@@ -1,7 +1,7 @@
 {
   "name": "Investigation Case",
   "doctype": "DocType",
-  "module": "Thanatos Intel",
+  "module": "Custom",
   "autoname": "field:case_code",
   "is_submittable": false,
   "fields": [
