@@ -1,0 +1,4 @@
+[project]
+name = "thanatos_intel"
+version = "0.0.1"
+description = "Intelligence Investigation Platform MVP"
