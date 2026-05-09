@@ -1,7 +1,21 @@
-from setuptools import setup, find_packages
+from __future__ import annotations
 
-with open('requirements.txt') as f:
-    install_requires = f.read().strip().splitlines() if f.read() else []
+from pathlib import Path
+
+from setuptools import find_packages, setup
+
+
+def _read_requirements() -> list[str]:
+	# Optional: keep supporting requirements.txt for local/dev installs.
+	# The file is not required for packaging/builds.
+	req = Path(__file__).with_name("requirements.txt")
+	if not req.exists():
+		return []
+	content = req.read_text(encoding="utf-8").strip()
+	return [line for line in content.splitlines() if line.strip()] if content else []
+
+
+install_requires = _read_requirements()
 
 setup(
     name='thanatos_intel',
