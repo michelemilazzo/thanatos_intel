@@ -2,6 +2,17 @@
 
 Intelligence Investigation Platform MVP for Frappe/ERPNext.
 
+## CI Status
+
+GitHub Actions workflow: `Thanatos CI`
+
+The repository runs automatic validation on every push to `main`:
+
+- Python syntax validation
+- JSON validation
+- Frappe file structure validation
+- pytest static test suite
+
 ## Objective
 
 Thanatos Intel is a modular Frappe app for managing investigative cases, entities, evidence, OSINT checks, fraud intelligence, document analysis, cyber risk, corporate due diligence, pay-per-use billing and professional portals.
@@ -54,4 +65,4 @@ bench --site <site-name> migrate
 
 ## Status
 
-Baseline planning committed. Frappe scaffold and DocTypes will be added progressively.
+Baseline v0.1 committed. Frappe scaffold, DocTypes, controllers, roles, workspace, install hook, permission helpers and CI tests are now present.
