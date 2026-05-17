@@ -1,0 +1,11 @@
+{
+"doctype":"DocType",
+"name":"Risk Score",
+"module":"Thanatos Core",
+"track_changes":1,
+"fields":[
+{"fieldname":"score","fieldtype":"Int","label":"Score"},
+{"fieldname":"classification","fieldtype":"Select","label":"Classification","options":"Low\nMedium\nHigh\nCritical"},
+{"fieldname":"reason","fieldtype":"Small Text","label":"Reason"}
+]
+}
