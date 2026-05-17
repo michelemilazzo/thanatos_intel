@@ -18,3 +18,15 @@ jobs:
         run: python -m compileall thanatos_intel
       - name: Run pytest suite
         run: pytest -v tests
+
+  docker-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests inside Python Docker container
+        run: |
+          docker run --rm \
+            -v "$PWD":/app \
+            -w /app \
+            python:3.11-bookworm \
+            bash -lc "pip install pytest && python -m compileall thanatos_intel && pytest -v tests"
