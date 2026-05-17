@@ -1,0 +1,22 @@
+{
+ "doctype":"DocType",
+ "name":"Visa Study Case",
+ "module":"Thanatos Portal",
+ "track_changes":1,
+ "title_field":"student_full_name",
+ "fields":[
+  {"fieldname":"student_full_name","fieldtype":"Data","label":"Student Full Name","reqd":1},
+  {"fieldname":"nationality","fieldtype":"Data","label":"Nationality"},
+  {"fieldname":"passport_number","fieldtype":"Data","label":"Passport Number"},
+  {"fieldname":"current_country","fieldtype":"Data","label":"Current Country","default":"China"},
+  {"fieldname":"destination_country","fieldtype":"Data","label":"Destination Country","default":"Italy"},
+  {"fieldname":"visa_type","fieldtype":"Select","label":"Visa Type","options":"Study National D\nStudy Schengen C\nOther","default":"Study National D"},
+  {"fieldname":"case_status","fieldtype":"Select","label":"Case Status","options":"Pending\nIn Progress\nReady For Appointment\nSubmitted\nApproved\nRejected\nCompleted","default":"Pending"},
+  {"fieldname":"sponsor_full_name","fieldtype":"Data","label":"Sponsor Full Name"},
+  {"fieldname":"planned_budget_eur","fieldtype":"Currency","label":"Planned Budget EUR"},
+  {"fieldname":"planned_budget_cny","fieldtype":"Currency","label":"Planned Budget CNY"},
+  {"fieldname":"consular_jurisdiction","fieldtype":"Data","label":"Consular Jurisdiction"},
+  {"fieldname":"missing_information","fieldtype":"Small Text","label":"Missing Information"},
+  {"fieldname":"notes","fieldtype":"Small Text","label":"Notes"}
+ ]
+}
