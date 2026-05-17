@@ -1,47 +1,20 @@
 name: Thanatos CI
-
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
-
+    branches: [main]
 jobs:
   static-validation:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Validate Python syntax
-        run: |
-          python -m compileall thanatos_intel
-
-      - name: Validate JSON files
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          for path in Path('.').rglob('*.json'):
-              with path.open('r', encoding='utf-8') as f:
-                  json.load(f)
-              print(f'OK JSON: {path}')
-          PY
-
-      - name: Validate required Frappe files
-        run: |
-          test -f thanatos_intel/hooks.py
-          test -f thanatos_intel/modules.txt
-          test -f thanatos_intel/install.py
-          test -f thanatos_intel/api.py
-          test -d thanatos_intel/thanatos_core/doctype/investigation_case
-          test -d thanatos_intel/thanatos_core/doctype/investigation_entity
-          test -d thanatos_intel/thanatos_core/doctype/investigation_evidence
-          test -d thanatos_intel/thanatos_core/doctype/investigation_report
-          test -d thanatos_intel/thanatos_core/doctype/risk_score
-          test -d thanatos_intel/thanatos_core/doctype/chain_of_custody_event
+      - name: Install pytest
+        run: pip install pytest
+      - name: Python compile check
+        run: python -m compileall thanatos_intel
+      - name: Run pytest suite
+        run: pytest -v tests
