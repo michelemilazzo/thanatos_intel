@@ -1,0 +1,12 @@
+{
+ "doctype":"DocType",
+ "name":"Investigation Evidence",
+ "module":"Thanatos Core",
+ "track_changes":1,
+ "fields":[
+ {"fieldname":"evidence_name","fieldtype":"Data","label":"Evidence Name","reqd":1},
+ {"fieldname":"evidence_type","fieldtype":"Select","label":"Evidence Type","options":"Document\nImage\nVideo\nAudio\nEmail\nURL\nFile"},
+ {"fieldname":"hash_value","fieldtype":"Data","label":"Hash Value"},
+ {"fieldname":"notes","fieldtype":"Small Text","label":"Notes"}
+ ]
+}
