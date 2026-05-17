@@ -5,29 +5,13 @@
  "custom": 0,
  "is_submittable": 0,
  "track_changes": 1,
+ "title_field": "case_title",
  "fields": [
-  {
-   "fieldname": "case_title",
-   "fieldtype": "Data",
-   "label": "Case Title",
-   "reqd": 1
-  },
-  {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "label": "Status",
-   "options": "Open\nIn Progress\nPending\nClosed"
-  },
-  {
-   "fieldname": "risk_level",
-   "fieldtype": "Select",
-   "label": "Risk Level",
-   "options": "Low\nMedium\nHigh\nCritical"
-  },
-  {
-   "fieldname": "summary",
-   "fieldtype": "Small Text",
-   "label": "Summary"
-  }
+  {"fieldname": "case_title", "fieldtype": "Data", "label": "Case Title", "reqd": 1},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Open\nIn Progress\nPending\nClosed", "default": "Open"},
+  {"fieldname": "risk_level", "fieldtype": "Select", "label": "Risk Level", "options": "Low\nMedium\nHigh\nCritical"},
+  {"fieldname": "primary_entity", "fieldtype": "Link", "label": "Primary Entity", "options": "Investigation Entity"},
+  {"fieldname": "risk_score", "fieldtype": "Link", "label": "Risk Score", "options": "Risk Score"},
+  {"fieldname": "summary", "fieldtype": "Small Text", "label": "Summary"}
  ]
 }
