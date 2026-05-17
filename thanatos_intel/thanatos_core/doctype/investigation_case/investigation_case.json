@@ -1,0 +1,33 @@
+{
+ "doctype": "DocType",
+ "name": "Investigation Case",
+ "module": "Thanatos Core",
+ "custom": 0,
+ "is_submittable": 0,
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "case_title",
+   "fieldtype": "Data",
+   "label": "Case Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Open\nIn Progress\nPending\nClosed"
+  },
+  {
+   "fieldname": "risk_level",
+   "fieldtype": "Select",
+   "label": "Risk Level",
+   "options": "Low\nMedium\nHigh\nCritical"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "label": "Summary"
+  }
+ ]
+}
