@@ -11,12 +11,10 @@ app_email = 'info@onekeyco.com'
 app_docs = 'https://thanatos.onekeyco.com'
 app_country = 'IT'
 
-# Fixtures exported by the app.
-# Roles, workspace and permission records will be added here after they are created and validated.
-fixtures = []
+fixtures = [
+    'Role'
+]
 
-# Document event hooks.
-# Business logic stays inside each DocType controller for the MVP baseline.
 doc_events = {}
 
 scheduler_events = {
@@ -31,7 +29,5 @@ scheduler_events = {
 }
 
 website_route_rules = []
-
 permission_query_conditions = {}
-
 has_permission = {}
