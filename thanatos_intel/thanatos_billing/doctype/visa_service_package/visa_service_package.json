@@ -8,6 +8,8 @@
   {"fieldname":"package_name","fieldtype":"Data","label":"Package Name","reqd":1},
   {"fieldname":"destination_country","fieldtype":"Data","label":"Destination Country"},
   {"fieldname":"visa_type","fieldtype":"Data","label":"Visa Type"},
+  {"fieldname":"erpnext_item","fieldtype":"Link","label":"ERPNext Item","options":"Item"},
+  {"fieldname":"item_code","fieldtype":"Data","label":"Item Code","read_only":1},
   {"fieldname":"price","fieldtype":"Currency","label":"Price"},
   {"fieldname":"currency","fieldtype":"Data","label":"Currency","default":"EUR"},
   {"fieldname":"included_services","fieldtype":"Text","label":"Included Services"},
