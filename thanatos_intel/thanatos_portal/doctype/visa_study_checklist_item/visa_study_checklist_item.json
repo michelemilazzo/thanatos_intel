@@ -1,0 +1,12 @@
+{
+"doctype":"DocType",
+"name":"Visa Study Checklist Item",
+"module":"Thanatos Portal",
+"istable":1,
+"fields":[
+{"fieldname":"check_item","fieldtype":"Data","label":"Checklist Item","reqd":1},
+{"fieldname":"completed","fieldtype":"Check","label":"Completed"},
+{"fieldname":"responsible_party","fieldtype":"Select","label":"Responsible","options":"China Student\nChina Family\nItaly Agency\nStudent\nSponsor"},
+{"fieldname":"notes","fieldtype":"Small Text","label":"Notes"}
+]
+}
