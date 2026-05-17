@@ -1,0 +1,12 @@
+{
+ "doctype": "DocType",
+ "name": "Investigation Entity",
+ "module": "Thanatos Core",
+ "track_changes": 1,
+ "fields": [
+  {"fieldname":"entity_name","fieldtype":"Data","label":"Entity Name","reqd":1},
+  {"fieldname":"entity_type","fieldtype":"Select","label":"Entity Type","options":"Person\nCompany\nDomain\nWallet\nPhone\nEmail\nIP"},
+  {"fieldname":"risk_level","fieldtype":"Select","label":"Risk Level","options":"Low\nMedium\nHigh\nCritical"},
+  {"fieldname":"notes","fieldtype":"Small Text","label":"Notes"}
+ ]
+}
