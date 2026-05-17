@@ -1,0 +1,1 @@
+{"doctype":"DocType","name":"Investigation Report","module":"Thanatos Core","track_changes":1,"fields":[{"fieldname":"report_title","fieldtype":"Data","label":"Report Title","reqd":1},{"fieldname":"report_status","fieldtype":"Select","label":"Status","options":"Draft\nReview\nFinal"},{"fieldname":"report_content","fieldtype":"Text Editor","label":"Content"}]}
