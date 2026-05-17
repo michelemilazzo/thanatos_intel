@@ -1,0 +1,17 @@
+{
+  "doctype": "Workspace",
+  "name": "Thanatos Intel",
+  "title": "Thanatos Intel",
+  "module": "Thanatos Core",
+  "public": 1,
+  "is_hidden": 0,
+  "content": "[{\"id\":\"thanatos_header\",\"type\":\"header\",\"data\":{\"text\":\"Thanatos Intel\"}},{\"id\":\"thanatos_shortcuts\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Investigation Case\",\"col\":3}},{\"id\":\"thanatos_entities\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Investigation Entity\",\"col\":3}},{\"id\":\"thanatos_evidence\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Investigation Evidence\",\"col\":3}},{\"id\":\"thanatos_reports\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Investigation Report\",\"col\":3}}]",
+  "shortcuts": [
+    {"type": "DocType", "label": "Investigation Case", "link_to": "Investigation Case"},
+    {"type": "DocType", "label": "Investigation Entity", "link_to": "Investigation Entity"},
+    {"type": "DocType", "label": "Investigation Evidence", "link_to": "Investigation Evidence"},
+    {"type": "DocType", "label": "Investigation Report", "link_to": "Investigation Report"},
+    {"type": "DocType", "label": "Risk Score", "link_to": "Risk Score"},
+    {"type": "DocType", "label": "Chain Of Custody Event", "link_to": "Chain Of Custody Event"}
+  ]
+}
