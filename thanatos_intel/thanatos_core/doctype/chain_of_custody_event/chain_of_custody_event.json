@@ -1,0 +1,1 @@
+{"doctype":"DocType","name":"Chain Of Custody Event","module":"Thanatos Core","track_changes":1,"fields":[{"fieldname":"event_type","fieldtype":"Select","label":"Event Type","options":"Created\nViewed\nModified\nTransferred\nArchived"},{"fieldname":"related_reference","fieldtype":"Data","label":"Reference"},{"fieldname":"notes","fieldtype":"Small Text","label":"Notes"}]}
