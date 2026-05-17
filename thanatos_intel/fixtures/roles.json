@@ -1,0 +1,5 @@
+[
+  {"doctype":"Role","role_name":"Thanatos Investigator","desk_access":1},
+  {"doctype":"Role","role_name":"Thanatos Analyst","desk_access":1},
+  {"doctype":"Role","role_name":"Thanatos Supervisor","desk_access":1}
+]
