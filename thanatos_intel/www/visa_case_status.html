@@ -1,0 +1,12 @@
+{% extends 'templates/web.html' %}
+{% block page_content %}
+<div class='container py-5'>
+  <h1>Visa Case Status</h1>
+  {% if message %}<div class='alert alert-warning'>{{ message }}</div>{% endif %}
+  {% if case_order %}<p><strong>Payment Status:</strong> {{ case_order.payment_status }}</p>{% endif %}
+  {% if visa_case %}
+    <p><strong>Student:</strong> {{ visa_case.student_full_name }}</p>
+    <p><strong>Completion:</strong> {{ visa_case.completion_percent or 0 }}%</p>
+  {% endif %}
+</div>
+{% endblock %}
