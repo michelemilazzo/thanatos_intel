@@ -6,6 +6,7 @@ def get_context(context):
     context.title = "Visa Case Status"
     context.case_order = None
     context.visa_case = None
+    context.document_requests = []
     context.message = None
 
     order_name = frappe.form_dict.get("order")
@@ -25,5 +26,11 @@ def get_context(context):
     context.case_order = order
     if order.visa_study_case:
         context.visa_case = frappe.get_doc("Visa Study Case", order.visa_study_case)
+        context.document_requests = frappe.get_all(
+            "Visa Document Request",
+            filters={"visa_study_case": order.visa_study_case},
+            fields=["name", "document_name", "required", "status", "uploaded_file"],
+            order_by="document_name asc",
+        )
 
     return context
