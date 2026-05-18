@@ -1,0 +1,16 @@
+{
+ "doctype":"DocType",
+ "name":"Visa Case Order",
+ "module":"Thanatos Billing",
+ "track_changes":1,
+ "title_field":"customer",
+ "fields":[
+  {"fieldname":"customer","fieldtype":"Link","label":"Customer","options":"Customer","reqd":1},
+  {"fieldname":"selected_package","fieldtype":"Link","label":"Visa Service Package","options":"Visa Service Package"},
+  {"fieldname":"sales_order","fieldtype":"Link","label":"Sales Order","options":"Sales Order"},
+  {"fieldname":"sales_invoice","fieldtype":"Link","label":"Sales Invoice","options":"Sales Invoice"},
+  {"fieldname":"payment_status","fieldtype":"Select","label":"Payment Status","options":"Pending\nPartially Paid\nPaid\nCancelled","default":"Pending"},
+  {"fieldname":"visa_study_case","fieldtype":"Link","label":"Visa Study Case","options":"Visa Study Case"},
+  {"fieldname":"portal_enabled","fieldtype":"Check","label":"Portal Enabled","default":0}
+ ]
+}
