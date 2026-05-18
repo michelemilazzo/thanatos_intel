@@ -19,6 +19,12 @@
         <li>{% if item.completed %}[x]{% else %}[ ]{% endif %} {{ item.check_item }}</li>
       {% endfor %}
     </ul>
+    <h3>Requested Documents</h3>
+    <ul>
+      {% for doc in document_requests %}
+        <li>{{ doc.document_name }} - {{ doc.status }}{% if doc.uploaded_file %} - uploaded{% endif %}</li>
+      {% endfor %}
+    </ul>
   {% endif %}
 </div>
 {% endblock %}
