@@ -1,0 +1,10 @@
+<div class='card mt-4'>
+ <div class='card-body'>
+   <h3>Case Progress</h3>
+   <div class='progress'>
+      <div class='progress-bar' role='progressbar' style='width: {{ visa_case.completion_percent or 0 }}%'>
+        {{ visa_case.completion_percent or 0 }}%
+      </div>
+   </div>
+ </div>
+</div>
