@@ -7,6 +7,18 @@
   {% if visa_case %}
     <p><strong>Student:</strong> {{ visa_case.student_full_name }}</p>
     <p><strong>Completion:</strong> {{ visa_case.completion_percent or 0 }}%</p>
+    <h3>Origin Country Checklist</h3>
+    <ul>
+      {% for item in visa_case.origin_country_checklist %}
+        <li>{% if item.completed %}[x]{% else %}[ ]{% endif %} {{ item.check_item }}</li>
+      {% endfor %}
+    </ul>
+    <h3>Destination / Agency Checklist</h3>
+    <ul>
+      {% for item in visa_case.destination_country_checklist %}
+        <li>{% if item.completed %}[x]{% else %}[ ]{% endif %} {{ item.check_item }}</li>
+      {% endfor %}
+    </ul>
   {% endif %}
 </div>
 {% endblock %}
