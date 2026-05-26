@@ -7,9 +7,7 @@ name = "thanatos_intel"
 version = "0.0.1"
 description = "Intelligence Investigation Platform MVP"
 requires-python = ">=3.10"
-dependencies = [
-    "frappe>=16.0.0,<17.0.0",
-]
+dependencies = []
 
 [tool.setuptools]
 include-package-data = true
