@@ -1,0 +1,1 @@
+"""Thanatos KYC package."""

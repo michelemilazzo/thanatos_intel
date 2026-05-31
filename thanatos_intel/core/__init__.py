@@ -1,0 +1,1 @@
+"""Thanatos core package."""

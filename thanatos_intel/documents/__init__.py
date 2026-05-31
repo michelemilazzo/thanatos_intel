@@ -1,0 +1,1 @@
+"""Thanatos documents package."""
