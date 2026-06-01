@@ -1,0 +1,15 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos Data Retention Rule",
+  "module": "Thanatos Legal Compliance",
+  "autoname": "field:rule_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "rule_name", "fieldtype": "Data", "label": "Rule Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "data_category", "fieldtype": "Data", "label": "Data Category", "reqd": 1, "unique": 1},
+    {"fieldname": "retention_period", "fieldtype": "Data", "label": "Retention Period", "reqd": 1},
+    {"fieldname": "retention_basis", "fieldtype": "Link", "label": "Retention Basis", "options": "Thanatos Legal Basis"},
+    {"fieldname": "deletion_action", "fieldtype": "Select", "label": "Deletion Action", "options": "Delete\nAnonymize\nArchive", "default": "Archive"},
+    {"fieldname": "active", "fieldtype": "Check", "label": "Active", "default": 1}
+  ]
+}

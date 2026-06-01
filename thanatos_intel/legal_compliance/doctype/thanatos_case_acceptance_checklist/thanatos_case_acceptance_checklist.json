@@ -1,0 +1,19 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos Case Acceptance Checklist",
+  "module": "Thanatos Legal Compliance",
+  "autoname": "field:checklist_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "checklist_name", "fieldtype": "Data", "label": "Checklist Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case", "reqd": 1},
+    {"fieldname": "client_verified", "fieldtype": "Check", "label": "Client Verified"},
+    {"fieldname": "mandate_signed", "fieldtype": "Check", "label": "Mandate Signed"},
+    {"fieldname": "lawful_basis_selected", "fieldtype": "Check", "label": "Lawful Basis Selected"},
+    {"fieldname": "privacy_notice_accepted", "fieldtype": "Check", "label": "Privacy Notice Accepted"},
+    {"fieldname": "restricted_activity_check_passed", "fieldtype": "Check", "label": "Restricted Activity Check Passed"},
+    {"fieldname": "director_approval", "fieldtype": "Check", "label": "Director Approval"},
+    {"fieldname": "overall_status", "fieldtype": "Select", "label": "Overall Status", "options": "Pending\nApproved\nRejected", "default": "Pending", "in_list_view": 1},
+    {"fieldname": "notes", "fieldtype": "Text Editor", "label": "Notes"}
+  ]
+}

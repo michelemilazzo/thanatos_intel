@@ -12,6 +12,9 @@
     {"type": "DocType", "label": "Investigation Evidence", "link_to": "Investigation Evidence"},
     {"type": "DocType", "label": "Investigation Report", "link_to": "Investigation Report"},
     {"type": "DocType", "label": "Risk Score", "link_to": "Risk Score"},
-    {"type": "DocType", "label": "Chain Of Custody Event", "link_to": "Chain Of Custody Event"}
+    {"type": "DocType", "label": "Chain Of Custody Event", "link_to": "Chain Of Custody Event"},
+    {"type": "DocType", "label": "Thanatos Legal Basis", "link_to": "Thanatos Legal Basis"},
+    {"type": "DocType", "label": "Thanatos Case Acceptance Checklist", "link_to": "Thanatos Case Acceptance Checklist"},
+    {"type": "DocType", "label": "Thanatos GDPR Processing Record", "link_to": "Thanatos GDPR Processing Record"}
   ]
 }

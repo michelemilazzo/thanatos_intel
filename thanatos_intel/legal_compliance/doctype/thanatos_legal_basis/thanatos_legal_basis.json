@@ -1,0 +1,17 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos Legal Basis",
+  "module": "Thanatos Legal Compliance",
+  "autoname": "field:basis_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "basis_name", "fieldtype": "Data", "label": "Basis Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "jurisdiction", "fieldtype": "Data", "label": "Jurisdiction", "default": "Romania"},
+    {"fieldname": "law_reference", "fieldtype": "Data", "label": "Law Reference", "reqd": 1},
+    {"fieldname": "authority", "fieldtype": "Data", "label": "Authority"},
+    {"fieldname": "lawful_basis", "fieldtype": "Select", "label": "Lawful Basis", "options": "Contract\nConsent\nLegal Obligation\nLegitimate Interest\nVital Interests\nPublic Task", "default": "Legitimate Interest"},
+    {"fieldname": "purpose", "fieldtype": "Small Text", "label": "Purpose"},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Draft\nActive\nArchived", "default": "Draft", "in_list_view": 1},
+    {"fieldname": "notes", "fieldtype": "Text Editor", "label": "Notes"}
+  ]
+}

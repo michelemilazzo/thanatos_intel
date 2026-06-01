@@ -1,0 +1,14 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos Restricted Activity Rule",
+  "module": "Thanatos Legal Compliance",
+  "autoname": "field:rule_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "rule_name", "fieldtype": "Data", "label": "Rule Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "activity_code", "fieldtype": "Data", "label": "Activity Code", "reqd": 1, "unique": 1},
+    {"fieldname": "rule_text", "fieldtype": "Text Editor", "label": "Rule Text", "reqd": 1},
+    {"fieldname": "severity", "fieldtype": "Select", "label": "Severity", "options": "Block\nEscalate\nReview", "default": "Block"},
+    {"fieldname": "active", "fieldtype": "Check", "label": "Active", "default": 1}
+  ]
+}

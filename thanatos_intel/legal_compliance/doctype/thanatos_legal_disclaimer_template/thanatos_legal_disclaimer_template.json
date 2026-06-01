@@ -1,0 +1,14 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos Legal Disclaimer Template",
+  "module": "Thanatos Legal Compliance",
+  "autoname": "field:template_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "template_name", "fieldtype": "Data", "label": "Template Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "language", "fieldtype": "Select", "label": "Language", "options": "Romanian\nEnglish\nItalian", "default": "Romanian"},
+    {"fieldname": "title", "fieldtype": "Data", "label": "Title"},
+    {"fieldname": "disclaimer", "fieldtype": "Text Editor", "label": "Disclaimer", "reqd": 1},
+    {"fieldname": "active", "fieldtype": "Check", "label": "Active", "default": 1}
+  ]
+}

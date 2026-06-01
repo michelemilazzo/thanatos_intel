@@ -1,0 +1,14 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos Jurisdiction Review",
+  "module": "Thanatos Legal Compliance",
+  "autoname": "field:review_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "review_name", "fieldtype": "Data", "label": "Review Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case", "reqd": 1},
+    {"fieldname": "governing_law", "fieldtype": "Data", "label": "Governing Law", "default": "Romanian law"},
+    {"fieldname": "default_court", "fieldtype": "Data", "label": "Default Court", "default": "Tribunalul Constanta"},
+    {"fieldname": "jurisdiction_notes", "fieldtype": "Text Editor", "label": "Jurisdiction Notes"}
+  ]
+}

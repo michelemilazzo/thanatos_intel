@@ -1,0 +1,17 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos Evidence Legality Review",
+  "module": "Thanatos Legal Compliance",
+  "autoname": "field:review_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "review_name", "fieldtype": "Data", "label": "Review Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case", "reqd": 1},
+    {"fieldname": "evidence", "fieldtype": "Link", "label": "Evidence", "options": "Investigation Evidence", "reqd": 1},
+    {"fieldname": "lawful_source", "fieldtype": "Check", "label": "Lawful Source"},
+    {"fieldname": "consent_or_mandate", "fieldtype": "Check", "label": "Consent Or Mandate"},
+    {"fieldname": "chain_of_custody_check", "fieldtype": "Check", "label": "Chain Of Custody Check"},
+    {"fieldname": "admissibility_note", "fieldtype": "Small Text", "label": "Admissibility Note"},
+    {"fieldname": "reviewer", "fieldtype": "Link", "label": "Reviewer", "options": "User"}
+  ]
+}

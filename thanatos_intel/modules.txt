@@ -15,9 +15,5 @@ Thanatos Compliance
 Thanatos Billing
 Thanatos Reports
 Thanatos Fraud
-Thanatos Documents
-Thanatos OSINT
-Thanatos Cyber
 Thanatos Corporate
-Thanatos Billing
-Thanatos Portal
+Thanatos Cyber

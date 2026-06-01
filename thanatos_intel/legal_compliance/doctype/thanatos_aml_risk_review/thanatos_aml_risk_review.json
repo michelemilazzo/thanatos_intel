@@ -1,0 +1,19 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos AML Risk Review",
+  "module": "Thanatos Legal Compliance",
+  "autoname": "field:review_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "review_name", "fieldtype": "Data", "label": "Review Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case", "reqd": 1},
+    {"fieldname": "subject", "fieldtype": "Data", "label": "Subject"},
+    {"fieldname": "risk_level", "fieldtype": "Select", "label": "Risk Level", "options": "Low\nMedium\nHigh\nCritical", "default": "Medium", "in_list_view": 1},
+    {"fieldname": "pep_screening", "fieldtype": "Check", "label": "PEP Screening"},
+    {"fieldname": "sanctions_screening", "fieldtype": "Check", "label": "Sanctions Screening"},
+    {"fieldname": "adverse_media", "fieldtype": "Check", "label": "Adverse Media"},
+    {"fieldname": "source_of_funds", "fieldtype": "Check", "label": "Source Of Funds"},
+    {"fieldname": "source_of_wealth", "fieldtype": "Check", "label": "Source Of Wealth"},
+    {"fieldname": "comments", "fieldtype": "Text Editor", "label": "Comments"}
+  ]
+}
