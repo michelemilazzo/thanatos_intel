@@ -53,7 +53,8 @@ sidebar_items = [
 
 # Fixtures
 fixtures = [
-    {"dt": "Blockchain", "filters": [["name", "in", ["Polygon", "Ethereum"]]]},
+    {"dt": "Blockchain", "filters": [["name", "in", ["Polygon", "Ethereum", "Arbitrum", "Base"]]]},
+    {"dt": "Token", "filters": [["name", "in", ["USDT", "USDC", "WETH", "WMATIC"]]]},
 ]
 
 # ERPNext required

@@ -1,0 +1,48 @@
+{
+  "add_total_row": 0,
+  "creation": "2026-06-01 13:00:00.000000",
+  "custom": 0,
+  "docstatus": 0,
+  "doctype": "Report",
+  "engine": "python",
+  "filters": [
+    {
+      "fieldname": "date_from",
+      "fieldtype": "Date",
+      "label": "Date From"
+    },
+    {
+      "fieldname": "date_to",
+      "fieldtype": "Date",
+      "label": "Date To"
+    },
+    {
+      "fieldname": "blockchain",
+      "fieldtype": "Link",
+      "label": "Blockchain",
+      "options": "Blockchain"
+    },
+    {
+      "fieldname": "liquidity_status",
+      "fieldtype": "Select",
+      "label": "Liquidity Status",
+      "options": "\nAdequate\nLow\nInsufficient"
+    }
+  ],
+  "idx": 0,
+  "is_standard": 0,
+  "modified": "2026-06-01 13:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Thanatos Intel",
+  "name": "Token Liquidity Analytics",
+  "owner": "Administrator",
+  "query_report": 0,
+  "ref_doctype": "Token Liquidity Test",
+  "report_name": "Token Liquidity Analytics",
+  "report_type": "Report Builder",
+  "roles": [
+    {
+      "role": "System Manager"
+    }
+  ]
+}

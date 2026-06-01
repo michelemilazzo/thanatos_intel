@@ -16,5 +16,23 @@
     "rpc_url": "https://eth.public-rpc.com",
     "explorer_url": "https://etherscan.io",
     "is_active": 1
+  },
+  {
+    "doctype": "Blockchain",
+    "name": "Arbitrum",
+    "chain_id": "42161",
+    "chain_name": "Arbitrum",
+    "rpc_url": "https://arb1.arbitrum.io/rpc",
+    "explorer_url": "https://arbiscan.io",
+    "is_active": 1
+  },
+  {
+    "doctype": "Blockchain",
+    "name": "Base",
+    "chain_id": "8453",
+    "chain_name": "Base",
+    "rpc_url": "https://mainnet.base.org",
+    "explorer_url": "https://basescan.org",
+    "is_active": 1
   }
 ]

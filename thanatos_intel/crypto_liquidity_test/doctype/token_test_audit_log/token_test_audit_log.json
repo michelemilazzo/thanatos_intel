@@ -1,0 +1,73 @@
+{
+  "actions": [],
+  "allow_copy": 0,
+  "allow_rename": 0,
+  "autoname": "format:AUDIT-{blockchain}-{creation_datetime}",
+  "beta": 0,
+  "creation": "2026-06-01 13:00:00.000000",
+  "custom": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "document_type": "Document",
+  "engine": "InnoDB",
+  "fields": [
+    {
+      "fieldname": "test_name",
+      "fieldtype": "Link",
+      "label": "Test Record",
+      "options": "Token Liquidity Test",
+      "reqd": 1
+    },
+    {
+      "fieldname": "token_symbol",
+      "fieldtype": "Data",
+      "label": "Token Symbol"
+    },
+    {
+      "fieldname": "blockchain",
+      "fieldtype": "Data",
+      "label": "Blockchain"
+    },
+    {
+      "fieldname": "analyst",
+      "fieldtype": "Data",
+      "label": "Analyst"
+    },
+    {
+      "fieldname": "verdict",
+      "fieldtype": "Select",
+      "label": "Verdict",
+      "options": "PASS\nFAIL\nPARTIAL"
+    },
+    {
+      "fieldname": "risk_level",
+      "fieldtype": "Select",
+      "label": "Risk Level",
+      "options": "Low\nMedium\nHigh\nUnknown"
+    },
+    {
+      "fieldname": "test_data",
+      "fieldtype": "JSON",
+      "label": "Full Test Data"
+    }
+  ],
+  "modified": "2026-06-01 13:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Thanatos Intel",
+  "name": "Token Test Audit Log",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "all": 1,
+      "create": 0,
+      "default": 1,
+      "delete": 0,
+      "email": 1,
+      "export": 1,
+      "read": 1,
+      "role": "System Manager",
+      "share": 0,
+      "write": 0
+    }
+  ]
+}
