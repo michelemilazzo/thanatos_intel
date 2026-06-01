@@ -1,0 +1,14 @@
+{
+  "app_name": "thanatos_intel",
+  "app_title": "Thanatos Intel",
+  "app_publisher": "Thanatos",
+  "app_description": "Intelligence & crypto analysis tools: token liquidity testing, DEX screener, risk assessment",
+  "app_icon": "octicon octicon-telescope",
+  "app_color": "indigo",
+  "app_email": "ops@thanatos.onekeyco.com",
+  "app_license": "MIT",
+  "app_version": "0.1.0",
+  "app_type": "App",
+  "docs_url": "https://thanatos.onekeyco.com",
+  "supported_versions": ["Version 15", "Version 16"]
+}

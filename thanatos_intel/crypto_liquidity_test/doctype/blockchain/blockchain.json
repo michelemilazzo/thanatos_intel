@@ -1,0 +1,59 @@
+{
+  "actions": [],
+  "autoname": "field:chain_name",
+  "creation": "2026-06-01 13:00:00.000000",
+  "custom": 0,
+  "docstatus": 0,
+  "doctype": "DocType",
+  "document_type": "Master",
+  "engine": "InnoDB",
+  "fields": [
+    {
+      "fieldname": "chain_name",
+      "fieldtype": "Data",
+      "label": "Chain Name",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "chain_id",
+      "fieldtype": "Data",
+      "label": "Chain ID"
+    },
+    {
+      "fieldname": "rpc_url",
+      "fieldtype": "Data",
+      "label": "RPC URL"
+    },
+    {
+      "fieldname": "explorer_url",
+      "fieldtype": "Data",
+      "label": "Block Explorer URL"
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Active",
+      "default": 1
+    }
+  ],
+  "modified": "2026-06-01 13:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Thanatos Intel",
+  "name": "Blockchain",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "all": 1,
+      "create": 1,
+      "default": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "read": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ]
+}

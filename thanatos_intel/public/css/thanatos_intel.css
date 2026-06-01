@@ -1,0 +1,74 @@
+/* Thanatos Intel App Styles */
+
+.token-liquidity-verdict {
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.token-liquidity-verdict.pass {
+    background-color: #28a745;
+    color: white;
+}
+
+.token-liquidity-verdict.fail {
+    background-color: #dc3545;
+    color: white;
+}
+
+.token-liquidity-verdict.warning {
+    background-color: #ffc107;
+    color: #333;
+}
+
+.liquidity-status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.liquidity-status-badge.adequate {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.liquidity-status-badge.low {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.liquidity-status-badge.insufficient {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.risk-field {
+    border-left: 4px solid #dc3545;
+    padding-left: 12px;
+}
+
+.risk-field.pass {
+    border-left-color: #28a745;
+}
+
+.test-results {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.test-results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+@media (max-width: 768px) {
+    .test-results-grid {
+        grid-template-columns: 1fr;
+    }
+}

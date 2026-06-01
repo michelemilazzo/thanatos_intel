@@ -1,0 +1,17 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "thanatos_intel"
+authors = [{name = "Thanatos", email = "ops@thanatos.onekeyco.com"}]
+description = "Crypto intelligence & compliance tools for Frappe"
+requires-python = ">=3.8"
+dynamic = ["version"]
+dependencies = [
+    "frappe>=14.0.0",
+    "requests>=2.25.0",
+]
+
+[project.optional-dependencies]
+dev = ["black", "flake8"]

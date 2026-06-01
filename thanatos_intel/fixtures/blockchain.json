@@ -1,0 +1,20 @@
+[
+  {
+    "doctype": "Blockchain",
+    "name": "Polygon",
+    "chain_id": "137",
+    "chain_name": "Polygon",
+    "rpc_url": "https://polygon-rpc.com",
+    "explorer_url": "https://polygonscan.com",
+    "is_active": 1
+  },
+  {
+    "doctype": "Blockchain",
+    "name": "Ethereum",
+    "chain_id": "1",
+    "chain_name": "Ethereum",
+    "rpc_url": "https://eth.public-rpc.com",
+    "explorer_url": "https://etherscan.io",
+    "is_active": 1
+  }
+]
