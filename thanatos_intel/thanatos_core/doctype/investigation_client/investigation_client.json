@@ -1,0 +1,34 @@
+{
+ "doctype": "DocType",
+ "name": "Investigation Client",
+ "module": "Thanatos Core",
+ "track_changes": 1,
+ "autoname": "field:email",
+ "title_field": "client_name",
+ "fields": [
+  {"fieldname":"sb_main","fieldtype":"Section Break","label":"Client"},
+  {"fieldname":"client_name","fieldtype":"Data","label":"Client Name","reqd":1,"in_list_view":1},
+  {"fieldname":"client_type","fieldtype":"Select","label":"Client Type","options":"Individual\nCompany\nLaw Firm\nAccounting Firm\nOther","default":"Individual","in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"email","fieldtype":"Data","label":"Email","reqd":1,"options":"Email","in_list_view":1},
+  {"fieldname":"phone","fieldtype":"Data","label":"Phone","options":"Phone"},
+  {"fieldname":"cb_main","fieldtype":"Column Break"},
+  {"fieldname":"country","fieldtype":"Link","label":"Country","options":"Country"},
+  {"fieldname":"vat_number","fieldtype":"Data","label":"VAT / CUI"},
+  {"fieldname":"preferred_language","fieldtype":"Select","label":"Preferred Language","options":"Italian\nRomanian\nEnglish","default":"English"},
+  {"fieldname":"address","fieldtype":"Text","label":"Address"},
+  {"fieldname":"sb_link","fieldtype":"Section Break","label":"Platform & ERP"},
+  {"fieldname":"platform_user","fieldtype":"Link","label":"Platform User","options":"User"},
+  {"fieldname":"erp_customer_id","fieldtype":"Data","label":"ERP Customer ID"},
+  {"fieldname":"cb_link","fieldtype":"Column Break"},
+  {"fieldname":"subscription_status","fieldtype":"Select","label":"Subscription Status","options":"None\nActive\nSuspended\nExpired","default":"None"},
+  {"fieldname":"sb_stats","fieldtype":"Section Break","label":"Statistics"},
+  {"fieldname":"total_cases","fieldtype":"Int","label":"Total Cases","read_only":1},
+  {"fieldname":"cb_stats","fieldtype":"Column Break"},
+  {"fieldname":"total_spent","fieldtype":"Currency","label":"Total Spent","read_only":1}
+ ],
+ "permissions": [
+  {"role":"Investigation Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1,"print":1,"email":1,"share":1},
+  {"role":"Billing Manager","read":1,"write":1,"create":1,"report":1,"print":1},
+  {"role":"Investigator","read":1}
+ ]
+}

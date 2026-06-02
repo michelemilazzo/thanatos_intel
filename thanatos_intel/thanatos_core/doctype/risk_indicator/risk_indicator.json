@@ -1,0 +1,14 @@
+{
+ "doctype": "DocType",
+ "name": "Risk Indicator",
+ "module": "Thanatos Core",
+ "istable": 1,
+ "editable_grid": 1,
+ "fields": [
+  {"fieldname":"indicator_type","fieldtype":"Data","label":"Indicator Type","in_list_view":1,"columns":2},
+  {"fieldname":"value","fieldtype":"Data","label":"Value","in_list_view":1,"columns":3},
+  {"fieldname":"source","fieldtype":"Data","label":"Source","in_list_view":1,"columns":2},
+  {"fieldname":"points","fieldtype":"Int","label":"Points","in_list_view":1,"columns":1},
+  {"fieldname":"verified","fieldtype":"Check","label":"Verified","in_list_view":1,"columns":1}
+ ]
+}

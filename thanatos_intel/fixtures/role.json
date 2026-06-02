@@ -1,0 +1,9 @@
+[
+ {"doctype": "Role", "role_name": "Investigation Manager", "desk_access": 1},
+ {"doctype": "Role", "role_name": "Investigator", "desk_access": 1},
+ {"doctype": "Role", "role_name": "Lawyer", "desk_access": 1},
+ {"doctype": "Role", "role_name": "Accountant", "desk_access": 1},
+ {"doctype": "Role", "role_name": "Investigation Client", "desk_access": 0},
+ {"doctype": "Role", "role_name": "Affiliate", "desk_access": 0},
+ {"doctype": "Role", "role_name": "Billing Manager", "desk_access": 1}
+]

@@ -3,10 +3,32 @@
  "name": "Investigation Entity",
  "module": "Thanatos Core",
  "track_changes": 1,
+ "autoname": "field:primary_identifier",
+ "title_field": "primary_identifier",
  "fields": [
-  {"fieldname":"entity_name","fieldtype":"Data","label":"Entity Name","reqd":1},
-  {"fieldname":"entity_type","fieldtype":"Select","label":"Entity Type","options":"Person\nCompany\nDomain\nWallet\nPhone\nEmail\nIP"},
-  {"fieldname":"risk_level","fieldtype":"Select","label":"Risk Level","options":"Low\nMedium\nHigh\nCritical"},
-  {"fieldname":"notes","fieldtype":"Small Text","label":"Notes"}
+  {"fieldname":"sb_identity","fieldtype":"Section Break","label":"Identity"},
+  {"fieldname":"entity_type","fieldtype":"Select","label":"Entity Type","options":"Person\nCompany\nEmail\nDomain\nIP\nWallet\nPhone","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"primary_identifier","fieldtype":"Data","label":"Primary Identifier","reqd":1,"in_list_view":1,"description":"Email, domain, IP, wallet, phone or name"},
+  {"fieldname":"cb_identity","fieldtype":"Column Break"},
+  {"fieldname":"full_name","fieldtype":"Data","label":"Full Name","in_list_view":1},
+  {"fieldname":"country","fieldtype":"Link","label":"Country","options":"Country"},
+  {"fieldname":"sb_risk","fieldtype":"Section Break","label":"Risk Assessment"},
+  {"fieldname":"risk_score","fieldtype":"Float","label":"Risk Score","read_only":1,"in_list_view":1,"precision":"1"},
+  {"fieldname":"risk_level","fieldtype":"Select","label":"Risk Level","options":"\nBasso\nMedio\nAlto\nCritico","read_only":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"cb_risk","fieldtype":"Column Break"},
+  {"fieldname":"status","fieldtype":"Select","label":"Status","options":"Active\nWatchlist\nBlacklisted\nVerified","default":"Active","in_standard_filter":1},
+  {"fieldname":"blacklist_ref","fieldtype":"Data","label":"Blacklist Ref","read_only":1},
+  {"fieldname":"sb_indicators","fieldtype":"Section Break","label":"Risk Indicators"},
+  {"fieldname":"risk_indicators","fieldtype":"Table","label":"Risk Indicators","options":"Risk Indicator"},
+  {"fieldname":"sb_osint","fieldtype":"Section Break","label":"OSINT","collapsible":1},
+  {"fieldname":"last_osint_run","fieldtype":"Datetime","label":"Last OSINT Run","read_only":1},
+  {"fieldname":"osint_raw","fieldtype":"Long Text","label":"OSINT Raw (JSON)","read_only":1},
+  {"fieldname":"sb_notes","fieldtype":"Section Break","label":"Notes"},
+  {"fieldname":"notes","fieldtype":"Text","label":"Notes"}
+ ],
+ "permissions": [
+  {"role":"Investigation Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1,"print":1,"email":1,"share":1},
+  {"role":"Investigator","read":1,"write":1,"create":1,"report":1,"print":1},
+  {"role":"Lawyer","read":1}
  ]
 }

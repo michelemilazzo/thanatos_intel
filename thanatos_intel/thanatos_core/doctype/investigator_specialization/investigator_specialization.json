@@ -1,0 +1,12 @@
+{
+ "doctype": "DocType",
+ "name": "Investigator Specialization",
+ "module": "Thanatos Core",
+ "istable": 1,
+ "editable_grid": 1,
+ "fields": [
+  {"fieldname":"specialization","fieldtype":"Data","label":"Specialization","in_list_view":1,"columns":4,"reqd":1},
+  {"fieldname":"level","fieldtype":"Select","label":"Level","options":"Junior\nMid\nSenior\nExpert","in_list_view":1,"columns":2,"default":"Mid"},
+  {"fieldname":"notes","fieldtype":"Data","label":"Notes","in_list_view":1,"columns":4}
+ ]
+}
