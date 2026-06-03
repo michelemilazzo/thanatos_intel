@@ -1,0 +1,51 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ category.category_name }} — Thanatos News{% endblock %}
+
+{% block head_include %}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body.cat-page{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+.page_content{padding:0;max-width:100%;}
+.cat-head{padding:48px 24px;border-bottom:1px solid var(--line);text-align:center;background:linear-gradient(180deg,#070A14,#0A0E1A);}
+.cat-head img{height:48px;margin-bottom:12px;}
+.cat-head h1{color:var(--gold);font-weight:400;letter-spacing:5px;font-size:24px;}
+.cat-head p{color:var(--muted);max-width:680px;margin:12px auto 0;font-size:14px;line-height:1.6;}
+.cat-wrap{max-width:1180px;margin:32px auto;padding:0 24px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;}
+.tile{background:var(--navy2);border:1px solid var(--line);text-decoration:none!important;color:#E6E8EE;display:flex;flex-direction:column;transition:border-color .15s;}
+.tile:hover{border-color:var(--gold);}
+.tile .body{padding:18px;display:flex;flex-direction:column;gap:8px;}
+.tile h3{margin:0;font-weight:400;font-size:17px;color:#F2F3F6;line-height:1.35;}
+.tile .ex{color:var(--muted);font-size:12px;line-height:1.5;}
+.tile .meta{color:#5B6276;font-size:10px;letter-spacing:1px;margin-top:6px;}
+.empty{text-align:center;color:var(--muted);padding:48px;border:1px dashed var(--line);}
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="cat-page">
+<header class="cat-head">
+  <a href="/"><img src="/assets/thanatos_intel/images/thanatos-logo.svg"/></a>
+  <h1 style="border-bottom:2px solid {{ category.color or '#C8A96E' }};display:inline-block;padding-bottom:6px">{{ category.category_name }}</h1>
+  {% if category.description %}<p>{{ category.description }}</p>{% endif %}
+</header>
+<div class="cat-wrap">
+  {% if articles %}
+  <div class="grid">
+    {% for n in articles %}
+    <a class="tile" href="/news/{{ n.slug }}"><div class="body">
+      <h3>{{ n.title }}</h3>
+      {% if n.excerpt %}<div class="ex">{{ n.excerpt[:180] }}{% if n.excerpt|length > 180 %}…{% endif %}</div>{% endif %}
+      <div class="meta">
+        {% if n.published_at %}{{ frappe.utils.format_datetime(n.published_at, 'd MMM yyyy') }}{% endif %}
+        {% if n.source_name_label %} · {{ n.source_name_label }}{% endif %}
+      </div>
+    </div></a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">Nessuna notizia ancora in questa categoria.</div>
+  {% endif %}
+</div>
+</body>
+{% endblock %}

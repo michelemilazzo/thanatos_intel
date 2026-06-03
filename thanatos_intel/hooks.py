@@ -11,11 +11,12 @@ app_email='info@onekeyco.com'
 app_docs='https://thanatos.onekeyco.com'
 app_country='IT'
 
-app_logo_url='/assets/thanatos_intel/images/thanatos-icon-white.svg'
+app_logo_url='/assets/thanatos_intel/images/thanatos-icon.svg'
 brand_html='<img src="/assets/thanatos_intel/images/thanatos-logo.svg" alt="Thanatos Intel" style="height:32px"/>'
 website_context={
- 'favicon': '/assets/thanatos_intel/images/thanatos-icon-white.svg',
- 'splash_image': '/assets/thanatos_intel/images/thanatos-logo-white.svg',
+ 'favicon': '/assets/thanatos_intel/images/thanatos-icon.svg',
+ 'splash_image': '/assets/thanatos_intel/images/thanatos-logo.svg',
+ 'brand_html': '<img src="/assets/thanatos_intel/images/thanatos-logo.svg" alt="Thanatos Intel" style="height:32px"/>',
 }
 
 after_install='thanatos_intel.install.after_install'
@@ -24,13 +25,16 @@ fixtures=[
  {'doctype': 'Investigation Subscription Plan', 'filters': []},
  {'doctype': 'Service Catalog', 'filters': []},
  {'doctype': 'Infrastructure Cost', 'filters': []},
+ {'doctype': 'News Category', 'filters': []},
+ {'doctype': 'News Source', 'filters': []},
 ]
 
 doc_events={}
 scheduler_events={
  'cron':{},
  'all':[],
- 'daily':[],
+ 'hourly':['thanatos_intel.news.ingestion.hourly_ingest'],
+ 'daily':['thanatos_intel.news.ingestion.daily_case_digest'],
  'daily_long':[],
  'weekly':[],
  'weekly_long':[],
@@ -39,6 +43,7 @@ scheduler_events={
 }
 website_route_rules=[
  {'from_route': '/portal/case/<name>', 'to_route': 'portal/case'},
+ {'from_route': '/news/categoria/<slug>', 'to_route': 'news/categoria'},
 ]
 permission_query_conditions={}
 has_permission={

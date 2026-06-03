@@ -1,0 +1,34 @@
+{
+ "doctype": "DocType",
+ "name": "News Source",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "naming_rule": "By fieldname",
+ "autoname": "field:source_name",
+ "title_field": "source_name",
+ "search_fields": "source_name,rss_url",
+ "track_changes": 1,
+ "fields": [
+  {"fieldname": "source_name", "fieldtype": "Data", "label": "Source Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+  {"fieldname": "source_type", "fieldtype": "Select", "label": "Type", "options": "RSS\nAtom\nJSON Feed\nManual\nAI Generated", "default": "RSS"},
+  {"fieldname": "rss_url", "fieldtype": "Data", "label": "Feed URL"},
+  {"fieldname": "default_category", "fieldtype": "Link", "label": "Default Category", "options": "News Category"},
+  {"fieldname": "language", "fieldtype": "Select", "label": "Language", "options": "it\nro\nen\nfr\nde\nes", "default": "it"},
+  {"fieldname": "country_focus", "fieldtype": "Data", "label": "Country Focus", "description": "ISO codes comma-separated, e.g. IT,RO,EU"},
+  {"fieldname": "sb_meta", "fieldtype": "Section Break"},
+  {"fieldname": "is_active", "fieldtype": "Check", "label": "Active", "default": 1, "in_list_view": 1},
+  {"fieldname": "auto_publish", "fieldtype": "Check", "label": "Auto Publish", "default": 0,
+   "description": "If set, ingested articles get published immediately (no editorial review)"},
+  {"fieldname": "ai_summarize", "fieldtype": "Check", "label": "AI Summarize", "default": 1,
+   "description": "If set, use Claude/Ollama to rewrite the excerpt + content for Thanatos voice"},
+  {"fieldname": "max_articles_per_fetch", "fieldtype": "Int", "label": "Max Articles per Fetch", "default": 20},
+  {"fieldname": "sb_status", "fieldtype": "Section Break"},
+  {"fieldname": "last_fetched_at", "fieldtype": "Datetime", "label": "Last Fetched", "read_only": 1},
+  {"fieldname": "last_status", "fieldtype": "Data", "label": "Last Status", "read_only": 1},
+  {"fieldname": "last_error", "fieldtype": "Small Text", "label": "Last Error", "read_only": 1},
+  {"fieldname": "total_fetched", "fieldtype": "Int", "label": "Total Fetched", "read_only": 1, "default": 0}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+ ]
+}

@@ -1,0 +1,75 @@
+{% extends "templates/web.html" %}
+{% block title %}{{ title }} — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="{{ doc.excerpt or doc.meta_description or doc.title }}"/>
+<meta property="og:title" content="{{ doc.title }}"/>
+<meta property="og:description" content="{{ doc.excerpt or '' }}"/>
+{% if doc.featured_image %}<meta property="og:image" content="{{ doc.featured_image }}"/>{% endif %}
+<meta property="og:type" content="article"/>
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New Roman',serif;}
+.page_content{padding:0;max-width:100%;}
+.art-head{background:linear-gradient(180deg,#070A14,#0A0E1A);padding:32px 24px 24px;border-bottom:1px solid var(--line);text-align:center;}
+.art-head a img{height:42px;}
+.art-wrap{max-width:760px;margin:0 auto;padding:48px 24px;}
+.art-cat{color:var(--gold);font-size:11px;letter-spacing:4px;text-transform:uppercase;}
+.art-wrap h1{font-weight:400;font-size:34px;color:#F2F3F6;margin:14px 0 18px;line-height:1.25;}
+.art-meta{color:#5B6276;font-size:12px;letter-spacing:1px;margin-bottom:24px;border-bottom:1px solid var(--line);padding-bottom:14px;}
+.art-hero{margin:24px 0;}
+.art-hero img{width:100%;display:block;}
+.art-excerpt{font-size:18px;color:#C8CBD4;line-height:1.6;font-style:italic;border-left:2px solid var(--gold);padding:0 0 0 18px;margin:0 0 26px;}
+.art-content{font-size:16px;line-height:1.75;color:#D4D7E0;}
+.art-content p{margin:0 0 18px;}
+.art-content h2,.art-content h3{color:var(--gold);font-weight:400;letter-spacing:2px;margin:28px 0 12px;}
+.art-content a{color:var(--gold);}
+.art-content ul,.art-content ol{margin:0 0 18px 22px;}
+.art-source{margin-top:32px;padding:14px 18px;background:rgba(200,169,110,.06);border-left:2px solid var(--gold);color:var(--muted);font-size:13px;}
+.art-source a{color:var(--gold);}
+.related{max-width:1180px;margin:48px auto;padding:0 24px;}
+.related h3{color:var(--gold);font-weight:400;letter-spacing:4px;text-transform:uppercase;font-size:14px;text-align:center;margin-bottom:18px;}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;}
+.rcard{background:var(--navy2);border:1px solid var(--line);padding:16px;text-decoration:none!important;color:#E6E8EE;transition:border-color .15s;}
+.rcard:hover{border-color:var(--gold);}
+.rcard h4{font-weight:400;font-size:15px;color:#F2F3F6;margin:0 0 8px;line-height:1.35;}
+.rcard p{color:var(--muted);font-size:12px;line-height:1.5;margin:0;}
+.back{display:inline-block;margin-bottom:24px;color:var(--gold);text-decoration:none;font-size:11px;letter-spacing:3px;text-transform:uppercase;}
+</style>
+{% endblock %}
+
+{% block content %}
+<body class="article">
+<header class="art-head"><a href="/"><img src="/assets/thanatos_intel/images/thanatos-logo.svg"/></a></header>
+<article class="art-wrap">
+  <a class="back" href="/news">← Newsroom</a>
+  {% if doc.category %}<div class="art-cat">{{ doc.category }}</div>{% endif %}
+  <h1>{{ doc.title }}</h1>
+  <div class="art-meta">
+    {% if doc.published_at %}{{ frappe.utils.format_datetime(doc.published_at, 'd MMMM yyyy · HH:mm') }}{% endif %}
+    {% if doc.reading_time_min %} · {{ doc.reading_time_min }} min di lettura{% endif %}
+    {% if doc.source_name_label %} · Fonte: {{ doc.source_name_label }}{% endif %}
+  </div>
+  {% if doc.featured_image %}<div class="art-hero"><img src="{{ doc.featured_image }}" alt="{{ doc.image_caption or doc.title }}"/>
+    {% if doc.image_caption %}<small style="color:#5B6276;font-size:11px">{{ doc.image_caption }}</small>{% endif %}
+  </div>{% endif %}
+  {% if doc.excerpt %}<p class="art-excerpt">{{ doc.excerpt }}</p>{% endif %}
+  <div class="art-content">{{ doc.content or '' | safe }}</div>
+  {% if doc.source_url %}<div class="art-source">Fonte originale: <a href="{{ doc.source_url }}" rel="noopener nofollow" target="_blank">{{ doc.source_name_label or doc.source_url }}</a></div>{% endif %}
+</article>
+
+{% if related %}
+<section class="related">
+  <h3>Articoli correlati</h3>
+  <div class="rgrid">
+    {% for r in related %}
+    <a class="rcard" href="/news/{{ r.slug }}">
+      <h4>{{ r.title }}</h4>
+      {% if r.excerpt %}<p>{{ r.excerpt[:140] }}{% if r.excerpt|length > 140 %}…{% endif %}</p>{% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+</body>
+{% endblock %}

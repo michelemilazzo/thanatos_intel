@@ -1,0 +1,25 @@
+{
+ "doctype": "DocType",
+ "name": "News Category",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "naming_rule": "By fieldname",
+ "autoname": "field:category_slug",
+ "title_field": "category_name",
+ "search_fields": "category_name,category_slug",
+ "track_changes": 1,
+ "fields": [
+  {"fieldname": "category_name", "fieldtype": "Data", "label": "Category Name", "reqd": 1, "in_list_view": 1, "in_global_search": 1},
+  {"fieldname": "category_slug", "fieldtype": "Data", "label": "Slug", "reqd": 1, "unique": 1, "description": "URL slug, lowercase, dashes"},
+  {"fieldname": "color", "fieldtype": "Color", "label": "Color", "default": "#C8A96E"},
+  {"fieldname": "icon", "fieldtype": "Data", "label": "Icon (FontAwesome class)", "default": "fa-shield-alt"},
+  {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"},
+  {"fieldname": "sb_display", "fieldtype": "Section Break"},
+  {"fieldname": "is_active", "fieldtype": "Check", "label": "Active", "default": 1, "in_list_view": 1},
+  {"fieldname": "display_order", "fieldtype": "Int", "label": "Display Order", "default": 100}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
+ ]
+}
