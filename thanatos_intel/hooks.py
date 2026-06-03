@@ -12,7 +12,11 @@ app_docs='https://thanatos.onekeyco.com'
 app_country='IT'
 
 after_install='thanatos_intel.install.after_install'
-fixtures=['Role']
+fixtures=[
+ 'Role',
+ {'doctype': 'Subscription Plan', 'filters': []},
+ {'doctype': 'Service Catalog', 'filters': []},
+]
 
 doc_events={}
 scheduler_events={'cron':{},'all':[],'daily':[],'daily_long':[],'weekly':[],'weekly_long':[],'monthly':[],'monthly_long':[]}

@@ -1,0 +1,39 @@
+{
+ "doctype": "DocType",
+ "name": "Usage Event",
+ "module": "Portal System",
+ "track_changes": 1,
+ "autoname": "format:UE-{YYYY}-{####}",
+ "title_field": "service",
+ "fields": [
+  {"fieldname":"sb_main","fieldtype":"Section Break","label":"Usage Event"},
+  {"fieldname":"client","fieldtype":"Link","label":"Client","options":"Investigation Client","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"service","fieldtype":"Link","label":"Service","options":"Service Catalog","reqd":1,"in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"case","fieldtype":"Link","label":"Investigative Case","options":"Investigation Case"},
+  {"fieldname":"cb_main","fieldtype":"Column Break"},
+  {"fieldname":"status","fieldtype":"Select","label":"Status","options":"Pending\nPaid\nInvoiced\nCancelled\nRefunded","default":"Pending","in_list_view":1,"in_standard_filter":1},
+  {"fieldname":"is_urgent","fieldtype":"Check","label":"Urgent (apply multiplier)"},
+  {"fieldname":"quantity","fieldtype":"Int","label":"Quantity","default":1,"reqd":1},
+  {"fieldname":"sb_pricing","fieldtype":"Section Break","label":"Pricing"},
+  {"fieldname":"unit_price","fieldtype":"Currency","label":"Unit Price","read_only":1,"in_list_view":1},
+  {"fieldname":"discount_applied","fieldtype":"Percent","label":"Discount Applied","read_only":1},
+  {"fieldname":"cb_pricing","fieldtype":"Column Break"},
+  {"fieldname":"total","fieldtype":"Currency","label":"Total","read_only":1,"in_list_view":1},
+  {"fieldname":"currency","fieldtype":"Select","label":"Currency","options":"EUR\nRON\nUSD","default":"EUR","read_only":1},
+  {"fieldname":"sb_pay","fieldtype":"Section Break","label":"Payment","collapsible":1},
+  {"fieldname":"stripe_session_id","fieldtype":"Data","label":"Stripe Session ID","read_only":1},
+  {"fieldname":"stripe_payment_intent","fieldtype":"Data","label":"Stripe Payment Intent","read_only":1},
+  {"fieldname":"cb_pay","fieldtype":"Column Break"},
+  {"fieldname":"paid_at","fieldtype":"Datetime","label":"Paid At","read_only":1},
+  {"fieldname":"sb_erp","fieldtype":"Section Break","label":"ERP & Affiliate","collapsible":1},
+  {"fieldname":"erp_invoice_id","fieldtype":"Data","label":"ERP Invoice ID","read_only":1},
+  {"fieldname":"referred_by","fieldtype":"Link","label":"Referred By (Affiliate)","options":"Investigator"}
+ ],
+ "permissions": [
+  {"role":"Investigation Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1,"print":1,"email":1,"share":1},
+  {"role":"Billing Manager","read":1,"write":1,"create":1,"report":1,"export":1,"print":1,"email":1},
+  {"role":"Investigator","read":1},
+  {"role":"Lawyer","read":1},
+  {"role":"Accountant","read":1}
+ ]
+}
