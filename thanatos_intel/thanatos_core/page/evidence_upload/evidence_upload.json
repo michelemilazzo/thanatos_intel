@@ -1,0 +1,15 @@
+{
+ "doctype": "Page",
+ "name": "evidence-upload",
+ "module": "Thanatos Core",
+ "page_name": "evidence-upload",
+ "title": "Evidence Upload",
+ "icon": "upload",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {"role": "Investigation Manager"},
+  {"role": "Investigator"},
+  {"role": "System Manager"}
+ ]
+}
