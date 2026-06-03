@@ -27,6 +27,12 @@ class InvestigationCase(Document):
 			"hours_spent": 0,
 		})
 		self.db_update()
+		# Drive folder per il caso (best-effort, async-safe)
+		try:
+			from thanatos_intel.integrations.drive_bridge import ensure_case_folder
+			ensure_case_folder(self.name)
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), f"InvestigationCase.after_insert drive {self.name}")
 
 	def on_update(self):
 		# Se status passa a Closed, valorizza closing_date e aggiorna stats client

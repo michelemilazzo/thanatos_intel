@@ -45,7 +45,7 @@ class UsageEvent(Document):
 		self.total = round(float(self.quantity or 1) * float(self.unit_price or 0), 2)
 
 	def on_payment_confirmed(self, stripe_session_id: str | None = None, stripe_payment_intent: str | None = None):
-		# Chiamato dal webhook Stripe nel Blocco 8. Stub minimale: marca Paid + timestamp.
+		# Chiamato dal webhook Stripe nel Blocco 8.
 		self.status = "Paid"
 		self.paid_at = now_datetime()
 		if stripe_session_id:
@@ -53,4 +53,9 @@ class UsageEvent(Document):
 		if stripe_payment_intent:
 			self.stripe_payment_intent = stripe_payment_intent
 		self.save(ignore_permissions=True)
-		# Hook futuro: ERP bridge -> Sales Invoice
+		# ERP bridge: crea Sales Invoice + Payment Entry
+		try:
+			from thanatos_intel.integrations.erpnext_billing import after_payment
+			after_payment(self.name)
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), f"UsageEvent.on_payment_confirmed ERP {self.name}")
