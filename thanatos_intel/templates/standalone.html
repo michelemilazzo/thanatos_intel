@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="{{ lang or 'it' }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{% block title %}{{ title or "Thanatos Intel" }}{% endblock %}</title>
+{%- block head -%}{%- endblock -%}
+</head>
+<body>
+{% block content %}{% endblock %}
+</body>
+</html>
