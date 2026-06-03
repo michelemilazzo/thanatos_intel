@@ -1,0 +1,22 @@
+{
+  "doctype": "DocType",
+  "name": "Stripe Event",
+  "module": "Billing",
+  "autoname": "field:event_id",
+  "title_field": "event_type",
+  "fields": [
+    {"fieldname": "event_id", "fieldtype": "Data", "label": "Stripe Event ID", "reqd": 1, "unique": 1, "in_list_view": 1, "length": 80},
+    {"fieldname": "event_type", "fieldtype": "Data", "label": "Event Type", "in_list_view": 1, "in_standard_filter": 1, "length": 64},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "received_at", "fieldtype": "Datetime", "label": "Received At", "in_list_view": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "received\nprocessed\nfailed\nignored", "default": "received", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "is_signature_valid", "fieldtype": "Check", "label": "Signature Valid"},
+    {"fieldname": "sb_payload", "fieldtype": "Section Break"},
+    {"fieldname": "payload", "fieldtype": "Code", "label": "Payload", "options": "JSON"},
+    {"fieldname": "sb_err", "fieldtype": "Section Break"},
+    {"fieldname": "error_message", "fieldtype": "Long Text", "label": "Error"}
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

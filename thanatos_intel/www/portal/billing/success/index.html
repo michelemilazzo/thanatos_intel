@@ -1,0 +1,26 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block head %}
+<style>
+body{margin:0;background:#0A0E1A;color:#E8E9F0;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{max-width:480px;text-align:center;padding:48px 36px;border:1px solid #C8A96E;border-radius:4px;
+  background:linear-gradient(135deg,#111729 0%,#0D1B3E 100%)}
+.check{width:64px;height:64px;border-radius:50%;border:2px solid #C8A96E;margin:0 auto 18px;
+  display:flex;align-items:center;justify-content:center;color:#C8A96E;font-size:36px;font-family:Georgia,serif}
+h1{font-family:Georgia,serif;font-weight:400;font-size:26px;color:#FFF;margin:0 0 8px;letter-spacing:1px}
+p{color:#7A8294;font-size:13px;line-height:1.6;margin:0 0 24px}
+.btn{display:inline-block;padding:12px 24px;border:1px solid #C8A96E;color:#0A0E1A;background:#C8A96E;
+  text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+.sid{font-size:10px;color:#4A5168;font-family:monospace;margin-top:18px;word-break:break-all}
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="check">✓</div>
+  <h1>Pagamento confermato</h1>
+  <p>Grazie. Il tuo abbonamento è stato attivato. Riceverai entro pochi secondi la conferma via webhook.</p>
+  <a class="btn" href="/portal">Vai al portale</a>
+  {% if session_id %}<div class="sid">Session: {{ session_id }}</div>{% endif %}
+</div>
+{% endblock %}

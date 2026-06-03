@@ -1,0 +1,30 @@
+{
+  "doctype": "DocType",
+  "name": "Stripe Subscription",
+  "module": "Billing",
+  "autoname": "field:stripe_subscription_id",
+  "title_field": "investigation_client",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "stripe_subscription_id", "fieldtype": "Data", "label": "Stripe Subscription ID", "reqd": 1, "unique": 1, "in_list_view": 1, "length": 64},
+    {"fieldname": "stripe_customer_id", "fieldtype": "Data", "label": "Stripe Customer ID", "in_list_view": 1, "length": 64},
+    {"fieldname": "investigation_client", "fieldtype": "Link", "label": "Investigation Client", "options": "Investigation Client", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "subscription_plan", "fieldtype": "Link", "label": "Plan", "options": "Investigation Subscription Plan"},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "incomplete\nactive\ntrialing\npast_due\ncanceled\nunpaid", "default": "incomplete", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "amount", "fieldtype": "Currency", "label": "Amount"},
+    {"fieldname": "currency", "fieldtype": "Data", "label": "Currency", "default": "EUR", "length": 8},
+    {"fieldname": "sb_dates", "fieldtype": "Section Break"},
+    {"fieldname": "current_period_start", "fieldtype": "Datetime", "label": "Current Period Start"},
+    {"fieldname": "current_period_end", "fieldtype": "Datetime", "label": "Current Period End"},
+    {"fieldname": "col_2", "fieldtype": "Column Break"},
+    {"fieldname": "trial_end", "fieldtype": "Datetime", "label": "Trial End"},
+    {"fieldname": "canceled_at", "fieldtype": "Datetime", "label": "Canceled At"},
+    {"fieldname": "sb_meta", "fieldtype": "Section Break"},
+    {"fieldname": "raw_payload", "fieldtype": "Code", "label": "Last Payload", "options": "JSON", "read_only": 1}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

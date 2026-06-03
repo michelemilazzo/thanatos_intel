@@ -1,0 +1,141 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--navy:#0D1B3E;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;--border:#1F2842;--green:#4caf50}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1180px;margin:0 auto;padding:28px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+.hero{padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:32px;color:#FFF;margin:0 0 6px}
+.hero p{margin:0;color:var(--grey);font-size:13px}
+
+.banner{padding:12px 16px;border:1px solid var(--gold-soft);background:rgba(200,169,110,.06);
+  border-radius:4px;font-size:12px;color:var(--gold);margin-bottom:24px;letter-spacing:.5px}
+.banner.warn{border-color:#5a3a0a;color:#e8b85c;background:rgba(232,184,92,.08)}
+
+.current{margin-bottom:36px;padding:18px;border:1px solid var(--gold);border-radius:4px;
+  background:linear-gradient(135deg,#111729 0%,#0D1B3E 100%)}
+.current .label{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase}
+.current h2{margin:6px 0 4px;color:#FFF;font-family:Georgia,serif;font-weight:400;font-size:22px}
+.current .meta{color:var(--grey);font-size:12px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.plan{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:24px;
+  display:flex;flex-direction:column;transition:border-color .2s,transform .2s}
+.plan.highlight{border-color:var(--gold)}
+.plan:hover{transform:translateY(-2px);border-color:var(--gold)}
+.plan .lvl{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase}
+.plan h3{font-family:Georgia,serif;font-weight:400;font-size:22px;color:#FFF;margin:6px 0 4px}
+.plan .price{font-family:Georgia,serif;color:var(--gold);font-size:34px;margin:14px 0 4px}
+.plan .price small{font-size:12px;color:var(--grey)}
+.plan ul{list-style:none;padding:0;margin:18px 0;font-size:12px;color:#D0D2DC}
+.plan li{padding:6px 0;border-bottom:1px dashed var(--border)}
+.plan li:last-child{border-bottom:0}
+.plan li::before{content:"·  ";color:var(--gold)}
+.plan .cta{margin-top:auto}
+
+.btn{display:block;width:100%;padding:12px;text-align:center;background:transparent;
+  border:1px solid var(--gold);color:var(--gold);text-decoration:none;font-size:11px;
+  letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit}
+.btn:hover{background:var(--gold);color:var(--dark)}
+.btn.solid{background:var(--gold);color:var(--dark)}
+.btn.solid:hover{background:#B8975A}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+
+.footer-note{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
+  font-size:10px;color:var(--grey);text-align:center;letter-spacing:1.5px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="shell">
+  <div class="crumb"><a href="/portal">← Portal</a> · Billing</div>
+
+  <div class="hero">
+    <h1>Piani & Fatturazione</h1>
+    <p>Gestione abbonamento Thanatos Intel · pagamento sicuro Stripe</p>
+  </div>
+
+  {% if not stripe_configured %}
+  <div class="banner warn">⚠ Stripe non configurato. I bottoni di checkout sono disabilitati finché l'admin imposta stripe_secret_key.</div>
+  {% endif %}
+
+  {% if not client %}
+  <div class="banner">Il tuo utente non risulta legato a un Investigation Client. Contatta l'amministratore.</div>
+  {% endif %}
+
+  {% if current_sub %}
+  <div class="current">
+    <div class="label">Abbonamento attivo</div>
+    <h2>{{ current_sub.subscription_plan }} · {{ current_sub.status|upper }}</h2>
+    <div class="meta">
+      {{ current_sub.amount }} {{ current_sub.currency }} / mese
+      {% if current_sub.current_period_end %} · rinnovo {{ frappe.utils.format_datetime(current_sub.current_period_end, 'dd/MM/yyyy') }}{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid">
+    {% for p in plans %}
+    <div class="plan {% if current_sub and current_sub.subscription_plan == p.name %}highlight{% endif %}">
+      <div class="lvl">{{ p.plan_level }}</div>
+      <h3>{{ p.plan_name }}</h3>
+      <div class="price">€{{ "%.0f"|format(p.monthly_price) }}<small> / mese</small></div>
+
+      <ul>
+        <li>{{ p.included_verifications or '∞' }} verifiche / mese</li>
+        <li>{{ p.included_analyses or '∞' }} analisi / mese</li>
+        <li>{{ p.included_reports or '∞' }} report / mese</li>
+        <li>{{ p.max_users or 1 }} utenti</li>
+        <li>{{ p.support_level }}</li>
+      </ul>
+
+      <div class="cta">
+        {% if current_sub and current_sub.subscription_plan == p.name %}
+        <button class="btn" disabled>✓ Piano attuale</button>
+        {% else %}
+        <button class="btn solid" {% if not stripe_configured or not client %}disabled{% endif %}
+                onclick="checkout('{{ p.name|e }}')">Attiva →</button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="footer-note">
+    Pagamento sicuro via Stripe · SCA / PSD2 · GDPR compliant · IVA inclusa
+  </div>
+</div>
+
+<script>
+const CLIENT = {{ (client.name if client else '')|tojson }};
+const CSRF = "{{ frappe.sessions.get_csrf_token() }}";
+
+async function checkout(planName) {
+  if (!CLIENT) { alert("Cliente non collegato"); return; }
+  try {
+    const r = await fetch("/api/method/thanatos_intel.integrations.stripe_bridge.create_checkout_session", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Content-Type": "application/x-www-form-urlencoded", "X-Frappe-CSRF-Token": CSRF},
+      body: new URLSearchParams({client_name: CLIENT, plan_name: planName}).toString(),
+    });
+    const j = await r.json();
+    if (j.message && j.message.url) {
+      window.location = j.message.url;
+    } else {
+      alert("Errore: " + (j._error_message || j.exc || JSON.stringify(j)));
+    }
+  } catch (e) {
+    alert("Errore: " + e.message);
+  }
+}
+</script>
+{% endblock %}

@@ -31,6 +31,10 @@
   {"fieldname":"support_level","fieldtype":"Select","label":"Support Level","options":"Email\nPriority\nDedicated Account Manager","default":"Email"},
   {"fieldname":"sb_erp","fieldtype":"Section Break","label":"ERPNext","collapsible":1},
   {"fieldname":"erp_item_code","fieldtype":"Data","label":"ERP Item Code"},
+  {"fieldname":"sb_stripe","fieldtype":"Section Break","label":"Stripe","collapsible":1},
+  {"fieldname":"stripe_product_id","fieldtype":"Data","label":"Stripe Product ID","read_only":1,"length":64},
+  {"fieldname":"cb_stripe","fieldtype":"Column Break"},
+  {"fieldname":"stripe_price_id","fieldtype":"Data","label":"Stripe Price ID","read_only":1,"length":64},
   {"fieldname":"sb_desc","fieldtype":"Section Break","label":"Description"},
   {"fieldname":"description","fieldtype":"Text Editor","label":"Description"}
  ],
