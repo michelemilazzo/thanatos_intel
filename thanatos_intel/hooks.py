@@ -23,10 +23,20 @@ fixtures=[
  'Role',
  {'doctype': 'Investigation Subscription Plan', 'filters': []},
  {'doctype': 'Service Catalog', 'filters': []},
+ {'doctype': 'Infrastructure Cost', 'filters': []},
 ]
 
 doc_events={}
-scheduler_events={'cron':{},'all':[],'daily':[],'daily_long':[],'weekly':[],'weekly_long':[],'monthly':[],'monthly_long':[]}
+scheduler_events={
+ 'cron':{},
+ 'all':[],
+ 'daily':[],
+ 'daily_long':[],
+ 'weekly':[],
+ 'weekly_long':[],
+ 'monthly':['thanatos_intel.billing.cost_invoicing.scheduled_monthly_cost_invoicing'],
+ 'monthly_long':[]
+}
 website_route_rules=[
  {'from_route': '/portal/case/<name>', 'to_route': 'portal/case'},
 ]

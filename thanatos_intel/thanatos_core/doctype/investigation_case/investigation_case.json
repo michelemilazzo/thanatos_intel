@@ -27,6 +27,8 @@
   {"fieldname":"sb_desc","fieldtype":"Section Break","label":"Description"},
   {"fieldname":"description","fieldtype":"Text Editor","label":"Description"},
   {"fieldname":"summary","fieldtype":"Text","label":"Summary / AI Draft"},
+  {"fieldname":"sb_assignments","fieldtype":"Section Break","label":"Case Assignments / Commissions","collapsible":1},
+  {"fieldname":"case_assignments","fieldtype":"Table","label":"Assignments","options":"Case Assignment","description":"Investigatori / Agenzie / Avvocati / Commercialisti che gestiscono il caso con relativa % commissione su revenue"},
   {"fieldname":"sb_entities","fieldtype":"Section Break","label":"Entities Involved"},
   {"fieldname":"case_entities","fieldtype":"Table","label":"Entities","options":"Case Entity"},
   {"fieldname":"sb_activities","fieldtype":"Section Break","label":"Activities Log"},

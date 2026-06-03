@@ -1,0 +1,41 @@
+{
+  "doctype": "DocType",
+  "name": "Revenue Distribution",
+  "module": "Billing",
+  "autoname": "format:RD-{YYYY}-{####}",
+  "title_field": "title",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "title", "fieldtype": "Data", "label": "Title", "in_list_view": 1},
+    {"fieldname": "source_doctype", "fieldtype": "Link", "label": "Source DocType", "options": "DocType", "reqd": 1},
+    {"fieldname": "source_name", "fieldtype": "Dynamic Link", "label": "Source", "options": "source_doctype", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "cb_1", "fieldtype": "Column Break"},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case", "in_standard_filter": 1},
+    {"fieldname": "investigation_client", "fieldtype": "Link", "label": "Client", "options": "Investigation Client", "in_standard_filter": 1},
+    {"fieldname": "stripe_charge_id", "fieldtype": "Data", "label": "Stripe Charge / Invoice ID"},
+    {"fieldname": "sb_amounts", "fieldtype": "Section Break", "label": "Amounts"},
+    {"fieldname": "gross_amount", "fieldtype": "Currency", "label": "Gross", "reqd": 1, "in_list_view": 1, "description": "Incassato da cliente"},
+    {"fieldname": "stripe_fee", "fieldtype": "Currency", "label": "Stripe Fee"},
+    {"fieldname": "vat_amount", "fieldtype": "Currency", "label": "VAT"},
+    {"fieldname": "net_amount", "fieldtype": "Currency", "label": "Net (gross - fee - VAT)", "read_only": 1, "in_list_view": 1},
+    {"fieldname": "cb_2", "fieldtype": "Column Break"},
+    {"fieldname": "currency", "fieldtype": "Data", "label": "Currency", "default": "EUR", "length": 8},
+    {"fieldname": "infra_cost_share", "fieldtype": "Currency", "label": "Infra Cost Share", "read_only": 1},
+    {"fieldname": "commissions_total", "fieldtype": "Currency", "label": "Commissions Total", "read_only": 1},
+    {"fieldname": "profit_pool", "fieldtype": "Currency", "label": "Profit Pool (net - infra - commissions)", "read_only": 1},
+    {"fieldname": "thanatos_share", "fieldtype": "Currency", "label": "Thanatos 50%", "read_only": 1},
+    {"fieldname": "mmos_share", "fieldtype": "Currency", "label": "MMOS 50%", "read_only": 1},
+    {"fieldname": "sb_split", "fieldtype": "Section Break", "label": "Split Detail"},
+    {"fieldname": "split_lines", "fieldtype": "Table", "label": "Split Lines", "options": "Revenue Split Line"},
+    {"fieldname": "sb_status", "fieldtype": "Section Break", "label": "Status"},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Draft\nComputed\nPayouts Queued\nPayouts Done\nReconciled", "default": "Draft", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "computed_at", "fieldtype": "Datetime", "label": "Computed At", "read_only": 1},
+    {"fieldname": "cb_3", "fieldtype": "Column Break"},
+    {"fieldname": "reconciled_at", "fieldtype": "Datetime", "label": "Reconciled At", "read_only": 1},
+    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"}
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "doctype": "DocType",
+  "name": "Party Payout",
+  "module": "Billing",
+  "autoname": "format:PAYOUT-{YYYY}-{####}",
+  "title_field": "beneficiary_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "beneficiary_type", "fieldtype": "Select", "label": "Beneficiary Type", "options": "Investigator\nAgency\nLawyer\nAccountant\nConsultant\nMMOS\nThanatos", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "beneficiary_name", "fieldtype": "Data", "label": "Beneficiary", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "stripe_connect_account_id", "fieldtype": "Data", "label": "Stripe Connect Acct"},
+    {"fieldname": "cb_1", "fieldtype": "Column Break"},
+    {"fieldname": "revenue_distribution", "fieldtype": "Link", "label": "Revenue Distribution", "options": "Revenue Distribution", "in_list_view": 1},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case"},
+    {"fieldname": "amount", "fieldtype": "Currency", "label": "Amount", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "currency", "fieldtype": "Data", "label": "Currency", "default": "EUR", "length": 8},
+    {"fieldname": "sb_status", "fieldtype": "Section Break", "label": "Status"},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Pending\nQueued\nTransferred\nManual Bonifico\nFailed", "default": "Pending", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "stripe_transfer_id", "fieldtype": "Data", "label": "Stripe Transfer ID", "read_only": 1},
+    {"fieldname": "cb_2", "fieldtype": "Column Break"},
+    {"fieldname": "queued_at", "fieldtype": "Datetime", "label": "Queued At"},
+    {"fieldname": "completed_at", "fieldtype": "Datetime", "label": "Completed At"},
+    {"fieldname": "failure_reason", "fieldtype": "Small Text", "label": "Failure Reason"}
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
+  ]
+}

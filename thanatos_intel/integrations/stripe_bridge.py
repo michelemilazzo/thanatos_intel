@@ -285,7 +285,7 @@ def handle_event(event: dict) -> dict:
     if etype == "invoice.paid":
         sub_id = obj.get("subscription")
         if sub_id:
-            return sync_subscription(sub_id)
+            sync_subscription(sub_id)
         ue_name = (obj.get("metadata") or {}).get("usage_event")
         if ue_name:
             try:
@@ -293,6 +293,14 @@ def handle_event(event: dict) -> dict:
                 after_payment(ue_name)
             except Exception:
                 frappe.log_error(frappe.get_traceback(), "after_payment failed")
+        try:
+            from thanatos_intel.billing.revenue_engine import create_distribution_from_stripe_invoice
+            inv_id = obj.get("id")
+            if inv_id:
+                rd_name = create_distribution_from_stripe_invoice(inv_id)
+                return {"ok": True, "revenue_distribution": rd_name}
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "revenue split failed")
         return {"ok": True}
 
     if etype == "invoice.payment_failed":

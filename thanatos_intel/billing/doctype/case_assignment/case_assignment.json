@@ -1,0 +1,15 @@
+{
+  "doctype": "DocType",
+  "name": "Case Assignment",
+  "module": "Billing",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "assignee_type", "fieldtype": "Select", "label": "Type", "options": "Investigator\nAgency\nLawyer\nAccountant\nConsultant", "reqd": 1, "in_list_view": 1, "columns": 2},
+    {"fieldname": "assignee", "fieldtype": "Data", "label": "Assignee", "reqd": 1, "in_list_view": 1, "columns": 3, "description": "Nome o link Investigator/User"},
+    {"fieldname": "assignee_email", "fieldtype": "Data", "label": "Email", "options": "Email", "columns": 2},
+    {"fieldname": "commission_pct", "fieldtype": "Percent", "label": "Commission %", "in_list_view": 1, "columns": 2, "description": "% sul revenue del caso"},
+    {"fieldname": "stripe_connect_account_id", "fieldtype": "Data", "label": "Stripe Connect Acct", "columns": 2, "description": "acct_xxx per pagamento automatico"},
+    {"fieldname": "role_description", "fieldtype": "Small Text", "label": "Role / Notes"},
+    {"fieldname": "is_primary", "fieldtype": "Check", "label": "Primary"}
+  ]
+}

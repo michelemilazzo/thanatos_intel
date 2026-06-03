@@ -1,0 +1,16 @@
+{
+  "doctype": "DocType",
+  "name": "Revenue Split Line",
+  "module": "Billing",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "line_type", "fieldtype": "Select", "label": "Type", "options": "Infrastructure Cost\nThird Party Commission\nThanatos Profit\nMMOS Profit\nStripe Fee\nVAT\nOther", "reqd": 1, "in_list_view": 1, "columns": 2},
+    {"fieldname": "label", "fieldtype": "Data", "label": "Label", "in_list_view": 1, "columns": 3, "reqd": 1},
+    {"fieldname": "beneficiary_type", "fieldtype": "Select", "label": "Beneficiary", "options": "MMOS\nThanatos\nInvestigator\nAgency\nLawyer\nAccountant\nConsultant\nProvider\nStripe", "columns": 2},
+    {"fieldname": "beneficiary", "fieldtype": "Data", "label": "Beneficiary Name", "columns": 2},
+    {"fieldname": "pct", "fieldtype": "Percent", "label": "%", "columns": 1},
+    {"fieldname": "amount", "fieldtype": "Currency", "label": "Amount", "reqd": 1, "in_list_view": 1, "columns": 2},
+    {"fieldname": "stripe_transfer_id", "fieldtype": "Data", "label": "Stripe Transfer ID", "read_only": 1},
+    {"fieldname": "payout_status", "fieldtype": "Select", "label": "Payout", "options": "Pending\nQueued\nTransferred\nManual\nNot Applicable", "default": "Pending"}
+  ]
+}
