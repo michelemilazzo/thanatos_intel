@@ -1,33 +1,55 @@
 # Copyright (c) 2026, OneKeyCo
-# For license information, please see license.txt
 
 import frappe
 from frappe.model.document import Document
+from frappe.utils import now_datetime, today
 
 
 class InvestigationCase(Document):
-    """Main investigative case container.
+	def before_insert(self):
+		# Auto-numbering CASE-YYYY-NNNN per anno
+		if not self.case_number:
+			self.case_number = generate_case_number()
 
-    This controller intentionally stays lightweight for MVP v0.1.
-    Business logic will be expanded progressively with evidence,
-    risk scoring, reporting and OSINT workflows.
-    """
+	def validate(self):
+		if self.case_title:
+			self.case_title = self.case_title.strip()
+		if not self.status:
+			self.status = "Draft"
 
-    def validate(self):
-        self.set_default_status()
-        self.normalize_case_title()
+	def after_insert(self):
+		# Log iniziale come Case Activity
+		self.append("case_activities", {
+			"activity_date": now_datetime(),
+			"activity_type": "Report",
+			"description": f"Caso aperto da {frappe.session.user}",
+			"operator": frappe.session.user,
+			"hours_spent": 0,
+		})
+		self.db_update()
 
-    def set_default_status(self):
-        if not self.status:
-            self.status = "Open"
+	def on_update(self):
+		# Se status passa a Closed, valorizza closing_date e aggiorna stats client
+		if self.status == "Closed" and not self.closing_date:
+			self.db_set("closing_date", today(), update_modified=False)
+		if self.client:
+			n = frappe.db.count("Investigation Case", {"client": self.client})
+			frappe.db.set_value("Investigation Client", self.client, "total_cases", n)
 
-    def normalize_case_title(self):
-        if self.case_title:
-            self.case_title = self.case_title.strip()
 
-    def before_save(self):
-        self.add_audit_note()
-
-    def add_audit_note(self):
-        """Placeholder for future immutable audit trail integration."""
-        return None
+def generate_case_number() -> str:
+	from datetime import datetime
+	year = datetime.now().year
+	prefix = f"CASE-{year}-"
+	last = frappe.db.sql(
+		"SELECT case_number FROM `tabInvestigation Case` WHERE case_number LIKE %s ORDER BY case_number DESC LIMIT 1",
+		(prefix + "%",),
+	)
+	if last:
+		try:
+			n = int(last[0][0].split("-")[-1])
+		except Exception:
+			n = 0
+	else:
+		n = 0
+	return f"{prefix}{(n + 1):04d}"

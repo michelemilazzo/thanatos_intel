@@ -47,14 +47,15 @@ def handle_upload(case_title: str = "", case_type: str = "Fraud"):
 	if not files:
 		return {"error": "no files"}
 
-	# Investigation Case (schema attuale: campi case_title, status, summary)
-	# Lo schema sarà esteso al Blocco 3 con case_type, case_number CASE-YYYY-NNNN, ecc.
+	# Investigation Case (schema B3 con case_number CASE-YYYY-NNNN + case_type obbligatorio)
 	title = case_title or f"Upload {now_datetime():%Y-%m-%d %H:%M}"
+	valid_types = ("Fraud", "Corporate", "Cyber", "Seizure", "Family", "Asset Recovery")
 	case_doc = frappe.get_doc({
 		"doctype": "Investigation Case",
 		"case_title": title,
-		"status": "Open",
-		"summary": f"[{case_type}] Caso creato da upload-test da {frappe.session.user}",
+		"case_type": case_type if case_type in valid_types else "Fraud",
+		"status": "Draft",
+		"summary": f"Caso creato da upload-test da {frappe.session.user}",
 	})
 	case_doc.insert(ignore_permissions=True)
 
@@ -145,15 +146,23 @@ def analyze_case(case_name: str):
 		limit=20,
 	)
 
-	# Prompt minimalista — niente upload del contenuto dei file (solo metadati) per non spendere token
+	# Carica codici reali del Service Catalog (top 30 servizi per category del case)
+	catalog_hint = _build_catalog_hint(case.get("case_type") or "Fraud")
+
 	prompt = (
-		"Sei un analista investigativo Thanatos. Hai i metadati di un nuovo caso. "
-		"Genera una BOZZA molto breve (max 6 righe) in italiano con: "
-		"(1) tipo di analisi consigliata, (2) servizi catalogo applicabili (codici SVC-*), "
-		"(3) red flags da verificare. Niente conclusioni — solo prossimi passi.\n\n"
-		f"Caso: {case.case_title}\n"
-		f"Evidence ({len(evidence_list)}):\n"
-		+ "\n".join(f"- {e.evidence_name} [{e.evidence_type}] hash={(e.hash_value or '')[:12]}…" for e in evidence_list)
+		"Sei un analista investigativo della piattaforma Thanatos Intel. "
+		"Ti vengono passati i metadati di un nuovo caso e i file di evidence acquisiti. "
+		"Genera una BOZZA tecnica MOLTO BREVE (max 8 righe) in italiano contenente:\n"
+		"1) Tipo di analisi consigliata\n"
+		"2) 3-5 servizi catalogo applicabili USANDO ESCLUSIVAMENTE codici SVC-* dalla lista qui sotto\n"
+		"3) Red flag specifiche da verificare sui file allegati\n"
+		"4) Prossimo passo operativo (NON conclusioni)\n\n"
+		f"=== CASO ===\n"
+		f"Titolo: {case.case_title}\n"
+		f"Tipo: {case.get('case_type') or 'N/A'}\n\n"
+		f"=== EVIDENCE ({len(evidence_list)}) ===\n"
+		+ "\n".join(f"- {e.evidence_name} [{e.evidence_type}] hash={(e.hash_value or '')[:12]}" for e in evidence_list)
+		+ f"\n\n=== SERVIZI CATALOGO APPLICABILI ===\n{catalog_hint}\n"
 	)
 
 	# Tenta Ollama qwen2.5 prima (locale, gratis, nessun refusal su task investigativi)
@@ -163,6 +172,30 @@ def analyze_case(case_name: str):
 	case.save(ignore_permissions=True)
 	frappe.db.commit()
 	return {"summary": summary.strip(), "case": case_name, "model": model_used}
+
+
+def _build_catalog_hint(case_type: str) -> str:
+	# Mappa case_type ai prefissi categoria più rilevanti, sempre includendo verifiche rapide.
+	priority = {
+		"Fraud": ["AF", "AD", "VR"],
+		"Corporate": ["CO", "FI", "VR"],
+		"Cyber": ["CY", "AD", "VR"],
+		"Seizure": ["SE", "FI", "CO"],
+		"Family": ["VR", "AD", "IC"],
+		"Asset Recovery": ["FI", "CO", "IC"],
+	}.get(case_type, ["VR", "AD", "AF"])
+	rows = []
+	for prefix in priority:
+		recs = frappe.get_all(
+			"Service Catalog",
+			filters={"name": ["like", f"SVC-{prefix}-%"], "is_active": 1},
+			fields=["name", "service_name", "price"],
+			limit=10,
+			order_by="name",
+		)
+		for r in recs:
+			rows.append(f"{r.name} | {r.service_name} | EUR {int(r.price)}")
+	return "\n".join(rows[:30])
 
 
 def _ai_call(prompt: str) -> tuple[str, str]:

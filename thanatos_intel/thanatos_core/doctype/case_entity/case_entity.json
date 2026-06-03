@@ -1,0 +1,13 @@
+{
+ "doctype": "DocType",
+ "name": "Case Entity",
+ "module": "Thanatos Core",
+ "istable": 1,
+ "editable_grid": 1,
+ "fields": [
+  {"fieldname":"entity","fieldtype":"Link","label":"Entity","options":"Investigation Entity","reqd":1,"in_list_view":1,"columns":3},
+  {"fieldname":"entity_type","fieldtype":"Data","label":"Type","fetch_from":"entity.entity_type","read_only":1,"in_list_view":1,"columns":2},
+  {"fieldname":"role_in_case","fieldtype":"Select","label":"Role","options":"Subject\nVictim\nWitness\nRelated","default":"Subject","in_list_view":1,"columns":2},
+  {"fieldname":"notes","fieldtype":"Data","label":"Notes","in_list_view":1,"columns":4}
+ ]
+}
