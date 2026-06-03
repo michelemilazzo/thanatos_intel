@@ -11,11 +11,11 @@ app_email='info@onekeyco.com'
 app_docs='https://thanatos.onekeyco.com'
 app_country='IT'
 
-app_logo_url='/assets/thanatos_intel/images/thanatos-logo.svg'
+app_logo_url='/assets/thanatos_intel/images/thanatos-icon-white.svg'
 brand_html='<img src="/assets/thanatos_intel/images/thanatos-logo.svg" alt="Thanatos Intel" style="height:32px"/>'
 website_context={
- 'favicon': '/assets/thanatos_intel/images/thanatos-icon.svg',
- 'splash_image': '/assets/thanatos_intel/images/thanatos-logo.svg',
+ 'favicon': '/assets/thanatos_intel/images/thanatos-icon-white.svg',
+ 'splash_image': '/assets/thanatos_intel/images/thanatos-logo-white.svg',
 }
 
 after_install='thanatos_intel.install.after_install'
