@@ -20,7 +20,7 @@
   {"fieldname":"platform_user","fieldtype":"Link","label":"Platform User","options":"User"},
   {"fieldname":"erp_customer_id","fieldtype":"Data","label":"ERP Customer ID"},
   {"fieldname":"cb_link","fieldtype":"Column Break"},
-  {"fieldname":"subscription_plan","fieldtype":"Link","label":"Subscription Plan","options":"Subscription Plan"},
+  {"fieldname":"subscription_plan","fieldtype":"Link","label":"Subscription Plan","options":"Investigation Subscription Plan"},
   {"fieldname":"subscription_status","fieldtype":"Select","label":"Subscription Status","options":"None\nActive\nSuspended\nExpired","default":"None"},
   {"fieldname":"subscription_started_at","fieldtype":"Datetime","label":"Subscription Started At"},
   {"fieldname":"subscription_renews_at","fieldtype":"Datetime","label":"Subscription Renews At"},

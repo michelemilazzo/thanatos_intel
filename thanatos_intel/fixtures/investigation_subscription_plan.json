@@ -1,6 +1,6 @@
 [
  {
-  "doctype": "Subscription Plan",
+  "doctype": "Investigation Subscription Plan",
   "name": "Basic",
   "plan_name": "Basic",
   "plan_level": "Basic",
@@ -20,7 +20,7 @@
   "support_level": "Email"
  },
  {
-  "doctype": "Subscription Plan",
+  "doctype": "Investigation Subscription Plan",
   "name": "Professional",
   "plan_name": "Professional",
   "plan_level": "Professional",
@@ -40,7 +40,7 @@
   "support_level": "Priority"
  },
  {
-  "doctype": "Subscription Plan",
+  "doctype": "Investigation Subscription Plan",
   "name": "Legal",
   "plan_name": "Legal",
   "plan_level": "Legal",
@@ -60,7 +60,7 @@
   "support_level": "Priority"
  },
  {
-  "doctype": "Subscription Plan",
+  "doctype": "Investigation Subscription Plan",
   "name": "Enterprise",
   "plan_name": "Enterprise",
   "plan_level": "Enterprise",

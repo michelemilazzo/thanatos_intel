@@ -14,7 +14,7 @@ app_country='IT'
 after_install='thanatos_intel.install.after_install'
 fixtures=[
  'Role',
- {'doctype': 'Subscription Plan', 'filters': []},
+ {'doctype': 'Investigation Subscription Plan', 'filters': []},
  {'doctype': 'Service Catalog', 'filters': []},
 ]
 

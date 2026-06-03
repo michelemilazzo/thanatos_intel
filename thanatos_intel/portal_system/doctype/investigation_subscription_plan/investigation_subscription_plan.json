@@ -1,6 +1,6 @@
 {
  "doctype": "DocType",
- "name": "Subscription Plan",
+ "name": "Investigation Subscription Plan",
  "module": "Portal System",
  "track_changes": 1,
  "autoname": "field:plan_name",
