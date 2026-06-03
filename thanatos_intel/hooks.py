@@ -20,7 +20,9 @@ fixtures=[
 
 doc_events={}
 scheduler_events={'cron':{},'all':[],'daily':[],'daily_long':[],'weekly':[],'weekly_long':[],'monthly':[],'monthly_long':[]}
-website_route_rules=[]
+website_route_rules=[
+ {'from_route': '/portal/case/<name>', 'to_route': 'portal/case'},
+]
 permission_query_conditions={}
 has_permission={
  'Investigation Case':'thanatos_intel.permissions.can_read_thanatos_doc',

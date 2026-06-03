@@ -1,0 +1,137 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root { --dark:#0A0E1A;--navy:#0D1B3E;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;--border:#1F2842; }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1080px;margin:0 auto;padding:28px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+.head{padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.nr{font-family:Georgia,serif;color:var(--gold);font-size:13px;letter-spacing:3px}
+h1{font-family:Georgia,serif;font-weight:400;font-size:28px;margin:6px 0 12px;color:#FFF;letter-spacing:1px}
+.tagrow{display:flex;gap:8px;flex-wrap:wrap}
+.tag{font-size:10px;padding:4px 10px;border-radius:2px;letter-spacing:1.5px;text-transform:uppercase;
+  border:1px solid var(--border);background:var(--panel-2);color:var(--grey)}
+.tag.active{color:var(--gold);border-color:var(--gold-soft)}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}
+.kv{background:var(--panel);border:1px solid var(--border);padding:12px 16px;border-radius:4px}
+.kv .l{font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px}
+.kv .v{font-size:14px;color:#FFF;margin-top:4px}
+
+.section{margin-top:36px}
+.section-title{font-family:Georgia,serif;font-size:14px;color:#FFF;letter-spacing:2.5px;
+  text-transform:uppercase;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--gold-soft)}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:10px 12px;background:var(--panel-2);color:var(--gold);
+  font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:#E8E9F0}
+tr:hover td{background:var(--panel)}
+.hash{font-family:"SF Mono",Consolas,monospace;font-size:10px;color:var(--grey)}
+.dl{color:var(--gold);text-decoration:none;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
+.dl:hover{text-decoration:underline}
+
+.empty{padding:30px;text-align:center;color:var(--grey);border:1px dashed var(--border);border-radius:4px;font-size:12px}
+
+.actions{margin-top:36px;display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:10px 18px;border:1px solid var(--gold);color:var(--gold);
+  text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase}
+.btn:hover{background:var(--gold);color:var(--dark)}
+.btn.solid{background:var(--gold);color:var(--dark)}
+
+.footer-note{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
+  font-size:10px;color:var(--grey);text-align:center;letter-spacing:1.5px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="shell">
+  <div class="crumb"><a href="/portal">← Portal</a> · {{ case.case_number or case.name }}</div>
+  <div class="head">
+    <div class="nr">{{ case.case_number or case.name }}</div>
+    <h1>{{ case.case_title or "(senza titolo)" }}</h1>
+    <div class="tagrow">
+      {% if case.case_type %}<span class="tag">{{ case.case_type }}</span>{% endif %}
+      {% if case.priority %}<span class="tag">{{ case.priority }}</span>{% endif %}
+      <span class="tag active">{{ case.status or 'Open' }}</span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="kv"><div class="l">Cliente</div><div class="v">{{ case.client or '—' }}</div></div>
+    <div class="kv"><div class="l">Apertura</div><div class="v">{{ frappe.utils.format_datetime(case.creation, 'dd/MM/yyyy HH:mm') }}</div></div>
+    <div class="kv"><div class="l">Lead</div><div class="v">{{ case.assigned_investigator or '—' }}</div></div>
+    <div class="kv"><div class="l">Ultimo aggiornamento</div><div class="v">{{ frappe.utils.format_datetime(case.modified, 'dd/MM/yyyy HH:mm') }}</div></div>
+  </div>
+
+  {% if case.description %}
+  <div class="section">
+    <div class="section-title">Descrizione</div>
+    <div style="font-size:13px;line-height:1.6;color:#D8D9E0">{{ case.description|safe }}</div>
+  </div>
+  {% endif %}
+
+  <div class="section">
+    <div class="section-title">Evidenze ({{ evidences|length }})</div>
+    {% if evidences %}
+    <table>
+      <thead><tr><th>Nome</th><th>Tipo</th><th>SHA-256</th><th>Acquisita</th><th>Stato</th>{% if is_investigator %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for e in evidences %}
+        <tr>
+          <td>{{ e.evidence_name or e.name }}</td>
+          <td>{{ e.evidence_type or '—' }}</td>
+          <td class="hash">{{ (e.hash_value or '')[:24] }}{% if e.hash_value %}…{% endif %}</td>
+          <td>{{ frappe.utils.format_datetime(e.acquisition_date, 'dd/MM/yy HH:mm') if e.acquisition_date else '—' }}</td>
+          <td><span class="tag {% if e.custody_status == 'Active' %}active{% endif %}">{{ e.custody_status or '—' }}</span></td>
+          {% if is_investigator %}<td>{% if e.attached_file %}<a class="dl" href="{{ e.attached_file }}">⇩ scarica</a>{% endif %}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">Nessuna evidenza registrata.</div>
+    {% endif %}
+  </div>
+
+  <div class="section">
+    <div class="section-title">Report ({{ reports|length }})</div>
+    {% if reports %}
+    <table>
+      <thead><tr><th>Titolo</th><th>Stato</th><th>Data</th><th>SHA-256</th><th></th></tr></thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td>{{ r.report_title or r.name }}</td>
+          <td><span class="tag {% if r.report_status in ['Final','Delivered'] %}active{% endif %}">{{ r.report_status }}</span></td>
+          <td>{{ frappe.utils.format_datetime(r.report_date, 'dd/MM/yyyy') if r.report_date else '—' }}</td>
+          <td class="hash">{{ (r.pdf_hash or '')[:24] }}{% if r.pdf_hash %}…{% endif %}</td>
+          <td>{% if r.pdf_file %}<a class="dl" href="{{ r.pdf_file }}">⇩ PDF</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">Nessun report ancora generato.</div>
+    {% endif %}
+  </div>
+
+  {% if is_investigator %}
+  <div class="actions">
+    <a class="btn solid" href="/app/evidence-upload">⇪ Carica Evidenza</a>
+    <a class="btn" href="/app/investigation-case/{{ case.name }}">Apri nel desk →</a>
+  </div>
+  {% endif %}
+
+  <div class="footer-note">
+    Accesso tracciato · Catena di custodia art. 234-bis c.p.p. · SHA-256
+  </div>
+</div>
+{% endblock %}
