@@ -1,0 +1,11 @@
+--- a/app/javascript/submission_form/validate_signature.js
++++ b/app/javascript/submission_form/validate_signature.js
+@@ -22,7 +22,7 @@
+
+     const avgDeviation = totalDeviation / points.length
+
+-    if (avgDeviation < 3 && skippedStraightLine < 2) {
++    if (avgDeviation < 0.05 && skippedStraightLine < 99) {
+       skippedStraightLine++
+
+       return false

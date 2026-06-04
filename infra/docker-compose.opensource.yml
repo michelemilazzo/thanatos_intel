@@ -29,7 +29,7 @@ services:
     command: ["-l", "0.0.0.0:5001"]
 
   docuseal:
-    image: docuseal/docuseal:latest
+    image: thanatos/docuseal:custom
     container_name: thanatos-docuseal
     restart: unless-stopped
     environment:
