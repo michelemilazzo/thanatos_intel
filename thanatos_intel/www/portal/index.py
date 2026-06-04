@@ -59,6 +59,42 @@ def get_context(context):
 
     context.cases = cases
     context.case_count = len(cases)
+    context.recent_activity = _recent_activity(cases, is_investigator)
     context.title = "Portal — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context
+
+
+def _recent_activity(cases, is_investigator):
+    items = []
+    case_names = [c["name"] for c in cases] if cases else []
+    flt_ev = {} if is_investigator else ({"investigation_case": ["in", case_names]} if case_names else None)
+    if flt_ev is not None:
+        try:
+            for e in frappe.get_all("Investigation Evidence", filters=flt_ev,
+                                    fields=["name", "evidence_title", "creation"],
+                                    order_by="creation desc", limit=5):
+                items.append({"kind": "Evidence",
+                              "label": e.evidence_title or e.name, "when": e.creation})
+        except Exception:
+            pass
+        try:
+            for r in frappe.get_all("Investigation Report", filters=flt_ev,
+                                    fields=["name", "report_title", "creation"],
+                                    order_by="creation desc", limit=5):
+                items.append({"kind": "Report",
+                              "label": r.report_title or r.name, "when": r.creation})
+        except Exception:
+            pass
+    if case_names:
+        try:
+            for o in frappe.get_all("OSINT Lookup",
+                                    filters={"investigation_case": ["in", case_names]},
+                                    fields=["name", "lookup_type", "target", "creation"],
+                                    order_by="creation desc", limit=5):
+                items.append({"kind": "OSINT",
+                              "label": f"{o.lookup_type}: {o.target}", "when": o.creation})
+        except Exception:
+            pass
+    items.sort(key=lambda x: x["when"] or "", reverse=True)
+    return items[:8]

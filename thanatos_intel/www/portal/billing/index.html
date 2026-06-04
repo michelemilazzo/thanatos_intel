@@ -1,4 +1,5 @@
 {% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -55,6 +56,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 {% endblock %}
 
 {% block content %}
+{{ thanatos_header('billing') }}
 <div class="shell">
   <div class="crumb"><a href="/portal">← Portal</a> · Billing</div>
 
@@ -110,9 +112,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
   </div>
 
   <div class="footer-note">
-    Pagamento sicuro via Stripe · SCA / PSD2 · GDPR compliant · IVA inclusa
+    Pagamento sicuro via Stripe · SCA / PSD2 · GDPR compliant
   </div>
 </div>
+{{ thanatos_footer() }}
 
 <script>
 const CLIENT = {{ (client.name if client else '')|tojson }};

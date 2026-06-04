@@ -1,0 +1,89 @@
+{# Shared chrome (header + footer) for Thanatos Intel public/portal pages.
+   Include with: {% include "thanatos_intel/templates/site_chrome.html" %}
+   Provides:  thanatos_header()  and  thanatos_footer()  macros. #}
+
+{% macro thanatos_header(active='') -%}
+<style>
+.tx-nav{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.92);backdrop-filter:blur(8px);
+  border-bottom:1px solid #1F2742;}
+.tx-nav-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;gap:24px;}
+.tx-brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.tx-brand img{height:38px;display:block;}
+.tx-brand .wm{font-family:Georgia,serif;font-size:16px;letter-spacing:5px;color:#E6E8EE;}
+.tx-brand .wm small{display:block;font-size:9px;letter-spacing:3px;color:#C8A96E;margin-top:2px;}
+.tx-links{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.tx-links a{color:#A4A9BC;text-decoration:none;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;
+  padding:8px 12px;border-bottom:1px solid transparent;transition:color .15s,border-color .15s;}
+.tx-links a:hover{color:#C8A96E;}
+.tx-links a.act{color:#C8A96E;border-bottom-color:#C8A96E;}
+.tx-cta{display:inline-block;padding:8px 16px;border:1px solid #C8A96E;color:#C8A96E;text-decoration:none;
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-left:8px;transition:background .15s,color .15s;}
+.tx-cta:hover{background:#C8A96E;color:#0A0E1A;}
+.tx-cta.solid{background:#C8A96E;color:#0A0E1A;}
+.tx-cta.solid:hover{background:#B8975A;}
+@media(max-width:780px){.tx-links a{padding:6px 8px;font-size:10px;letter-spacing:1.5px;}.tx-brand .wm{display:none;}}
+</style>
+<nav class="tx-nav">
+  <div class="tx-nav-inner">
+    <a class="tx-brand" href="/">
+      <img src="/assets/thanatos_intel/images/thanatos-icon.svg" alt=""/>
+      <span class="wm">THANATOS<small>INTELLIGENCE</small></span>
+    </a>
+    <div class="tx-links">
+      <a href="/" class="{% if active=='home' %}act{% endif %}">Home</a>
+      <a href="/news" class="{% if active=='news' %}act{% endif %}">Newsroom</a>
+      <a href="/portal" class="{% if active=='portal' %}act{% endif %}">Portale</a>
+      <a href="/portal/billing" class="{% if active=='billing' %}act{% endif %}">Billing</a>
+      {% if frappe.session.user == 'Guest' %}
+      <a class="tx-cta solid" href="/login?redirect-to=/portal">Accedi</a>
+      {% else %}
+      <a class="tx-cta" href="/api/method/logout">Esci</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+{%- endmacro %}
+
+{% macro thanatos_footer() -%}
+<style>
+.tx-foot{margin-top:64px;background:#070A14;border-top:1px solid #1F2742;padding:48px 24px 28px;color:#5B6276;}
+.tx-foot-inner{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px;}
+.tx-foot h5{color:#C8A96E;font-family:Georgia,serif;font-size:12px;letter-spacing:3px;text-transform:uppercase;
+  margin:0 0 14px;font-weight:400;}
+.tx-foot a{color:#A4A9BC;text-decoration:none;display:block;padding:4px 0;font-size:12px;letter-spacing:.5px;}
+.tx-foot a:hover{color:#C8A96E;}
+.tx-foot p{font-size:12px;line-height:1.6;margin:0 0 8px;}
+.tx-foot .legal{max-width:1240px;margin:32px auto 0;padding-top:18px;border-top:1px solid #1F2742;
+  text-align:center;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#5B6276;}
+@media(max-width:780px){.tx-foot-inner{grid-template-columns:1fr 1fr;}}
+</style>
+<footer class="tx-foot">
+  <div class="tx-foot-inner">
+    <div>
+      <img src="/assets/thanatos_intel/images/thanatos-logo.svg" style="height:36px;display:block;margin-bottom:10px;" alt="Thanatos Intel"/>
+      <p style="color:#7A8294;">Intelligence investigativa europea per studi legali, commercialisti, investigatori e aziende. Antifrode, due diligence, OSINT, sequestri.</p>
+    </div>
+    <div>
+      <h5>Piattaforma</h5>
+      <a href="/portal">Portale operativo</a>
+      <a href="/portal/billing">Piani & Billing</a>
+      <a href="/news">Newsroom</a>
+    </div>
+    <div>
+      <h5>Servizi</h5>
+      <a href="/news/categoria/antifrode">Antifrode</a>
+      <a href="/news/categoria/cyber">Cyber Intelligence</a>
+      <a href="/news/categoria/due-diligence">Due Diligence</a>
+      <a href="/news/categoria/osint">OSINT</a>
+    </div>
+    <div>
+      <h5>Compliance</h5>
+      <p style="color:#7A8294;font-size:11px;">SHA-256 Chain of Custody · art. 234-bis c.p.p.<br/>GDPR art. 6 · ISO 27001 ready</p>
+    </div>
+  </div>
+  <div class="legal">
+    © Thanatos Investigazioni S.R.L. · Constanța · RO 46901022 · powered by <a href="https://www.onekeyco.com" style="color:#C8A96E;text-decoration:none;">MMOS</a>
+  </div>
+</footer>
+{%- endmacro %}

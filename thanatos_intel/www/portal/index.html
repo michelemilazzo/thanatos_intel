@@ -1,146 +1,154 @@
 {% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block head %}
 <style>
-:root {
-  --dark: #0A0E1A;
-  --navy: #0D1B3E;
-  --gold: #C8A96E;
-  --gold-soft: rgba(200,169,110,0.15);
-  --grey: #7A8294;
-  --bg: #0A0E1A;
-  --panel: #111729;
-  --panel-2: #161D33;
-  --border: #1F2842;
-}
-* { box-sizing: border-box; }
-html, body { margin:0; padding:0; background: var(--bg); color:#E8E9F0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  min-height: 100vh; }
-.shell { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
-
-.brand-top { display:flex; align-items:center; justify-content:space-between;
-  padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
-.brand-name { font-family: Georgia, "Times New Roman", serif; font-size: 18px;
-  letter-spacing: 4px; color: var(--gold); }
-.brand-meta { font-size: 11px; color: var(--grey); letter-spacing: 1px; text-transform: uppercase; }
-.user-pill { display:inline-flex; gap:10px; align-items:center; background: var(--panel);
-  border:1px solid var(--border); padding:6px 14px; border-radius: 999px; font-size: 12px; }
-.user-pill .role { color: var(--gold); font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; }
-
-.hero { padding: 18px 0 8px; }
-.hero h1 { font-family: Georgia, serif; font-weight: 400; font-size: 32px;
-  margin: 0 0 6px; color:#FFF; letter-spacing: 1px; }
-.hero p { margin: 0; color: var(--grey); font-size: 13px; }
-
-.stats { display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 26px 0 32px; }
-.stat { background: var(--panel); border:1px solid var(--border); border-radius: 4px;
-  padding: 16px 18px; }
-.stat .v { font-family: Georgia, serif; font-size: 26px; color: var(--gold); }
-.stat .l { font-size: 11px; color: var(--grey); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 4px;}
-
-.section-title { font-family: Georgia, serif; font-size: 16px; color:#FFF;
-  letter-spacing: 2px; text-transform: uppercase; margin: 0 0 14px;
-  padding-bottom: 8px; border-bottom: 1px solid var(--gold-soft); }
-
-.case-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
-.case { background: var(--panel); border:1px solid var(--border); border-radius: 4px;
-  padding: 18px; transition: border-color .15s, transform .15s; cursor: pointer;
-  text-decoration: none; color: inherit; display:block; }
-.case:hover { border-color: var(--gold); transform: translateY(-2px); }
-.case .nr { font-family: Georgia, serif; color: var(--gold); font-size: 13px; letter-spacing: 2px; }
-.case .ti { font-size: 15px; margin: 6px 0 12px; color:#FFF; line-height:1.35; }
-.case .meta { display:flex; gap:8px; flex-wrap: wrap; }
-.tag { font-size: 10px; padding: 3px 8px; border-radius: 2px; letter-spacing: 1px;
-  text-transform: uppercase; border:1px solid var(--border); background: var(--panel-2); color: var(--grey); }
-.tag.active { color: var(--gold); border-color: var(--gold-soft); }
-.case .ft { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);
-  display:flex; justify-content: space-between; font-size: 11px; color: var(--grey); }
-
-.empty { padding: 60px 20px; text-align: center; color: var(--grey);
-  border: 1px dashed var(--border); border-radius: 4px; }
-.empty strong { color:#FFF; display:block; font-family: Georgia, serif;
-  font-size: 18px; letter-spacing:2px; margin-bottom: 8px; }
-
-.actions { margin-top: 36px; display:flex; gap: 12px; flex-wrap: wrap; }
-.btn { display:inline-block; padding: 10px 18px; border:1px solid var(--gold);
-  color: var(--gold); text-decoration: none; font-size: 12px; letter-spacing: 2px;
-  text-transform: uppercase; transition: background .15s, color .15s; }
-.btn:hover { background: var(--gold); color: var(--dark); }
-.btn.solid { background: var(--gold); color: var(--dark); }
-.btn.solid:hover { background:#B8975A; }
-
-.footer-note { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--border);
-  font-size: 10px; color: var(--grey); text-align: center; letter-spacing: 1.5px; }
+:root{--dark:#0A0E1A;--navy:#0D1B3E;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;--border:#1F2842;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1240px;margin:0 auto;padding:40px 24px 60px}
+.hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  padding-bottom:22px;border-bottom:1px solid var(--border);margin-bottom:32px;flex-wrap:wrap}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:34px;color:#fff;margin:0 0 6px;letter-spacing:.5px}
+.hero p{margin:0;color:var(--grey);font-size:13px}
+.user-pill{display:inline-flex;gap:10px;align-items:center;background:var(--panel);
+  border:1px solid var(--border);padding:8px 16px;border-radius:999px;font-size:12px}
+.user-pill .role{color:var(--gold);font-weight:600;text-transform:uppercase;letter-spacing:1.5px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:0 0 36px}
+@media(max-width:780px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:18px 20px}
+.stat .v{font-family:Georgia,serif;font-size:28px;color:var(--gold);line-height:1}
+.stat .l{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;margin-top:6px}
+.stat .d{font-size:10px;color:#5B6276;margin-top:4px;letter-spacing:.5px}
+.section-title{font-family:Georgia,serif;font-size:18px;color:#fff;letter-spacing:2px;
+  text-transform:uppercase;margin:0 0 18px;padding-bottom:10px;border-bottom:1px solid var(--gold-soft)}
+.section-title small{float:right;font-family:inherit;font-size:11px;letter-spacing:1px;color:var(--grey);
+  text-transform:none;margin-top:6px}
+.quick-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:36px}
+.qa{background:var(--panel);border:1px solid var(--border);padding:18px 20px;text-decoration:none;
+  color:inherit;display:flex;align-items:center;gap:14px;transition:border-color .15s,transform .15s}
+.qa:hover{border-color:var(--gold);transform:translateY(-2px)}
+.qa .ic{width:38px;height:38px;border-radius:4px;background:rgba(200,169,110,.1);
+  display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:18px}
+.qa .t{font-size:13px;color:#fff;letter-spacing:.5px}
+.qa .s{font-size:11px;color:var(--grey);margin-top:2px}
+.case-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.case{background:var(--panel);border:1px solid var(--border);border-radius:4px;
+  padding:18px;transition:border-color .15s,transform .15s;cursor:pointer;
+  text-decoration:none;color:inherit;display:block}
+.case:hover{border-color:var(--gold);transform:translateY(-2px)}
+.case .nr{font-family:Georgia,serif;color:var(--gold);font-size:13px;letter-spacing:2px}
+.case .ti{font-size:15px;margin:6px 0 12px;color:#fff;line-height:1.35}
+.case .meta{display:flex;gap:8px;flex-wrap:wrap}
+.tag{font-size:10px;padding:3px 8px;border-radius:2px;letter-spacing:1px;
+  text-transform:uppercase;border:1px solid var(--border);background:var(--panel-2);color:var(--grey)}
+.tag.active{color:var(--gold);border-color:var(--gold-soft)}
+.case .ft{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);
+  display:flex;justify-content:space-between;font-size:11px;color:var(--grey)}
+.empty{padding:50px 20px;text-align:center;color:var(--grey);
+  border:1px dashed var(--border);border-radius:4px}
+.empty strong{color:#fff;display:block;font-family:Georgia,serif;font-size:18px;letter-spacing:2px;margin-bottom:8px}
+.activity{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:0}
+.activity .row{display:flex;justify-content:space-between;gap:10px;padding:12px 16px;
+  border-bottom:1px solid var(--border);font-size:12px;color:#D0D2DC}
+.activity .row:last-child{border-bottom:0}
+.activity .when{color:var(--grey);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.activity .badge{font-size:9px;padding:2px 6px;border:1px solid var(--gold-soft);color:var(--gold);
+  letter-spacing:1px;text-transform:uppercase;margin-right:8px}
+.two-col{display:grid;grid-template-columns:1.5fr 1fr;gap:24px;margin-top:8px}
+@media(max-width:980px){.two-col{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 
 {% block content %}
+{{ thanatos_header('portal') }}
 <div class="shell">
 
-  <div class="brand-top">
-    <div>
-      <div class="brand-name">THANATOS · INTEL</div>
-      <div class="brand-meta">Investigation Portal · Confidential</div>
+  <div class="hero-row">
+    <div class="hero">
+      <h1>Benvenuto{% if user_fullname %}, {{ user_fullname }}{% endif %}</h1>
+      <p>Riepilogo casi assegnati e attività investigative · accesso protetto e tracciato.</p>
     </div>
     <div class="user-pill">
       <span class="role">{{ role_label }}</span>
-      <span>{{ user_fullname }}</span>
-      <a href="/api/method/logout" style="color:var(--grey); margin-left:6px; font-size:11px;">⏻</a>
+      <span>{{ user }}</span>
     </div>
   </div>
 
-  <div class="hero">
-    <h1>Benvenuto{% if not is_client %}, {{ role_label }}{% endif %}</h1>
-    <p>Riepilogo casi assegnati e attività investigative · accesso protetto e tracciato.</p>
-  </div>
-
   <div class="stats">
-    <div class="stat"><div class="v">{{ case_count }}</div><div class="l">Casi</div></div>
-    <div class="stat"><div class="v">{{ in_progress }}</div><div class="l">Attivi</div></div>
-    <div class="stat"><div class="v">{{ closed }}</div><div class="l">Chiusi</div></div>
-    <div class="stat"><div class="v">{{ evidence_total }}</div><div class="l">Evidenze</div></div>
+    <div class="stat"><div class="v">{{ case_count }}</div><div class="l">Casi totali</div><div class="d">visibili a te</div></div>
+    <div class="stat"><div class="v">{{ in_progress }}</div><div class="l">Attivi</div><div class="d">in lavorazione</div></div>
+    <div class="stat"><div class="v">{{ closed }}</div><div class="l">Chiusi</div><div class="d">archiviati</div></div>
+    <div class="stat"><div class="v">{{ evidence_total }}</div><div class="l">Evidenze</div><div class="d">SHA-256 custody</div></div>
   </div>
-
-  <h2 class="section-title">Casi recenti</h2>
-
-  {% if cases %}
-  <div class="case-grid">
-    {% for c in cases %}
-    <a class="case" href="/portal/case/{{ c.name }}">
-      <div class="nr">{{ c.case_number or c.name }}</div>
-      <div class="ti">{{ c.case_title or "(senza titolo)" }}</div>
-      <div class="meta">
-        {% if c.case_type %}<span class="tag">{{ c.case_type }}</span>{% endif %}
-        {% if c.priority %}<span class="tag">{{ c.priority }}</span>{% endif %}
-        <span class="tag {% if c.case_status == 'In Progress' %}active{% endif %}">{{ c.case_status or 'Open' }}</span>
-      </div>
-      <div class="ft">
-        <span>{{ c.evidence_count }} evidenze · {{ c.report_count }} report</span>
-        <span>{{ frappe.utils.format_datetime(c.creation, 'dd/MM/yy') }}</span>
-      </div>
-    </a>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="empty">
-    <strong>NESSUN CASO</strong>
-    Non ci sono ancora casi associati al tuo account.
-  </div>
-  {% endif %}
 
   {% if is_investigator %}
-  <div class="actions">
-    <a class="btn solid" href="/app/evidence-upload">⇪ Carica Evidenza</a>
-    <a class="btn" href="/app/investigation-case/new?case_status=Open">+ Nuovo Caso</a>
-    <a class="btn" href="/app/thanatos-intel">Desk completo →</a>
+  <div class="quick-actions">
+    <a class="qa" href="/app/investigation-case/new?case_status=Open">
+      <div class="ic">+</div><div><div class="t">Nuovo caso</div><div class="s">Apri un'indagine</div></div>
+    </a>
+    <a class="qa" href="/app/evidence-upload">
+      <div class="ic">⇪</div><div><div class="t">Carica evidenza</div><div class="s">Con hash SHA-256</div></div>
+    </a>
+    <a class="qa" href="/app/osint-lookup/new">
+      <div class="ic">⌖</div><div><div class="t">OSINT lookup</div><div class="s">HIBP · RDAP · sanctions</div></div>
+    </a>
+    <a class="qa" href="/app/thanatos-intel">
+      <div class="ic">⌗</div><div><div class="t">Desk completo</div><div class="s">Backend Frappe</div></div>
+    </a>
   </div>
   {% endif %}
 
-  <div class="footer-note">
-    THANATOS INTEL · Catena di custodia art. 234-bis c.p.p. · SHA-256 · GDPR art. 6
+  <div class="two-col">
+    <div>
+      <h2 class="section-title">Casi recenti <small>{{ cases|length }} totali</small></h2>
+      {% if cases %}
+      <div class="case-grid">
+        {% for c in cases[:9] %}
+        <a class="case" href="/portal/case/{{ c.name }}">
+          <div class="nr">{{ c.case_number or c.name }}</div>
+          <div class="ti">{{ c.case_title or "(senza titolo)" }}</div>
+          <div class="meta">
+            {% if c.case_type %}<span class="tag">{{ c.case_type }}</span>{% endif %}
+            {% if c.priority %}<span class="tag">{{ c.priority }}</span>{% endif %}
+            <span class="tag {% if c.case_status == 'In Progress' %}active{% endif %}">{{ c.case_status or 'Open' }}</span>
+          </div>
+          <div class="ft">
+            <span>{{ c.evidence_count }} evidenze · {{ c.report_count }} report</span>
+            <span>{{ frappe.utils.format_datetime(c.creation, 'dd/MM/yy') }}</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <strong>NESSUN CASO</strong>
+        Non ci sono ancora casi associati al tuo account.
+      </div>
+      {% endif %}
+    </div>
+
+    <div>
+      <h2 class="section-title">Attività recente</h2>
+      {% if recent_activity %}
+      <div class="activity">
+        {% for a in recent_activity %}
+        <div class="row">
+          <div><span class="badge">{{ a.kind }}</span>{{ a.label }}</div>
+          <div class="when">{{ frappe.utils.format_datetime(a.when, 'dd/MM HH:mm') }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><strong>—</strong>Nessuna attività recente.</div>
+      {% endif %}
+    </div>
   </div>
+
 </div>
+{{ thanatos_footer() }}
 {% endblock %}

@@ -29,19 +29,31 @@ def get_context(context):
 		limit=8,
 	)
 	context.stats = _stats()
+	context.plans = frappe.get_all(
+		"Investigation Subscription Plan",
+		filters={"is_active": 1},
+		fields=["name", "plan_name", "plan_level", "monthly_price", "currency",
+		        "included_verifications", "included_analyses", "included_reports",
+		        "max_users", "support_level"],
+		order_by="monthly_price asc",
+		limit=4,
+	)
 	return context
 
 
 def _stats():
-	out = {"cases": 0, "evidence": 0, "reports": 0, "osint": 0}
-	try:
-		out["cases"] = frappe.db.count("Investigation Case")
-		out["evidence"] = frappe.db.count("Investigation Evidence")
-		out["reports"] = frappe.db.count("Investigation Report")
-	except Exception:
-		pass
-	try:
-		out["osint"] = frappe.db.count("OSINT Lookup")
-	except Exception:
-		pass
+	out = {"cases": 0, "evidence": 0, "reports": 0, "osint": 0, "news": 0, "clients": 0}
+	mapping = [
+		("Investigation Case", "cases", None),
+		("Investigation Evidence", "evidence", None),
+		("Investigation Report", "reports", None),
+		("OSINT Lookup", "osint", None),
+		("News Article", "news", {"published": 1}),
+		("Investigation Client", "clients", None),
+	]
+	for doctype, key, flt in mapping:
+		try:
+			out[key] = frappe.db.count(doctype, flt) if flt else frappe.db.count(doctype)
+		except Exception:
+			pass
 	return out

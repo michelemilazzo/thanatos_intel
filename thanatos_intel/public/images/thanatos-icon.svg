@@ -1,14 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
   <defs>
-    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#E0C58A"/>
-      <stop offset="100%" stop-color="#B8975A"/>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E6CC92"/>
+      <stop offset="100%" stop-color="#9A7E48"/>
     </linearGradient>
   </defs>
   <rect width="80" height="80" rx="8" fill="#0A0E1A"/>
-  <g transform="translate(15,15)">
-    <path d="M0 0 L50 0 L50 7 L29 7 L29 50 L21 50 L21 7 L0 7 Z" fill="url(#gold)"/>
-    <circle cx="25" cy="28" r="2.5" fill="#0A0E1A"/>
-  </g>
-  <line x1="15" y1="68" x2="65" y2="68" stroke="#C8A96E" stroke-width="0.8" opacity="0.6"/>
+  <circle cx="40" cy="40" r="32" fill="none" stroke="url(#g)" stroke-width="1.2"/>
+  <circle cx="40" cy="40" r="26" fill="none" stroke="#C8A96E" stroke-width=".4" opacity=".5"/>
+  <path d="M18 22 L62 22 L62 29 L44 29 L44 59 L36 59 L36 29 L18 29 Z" fill="url(#g)"/>
+  <circle cx="40" cy="44" r="2" fill="#0A0E1A"/>
 </svg>
