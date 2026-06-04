@@ -148,7 +148,14 @@ def push_all_infra_items_to_erp() -> dict:
 	return results
 
 
-# ---------- monthly Sales Invoice ----------
+# ---------- monthly Pro-Forma (Quotation) ----------
+#
+# Workflow:
+#   1) scheduler monthly → emit_monthly_proforma_on_erp() crea una Quotation
+#      su ERP (pro-forma, no fiscal value, no SDI).
+#   2) Cliente paga.
+#   3) Operatore (o webhook payment) chiama convert_proforma_to_invoice(quotation)
+#      → crea Sales Invoice da quella quotation e la submitta.
 
 def _resolve_customer_names() -> tuple[str, str]:
 	"""(buyer, seller_company) — Thanatos è il Customer, MMOS è la Company."""
@@ -160,9 +167,11 @@ def _resolve_customer_names() -> tuple[str, str]:
 
 
 @frappe.whitelist()
-def emit_monthly_invoice_on_erp(for_month: str | None = None) -> dict:
-	"""Genera Sales Invoice su ERP con linee = tutti gli Infrastructure Cost auto-invoice
-	per il mese specificato (default: mese precedente)."""
+def emit_monthly_proforma_on_erp(for_month: str | None = None) -> dict:
+	"""Genera Quotation (Pro-Forma) su ERP con linee = tutti gli Infrastructure
+	Cost auto-invoice per il mese specificato (default: mese precedente).
+	NON crea Sales Invoice — quella si genera solo a incasso avvenuto via
+	convert_proforma_to_invoice()."""
 	if not _erp_headers():
 		return {"skipped": "no_credentials"}
 
@@ -185,10 +194,17 @@ def emit_monthly_invoice_on_erp(for_month: str | None = None) -> dict:
 	buyer, company = _resolve_customer_names()
 	po_no = f"INFRA-{month_label}"
 
-	# Dedup: skip if invoice already exists on ERP
-	existing = _erp_get("/api/resource/Sales Invoice",
+	# Dedup: skip if Quotation already exists on ERP for this month
+	existing = _erp_get("/api/resource/Quotation",
 	                    params={"filters": json.dumps([
-	                        ["po_no", "=", po_no], ["customer", "=", buyer]])})
+	                        ["party_name", "=", buyer],
+	                        ["custom_proforma_ref", "=", po_no]])})
+	# Fallback dedup via title if custom field missing
+	if not existing.get("data"):
+		existing = _erp_get("/api/resource/Quotation",
+		                    params={"filters": json.dumps([
+		                        ["party_name", "=", buyer],
+		                        ["title", "=", f"PROFORMA-{po_no}"]])})
 	if existing.get("data"):
 		return {"already_exists": existing["data"][0]["name"],
 		        "month": month_label}
@@ -235,14 +251,19 @@ def emit_monthly_invoice_on_erp(for_month: str | None = None) -> dict:
 				break
 
 	payload = {
+		"quotation_to": "Customer",
+		"party_name": buyer,
 		"customer": buyer,
 		"company": company,
-		"posting_date": str(get_last_day(month_start)),
-		"due_date": str(get_last_day(add_months(month_start, 1))),
-		"po_no": po_no,
-		"po_date": str(month_start),
+		"transaction_date": str(get_last_day(month_start)),
+		"valid_till": str(get_last_day(add_months(month_start, 1))),
+		"order_type": "Sales",
+		"title": f"PROFORMA-{po_no}",
 		"currency": (costs[0].currency or "EUR"),
-		"remarks": f"Costi infrastruttura Thanatos {month_label}",
+		"tc_name": None,
+		"terms": (f"Pro-Forma Infrastruttura Thanatos {month_label}.\n"
+		          f"Fattura emessa ad incasso avvenuto. "
+		          f"Riferimento contabile: {po_no}."),
 		"items": items,
 	}
 	if tax_template:
@@ -251,35 +272,122 @@ def emit_monthly_invoice_on_erp(for_month: str | None = None) -> dict:
 		tpl_data = tpl.get("data") or {}
 		tax_rows = []
 		for t in tpl_data.get("taxes", []):
-			tax_rows.append({
+			row = {
 				"charge_type": t.get("charge_type"),
 				"account_head": t.get("account_head"),
-				"rate": t.get("rate"),
+				"rate": t.get("rate") or 0,
 				"description": t.get("description"),
 				"cost_center": t.get("cost_center"),
-			})
+			}
+			if t.get("tax_amount"):
+				row["tax_amount"] = t["tax_amount"]
+			tax_rows.append(row)
 		if tax_rows:
 			payload["taxes"] = tax_rows
-	r = _erp_post("/api/resource/Sales Invoice", payload)
+	r = _erp_post("/api/resource/Quotation", payload)
 	if r.get("error"):
-		frappe.log_error(f"ERP SI create fail: {r}", "erp_sync")
+		frappe.log_error(f"ERP Quotation create fail: {r}", "erp_sync")
 		return {"error": "create_failed", "details": r}
 	name = (r.get("data") or {}).get("name")
-	return {"invoice": name, "total": round(total, 2),
-	        "items": len(items), "month": month_label}
+	return {"proforma": name, "total": round(total, 2),
+	        "items": len(items), "month": month_label,
+	        "po_no": po_no,
+	        "next_step": "Quando incassi: chiama convert_proforma_to_invoice('"+(name or "")+"')"}
+
+
+# Backwards-compat alias (some external callers may still use the old name)
+@frappe.whitelist()
+def emit_monthly_invoice_on_erp(for_month: str | None = None) -> dict:
+	"""DEPRECATED: alias di emit_monthly_proforma_on_erp().
+	Mantenuto per backward-compat — ora emette Pro-Forma, non Sales Invoice."""
+	return emit_monthly_proforma_on_erp(for_month)
+
+
+# ---------- convert pro-forma → invoice on payment ----------
+
+@frappe.whitelist()
+def convert_proforma_to_invoice(quotation_name: str, submit: bool = True) -> dict:
+	"""Converte una Quotation (pro-forma) in Sales Invoice e (opzionalmente)
+	la submitta. Da chiamare a incasso avvenuto."""
+	if not _erp_headers():
+		return {"skipped": "no_credentials"}
+
+	q = _erp_get(f"/api/resource/Quotation/{quotation_name}")
+	if q.get("error") or not q.get("data"):
+		return {"error": "quotation_not_found",
+		        "quotation": quotation_name, "details": q}
+	qd = q["data"]
+
+	# Build Sales Invoice from quotation
+	items = []
+	for it in qd.get("items", []):
+		items.append({
+			"item_code": it.get("item_code"),
+			"qty": it.get("qty"),
+			"rate": it.get("rate"),
+			"description": it.get("description"),
+		})
+
+	po_no = (qd.get("title") or "").replace("PROFORMA-", "")
+	payload = {
+		"customer": qd.get("party_name") or qd.get("customer"),
+		"company": qd.get("company"),
+		"posting_date": str(frappe.utils.today()),
+		"due_date": str(frappe.utils.today()),
+		"po_no": po_no,
+		"po_date": qd.get("transaction_date"),
+		"currency": qd.get("currency") or "EUR",
+		"remarks": f"Fattura da Pro-Forma {quotation_name} - incasso ricevuto",
+		"items": items,
+	}
+	if qd.get("taxes_and_charges"):
+		payload["taxes_and_charges"] = qd["taxes_and_charges"]
+		tax_rows = []
+		for t in qd.get("taxes", []):
+			row = {
+				"charge_type": t.get("charge_type"),
+				"account_head": t.get("account_head"),
+				"rate": t.get("rate") or 0,
+				"description": t.get("description"),
+				"cost_center": t.get("cost_center"),
+			}
+			if t.get("tax_amount"):
+				row["tax_amount"] = t["tax_amount"]
+			tax_rows.append(row)
+		if tax_rows:
+			payload["taxes"] = tax_rows
+
+	r = _erp_post("/api/resource/Sales Invoice", payload)
+	if r.get("error"):
+		return {"error": "create_failed", "details": r}
+	inv_name = (r.get("data") or {}).get("name")
+
+	if submit and inv_name:
+		# Submit the Sales Invoice via /api/method
+		sub = _erp_post("/api/method/frappe.client.submit",
+		                {"doc": json.dumps({"doctype": "Sales Invoice",
+		                                    "name": inv_name})})
+		# best-effort: also link Quotation → Sales Invoice via status update
+		_erp_put(f"/api/resource/Quotation/{quotation_name}",
+		         {"status": "Ordered"})
+		return {"invoice": inv_name, "submitted": True,
+		        "from_proforma": quotation_name}
+
+	return {"invoice": inv_name, "submitted": False,
+	        "from_proforma": quotation_name}
 
 
 # ---------- scheduler hooks ----------
 
 def scheduled_monthly_invoice_on_erp():
-	"""Hook scheduler_events.monthly: emette la fattura MMOS→Thanatos
+	"""Hook scheduler_events.monthly: emette la Pro-Forma MMOS→Thanatos
 	il primo del mese (per il mese precedente)."""
 	try:
-		res = emit_monthly_invoice_on_erp()
-		frappe.logger().info(f"[erp_sync] monthly invoice: {res}")
+		res = emit_monthly_proforma_on_erp()
+		frappe.logger().info(f"[erp_sync] monthly proforma: {res}")
 	except Exception:
 		frappe.log_error(frappe.get_traceback(),
-		                 "erp_sync monthly invoice")
+		                 "erp_sync monthly proforma")
 
 
 def on_infrastructure_cost_save(doc, method=None):
