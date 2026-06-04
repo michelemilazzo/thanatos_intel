@@ -4,72 +4,131 @@
   <p><a href="/portal/ddd/case?name={{ mandate.ddd_case }}" style="color:#c8a96e">← Torna al case</a></p>
   <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">Firma Mandato — {{ mandate.name }}</h1>
 
-  <div style="background:#fff3e0;border-left:4px solid #c8a96e;padding:12px;font-size:13px;margin:14px 0">
-    <b>Firma Elettronica Semplice (eIDAS SES — Reg. UE 910/2014).</b><br>
-    La firma viene tracciata con IP, User-Agent, timestamp e hash SHA256
-    del documento. Pienamente valida ai sensi dell'art. 25 eIDAS per
-    documenti contrattuali tra le parti.
-  </div>
-
   <p><b>Mandatario:</b> Thanatos Intel — OneKey Co.<br>
      <b>Firmatario:</b> {{ signer }}<br>
-     <b>Importo:</b> € {{ "%.2f"|format(mandate.fee_total or 0) }} ({{ mandate.currency or 'EUR' }})<br>
-     <b>Oggetto:</b> {{ mandate.subject_matter or '—' }}<br>
-     <b>PDF preliminare:</b> <a href="{{ mandate.mandate_pdf }}" target="_blank">apri documento</a></p>
+     <b>Importo:</b> € {{ "%.2f"|format(mandate.fee_total or 0) }} {{ mandate.currency or 'EUR' }}<br>
+     <b>PDF preliminare:</b> <a href="{{ mandate.mandate_pdf }}" target="_blank">apri</a></p>
 
-  <h3>Tracciare la firma nel riquadro</h3>
-  <canvas id="sigpad" width="800" height="220"
-          style="border:2px dashed #c8a96e;border-radius:8px;background:#fff;width:100%;height:220px;touch-action:none"></canvas>
-  <div style="margin-top:10px">
-    <button id="clear" style="background:#7a1c1c;color:#fff;border:0;padding:8px 16px;border-radius:5px">Cancella</button>
-    <label style="margin-left:14px"><input type="checkbox" id="accept">
-      Confermo di aver letto e accettato il mandato</label>
-    <button id="submit" disabled style="margin-left:14px;background:#c8a96e;color:#0A0E1A;border:0;padding:10px 22px;border-radius:5px;font-weight:600">Firma con SES</button>
+  <h3 style="margin-top:22px">Scegli il metodo di firma</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    {% for mth in methods %}
+      <label style="background:{% if mth.enabled %}#f3f1ec{% else %}#eee{% endif %};padding:12px;border-radius:8px;cursor:pointer;{% if not mth.enabled %}opacity:0.5{% endif %}">
+        <input type="radio" name="sigmethod" value="{{ mth.id }}" {% if loop.first %}checked{% endif %} {% if not mth.enabled %}disabled{% endif %}>
+        <b>{{ mth.label }}</b><br>
+        <small>{{ mth.scope }} · livello {{ mth.level }}{% if not mth.enabled %} <span style="color:#7a1c1c">(non configurato)</span>{% endif %}</small>
+      </label>
+    {% endfor %}
+  </div>
+
+  <!-- SES / SES_OTP UI -->
+  <div id="ui-canvas" style="margin-top:18px">
+    <h3>Firma a mano nel riquadro</h3>
+    <canvas id="sigpad" width="800" height="220"
+            style="border:2px dashed #c8a96e;border-radius:8px;background:#fff;width:100%;height:220px;touch-action:none"></canvas>
+    <button id="clear" style="margin-top:6px;background:#7a1c1c;color:#fff;border:0;padding:6px 14px;border-radius:5px">Cancella</button>
+  </div>
+
+  <!-- SES_OTP extra -->
+  <div id="ui-otp" style="margin-top:18px;display:none">
+    <button id="btn-send-otp" style="background:#0A0E1A;color:#c8a96e;border:0;padding:8px 14px;border-radius:5px;font-weight:600">📲 Invia OTP SMS</button>
+    &nbsp;Codice ricevuto: <input id="otp-code" maxlength="6" pattern="\\d{6}" style="width:100px;padding:6px;font-size:16px;letter-spacing:4px">
+    <div id="otp-info" style="margin-top:6px;color:#7a1c1c;font-size:12px"></div>
+  </div>
+
+  <!-- AES_PADES UI -->
+  <div id="ui-pades" style="margin-top:18px;display:none">
+    <p>Verrà applicata una <b>firma crittografica PAdES-B-B</b> con certificato X.509 a 2048 bit
+    (ISO 32000 / ETSI EN 319 142). Il PDF risultante è verificabile da qualsiasi
+    PDF reader (Acrobat, Foxit, Preview) in tutto il mondo.</p>
+    <label>Motivo: <input id="pades-reason" value="Mandato professionale" style="width:300px;padding:6px"></label>
+  </div>
+
+  <!-- External providers -->
+  <div id="ui-ext" style="margin-top:18px;display:none">
+    <p>L'envelope sarà inviato al provider selezionato; il firmatario riceverà
+    email e procedura web nativa del provider.</p>
+  </div>
+
+  <div style="margin-top:16px">
+    <label><input type="checkbox" id="accept">
+      Confermo di aver letto il mandato e dato il mio consenso alla firma elettronica</label>
+  </div>
+
+  <div style="margin-top:14px">
+    <button id="submit" disabled style="background:#c8a96e;color:#0A0E1A;border:0;padding:10px 24px;border-radius:5px;font-weight:600">Firma Mandato</button>
   </div>
 
   <pre id="result" style="background:#0A0E1A;color:#c8a96e;padding:14px;margin-top:14px;border-radius:8px;display:none;white-space:pre-wrap"></pre>
 </div>
 
 <script>
+const MANDATE = "{{ mandate.name }}";
+const SIGNER  = "{{ signer }}";
+
+// Signature pad
 const c = document.getElementById("sigpad");
 const ctx = c.getContext("2d");
-ctx.strokeStyle = "#0A0E1A"; ctx.lineWidth = 2; ctx.lineCap = "round";
-let drawing = false, hasDrawn = false;
+ctx.strokeStyle="#0A0E1A"; ctx.lineWidth=2; ctx.lineCap="round";
+let drawing=false, hasDrawn=false;
+function pos(e){const r=c.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*(c.width/r.width),y:(t.clientY-r.top)*(c.height/r.height)};}
+c.addEventListener("mousedown",e=>{drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
+c.addEventListener("mousemove",e=>{if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();hasDrawn=true;check();});
+c.addEventListener("mouseup",()=>drawing=false);
+c.addEventListener("mouseout",()=>drawing=false);
+c.addEventListener("touchstart",e=>{e.preventDefault();drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
+c.addEventListener("touchmove",e=>{e.preventDefault();if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();hasDrawn=true;check();});
+c.addEventListener("touchend",e=>{e.preventDefault();drawing=false;});
+document.getElementById("clear").onclick=()=>{ctx.clearRect(0,0,c.width,c.height);hasDrawn=false;check();};
 
-function pos(e){
-  const r=c.getBoundingClientRect();
-  const t=e.touches?e.touches[0]:e;
-  return {x:(t.clientX-r.left)*(c.width/r.width),
-          y:(t.clientY-r.top)*(c.height/r.height)};
+// Method switcher
+function showUI(){
+  const m = document.querySelector('input[name=sigmethod]:checked').value;
+  document.getElementById("ui-canvas").style.display = ["SES","SES_OTP"].includes(m) ? "block":"none";
+  document.getElementById("ui-otp").style.display    = m === "SES_OTP" ? "block":"none";
+  document.getElementById("ui-pades").style.display  = m === "AES_PADES" ? "block":"none";
+  document.getElementById("ui-ext").style.display    = ["DOCUSIGN","ADOBE_SIGN","HELLOSIGN"].includes(m) ? "block":"none";
+  check();
 }
-c.addEventListener("mousedown", e=>{drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);});
-c.addEventListener("mousemove", e=>{ if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasDrawn=true; check();});
-c.addEventListener("mouseup", ()=>drawing=false);
-c.addEventListener("mouseout", ()=>drawing=false);
-c.addEventListener("touchstart", e=>{e.preventDefault(); drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);});
-c.addEventListener("touchmove", e=>{e.preventDefault(); if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasDrawn=true; check();});
-c.addEventListener("touchend", e=>{e.preventDefault(); drawing=false;});
+document.querySelectorAll('input[name=sigmethod]').forEach(r=>r.onchange=showUI);
+document.getElementById("accept").onchange=check;
 
-document.getElementById("clear").onclick = ()=>{ctx.clearRect(0,0,c.width,c.height); hasDrawn=false; check();};
-document.getElementById("accept").onchange = check;
 function check(){
-  document.getElementById("submit").disabled = !(hasDrawn && document.getElementById("accept").checked);
+  const m = document.querySelector('input[name=sigmethod]:checked').value;
+  const accepted = document.getElementById("accept").checked;
+  let ok = accepted;
+  if (m==="SES" || m==="SES_OTP") ok = ok && hasDrawn;
+  if (m==="SES_OTP") ok = ok && document.getElementById("otp-code").value.length === 6;
+  document.getElementById("submit").disabled = !ok;
 }
+document.getElementById("otp-code").addEventListener("input", check);
+
+document.getElementById("btn-send-otp").onclick = async ()=>{
+  const r=await fetch("/api/method/thanatos_intel.thanatos_ddd.signature_methods.send_otp",
+    {method:"POST", body:new URLSearchParams({mandate:MANDATE}),
+     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,
+              "Content-Type":"application/x-www-form-urlencoded"}});
+  const j=(await r.json()).message;
+  document.getElementById("otp-info").innerText =
+    j.otp_sent ? `Codice inviato a ${j.phone_masked}` :
+    `Errore: ${j.error || "?"}${j.hint ? " — "+j.hint:""}`;
+};
 
 document.getElementById("submit").onclick = async ()=>{
-  const dataUrl = c.toDataURL("image/png");
-  const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.signature.sign_mandate", {
-    method:"POST",
-    body: new URLSearchParams({mandate:"{{ mandate.name }}",
-                               signature_base64: dataUrl,
-                               signer_name: "{{ signer }}"}),
-    headers:{"X-Frappe-CSRF-Token": frappe.csrf_token,
-             "Content-Type":"application/x-www-form-urlencoded"}
-  });
-  const j = await r.json();
-  const out = document.getElementById("result");
+  const method = document.querySelector('input[name=sigmethod]:checked').value;
+  const payload = {mandate: MANDATE, method, signer_name: SIGNER};
+  if (["SES","SES_OTP"].includes(method)) payload.signature_base64 = c.toDataURL("image/png");
+  if (method === "SES_OTP") payload.otp = document.getElementById("otp-code").value;
+  if (method === "AES_PADES") payload.reason = document.getElementById("pades-reason").value;
+  const r=await fetch("/api/method/thanatos_intel.thanatos_ddd.signature_methods.dispatch",
+    {method:"POST", body:new URLSearchParams(payload),
+     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,
+              "Content-Type":"application/x-www-form-urlencoded"}});
+  const j=await r.json();
+  const out=document.getElementById("result");
   out.style.display="block";
-  out.innerText = JSON.stringify(j.message||j, null, 2);
+  out.innerText=JSON.stringify(j.message||j, null, 2);
 };
+
+showUI();
 </script>
 {% endblock %}

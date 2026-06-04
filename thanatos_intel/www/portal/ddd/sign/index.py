@@ -15,4 +15,6 @@ def get_context(context):
     context.signer = (frappe.db.get_value("Applicant Profile", m.applicant,
                                           "full_legal_name") if m.applicant
                       else frappe.session.user)
+    from thanatos_intel.thanatos_ddd.signature_methods import list_methods
+    context.methods = list_methods()
     return context
