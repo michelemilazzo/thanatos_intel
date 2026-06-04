@@ -1,0 +1,62 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<div style="max-width:1100px;margin:30px auto;font-family:system-ui,sans-serif;color:#1a1f3a">
+  <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">Passport Analyzer</h1>
+  <p style="color:#555">Carica una scansione (PDF o immagine). Il sistema legge la MRZ ICAO 9303, valida i check-digit,
+  distingue passaporti <b>Diplomatici / Servizio / Ufficiali</b> e calcola un risk score.</p>
+
+  <form id="pa-form" style="background:#0A0E1A;color:#eee;padding:18px;border-radius:12px;margin:18px 0">
+    <label>Investigation Case (opz.) <input name="case" placeholder="CASE-2026-0006" style="width:280px;padding:6px"></label>
+    &nbsp;
+    <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.tiff" required style="color:#eee">
+    <button type="submit" style="background:#c8a96e;color:#0A0E1A;border:0;padding:8px 18px;border-radius:6px;font-weight:600">Analizza</button>
+  </form>
+
+  <div id="pa-result"></div>
+
+  <h2 style="margin-top:30px">Analisi recenti</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px">
+    <thead style="background:#f3f1ec"><tr>
+      <th style="padding:6px;text-align:left">Nome</th><th>N°</th><th>Tipo</th><th>Stato</th>
+      <th>Scadenza</th><th>Risk</th><th>Verdetto</th>
+    </tr></thead>
+    <tbody>
+    {% for r in recent %}
+      <tr style="border-bottom:1px solid #eee">
+        <td style="padding:6px"><a href="/app/passport-analysis/{{r.name}}">{{r.name}}</a></td>
+        <td>{{r.passport_number or '-'}}</td>
+        <td>{{r.passport_type or '-'}}{% if r.is_diplomatic %} 🛡{% endif %}</td>
+        <td>{{r.issuing_country or '-'}}</td>
+        <td>{{r.expiry or '-'}}</td>
+        <td style="font-weight:600;color:{% if r.risk_score>=50 %}#b00{% elif r.risk_score>=20 %}#c80{% else %}#080{% endif %}">{{r.risk_score or 0}}</td>
+        <td>{{r.verdict or '-'}}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.getElementById("pa-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const file = f.file.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const formData = new FormData();
+    formData.append("files", file);
+    if (f.case.value) formData.append("case_title", f.case.value);
+    const r = await fetch("/api/method/thanatos_intel.www.upload_test.handle_upload", {
+      method: "POST", body: formData,
+      headers: {"X-Frappe-CSRF-Token": frappe.csrf_token},
+    });
+    const j = await r.json();
+    document.getElementById("pa-result").innerHTML =
+      "<pre style='background:#f7f4ee;padding:14px;border-radius:8px;overflow:auto'>"
+      + JSON.stringify(j.message || j, null, 2) + "</pre>";
+  };
+  reader.readAsArrayBuffer(file);
+});
+</script>
+{% endblock %}

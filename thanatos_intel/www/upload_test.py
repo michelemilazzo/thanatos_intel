@@ -96,13 +96,26 @@ def handle_upload(case_title: str = "", case_type: str = "Fraud"):
 				"notes": f"Upload {f.filename} | SHA256={sha} | user={frappe.session.user}",
 			}).insert(ignore_permissions=True)
 
-			uploaded.append({
+			entry = {
 				"original_name": f.filename,
 				"size": len(content),
 				"sha256": sha,
 				"evidence": ev_doc.name,
 				"file_url": file_doc.file_url,
-			})
+			}
+			if any(k in (f.filename or "").lower() for k in ("passport", "passaporto", "passeport", "pasaporte")):
+				try:
+					from thanatos_intel.thanatos_documents.passport.analyzer import analyze_evidence
+					pa_name = analyze_evidence(ev_doc.name, case=case_doc.name)
+					pa = frappe.db.get_value("Passport Analysis", pa_name,
+						["passport_type", "is_diplomatic", "passport_number",
+						 "issuing_country", "expiry", "mrz_valid", "risk_score",
+						 "verdict", "anomalies"], as_dict=True)
+					entry["passport_analysis"] = {"name": pa_name, **(pa or {})}
+				except Exception as e:
+					frappe.log_error(frappe.get_traceback(), f"passport analyze {f.filename}")
+					entry["passport_analysis_error"] = str(e)[:200]
+			uploaded.append(entry)
 		except Exception as e:
 			frappe.log_error(frappe.get_traceback(), f"upload_test {f.filename}")
 			errors.append({"name": f.filename, "error": str(e)[:200]})
