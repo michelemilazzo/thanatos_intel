@@ -29,7 +29,12 @@ fixtures=[
  {'doctype': 'News Source', 'filters': []},
 ]
 
-doc_events={}
+doc_events={
+ 'Infrastructure Cost': {
+   'after_insert': 'thanatos_intel.billing.erp_sync.on_infrastructure_cost_save',
+   'on_update': 'thanatos_intel.billing.erp_sync.on_infrastructure_cost_save',
+ }
+}
 scheduler_events={
  'cron':{},
  'all':[],
@@ -38,7 +43,8 @@ scheduler_events={
  'daily_long':[],
  'weekly':[],
  'weekly_long':[],
- 'monthly':['thanatos_intel.billing.cost_invoicing.scheduled_monthly_cost_invoicing'],
+ 'monthly':['thanatos_intel.billing.cost_invoicing.scheduled_monthly_cost_invoicing',
+            'thanatos_intel.billing.erp_sync.scheduled_monthly_invoice_on_erp'],
  'monthly_long':[]
 }
 website_route_rules=[
