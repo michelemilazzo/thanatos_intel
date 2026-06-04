@@ -13,6 +13,7 @@ app_country='IT'
 
 app_logo_url='/assets/thanatos_intel/images/thanatos-icon-192.png'
 app_include_css=['/assets/thanatos_intel/css/desk_chrome.css']
+app_include_js=['/assets/thanatos_intel/js/desk_chrome.js']
 brand_html='<img src="/assets/thanatos_intel/images/thanatos-logo-mark.png" alt="Thanatos Intel" style="height:32px"/>'
 website_context={
  'favicon': '/assets/thanatos_intel/images/thanatos-icon-192.png',
