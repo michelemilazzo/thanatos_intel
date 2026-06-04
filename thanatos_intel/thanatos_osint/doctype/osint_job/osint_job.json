@@ -1,0 +1,37 @@
+{
+  "doctype": "DocType",
+  "name": "OSINT Job",
+  "module": "Thanatos OSINT",
+  "autoname": "format:JOB-{YYYY}-{#####}",
+  "title_field": "title",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "title", "fieldtype": "Data", "label": "Title", "in_list_view": 1},
+    {"fieldname": "entity", "fieldtype": "Link", "label": "Entity", "options": "Entity", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Investigation Case", "options": "Investigation Case", "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "mode", "fieldtype": "Select", "label": "Mode", "options": "Quick Scan\nDeep Investigation\nLegal Review\nMonitoring", "default": "Quick Scan", "in_list_view": 1, "reqd": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Pending\nRunning\nCompleted\nFailed\nCancelled", "default": "Pending", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "started_at", "fieldtype": "Datetime", "label": "Started"},
+    {"fieldname": "completed_at", "fieldtype": "Datetime", "label": "Completed"},
+    {"fieldname": "sb_input", "fieldtype": "Section Break", "label": "Input"},
+    {"fieldname": "target_type", "fieldtype": "Select", "label": "Target Type", "options": "Email\nIP\nDomain\nUrl\nHash\nCompany\nPhone\nUsername\nWallet"},
+    {"fieldname": "target_value", "fieldtype": "Data", "label": "Target Value"},
+    {"fieldname": "col_input", "fieldtype": "Column Break"},
+    {"fieldname": "requested_by", "fieldtype": "Link", "label": "Requested By", "options": "User"},
+    {"fieldname": "client", "fieldtype": "Link", "label": "Client", "options": "Investigation Client"},
+    {"fieldname": "sb_steps", "fieldtype": "Section Break", "label": "Steps"},
+    {"fieldname": "steps", "fieldtype": "Table", "label": "Steps", "options": "OSINT Job Step"},
+    {"fieldname": "sb_result", "fieldtype": "Section Break", "label": "Result"},
+    {"fieldname": "risk_score", "fieldtype": "Int", "label": "Risk Score"},
+    {"fieldname": "risk_band", "fieldtype": "Select", "label": "Risk Band", "options": "\nLow\nMedium\nHigh\nCritical"},
+    {"fieldname": "col_result", "fieldtype": "Column Break"},
+    {"fieldname": "summary", "fieldtype": "Small Text", "label": "Summary"},
+    {"fieldname": "aggregated_json", "fieldtype": "Code", "label": "Aggregated JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

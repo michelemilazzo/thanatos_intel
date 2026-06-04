@@ -1,0 +1,40 @@
+{
+  "doctype": "DocType",
+  "name": "Entity",
+  "module": "Thanatos OSINT",
+  "autoname": "format:ENT-{YYYY}-{#####}",
+  "title_field": "label",
+  "search_fields": "label,primary_value,entity_type",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "entity_type", "fieldtype": "Select", "label": "Type", "options": "Person\nCompany\nEmail\nDomain\nIP\nUrl\nHash\nPhone\nUsername\nWallet\nFile\nDocument", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "label", "fieldtype": "Data", "label": "Label", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "primary_value", "fieldtype": "Data", "label": "Primary Value", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "country", "fieldtype": "Data", "label": "Country", "in_list_view": 1},
+    {"fieldname": "jurisdiction", "fieldtype": "Data", "label": "Jurisdiction"},
+    {"fieldname": "first_seen", "fieldtype": "Datetime", "label": "First Seen"},
+    {"fieldname": "last_seen", "fieldtype": "Datetime", "label": "Last Seen"},
+    {"fieldname": "sb_risk", "fieldtype": "Section Break", "label": "Risk"},
+    {"fieldname": "risk_score", "fieldtype": "Int", "label": "Risk Score", "default": 0, "in_list_view": 1},
+    {"fieldname": "risk_band", "fieldtype": "Select", "label": "Risk Band", "options": "\nLow\nMedium\nHigh\nCritical", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_risk", "fieldtype": "Column Break"},
+    {"fieldname": "blacklisted", "fieldtype": "Check", "label": "Blacklisted"},
+    {"fieldname": "monitored", "fieldtype": "Check", "label": "Monitored"},
+    {"fieldname": "sb_aliases", "fieldtype": "Section Break", "label": "Aliases"},
+    {"fieldname": "aliases", "fieldtype": "Table", "label": "Aliases", "options": "Entity Alias"},
+    {"fieldname": "sb_ids", "fieldtype": "Section Break", "label": "Identifiers"},
+    {"fieldname": "identifiers", "fieldtype": "Table", "label": "Identifiers", "options": "Entity Identifier"},
+    {"fieldname": "sb_relationships", "fieldtype": "Section Break", "label": "Relationships"},
+    {"fieldname": "relationships", "fieldtype": "Table", "label": "Relationships", "options": "Entity Relationship"},
+    {"fieldname": "sb_meta", "fieldtype": "Section Break", "label": "Metadata"},
+    {"fieldname": "notes", "fieldtype": "Long Text", "label": "Notes"},
+    {"fieldname": "tags", "fieldtype": "Data", "label": "Tags"},
+    {"fieldname": "metadata_json", "fieldtype": "Code", "label": "Metadata JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

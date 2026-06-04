@@ -1,0 +1,40 @@
+{
+  "doctype": "DocType",
+  "name": "Financial Snapshot",
+  "module": "Thanatos Corporate",
+  "autoname": "format:FIN-{YYYY}-{#####}",
+  "title_field": "company",
+  "fields": [
+    {"fieldname": "company", "fieldtype": "Link", "label": "Company", "options": "Company Profile", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "fiscal_year", "fieldtype": "Int", "label": "FY", "in_list_view": 1, "in_standard_filter": 1, "reqd": 1},
+    {"fieldname": "currency", "fieldtype": "Data", "label": "Currency", "default": "EUR"},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "revenue", "fieldtype": "Currency", "label": "Revenue", "in_list_view": 1},
+    {"fieldname": "ebitda", "fieldtype": "Currency", "label": "EBITDA"},
+    {"fieldname": "net_income", "fieldtype": "Currency", "label": "Net Income", "in_list_view": 1},
+    {"fieldname": "sb_balance", "fieldtype": "Section Break", "label": "Balance"},
+    {"fieldname": "total_assets", "fieldtype": "Currency", "label": "Total Assets"},
+    {"fieldname": "total_liabilities", "fieldtype": "Currency", "label": "Total Liabilities"},
+    {"fieldname": "equity", "fieldtype": "Currency", "label": "Equity"},
+    {"fieldname": "col_balance", "fieldtype": "Column Break"},
+    {"fieldname": "cash", "fieldtype": "Currency", "label": "Cash"},
+    {"fieldname": "short_term_debt", "fieldtype": "Currency", "label": "ST Debt"},
+    {"fieldname": "long_term_debt", "fieldtype": "Currency", "label": "LT Debt"},
+    {"fieldname": "sb_ratios", "fieldtype": "Section Break", "label": "Ratios"},
+    {"fieldname": "debt_to_equity", "fieldtype": "Float", "label": "Debt/Equity", "in_list_view": 1},
+    {"fieldname": "current_ratio", "fieldtype": "Float", "label": "Current Ratio"},
+    {"fieldname": "interest_coverage", "fieldtype": "Float", "label": "Interest Coverage"},
+    {"fieldname": "z_score", "fieldtype": "Float", "label": "Altman Z"},
+    {"fieldname": "col_ratios", "fieldtype": "Column Break"},
+    {"fieldname": "insolvency_risk", "fieldtype": "Select", "label": "Insolvency Risk", "options": "\nLow\nMedium\nHigh\nCritical", "in_list_view": 1},
+    {"fieldname": "source", "fieldtype": "Data", "label": "Source"},
+    {"fieldname": "raw_json", "fieldtype": "Code", "label": "Raw JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "Accountant", "read": 1, "write": 1, "create": 1},
+    {"role": "Lawyer", "read": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

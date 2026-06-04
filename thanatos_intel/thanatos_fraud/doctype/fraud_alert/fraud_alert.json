@@ -1,0 +1,27 @@
+{
+  "doctype": "DocType",
+  "name": "Fraud Alert",
+  "module": "Thanatos Fraud",
+  "autoname": "format:FA-{YYYY}-{#####}",
+  "title_field": "title",
+  "fields": [
+    {"fieldname": "title", "fieldtype": "Data", "label": "Title", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "severity", "fieldtype": "Select", "label": "Severity", "options": "Low\nMedium\nHigh\nCritical", "default": "Medium", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Open\nInvestigating\nFalse Positive\nConfirmed\nResolved", "default": "Open", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "created_at", "fieldtype": "Datetime", "label": "Created At", "in_list_view": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "entity", "fieldtype": "Link", "label": "Entity", "options": "Entity", "in_standard_filter": 1},
+    {"fieldname": "rule", "fieldtype": "Link", "label": "Rule Matched", "options": "Risk Rule"},
+    {"fieldname": "fraud_pattern", "fieldtype": "Link", "label": "Pattern Matched", "options": "Fraud Pattern"},
+    {"fieldname": "client", "fieldtype": "Link", "label": "Client", "options": "Investigation Client"},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case"},
+    {"fieldname": "sb", "fieldtype": "Section Break"},
+    {"fieldname": "details", "fieldtype": "Text Editor", "label": "Details"},
+    {"fieldname": "evidence_json", "fieldtype": "Code", "label": "Evidence JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

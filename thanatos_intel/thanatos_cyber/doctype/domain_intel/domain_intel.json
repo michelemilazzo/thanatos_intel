@@ -1,0 +1,29 @@
+{
+  "doctype": "DocType",
+  "name": "Domain Intel",
+  "module": "Thanatos Cyber",
+  "autoname": "field:domain",
+  "title_field": "domain",
+  "fields": [
+    {"fieldname": "domain", "fieldtype": "Data", "label": "Domain", "reqd": 1, "unique": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "registered_on", "fieldtype": "Datetime", "label": "Registered"},
+    {"fieldname": "expires_on", "fieldtype": "Datetime", "label": "Expires"},
+    {"fieldname": "registrar", "fieldtype": "Data", "label": "Registrar", "in_list_view": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "verdict", "fieldtype": "Select", "label": "Verdict", "options": "\nClean\nSuspicious\nMalicious\nPhishing\nParked", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "age_days", "fieldtype": "Int", "label": "Age (days)", "in_list_view": 1},
+    {"fieldname": "alexa_rank", "fieldtype": "Int", "label": "Alexa Rank"},
+    {"fieldname": "last_checked", "fieldtype": "Datetime", "label": "Last Checked"},
+    {"fieldname": "sb_dns", "fieldtype": "Section Break", "label": "DNS"},
+    {"fieldname": "current_ip", "fieldtype": "Data", "label": "Current IP"},
+    {"fieldname": "nameservers", "fieldtype": "Small Text", "label": "Nameservers"},
+    {"fieldname": "subdomains", "fieldtype": "Long Text", "label": "Subdomains"},
+    {"fieldname": "rdap_json", "fieldtype": "Code", "label": "RDAP JSON", "options": "JSON"},
+    {"fieldname": "securitytrails_json", "fieldtype": "Code", "label": "SecurityTrails JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "doctype": "DocType",
+  "name": "Hash Reputation",
+  "module": "Thanatos Cyber",
+  "autoname": "field:hash_value",
+  "title_field": "hash_value",
+  "fields": [
+    {"fieldname": "hash_value", "fieldtype": "Data", "label": "Hash", "reqd": 1, "unique": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "hash_type", "fieldtype": "Select", "label": "Type", "options": "MD5\nSHA-1\nSHA-256", "in_list_view": 1},
+    {"fieldname": "verdict", "fieldtype": "Select", "label": "Verdict", "options": "\nClean\nSuspicious\nMalicious\nPUA\nUnknown", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "vt_malicious", "fieldtype": "Int", "label": "VT Malicious"},
+    {"fieldname": "vt_total", "fieldtype": "Int", "label": "VT Total"},
+    {"fieldname": "last_checked", "fieldtype": "Datetime", "label": "Last Checked"},
+    {"fieldname": "sb", "fieldtype": "Section Break"},
+    {"fieldname": "malware_family", "fieldtype": "Data", "label": "Family"},
+    {"fieldname": "tags", "fieldtype": "Data", "label": "Tags"},
+    {"fieldname": "vt_json", "fieldtype": "Code", "label": "VT JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

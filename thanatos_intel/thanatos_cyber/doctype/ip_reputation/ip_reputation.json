@@ -1,0 +1,31 @@
+{
+  "doctype": "DocType",
+  "name": "IP Reputation",
+  "module": "Thanatos Cyber",
+  "autoname": "field:ip_address",
+  "title_field": "ip_address",
+  "fields": [
+    {"fieldname": "ip_address", "fieldtype": "Data", "label": "IP", "reqd": 1, "unique": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "abuse_score", "fieldtype": "Int", "label": "Abuse Score", "in_list_view": 1},
+    {"fieldname": "country", "fieldtype": "Data", "label": "Country", "in_list_view": 1},
+    {"fieldname": "asn", "fieldtype": "Data", "label": "ASN"},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "isp", "fieldtype": "Data", "label": "ISP"},
+    {"fieldname": "org", "fieldtype": "Data", "label": "Org"},
+    {"fieldname": "usage_type", "fieldtype": "Data", "label": "Usage Type"},
+    {"fieldname": "last_checked", "fieldtype": "Datetime", "label": "Last Checked"},
+    {"fieldname": "sb", "fieldtype": "Section Break"},
+    {"fieldname": "is_vpn", "fieldtype": "Check", "label": "VPN"},
+    {"fieldname": "is_proxy", "fieldtype": "Check", "label": "Proxy"},
+    {"fieldname": "is_tor", "fieldtype": "Check", "label": "Tor"},
+    {"fieldname": "is_hosting", "fieldtype": "Check", "label": "Hosting"},
+    {"fieldname": "open_ports", "fieldtype": "Small Text", "label": "Open Ports"},
+    {"fieldname": "vulns", "fieldtype": "Small Text", "label": "Vulnerabilities"},
+    {"fieldname": "providers_json", "fieldtype": "Code", "label": "Providers", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

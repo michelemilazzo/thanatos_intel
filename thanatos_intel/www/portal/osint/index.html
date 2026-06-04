@@ -1,0 +1,141 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}OSINT Console — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body.osint-page{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+.osint-wrap{max-width:1240px;margin:0 auto;padding:32px 24px;}
+.osint-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:24px;}
+.osint-head h1{color:var(--gold);font-weight:400;letter-spacing:5px;font-size:24px;margin:0;}
+.osint-head .sub{color:var(--muted);font-size:12px;letter-spacing:3px;text-transform:uppercase;}
+.card{background:var(--navy2);border:1px solid var(--line);padding:24px;margin-bottom:18px;}
+.card h2{color:var(--gold);font-weight:400;letter-spacing:3px;font-size:14px;text-transform:uppercase;margin:0 0 14px;}
+.row{display:grid;grid-template-columns:160px 1fr 200px 160px;gap:10px;margin-bottom:10px;}
+.row label{align-self:center;color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;}
+.row input,.row select{background:var(--navy);border:1px solid var(--line);color:#E6E8EE;padding:10px 12px;font-family:inherit;font-size:14px;}
+.row input:focus,.row select:focus{border-color:var(--gold);outline:0;}
+.btn{background:var(--gold);color:var(--navy);border:0;padding:12px 24px;letter-spacing:3px;text-transform:uppercase;font-size:11px;cursor:pointer;font-family:inherit;font-weight:bold;}
+.btn:hover{background:#B8975A;}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);}
+.btn.ghost:hover{background:var(--gold);color:var(--navy);}
+.result{margin-top:18px;background:#070A14;border:1px solid var(--line);padding:18px;font-family:monospace;font-size:12px;color:#A4A9BC;max-height:480px;overflow:auto;white-space:pre-wrap;}
+.score{display:inline-block;padding:6px 14px;letter-spacing:2px;font-size:11px;text-transform:uppercase;border:1px solid;}
+.score.Low{color:#7BC480;border-color:#7BC480;}
+.score.Medium{color:#E0B860;border-color:#E0B860;}
+.score.High{color:#E08B60;border-color:#E08B60;}
+.score.Critical{color:#E06860;border-color:#E06860;background:rgba(224,104,96,.08);}
+table.jobs{width:100%;border-collapse:collapse;font-size:13px;}
+table.jobs th,table.jobs td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;color:#E6E8EE;}
+table.jobs th{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:normal;}
+table.jobs tr:hover{background:rgba(200,169,110,.04);}
+.empty{color:var(--muted);text-align:center;padding:32px;border:1px dashed var(--line);}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('portal') }}
+<body class="osint-page">
+<div class="osint-wrap">
+  <div class="osint-head">
+    <div>
+      <h1>OSINT CONSOLE</h1>
+      <div class="sub">Quick scan · Deep investigation · Legal review</div>
+    </div>
+    <div>
+      <a class="btn ghost" href="/portal">← Portale</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Nuova analisi</h2>
+    <div class="row">
+      <label>Tipo target</label>
+      <select id="target_type">
+        <option value="Email">Email</option>
+        <option value="Domain">Dominio</option>
+        <option value="Url">URL</option>
+        <option value="IP">IP</option>
+        <option value="Hash">Hash file (MD5/SHA1/SHA256)</option>
+        <option value="Company">Azienda</option>
+        <option value="Phone">Telefono</option>
+        <option value="Username">Username</option>
+        <option value="Wallet">Wallet crypto</option>
+      </select>
+      <select id="mode">
+        <option value="Quick Scan">Quick Scan</option>
+        {% if can_run_deep %}<option value="Deep Investigation">Deep Investigation</option>
+        <option value="Legal Review">Legal Review</option>{% endif %}
+      </select>
+      <button class="btn" onclick="runJob()">Esegui</button>
+    </div>
+    <div class="row">
+      <label>Valore</label>
+      <input id="target_value" placeholder="es. example.com / user@dominio.it / 1.2.3.4 / sha256..." style="grid-column:span 3"/>
+    </div>
+    <div id="status" style="color:var(--muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-top:12px;"></div>
+    <div id="result" class="result" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Job recenti</h2>
+    {% if recent_jobs %}
+    <table class="jobs">
+      <thead><tr>
+        <th>Target</th><th>Tipo</th><th>Mode</th><th>Status</th><th>Risk</th><th>Summary</th><th>Quando</th>
+      </tr></thead>
+      <tbody>
+      {% for j in recent_jobs %}
+      <tr>
+        <td>{{ j.target_value or '—' }}</td>
+        <td>{{ j.target_type }}</td>
+        <td>{{ j.mode }}</td>
+        <td>{{ j.status }}</td>
+        <td>{% if j.risk_band %}<span class="score {{ j.risk_band }}">{{ j.risk_score }} · {{ j.risk_band }}</span>{% else %}—{% endif %}</td>
+        <td style="color:#A4A9BC;">{{ (j.summary or '')[:80] }}</td>
+        <td style="color:var(--muted);font-size:11px;">{{ frappe.utils.format_datetime(j.creation, 'd MMM HH:mm') }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">Nessun job ancora eseguito.</div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+async function runJob() {
+  const tt = document.getElementById('target_type').value;
+  const tv = document.getElementById('target_value').value.trim();
+  const mode = document.getElementById('mode').value;
+  const status = document.getElementById('status');
+  const result = document.getElementById('result');
+  if (!tv) { status.textContent = 'Inserisci un valore.'; return; }
+  status.textContent = 'Esecuzione in corso...';
+  result.style.display = 'none';
+  try {
+    const r = await fetch('/api/method/thanatos_intel.thanatos_osint.doctype.osint_job.osint_job.create_and_run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Frappe-CSRF-Token': frappe.csrf_token || ''},
+      body: `target_type=${encodeURIComponent(tt)}&target_value=${encodeURIComponent(tv)}&mode=${encodeURIComponent(mode)}`
+    });
+    const j = await r.json();
+    if (j.message) {
+      status.innerHTML = `Job <b style="color:#C8A96E">${j.message.name}</b> · Risk score <b>${j.message.risk_score}</b> (${j.message.risk_band})`;
+      result.style.display = 'block';
+      result.textContent = j.message.summary + '\n\n' + JSON.stringify(j.message, null, 2);
+      setTimeout(() => location.reload(), 1800);
+    } else {
+      status.textContent = 'Errore: ' + (j._server_messages || JSON.stringify(j));
+    }
+  } catch (e) {
+    status.textContent = 'Errore: ' + e;
+  }
+}
+</script>
+</body>
+{{ thanatos_footer() }}
+{% endblock %}

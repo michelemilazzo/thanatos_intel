@@ -1,0 +1,26 @@
+{
+  "doctype": "DocType",
+  "name": "Risk Rule",
+  "module": "Thanatos Fraud",
+  "autoname": "format:RR-{#####}",
+  "title_field": "rule_name",
+  "fields": [
+    {"fieldname": "rule_name", "fieldtype": "Data", "label": "Rule Name", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "enabled", "fieldtype": "Check", "label": "Enabled", "default": 1, "in_list_view": 1},
+    {"fieldname": "category", "fieldtype": "Select", "label": "Category", "options": "Identity\nReputation\nFinancial\nCyber\nDocument\nBehavioral\nGeo\nOther", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "applies_to", "fieldtype": "Select", "label": "Applies To", "options": "Entity\nEmail\nIP\nDomain\nCompany\nDocument\nCase", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "score_delta", "fieldtype": "Int", "label": "Score Δ", "in_list_view": 1, "reqd": 1},
+    {"fieldname": "severity", "fieldtype": "Select", "label": "Severity", "options": "Info\nLow\nMedium\nHigh\nCritical", "default": "Medium"},
+    {"fieldname": "sb_logic", "fieldtype": "Section Break", "label": "Logic"},
+    {"fieldname": "selector_expression", "fieldtype": "Code", "label": "Selector (Python expression)", "options": "Python", "description": "Riceve `e` (dict entity con dati arricchiti). Deve ritornare True/False."},
+    {"fieldname": "match_message", "fieldtype": "Small Text", "label": "Match Message"},
+    {"fieldname": "sb_meta", "fieldtype": "Section Break"},
+    {"fieldname": "created_by_user", "fieldtype": "Link", "label": "Created By", "options": "User"},
+    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

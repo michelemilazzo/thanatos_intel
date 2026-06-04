@@ -1,0 +1,25 @@
+{
+  "doctype": "DocType",
+  "name": "Watchlist Entry",
+  "module": "Thanatos Fraud",
+  "autoname": "format:WL-{YYYY}-{#####}",
+  "title_field": "value",
+  "fields": [
+    {"fieldname": "value", "fieldtype": "Data", "label": "Value", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "value_type", "fieldtype": "Select", "label": "Type", "options": "Email\nIP\nDomain\nCompany\nPerson\nPhone\nWallet", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "list_type", "fieldtype": "Select", "label": "List", "options": "Sanctions\nPEP\nFraud\nInternal\nMonitor", "in_list_view": 1, "in_standard_filter": 1, "reqd": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "severity", "fieldtype": "Select", "label": "Severity", "options": "Low\nMedium\nHigh\nCritical", "default": "Medium", "in_list_view": 1},
+    {"fieldname": "source", "fieldtype": "Data", "label": "Source"},
+    {"fieldname": "added_on", "fieldtype": "Date", "label": "Added On"},
+    {"fieldname": "expires_on", "fieldtype": "Date", "label": "Expires On"},
+    {"fieldname": "sb", "fieldtype": "Section Break"},
+    {"fieldname": "reason", "fieldtype": "Small Text", "label": "Reason"},
+    {"fieldname": "entity", "fieldtype": "Link", "label": "Entity", "options": "Entity"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

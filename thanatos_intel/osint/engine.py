@@ -1,22 +1,30 @@
 """
 OSINT Engine — Thanatos Intel.
 
-Providers:
-- HIBP (Have I Been Pwned): breach lookup per email
-- AbuseIPDB: reputation IP
-- RDAP (registry): WHOIS replacement per dominio/IP, NESSUNA chiave richiesta
+Providers integrati:
+- HIBP                — breach lookup email
+- AbuseIPDB           — IP reputation
+- RDAP                — WHOIS replacement (domain/IP), no key
+- OpenCorporates      — aziende globali
+- SecurityTrails      — DNS history, subdomains
+- IPinfo              — IP geoloc + ASN + company
+- VirusTotal v3       — file/URL/domain/IP
+- urlscan.io          — URL scan submit + result
+- Shodan              — host exposure
+- Censys              — internet asset search
 
-Le chiavi API si configurano in site_config.json:
-- hibp_api_key
-- abuseipdb_api_key
-
-Tutti i lookup sono salvati come OSINT Lookup DocType con cache TTL configurabile.
-Hit caching in cache redis per ridurre cost API.
+Site config keys (set via `bench --site X set-config`):
+hibp_api_key, abuseipdb_api_key, opencorporates_api_key,
+securitytrails_api_key, ipinfo_token, virustotal_api_key,
+urlscan_api_key, shodan_api_key, censys_api_id, censys_api_secret
 """
+import hashlib
 import json
+import re
 import socket
 from datetime import timedelta
 from typing import Optional
+from urllib.parse import urlparse
 
 import frappe
 import requests
@@ -26,8 +34,22 @@ HIBP_URL = "https://haveibeenpwned.com/api/v3/breachedaccount/{email}"
 ABUSEIPDB_URL = "https://api.abuseipdb.com/api/v2/check"
 RDAP_DOMAIN_URL = "https://rdap.org/domain/{domain}"
 RDAP_IP_URL = "https://rdap.org/ip/{ip}"
+OPENCORP_SEARCH_URL = "https://api.opencorporates.com/v0.4/companies/search"
+OPENCORP_COMPANY_URL = "https://api.opencorporates.com/v0.4/companies/{jurisdiction}/{company_number}"
+SECURITYTRAILS_DOMAIN_URL = "https://api.securitytrails.com/v1/domain/{domain}"
+SECURITYTRAILS_SUBDOMAINS_URL = "https://api.securitytrails.com/v1/domain/{domain}/subdomains"
+IPINFO_URL = "https://ipinfo.io/{ip}/json"
+VT_FILE_URL = "https://www.virustotal.com/api/v3/files/{hash}"
+VT_URL_URL = "https://www.virustotal.com/api/v3/urls/{id}"
+VT_DOMAIN_URL = "https://www.virustotal.com/api/v3/domains/{domain}"
+VT_IP_URL = "https://www.virustotal.com/api/v3/ip_addresses/{ip}"
+URLSCAN_SEARCH_URL = "https://urlscan.io/api/v1/search/"
+URLSCAN_SCAN_URL = "https://urlscan.io/api/v1/scan/"
+SHODAN_HOST_URL = "https://api.shodan.io/shodan/host/{ip}"
+CENSYS_HOSTS_URL = "https://search.censys.io/api/v2/hosts/{ip}"
 
 CACHE_TTL_HOURS = 24
+UA = "Thanatos-Intel/1.0"
 
 
 def _cfg(key: str) -> Optional[str]:
@@ -186,29 +208,410 @@ def lookup_domain(domain: str) -> dict:
 
 
 @frappe.whitelist()
-def resolve_and_check(target: str) -> dict:
-    """One-shot: rileva tipo (email/ip/domain) e ritorna tutti i lookup rilevanti."""
+def resolve_and_check(target: str, deep: int = 0) -> dict:
+    """One-shot: rileva tipo e ritorna lookup rilevanti.
+    deep=0 quick scan, deep=1 attiva connettori premium (VT/Shodan/Censys/SecurityTrails)."""
     target = (target or "").strip()
     if not target:
         return {"error": "empty"}
+    deep = int(deep or 0)
 
     out = {"target": target}
-    if "@" in target:
-        out["type"] = "email"
+    kind = _detect_kind(target) if "@" not in target else "email"
+    out["type"] = kind
+
+    if kind == "email":
         out["hibp"] = lookup_email(target)
-    elif _is_ip(target):
-        out["type"] = "ip"
+    elif kind == "hash":
+        out["virustotal"] = lookup_virustotal(target, kind="hash")
+    elif kind == "ip":
         out["abuseipdb"] = lookup_ip(target)
-    else:
-        out["type"] = "domain"
-        out["rdap"] = lookup_domain(target)
+        out["ipinfo"] = lookup_ipinfo(target)
+        if deep:
+            out["virustotal"] = lookup_virustotal(target, kind="ip")
+            out["shodan"] = lookup_shodan(target)
+            out["censys"] = lookup_censys(target)
+    else:  # domain or url
+        domain = _norm_domain(target)
+        out["domain"] = domain
+        out["rdap"] = lookup_domain(domain)
+        out["urlscan"] = lookup_urlscan(domain)
+        if deep:
+            out["securitytrails"] = lookup_dns_history(domain)
+            out["virustotal"] = lookup_virustotal(domain, kind="domain")
         try:
-            ip = socket.gethostbyname(target)
+            ip = socket.gethostbyname(domain)
             out["resolved_ip"] = ip
             out["abuseipdb"] = lookup_ip(ip)
+            out["ipinfo"] = lookup_ipinfo(ip)
+            if deep:
+                out["shodan"] = lookup_shodan(ip)
         except Exception:
             pass
     return out
+
+
+@frappe.whitelist()
+def lookup_company(query: str, jurisdiction: str = "") -> dict:
+    """OpenCorporates company search/profile."""
+    query = (query or "").strip()
+    if not query:
+        return {"error": "invalid_query"}
+    key = f"{query}|{jurisdiction}"
+    cached = _cache_get("opencorporates", key)
+    if cached:
+        return {**cached, "cached": True}
+    api_key = _cfg("opencorporates_api_key")
+    params = {"q": query, "format": "json"}
+    if jurisdiction:
+        params["jurisdiction_code"] = jurisdiction
+    if api_key:
+        params["api_token"] = api_key
+    try:
+        r = requests.get(OPENCORP_SEARCH_URL, params=params,
+                         headers={"user-agent": UA}, timeout=15)
+        if r.status_code == 200:
+            d = r.json().get("results", {})
+            companies = []
+            for c in (d.get("companies") or [])[:20]:
+                co = c.get("company") or {}
+                companies.append({
+                    "name": co.get("name"),
+                    "number": co.get("company_number"),
+                    "jurisdiction": co.get("jurisdiction_code"),
+                    "incorporation_date": co.get("incorporation_date"),
+                    "dissolution_date": co.get("dissolution_date"),
+                    "status": co.get("current_status"),
+                    "type": co.get("company_type"),
+                    "address": co.get("registered_address_in_full"),
+                    "opencorporates_url": co.get("opencorporates_url"),
+                })
+            result = {"query": query, "jurisdiction": jurisdiction,
+                      "total": d.get("total_count"), "companies": companies,
+                      "source": "opencorporates"}
+        else:
+            result = {"error": f"opencorporates_status_{r.status_code}",
+                      "source": "opencorporates"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "opencorporates"}
+    _cache_set("opencorporates", key, result)
+    _persist_lookup("Company", query, result)
+    return result
+
+
+@frappe.whitelist()
+def lookup_dns_history(domain: str) -> dict:
+    """SecurityTrails — historical DNS + subdomains."""
+    domain = _norm_domain(domain)
+    if not domain:
+        return {"error": "invalid_domain"}
+    cached = _cache_get("securitytrails", domain)
+    if cached:
+        return {**cached, "cached": True}
+    api_key = _cfg("securitytrails_api_key")
+    if not api_key:
+        result = {"stub": True, "source": "securitytrails",
+                  "message": "SecurityTrails API key not configured"}
+        _cache_set("securitytrails", domain, result)
+        return result
+    try:
+        h = {"APIKEY": api_key, "Accept": "application/json", "user-agent": UA}
+        r = requests.get(SECURITYTRAILS_DOMAIN_URL.format(domain=domain),
+                         headers=h, timeout=15)
+        if r.status_code != 200:
+            result = {"error": f"securitytrails_status_{r.status_code}",
+                      "source": "securitytrails"}
+        else:
+            d = r.json()
+            sub = requests.get(SECURITYTRAILS_SUBDOMAINS_URL.format(domain=domain),
+                               headers=h, timeout=15)
+            subdomains = (sub.json().get("subdomains") if sub.status_code == 200 else []) or []
+            result = {
+                "domain": domain,
+                "apex": d.get("apex_domain"),
+                "current_dns": d.get("current_dns"),
+                "alexa_rank": d.get("alexa_rank"),
+                "subdomain_count": d.get("subdomain_count"),
+                "subdomains": subdomains[:200],
+                "source": "securitytrails",
+            }
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "securitytrails"}
+    _cache_set("securitytrails", domain, result)
+    _persist_lookup("Domain", domain, result)
+    return result
+
+
+@frappe.whitelist()
+def lookup_ipinfo(ip: str) -> dict:
+    """IPinfo geoloc + ASN + company."""
+    ip = (ip or "").strip()
+    if not _is_ip(ip):
+        return {"error": "invalid_ip"}
+    cached = _cache_get("ipinfo", ip)
+    if cached:
+        return {**cached, "cached": True}
+    token = _cfg("ipinfo_token")
+    try:
+        params = {"token": token} if token else {}
+        r = requests.get(IPINFO_URL.format(ip=ip), params=params,
+                         headers={"user-agent": UA}, timeout=10)
+        if r.status_code == 200:
+            d = r.json()
+            result = {
+                "ip": d.get("ip"), "hostname": d.get("hostname"),
+                "city": d.get("city"), "region": d.get("region"),
+                "country": d.get("country"), "loc": d.get("loc"),
+                "org": d.get("org"), "asn": (d.get("asn") or {}).get("asn"),
+                "company": (d.get("company") or {}).get("name"),
+                "privacy": d.get("privacy"), "abuse": d.get("abuse"),
+                "source": "ipinfo",
+            }
+        else:
+            result = {"error": f"ipinfo_status_{r.status_code}", "source": "ipinfo"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "ipinfo"}
+    _cache_set("ipinfo", ip, result)
+    _persist_lookup("IP", ip, result)
+    return result
+
+
+@frappe.whitelist()
+def lookup_virustotal(target: str, kind: str = "auto") -> dict:
+    """VirusTotal v3 — file hash, url, domain, ip."""
+    target = (target or "").strip()
+    if not target:
+        return {"error": "invalid_target"}
+    if kind == "auto":
+        kind = _detect_kind(target)
+    cached = _cache_get(f"vt_{kind}", target)
+    if cached:
+        return {**cached, "cached": True}
+    api_key = _cfg("virustotal_api_key")
+    if not api_key:
+        result = {"stub": True, "source": "virustotal", "kind": kind,
+                  "message": "VirusTotal API key not configured"}
+        _cache_set(f"vt_{kind}", target, result)
+        return result
+    h = {"x-apikey": api_key, "Accept": "application/json", "user-agent": UA}
+    try:
+        if kind == "hash":
+            url = VT_FILE_URL.format(hash=target)
+        elif kind == "url":
+            url_id = re.sub(r"=+$", "", _b64(target.encode()).decode().replace("+", "-").replace("/", "_"))
+            url = VT_URL_URL.format(id=url_id)
+        elif kind == "ip":
+            url = VT_IP_URL.format(ip=target)
+        else:
+            url = VT_DOMAIN_URL.format(domain=_norm_domain(target))
+        r = requests.get(url, headers=h, timeout=15)
+        if r.status_code == 200:
+            attr = (r.json().get("data") or {}).get("attributes") or {}
+            stats = attr.get("last_analysis_stats") or {}
+            result = {
+                "kind": kind, "target": target,
+                "malicious": stats.get("malicious", 0),
+                "suspicious": stats.get("suspicious", 0),
+                "harmless": stats.get("harmless", 0),
+                "undetected": stats.get("undetected", 0),
+                "reputation": attr.get("reputation"),
+                "last_analysis_date": attr.get("last_analysis_date"),
+                "tags": attr.get("tags") or [],
+                "meaningful_name": attr.get("meaningful_name"),
+                "names": (attr.get("names") or [])[:10],
+                "source": "virustotal",
+            }
+        elif r.status_code == 404:
+            result = {"kind": kind, "target": target, "not_found": True, "source": "virustotal"}
+        else:
+            result = {"error": f"virustotal_status_{r.status_code}", "source": "virustotal"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "virustotal"}
+    _cache_set(f"vt_{kind}", target, result)
+    _persist_lookup(kind.capitalize() if kind != "hash" else "Hash", target, result)
+    return result
+
+
+@frappe.whitelist()
+def lookup_urlscan(target: str) -> dict:
+    """urlscan.io — cerca scansioni esistenti del dominio/URL."""
+    target = (target or "").strip()
+    if not target:
+        return {"error": "invalid_target"}
+    domain = _norm_domain(target)
+    cached = _cache_get("urlscan", domain)
+    if cached:
+        return {**cached, "cached": True}
+    try:
+        r = requests.get(URLSCAN_SEARCH_URL,
+                         params={"q": f"domain:{domain}", "size": 10},
+                         headers={"user-agent": UA}, timeout=15)
+        if r.status_code == 200:
+            d = r.json()
+            results = []
+            for s in (d.get("results") or [])[:10]:
+                task = s.get("task") or {}
+                page = s.get("page") or {}
+                verdicts = s.get("verdicts", {}).get("overall", {})
+                results.append({
+                    "url": task.get("url"),
+                    "scan_time": task.get("time"),
+                    "screenshot": s.get("screenshot"),
+                    "result_url": s.get("result"),
+                    "ip": page.get("ip"),
+                    "country": page.get("country"),
+                    "asn_name": page.get("asnname"),
+                    "malicious": verdicts.get("malicious"),
+                    "score": verdicts.get("score"),
+                })
+            result = {"domain": domain, "total": d.get("total"),
+                      "scans": results, "source": "urlscan"}
+        else:
+            result = {"error": f"urlscan_status_{r.status_code}", "source": "urlscan"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "urlscan"}
+    _cache_set("urlscan", domain, result)
+    _persist_lookup("Domain", domain, result)
+    return result
+
+
+@frappe.whitelist()
+def submit_urlscan(url: str, visibility: str = "unlisted") -> dict:
+    """urlscan.io — submit nuova scansione (richiede API key)."""
+    api_key = _cfg("urlscan_api_key")
+    if not api_key:
+        return {"stub": True, "source": "urlscan",
+                "message": "urlscan API key not configured"}
+    try:
+        r = requests.post(URLSCAN_SCAN_URL,
+                          json={"url": url, "visibility": visibility},
+                          headers={"API-Key": api_key, "Content-Type": "application/json",
+                                   "user-agent": UA}, timeout=20)
+        if r.status_code in (200, 201):
+            d = r.json()
+            return {"submitted": True, "uuid": d.get("uuid"),
+                    "result_url": d.get("result"), "api_url": d.get("api"),
+                    "source": "urlscan"}
+        return {"error": f"urlscan_submit_{r.status_code}", "source": "urlscan",
+                "body": r.text[:300]}
+    except Exception as e:
+        return {"error": str(e)[:200], "source": "urlscan"}
+
+
+@frappe.whitelist()
+def lookup_shodan(ip: str) -> dict:
+    """Shodan host info."""
+    ip = (ip or "").strip()
+    if not _is_ip(ip):
+        return {"error": "invalid_ip"}
+    cached = _cache_get("shodan", ip)
+    if cached:
+        return {**cached, "cached": True}
+    api_key = _cfg("shodan_api_key")
+    if not api_key:
+        result = {"stub": True, "source": "shodan",
+                  "message": "Shodan API key not configured"}
+        _cache_set("shodan", ip, result)
+        return result
+    try:
+        r = requests.get(SHODAN_HOST_URL.format(ip=ip),
+                         params={"key": api_key},
+                         headers={"user-agent": UA}, timeout=15)
+        if r.status_code == 200:
+            d = r.json()
+            result = {
+                "ip": d.get("ip_str"), "org": d.get("org"),
+                "isp": d.get("isp"), "asn": d.get("asn"),
+                "country": d.get("country_code"), "city": d.get("city"),
+                "hostnames": d.get("hostnames") or [],
+                "ports": d.get("ports") or [],
+                "vulns": list((d.get("vulns") or {}).keys())[:50] if isinstance(d.get("vulns"), dict) else (d.get("vulns") or []),
+                "tags": d.get("tags") or [],
+                "last_update": d.get("last_update"),
+                "services": [{"port": s.get("port"), "product": s.get("product"),
+                              "version": s.get("version"),
+                              "transport": s.get("transport")}
+                             for s in (d.get("data") or [])[:20]],
+                "source": "shodan",
+            }
+        elif r.status_code == 404:
+            result = {"ip": ip, "not_found": True, "source": "shodan"}
+        else:
+            result = {"error": f"shodan_status_{r.status_code}", "source": "shodan"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "shodan"}
+    _cache_set("shodan", ip, result)
+    _persist_lookup("IP", ip, result)
+    return result
+
+
+@frappe.whitelist()
+def lookup_censys(ip: str) -> dict:
+    """Censys hosts/v2 lookup."""
+    ip = (ip or "").strip()
+    if not _is_ip(ip):
+        return {"error": "invalid_ip"}
+    cached = _cache_get("censys", ip)
+    if cached:
+        return {**cached, "cached": True}
+    api_id = _cfg("censys_api_id")
+    api_secret = _cfg("censys_api_secret")
+    if not api_id or not api_secret:
+        result = {"stub": True, "source": "censys",
+                  "message": "Censys API credentials not configured"}
+        _cache_set("censys", ip, result)
+        return result
+    try:
+        r = requests.get(CENSYS_HOSTS_URL.format(ip=ip),
+                         auth=(api_id, api_secret),
+                         headers={"user-agent": UA}, timeout=15)
+        if r.status_code == 200:
+            result_data = (r.json().get("result") or {})
+            services = result_data.get("services") or []
+            result = {
+                "ip": result_data.get("ip"),
+                "last_updated_at": result_data.get("last_updated_at"),
+                "autonomous_system": (result_data.get("autonomous_system") or {}).get("name"),
+                "country": (result_data.get("location") or {}).get("country"),
+                "services": [{"port": s.get("port"),
+                              "service_name": s.get("service_name"),
+                              "transport_protocol": s.get("transport_protocol")}
+                             for s in services[:30]],
+                "source": "censys",
+            }
+        elif r.status_code == 404:
+            result = {"ip": ip, "not_found": True, "source": "censys"}
+        else:
+            result = {"error": f"censys_status_{r.status_code}", "source": "censys"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "censys"}
+    _cache_set("censys", ip, result)
+    _persist_lookup("IP", ip, result)
+    return result
+
+
+def _norm_domain(value: str) -> str:
+    v = (value or "").strip().lower()
+    if "://" in v:
+        v = urlparse(v).hostname or v
+    v = v.split("/")[0].strip(".")
+    return v if "." in v else ""
+
+
+def _detect_kind(value: str) -> str:
+    v = value.strip()
+    if re.fullmatch(r"[a-fA-F0-9]{32}|[a-fA-F0-9]{40}|[a-fA-F0-9]{64}", v):
+        return "hash"
+    if v.startswith("http://") or v.startswith("https://"):
+        return "url"
+    if _is_ip(v):
+        return "ip"
+    return "domain"
+
+
+def _b64(b: bytes) -> bytes:
+    import base64
+    return base64.urlsafe_b64encode(b)
 
 
 def _is_ip(value: str) -> bool:

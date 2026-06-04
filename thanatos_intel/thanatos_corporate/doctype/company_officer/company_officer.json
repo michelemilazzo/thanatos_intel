@@ -1,0 +1,13 @@
+{
+  "doctype": "DocType",
+  "name": "Company Officer",
+  "module": "Thanatos Corporate",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "full_name", "fieldtype": "Data", "label": "Name", "in_list_view": 1, "reqd": 1, "columns": 4},
+    {"fieldname": "role", "fieldtype": "Data", "label": "Role", "in_list_view": 1, "columns": 2},
+    {"fieldname": "appointed_on", "fieldtype": "Date", "label": "Appointed", "in_list_view": 1, "columns": 2},
+    {"fieldname": "resigned_on", "fieldtype": "Date", "label": "Resigned", "in_list_view": 1, "columns": 2},
+    {"fieldname": "entity", "fieldtype": "Link", "label": "Entity", "options": "Entity", "columns": 2}
+  ]
+}

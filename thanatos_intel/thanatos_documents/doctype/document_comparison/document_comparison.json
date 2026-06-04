@@ -1,0 +1,25 @@
+{
+  "doctype": "DocType",
+  "name": "Document Comparison",
+  "module": "Thanatos Documents",
+  "autoname": "format:DCMP-{YYYY}-{#####}",
+  "title_field": "title",
+  "fields": [
+    {"fieldname": "title", "fieldtype": "Data", "label": "Title", "in_list_view": 1},
+    {"fieldname": "doc_a", "fieldtype": "Link", "label": "Document A", "options": "Document Intake", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "doc_b", "fieldtype": "Link", "label": "Document B", "options": "Document Intake", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "similarity_pct", "fieldtype": "Percent", "label": "Similarity %", "in_list_view": 1},
+    {"fieldname": "verdict", "fieldtype": "Select", "label": "Verdict", "options": "\nIdentical\nMatch\nDerived\nDifferent\nForgery Suspected", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "compared_at", "fieldtype": "Datetime", "label": "Compared At"},
+    {"fieldname": "sb", "fieldtype": "Section Break", "label": "Findings"},
+    {"fieldname": "findings", "fieldtype": "Long Text", "label": "Findings"},
+    {"fieldname": "diff_json", "fieldtype": "Code", "label": "Diff JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "Lawyer", "read": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

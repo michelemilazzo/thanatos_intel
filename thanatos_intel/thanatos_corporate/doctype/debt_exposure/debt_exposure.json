@@ -1,0 +1,29 @@
+{
+  "doctype": "DocType",
+  "name": "Debt Exposure",
+  "module": "Thanatos Corporate",
+  "autoname": "format:DEBT-{YYYY}-{#####}",
+  "title_field": "company",
+  "fields": [
+    {"fieldname": "company", "fieldtype": "Link", "label": "Company", "options": "Company Profile", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "creditor", "fieldtype": "Data", "label": "Creditor", "in_list_view": 1},
+    {"fieldname": "debt_type", "fieldtype": "Select", "label": "Type", "options": "\nBank Loan\nBond\nMortgage\nLeasing\nFactoring\nSupplier\nTax\nOther", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "principal", "fieldtype": "Currency", "label": "Principal", "in_list_view": 1},
+    {"fieldname": "outstanding", "fieldtype": "Currency", "label": "Outstanding", "in_list_view": 1},
+    {"fieldname": "interest_rate", "fieldtype": "Percent", "label": "Interest Rate"},
+    {"fieldname": "sb", "fieldtype": "Section Break"},
+    {"fieldname": "start_date", "fieldtype": "Date", "label": "Start"},
+    {"fieldname": "maturity_date", "fieldtype": "Date", "label": "Maturity"},
+    {"fieldname": "in_default", "fieldtype": "Check", "label": "In Default", "in_list_view": 1},
+    {"fieldname": "col_dates", "fieldtype": "Column Break"},
+    {"fieldname": "collateral", "fieldtype": "Data", "label": "Collateral"},
+    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "Accountant", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

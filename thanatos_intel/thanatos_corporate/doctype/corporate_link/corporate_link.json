@@ -1,0 +1,13 @@
+{
+  "doctype": "DocType",
+  "name": "Corporate Link",
+  "module": "Thanatos Corporate",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "linked_company", "fieldtype": "Link", "label": "Linked Company", "options": "Company Profile", "in_list_view": 1, "columns": 4},
+    {"fieldname": "link_type", "fieldtype": "Select", "label": "Type", "options": "subsidiary\nparent\nshared_director\nshared_address\nshareholder\nsuspected_link", "in_list_view": 1, "columns": 3},
+    {"fieldname": "stake_pct", "fieldtype": "Percent", "label": "Stake %", "in_list_view": 1, "columns": 2},
+    {"fieldname": "since", "fieldtype": "Date", "label": "Since", "in_list_view": 1, "columns": 2},
+    {"fieldname": "note", "fieldtype": "Data", "label": "Note", "columns": 1}
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "doctype": "DocType",
+  "name": "IOC",
+  "module": "Thanatos Cyber",
+  "autoname": "format:IOC-{YYYY}-{#####}",
+  "title_field": "value",
+  "fields": [
+    {"fieldname": "ioc_type", "fieldtype": "Select", "label": "IOC Type", "options": "Hash\nIP\nDomain\nUrl\nEmail\nRegistry Key\nFile Path\nMutex\nUser Agent\nYARA", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "value", "fieldtype": "Data", "label": "Value", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "confidence", "fieldtype": "Percent", "label": "Confidence", "in_list_view": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "tlp", "fieldtype": "Select", "label": "TLP", "options": "WHITE\nGREEN\nAMBER\nRED", "default": "AMBER", "in_list_view": 1},
+    {"fieldname": "first_seen", "fieldtype": "Datetime", "label": "First Seen"},
+    {"fieldname": "last_seen", "fieldtype": "Datetime", "label": "Last Seen"},
+    {"fieldname": "sb", "fieldtype": "Section Break"},
+    {"fieldname": "threat_family", "fieldtype": "Data", "label": "Threat Family"},
+    {"fieldname": "campaign", "fieldtype": "Data", "label": "Campaign"},
+    {"fieldname": "source", "fieldtype": "Data", "label": "Source"},
+    {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

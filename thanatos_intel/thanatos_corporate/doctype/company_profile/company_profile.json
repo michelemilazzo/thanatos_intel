@@ -1,0 +1,40 @@
+{
+  "doctype": "DocType",
+  "name": "Company Profile",
+  "module": "Thanatos Corporate",
+  "autoname": "format:COMP-{YYYY}-{#####}",
+  "title_field": "company_name",
+  "search_fields": "company_name,company_number,vat_number",
+  "fields": [
+    {"fieldname": "company_name", "fieldtype": "Data", "label": "Company Name", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "company_number", "fieldtype": "Data", "label": "Number", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "jurisdiction", "fieldtype": "Data", "label": "Jurisdiction", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "vat_number", "fieldtype": "Data", "label": "VAT"},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "company_type", "fieldtype": "Data", "label": "Type"},
+    {"fieldname": "incorporation_date", "fieldtype": "Date", "label": "Incorporated"},
+    {"fieldname": "dissolution_date", "fieldtype": "Date", "label": "Dissolved"},
+    {"fieldname": "current_status", "fieldtype": "Data", "label": "Status", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "sb_addr", "fieldtype": "Section Break", "label": "Address"},
+    {"fieldname": "registered_address", "fieldtype": "Small Text", "label": "Registered Address"},
+    {"fieldname": "country", "fieldtype": "Data", "label": "Country"},
+    {"fieldname": "sb_officers", "fieldtype": "Section Break", "label": "Officers"},
+    {"fieldname": "officers", "fieldtype": "Table", "label": "Officers", "options": "Company Officer"},
+    {"fieldname": "sb_links", "fieldtype": "Section Break", "label": "Corporate Links"},
+    {"fieldname": "links", "fieldtype": "Table", "label": "Links", "options": "Corporate Link"},
+    {"fieldname": "sb_risk", "fieldtype": "Section Break", "label": "Risk"},
+    {"fieldname": "risk_score", "fieldtype": "Int", "label": "Risk Score", "in_list_view": 1},
+    {"fieldname": "risk_notes", "fieldtype": "Small Text", "label": "Risk Notes"},
+    {"fieldname": "col_risk", "fieldtype": "Column Break"},
+    {"fieldname": "entity", "fieldtype": "Link", "label": "Entity", "options": "Entity"},
+    {"fieldname": "opencorporates_url", "fieldtype": "Data", "label": "OpenCorporates URL"},
+    {"fieldname": "raw_json", "fieldtype": "Code", "label": "Raw JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "Accountant", "read": 1},
+    {"role": "Lawyer", "read": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

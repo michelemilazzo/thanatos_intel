@@ -1,0 +1,13 @@
+{
+  "doctype": "DocType",
+  "name": "Document Check",
+  "module": "Thanatos Documents",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "check_name", "fieldtype": "Data", "label": "Check", "in_list_view": 1, "columns": 3, "reqd": 1},
+    {"fieldname": "result", "fieldtype": "Select", "label": "Result", "options": "Pass\nFail\nWarning\nInfo", "in_list_view": 1, "columns": 1},
+    {"fieldname": "severity", "fieldtype": "Select", "label": "Severity", "options": "Info\nLow\nMedium\nHigh\nCritical", "in_list_view": 1, "columns": 1},
+    {"fieldname": "details", "fieldtype": "Small Text", "label": "Details", "in_list_view": 1, "columns": 5},
+    {"fieldname": "evidence", "fieldtype": "Data", "label": "Evidence", "columns": 2}
+  ]
+}

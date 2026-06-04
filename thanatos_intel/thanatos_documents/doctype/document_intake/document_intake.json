@@ -1,0 +1,35 @@
+{
+  "doctype": "DocType",
+  "name": "Document Intake",
+  "module": "Thanatos Documents",
+  "autoname": "format:DOC-{YYYY}-{#####}",
+  "title_field": "doc_label",
+  "fields": [
+    {"fieldname": "doc_label", "fieldtype": "Data", "label": "Document Label", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "doc_type", "fieldtype": "Select", "label": "Type", "options": "Contract\nInvoice\nProof of Funds\nBank Guarantee\nSBLC\nID Document\nNotary Deed\nPDF\nDigital Signature\nStamp\nScreenshot\nOther", "in_list_view": 1, "in_standard_filter": 1, "reqd": 1},
+    {"fieldname": "file_url", "fieldtype": "Attach", "label": "File", "reqd": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "client", "fieldtype": "Link", "label": "Client", "options": "Investigation Client", "in_standard_filter": 1},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case", "in_standard_filter": 1},
+    {"fieldname": "uploaded_by", "fieldtype": "Link", "label": "Uploaded By", "options": "User"},
+    {"fieldname": "uploaded_at", "fieldtype": "Datetime", "label": "Uploaded At"},
+    {"fieldname": "sb_status", "fieldtype": "Section Break", "label": "Analysis"},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Received\nAnalyzing\nNeeds Review\nCompleted\nRejected", "default": "Received", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "verdict", "fieldtype": "Link", "label": "Verdict", "options": "Document Verdict"},
+    {"fieldname": "metadata", "fieldtype": "Link", "label": "Metadata", "options": "Document Metadata"},
+    {"fieldname": "col_status", "fieldtype": "Column Break"},
+    {"fieldname": "sha256", "fieldtype": "Data", "label": "SHA-256"},
+    {"fieldname": "file_size", "fieldtype": "Int", "label": "Size"},
+    {"fieldname": "page_count", "fieldtype": "Int", "label": "Pages"},
+    {"fieldname": "sb_checks", "fieldtype": "Section Break", "label": "Checks"},
+    {"fieldname": "checks", "fieldtype": "Table", "label": "Checks", "options": "Document Check"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "Lawyer", "read": 1, "write": 1, "create": 1},
+    {"role": "Accountant", "read": 1, "write": 1, "create": 1},
+    {"role": "Investigation Client", "read": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

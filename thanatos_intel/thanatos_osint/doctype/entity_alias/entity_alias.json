@@ -1,0 +1,12 @@
+{
+  "doctype": "DocType",
+  "name": "Entity Alias",
+  "module": "Thanatos OSINT",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "alias", "fieldtype": "Data", "label": "Alias", "in_list_view": 1, "reqd": 1, "columns": 4},
+    {"fieldname": "alias_type", "fieldtype": "Select", "label": "Type", "options": "\nName\nNickname\nLegacy\nTransliteration\nDBA\nFormerName", "in_list_view": 1, "columns": 2},
+    {"fieldname": "source", "fieldtype": "Data", "label": "Source", "in_list_view": 1, "columns": 3},
+    {"fieldname": "confidence", "fieldtype": "Percent", "label": "Confidence", "in_list_view": 1, "columns": 1}
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "doctype": "DocType",
+  "name": "Document Metadata",
+  "module": "Thanatos Documents",
+  "autoname": "format:DMETA-{YYYY}-{#####}",
+  "title_field": "title",
+  "fields": [
+    {"fieldname": "title", "fieldtype": "Data", "label": "Title", "in_list_view": 1},
+    {"fieldname": "document_intake", "fieldtype": "Link", "label": "Document", "options": "Document Intake", "in_list_view": 1, "reqd": 1},
+    {"fieldname": "author", "fieldtype": "Data", "label": "Author", "in_list_view": 1},
+    {"fieldname": "creator_software", "fieldtype": "Data", "label": "Software", "in_list_view": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "created_at_meta", "fieldtype": "Datetime", "label": "Created (PDF)"},
+    {"fieldname": "modified_at_meta", "fieldtype": "Datetime", "label": "Modified (PDF)"},
+    {"fieldname": "producer", "fieldtype": "Data", "label": "Producer"},
+    {"fieldname": "sb_anom", "fieldtype": "Section Break", "label": "Anomalies"},
+    {"fieldname": "has_anomalies", "fieldtype": "Check", "label": "Anomalies", "in_list_view": 1},
+    {"fieldname": "anomalies_notes", "fieldtype": "Small Text", "label": "Notes"},
+    {"fieldname": "raw_json", "fieldtype": "Code", "label": "Raw Metadata", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "Lawyer", "read": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

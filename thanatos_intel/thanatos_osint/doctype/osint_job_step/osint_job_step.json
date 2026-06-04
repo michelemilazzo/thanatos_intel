@@ -1,0 +1,15 @@
+{
+  "doctype": "DocType",
+  "name": "OSINT Job Step",
+  "module": "Thanatos OSINT",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "connector", "fieldtype": "Data", "label": "Connector", "in_list_view": 1, "columns": 2},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Pending\nRunning\nOk\nError\nSkipped\nStub", "in_list_view": 1, "columns": 1},
+    {"fieldname": "started", "fieldtype": "Datetime", "label": "Started", "columns": 2},
+    {"fieldname": "elapsed_ms", "fieldtype": "Int", "label": "ms", "in_list_view": 1, "columns": 1},
+    {"fieldname": "score_delta", "fieldtype": "Int", "label": "Δ Score", "in_list_view": 1, "columns": 1},
+    {"fieldname": "note", "fieldtype": "Small Text", "label": "Note", "in_list_view": 1, "columns": 3},
+    {"fieldname": "result_json", "fieldtype": "Code", "label": "Result", "options": "JSON", "columns": 2}
+  ]
+}

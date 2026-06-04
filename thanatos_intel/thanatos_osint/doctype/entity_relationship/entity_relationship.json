@@ -1,0 +1,13 @@
+{
+  "doctype": "DocType",
+  "name": "Entity Relationship",
+  "module": "Thanatos OSINT",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "related_entity", "fieldtype": "Link", "label": "Related Entity", "options": "Entity", "in_list_view": 1, "columns": 4, "reqd": 1},
+    {"fieldname": "rel_type", "fieldtype": "Select", "label": "Relation", "options": "owner_of\nofficer_of\nshareholder_of\nemployee_of\nrelated_to\nuses\nresolves_to\nhosts\nregistered_by\ncontrolled_by\nsuspected_link\nsame_person", "in_list_view": 1, "columns": 3, "reqd": 1},
+    {"fieldname": "since", "fieldtype": "Date", "label": "Since", "in_list_view": 1, "columns": 2},
+    {"fieldname": "confidence", "fieldtype": "Percent", "label": "Confidence", "in_list_view": 1, "columns": 1},
+    {"fieldname": "source", "fieldtype": "Data", "label": "Source", "in_list_view": 1, "columns": 2}
+  ]
+}

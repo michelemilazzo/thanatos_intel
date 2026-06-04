@@ -1,0 +1,28 @@
+{
+  "doctype": "DocType",
+  "name": "URL Scan",
+  "module": "Thanatos Cyber",
+  "autoname": "format:USC-{YYYY}-{#####}",
+  "title_field": "url",
+  "fields": [
+    {"fieldname": "url", "fieldtype": "Data", "label": "URL", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "domain", "fieldtype": "Data", "label": "Domain", "in_list_view": 1},
+    {"fieldname": "scanned_at", "fieldtype": "Datetime", "label": "Scanned At", "in_list_view": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "verdict", "fieldtype": "Select", "label": "Verdict", "options": "\nClean\nSuspicious\nMalicious\nPhishing", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "score", "fieldtype": "Int", "label": "Score"},
+    {"fieldname": "screenshot_url", "fieldtype": "Data", "label": "Screenshot"},
+    {"fieldname": "sb", "fieldtype": "Section Break"},
+    {"fieldname": "resolved_ip", "fieldtype": "Data", "label": "Resolved IP"},
+    {"fieldname": "asn", "fieldtype": "Data", "label": "ASN"},
+    {"fieldname": "country", "fieldtype": "Data", "label": "Country"},
+    {"fieldname": "urlscan_uuid", "fieldtype": "Data", "label": "urlscan UUID"},
+    {"fieldname": "urlscan_result_url", "fieldtype": "Data", "label": "urlscan URL"},
+    {"fieldname": "result_json", "fieldtype": "Code", "label": "Result JSON", "options": "JSON"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}
