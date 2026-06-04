@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:DDD-{YYYY}-{#####}",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "applicant",
+  "country",
+  "request_type",
+  "col_break_h",
+  "institutional_purpose",
+  "linked_investigation_case",
+  "workflow_state",
+  "section_summary",
+  "summary",
+  "section_risk",
+  "risk_score",
+  "risk_band",
+  "section_decision",
+  "final_decision",
+  "decision_notes",
+  "section_disclaimer",
+  "disclaimer"
+ ],
+ "fields": [
+  {
+   "fieldname": "applicant",
+   "fieldtype": "Link",
+   "label": "Applicant",
+   "options": "Applicant Profile",
+   "reqd": 1
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Target Country",
+   "options": "Country Framework",
+   "reqd": 1
+  },
+  {
+   "fieldname": "request_type",
+   "fieldtype": "Select",
+   "label": "Request Type",
+   "options": "Diplomatic Assessment\nConsular Assessment\nHonorary Consul Assessment\nEmbassy Opening Assessment\nConsulate Opening Assessment\nRepresentative Office Assessment\nInstitutional Dossier",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_h",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "institutional_purpose",
+   "fieldtype": "Small Text",
+   "label": "Institutional Purpose"
+  },
+  {
+   "fieldname": "linked_investigation_case",
+   "fieldtype": "Link",
+   "label": "Linked Investigation Case",
+   "options": "Investigation Case"
+  },
+  {
+   "fieldname": "workflow_state",
+   "fieldtype": "Select",
+   "label": "Workflow State",
+   "options": "Draft\nQuestionnaire Pending\nKYC Pending\nKYB Pending\nVideo Identification Pending\nDocument Review\nOSINT Review\nCompliance Review\nLegal Review\nMandate Pending Signature\nPayment Step 1 Pending\nInvestigation Active\nDossier Preparation\nDirector Review\nApproved for Submission\nSubmitted to Authority\nAwaiting Authority Response\nClosed\nRejected\nSuspended",
+   "default": "Draft"
+  },
+  {
+   "fieldname": "section_summary",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Text Editor",
+   "label": "Case Summary"
+  },
+  {
+   "fieldname": "section_risk",
+   "fieldtype": "Section Break",
+   "label": "Risk"
+  },
+  {
+   "fieldname": "risk_score",
+   "fieldtype": "Int",
+   "label": "Risk Score (0-100)"
+  },
+  {
+   "fieldname": "risk_band",
+   "fieldtype": "Select",
+   "label": "Risk Band",
+   "options": "\nLow\nMedium\nHigh\nCritical"
+  },
+  {
+   "fieldname": "section_decision",
+   "fieldtype": "Section Break",
+   "label": "Decision"
+  },
+  {
+   "fieldname": "final_decision",
+   "fieldtype": "Select",
+   "label": "Final Decision",
+   "options": "\nEligible\nNot Eligible\nEscalate\nWithdrawn"
+  },
+  {
+   "fieldname": "decision_notes",
+   "fieldtype": "Long Text",
+   "label": "Decision Notes"
+  },
+  {
+   "fieldname": "section_disclaimer",
+   "fieldtype": "Section Break",
+   "label": "Compliance Notice"
+  },
+  {
+   "fieldname": "disclaimer",
+   "fieldtype": "Long Text",
+   "label": "Disclaimer",
+   "default": "Thanatos performs investigative, due diligence, compliance and eligibility assessment services only. Thanatos does not issue, sell, broker or guarantee diplomatic, consular, governmental or identity documents.",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Diplomatic Dd Case",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

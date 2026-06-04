@@ -29,13 +29,18 @@ fixtures=[
  {'doctype': 'Infrastructure Cost', 'filters': []},
  {'doctype': 'News Category', 'filters': []},
  {'doctype': 'News Source', 'filters': []},
+ {'doctype': 'Country Framework', 'filters': []},
 ]
 
 doc_events={
  'Infrastructure Cost': {
    'after_insert': 'thanatos_intel.billing.erp_sync.on_infrastructure_cost_save',
    'on_update': 'thanatos_intel.billing.erp_sync.on_infrastructure_cost_save',
- }
+ },
+ 'Diplomatic DD Case': {
+   'after_insert': 'thanatos_intel.thanatos_ddd.audit.on_after_insert_case',
+   'on_update': 'thanatos_intel.thanatos_ddd.audit.on_update_case',
+ },
 }
 scheduler_events={
  'cron':{},

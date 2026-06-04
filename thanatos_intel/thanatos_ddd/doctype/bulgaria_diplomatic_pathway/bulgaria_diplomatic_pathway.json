@@ -1,0 +1,135 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:BG-DP-{YYYY}-{####}",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ddd_case",
+  "citizenship_verified",
+  "institutional_agreement_verified",
+  "title_function_verified",
+  "competent_authority_verified",
+  "checklist_complete",
+  "legal_opinion",
+  "eligibility_decision",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "ddd_case",
+   "fieldtype": "Link",
+   "label": "Case",
+   "options": "Diplomatic DD Case",
+   "reqd": 1
+  },
+  {
+   "fieldname": "citizenship_verified",
+   "fieldtype": "Check",
+   "label": "Cittadinanza/Residenza verificata"
+  },
+  {
+   "fieldname": "institutional_agreement_verified",
+   "fieldtype": "Check",
+   "label": "Accordo istituzionale verificato"
+  },
+  {
+   "fieldname": "title_function_verified",
+   "fieldtype": "Check",
+   "label": "Titolo/funzione verificata"
+  },
+  {
+   "fieldname": "competent_authority_verified",
+   "fieldtype": "Check",
+   "label": "Autorit\u00e0 competente verificata"
+  },
+  {
+   "fieldname": "checklist_complete",
+   "fieldtype": "Check",
+   "label": "Checklist documentale completa"
+  },
+  {
+   "fieldname": "legal_opinion",
+   "fieldtype": "Link",
+   "label": "Parere legale",
+   "options": "Legal Opinion"
+  },
+  {
+   "fieldname": "eligibility_decision",
+   "fieldtype": "Select",
+   "label": "Decisione Eleggibilit\u00e0",
+   "options": "\nEligible\nNot Eligible\nEscalate"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Long Text",
+   "label": "Note"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Bulgaria Diplomatic Pathway",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -1,0 +1,132 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:LO-{YYYY}-{#####}",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ddd_case",
+  "country",
+  "legal_officer",
+  "conclusion",
+  "legal_basis_text",
+  "reasoning",
+  "issued_on",
+  "disclaimer"
+ ],
+ "fields": [
+  {
+   "fieldname": "ddd_case",
+   "fieldtype": "Link",
+   "label": "Case",
+   "options": "Diplomatic DD Case",
+   "reqd": 1
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country Framework",
+   "options": "Country Framework"
+  },
+  {
+   "fieldname": "legal_officer",
+   "fieldtype": "Link",
+   "label": "Legal Officer",
+   "options": "User"
+  },
+  {
+   "fieldname": "conclusion",
+   "fieldtype": "Select",
+   "label": "Conclusion",
+   "options": "Eligible\nNot Eligible\nEscalate\nInsufficient Evidence"
+  },
+  {
+   "fieldname": "legal_basis_text",
+   "fieldtype": "Long Text",
+   "label": "Legal Basis"
+  },
+  {
+   "fieldname": "reasoning",
+   "fieldtype": "Text Editor",
+   "label": "Reasoning"
+  },
+  {
+   "fieldname": "issued_on",
+   "fieldtype": "Date",
+   "label": "Issued On"
+  },
+  {
+   "fieldname": "disclaimer",
+   "fieldtype": "Long Text",
+   "label": "Disclaimer",
+   "default": "Thanatos performs investigative, due diligence, compliance and eligibility assessment services only. Thanatos does not issue, sell, broker or guarantee diplomatic, consular, governmental or identity documents.",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Legal Opinion",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

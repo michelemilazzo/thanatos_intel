@@ -1,0 +1,98 @@
+[
+ {
+  "doctype": "Country Framework",
+  "country": "Bulgaria",
+  "iso3": "BGR",
+  "official_languages": "Bulgarian",
+  "ocr_lang_codes": "bul+eng",
+  "passport_types": "Ordinary, Diplomatic (Дипломатически), Service (Служебен), Official, Emergency",
+  "diplomatic_authority": "Министерство на външните работи на Република България — Ministry of Foreign Affairs of the Republic of Bulgaria",
+  "legal_basis": "Закон за българските лични документи (Bulgarian Personal Documents Act). Diplomatic and service passports issued under arts. 45–47.\nLaw on Diplomatic Service. Bilateral institutional agreements where applicable.",
+  "bilateral_agreements": "Verifica con MFA Sofia per accordi attivi (institutional / honorary consulate).",
+  "required_documents": "1. Passport in corso di validità\n2. Documento di status istituzionale o accordo bilaterale di riferimento\n3. Certificato penale (clean criminal record)\n4. Curriculum istituzionale + lettera autorità referente\n5. Source of Funds / Wealth\n6. Proof of address\n7. Eventuale residenza/cittadinanza bulgara",
+  "risk_indicators": "Reverse-flag: claim diplomatico senza autorità referente verificabile, documenti non legalizzati MAE, persone in liste OFAC/EU/UN, PEP non dichiarato, source of wealth non documentata.",
+  "is_active": 1,
+  "notes": "PRIMA implementazione paese. Estendere ad altri Stati replicando i campi."
+ },
+ {
+  "doctype": "Country Framework", "country": "Italy", "iso3": "ITA",
+  "official_languages": "Italian", "ocr_lang_codes": "ita+eng",
+  "passport_types": "Ordinario, Diplomatico, Servizio, Ufficiale",
+  "diplomatic_authority": "Ministero degli Affari Esteri e della Cooperazione Internazionale (MAECI)",
+  "legal_basis": "DPR 649/1974, L. 1185/1967, normativa MAECI sui passaporti diplomatici/di servizio.",
+  "required_documents": "Passport, ID, accreditamento MAECI, lettera autorità referente, casellario, SoF/SoW.",
+  "risk_indicators": "Mancato accreditamento MAECI, status non istituzionale.",
+  "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Romania", "iso3": "ROU",
+  "official_languages": "Romanian", "ocr_lang_codes": "ron+eng",
+  "passport_types": "Ordinary, Diplomatic, Service",
+  "diplomatic_authority": "Ministerul Afacerilor Externe (MAE)",
+  "legal_basis": "Legea 248/2005 — pașapoarte. Legea 269/2003 — Statutul Corpului Diplomatic.",
+  "required_documents": "Passport, ID, autorità referente, casellario.", "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "France", "iso3": "FRA",
+  "official_languages": "French", "ocr_lang_codes": "fra+eng",
+  "passport_types": "Ordinaire, Diplomatique, Service, Mission",
+  "diplomatic_authority": "Ministère de l'Europe et des Affaires étrangères",
+  "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Germany", "iso3": "DEU",
+  "official_languages": "German", "ocr_lang_codes": "deu+eng",
+  "passport_types": "Reisepass, Diplomatenpass, Dienstpass",
+  "diplomatic_authority": "Auswärtiges Amt",
+  "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Spain", "iso3": "ESP",
+  "official_languages": "Spanish", "ocr_lang_codes": "spa+eng",
+  "passport_types": "Ordinario, Diplomático, de Servicio",
+  "diplomatic_authority": "Ministerio de Asuntos Exteriores, Unión Europea y Cooperación",
+  "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Portugal", "iso3": "PRT",
+  "official_languages": "Portuguese", "ocr_lang_codes": "por+eng",
+  "passport_types": "Comum, Diplomático, Serviço",
+  "diplomatic_authority": "Ministério dos Negócios Estrangeiros", "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Greece", "iso3": "GRC",
+  "official_languages": "Greek", "ocr_lang_codes": "ell+eng",
+  "passport_types": "Ordinary, Diplomatic, Service",
+  "diplomatic_authority": "Hellenic Ministry of Foreign Affairs", "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Serbia", "iso3": "SRB",
+  "official_languages": "Serbian", "ocr_lang_codes": "srp+srp_latn+eng",
+  "passport_types": "Ordinary, Diplomatic, Service",
+  "diplomatic_authority": "Ministarstvo spoljnih poslova", "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Albania", "iso3": "ALB",
+  "official_languages": "Albanian", "ocr_lang_codes": "sqi+eng",
+  "passport_types": "Ordinary, Diplomatic, Service",
+  "diplomatic_authority": "Ministry for Europe and Foreign Affairs", "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Turkey", "iso3": "TUR",
+  "official_languages": "Turkish", "ocr_lang_codes": "tur+eng",
+  "passport_types": "Ordinary, Diplomatic (Bordo), Service (Gri), Special (Yeşil)",
+  "diplomatic_authority": "Türkiye Cumhuriyeti Dışişleri Bakanlığı", "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Russia", "iso3": "RUS",
+  "official_languages": "Russian", "ocr_lang_codes": "rus+eng",
+  "diplomatic_authority": "Министерство иностранных дел Российской Федерации",
+  "passport_types": "Ordinary, Diplomatic, Service", "is_active": 1
+ },
+ {
+  "doctype": "Country Framework", "country": "Ukraine", "iso3": "UKR",
+  "official_languages": "Ukrainian", "ocr_lang_codes": "ukr+eng",
+  "diplomatic_authority": "Ministry of Foreign Affairs of Ukraine",
+  "passport_types": "Ordinary, Diplomatic, Service", "is_active": 1
+ }
+]

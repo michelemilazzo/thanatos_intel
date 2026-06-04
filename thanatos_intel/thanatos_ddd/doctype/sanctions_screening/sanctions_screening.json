@@ -1,0 +1,132 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:SCR-{YYYY}-{#####}",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ddd_case",
+  "subject_name",
+  "screening_type",
+  "source",
+  "matches_found",
+  "outcome",
+  "raw_payload",
+  "screened_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "ddd_case",
+   "fieldtype": "Link",
+   "label": "Case",
+   "options": "Diplomatic DD Case"
+  },
+  {
+   "fieldname": "subject_name",
+   "fieldtype": "Data",
+   "label": "Subject Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "screening_type",
+   "fieldtype": "Select",
+   "label": "Screening Type",
+   "options": "Sanctions\nPEP\nWatchlist\nAdverse Media\nInterpol",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "label": "Source",
+   "default": "OpenSanctions"
+  },
+  {
+   "fieldname": "matches_found",
+   "fieldtype": "Int",
+   "label": "Matches Found"
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Select",
+   "label": "Outcome",
+   "options": "Clear\nReview\nHit\nFalse Positive",
+   "default": "Clear"
+  },
+  {
+   "fieldname": "raw_payload",
+   "fieldtype": "Long Text",
+   "label": "Raw Payload"
+  },
+  {
+   "fieldname": "screened_on",
+   "fieldtype": "Datetime",
+   "label": "Screened On"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Sanctions Screening",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

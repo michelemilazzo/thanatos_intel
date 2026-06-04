@@ -1,0 +1,156 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:PRO-{YYYY}-{#####}",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ddd_case",
+  "mandate",
+  "issued_on",
+  "due_date",
+  "currency",
+  "step_title",
+  "amount",
+  "vat_pct",
+  "total",
+  "status",
+  "stripe_session",
+  "pdf_file"
+ ],
+ "fields": [
+  {
+   "fieldname": "ddd_case",
+   "fieldtype": "Link",
+   "label": "Case",
+   "options": "Diplomatic DD Case",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mandate",
+   "fieldtype": "Link",
+   "label": "Mandate",
+   "options": "Agency Mandate"
+  },
+  {
+   "fieldname": "issued_on",
+   "fieldtype": "Date",
+   "label": "Issued On"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "default": "EUR"
+  },
+  {
+   "fieldname": "step_title",
+   "fieldtype": "Data",
+   "label": "Step Title"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "vat_pct",
+   "fieldtype": "Float",
+   "label": "VAT %"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nSent\nPaid\nVoid\nOverdue",
+   "default": "Draft"
+  },
+  {
+   "fieldname": "stripe_session",
+   "fieldtype": "Data",
+   "label": "Stripe Checkout Session"
+  },
+  {
+   "fieldname": "pdf_file",
+   "fieldtype": "Attach",
+   "label": "PDF"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Ddd Proforma",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

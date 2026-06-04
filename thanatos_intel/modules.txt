@@ -1,4 +1,5 @@
 Thanatos Core
+Thanatos Ddd
 Thanatos Fraud
 Thanatos Documents
 Thanatos OSINT

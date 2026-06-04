@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:MND-{YYYY}-{#####}",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ddd_case",
+  "applicant",
+  "subject_matter",
+  "territorial_scope",
+  "fee_total",
+  "currency",
+  "status",
+  "section_clauses",
+  "no_guarantee_clause",
+  "osint_authorization",
+  "doc_verification_authorization",
+  "third_party_contact_authorization",
+  "governing_law",
+  "section_pdf",
+  "mandate_pdf",
+  "signed_on",
+  "signature_ref"
+ ],
+ "fields": [
+  {
+   "fieldname": "ddd_case",
+   "fieldtype": "Link",
+   "label": "Case",
+   "options": "Diplomatic DD Case",
+   "reqd": 1
+  },
+  {
+   "fieldname": "applicant",
+   "fieldtype": "Link",
+   "label": "Applicant",
+   "options": "Applicant Profile"
+  },
+  {
+   "fieldname": "subject_matter",
+   "fieldtype": "Small Text",
+   "label": "Subject Matter"
+  },
+  {
+   "fieldname": "territorial_scope",
+   "fieldtype": "Data",
+   "label": "Territorial Scope"
+  },
+  {
+   "fieldname": "fee_total",
+   "fieldtype": "Currency",
+   "label": "Fee Total (EUR)"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "default": "EUR"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nPending Signature\nSigned\nActive\nCompleted\nTerminated",
+   "default": "Draft"
+  },
+  {
+   "fieldname": "section_clauses",
+   "fieldtype": "Section Break",
+   "label": "Clauses"
+  },
+  {
+   "fieldname": "no_guarantee_clause",
+   "fieldtype": "Long Text",
+   "label": "No-Guarantee Clause",
+   "default": "Thanatos performs investigative, due diligence, compliance and eligibility assessment services only. Thanatos does not issue, sell, broker or guarantee diplomatic, consular, governmental or identity documents.",
+   "read_only": 1
+  },
+  {
+   "fieldname": "osint_authorization",
+   "fieldtype": "Check",
+   "label": "OSINT Authorization",
+   "default": "1"
+  },
+  {
+   "fieldname": "doc_verification_authorization",
+   "fieldtype": "Check",
+   "label": "Document Verification Authorization",
+   "default": "1"
+  },
+  {
+   "fieldname": "third_party_contact_authorization",
+   "fieldtype": "Check",
+   "label": "Third Party Contact Authorization"
+  },
+  {
+   "fieldname": "governing_law",
+   "fieldtype": "Data",
+   "label": "Governing Law",
+   "default": "Italian Law"
+  },
+  {
+   "fieldname": "section_pdf",
+   "fieldtype": "Section Break",
+   "label": "PDF / Signature"
+  },
+  {
+   "fieldname": "mandate_pdf",
+   "fieldtype": "Attach",
+   "label": "Mandate PDF"
+  },
+  {
+   "fieldname": "signed_on",
+   "fieldtype": "Date",
+   "label": "Signed On"
+  },
+  {
+   "fieldname": "signature_ref",
+   "fieldtype": "Data",
+   "label": "Signature Ref (OpenSign)"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Agency Mandate",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

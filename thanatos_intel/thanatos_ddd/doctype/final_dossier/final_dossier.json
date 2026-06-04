@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:DOSS-{YYYY}-{#####}",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ddd_case",
+  "version",
+  "executive_summary",
+  "institutional_purpose",
+  "legal_basis",
+  "compliance_summary",
+  "risk_summary",
+  "evidence_index",
+  "decision",
+  "dossier_pdf",
+  "generated_on",
+  "disclaimer"
+ ],
+ "fields": [
+  {
+   "fieldname": "ddd_case",
+   "fieldtype": "Link",
+   "label": "Case",
+   "options": "Diplomatic DD Case",
+   "reqd": 1
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "default": "1"
+  },
+  {
+   "fieldname": "executive_summary",
+   "fieldtype": "Text Editor",
+   "label": "Executive Summary"
+  },
+  {
+   "fieldname": "institutional_purpose",
+   "fieldtype": "Text Editor",
+   "label": "Institutional Purpose"
+  },
+  {
+   "fieldname": "legal_basis",
+   "fieldtype": "Text Editor",
+   "label": "Legal Basis"
+  },
+  {
+   "fieldname": "compliance_summary",
+   "fieldtype": "Text Editor",
+   "label": "Compliance Summary"
+  },
+  {
+   "fieldname": "risk_summary",
+   "fieldtype": "Text Editor",
+   "label": "Risk Summary"
+  },
+  {
+   "fieldname": "evidence_index",
+   "fieldtype": "Long Text",
+   "label": "Evidence Index"
+  },
+  {
+   "fieldname": "decision",
+   "fieldtype": "Select",
+   "label": "Decision",
+   "options": "\nApproved for Submission\nNot Approved\nRequires Additional Review"
+  },
+  {
+   "fieldname": "dossier_pdf",
+   "fieldtype": "Attach",
+   "label": "Dossier PDF"
+  },
+  {
+   "fieldname": "generated_on",
+   "fieldtype": "Datetime",
+   "label": "Generated On"
+  },
+  {
+   "fieldname": "disclaimer",
+   "fieldtype": "Long Text",
+   "label": "Disclaimer",
+   "default": "Thanatos performs investigative, due diligence, compliance and eligibility assessment services only. Thanatos does not issue, sell, broker or guarantee diplomatic, consular, governmental or identity documents.",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Final Dossier",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

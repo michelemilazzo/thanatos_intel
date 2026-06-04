@@ -1,0 +1,247 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:APP-{YYYY}-{####}",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "full_legal_name",
+  "dob",
+  "place_of_birth",
+  "nationality",
+  "additional_nationalities",
+  "col_break_a",
+  "tax_residence",
+  "current_residence",
+  "occupation",
+  "current_employer",
+  "is_pep",
+  "section_contact",
+  "email",
+  "phone",
+  "section_dec",
+  "arrested_ever",
+  "pending_criminal",
+  "convicted_ever",
+  "under_investigation",
+  "tax_disputes",
+  "sanctioned_ever",
+  "visa_refused",
+  "held_public_office",
+  "diplomatic_role_past",
+  "declarations_notes",
+  "section_skills",
+  "skills",
+  "languages_spoken"
+ ],
+ "fields": [
+  {
+   "fieldname": "full_legal_name",
+   "fieldtype": "Data",
+   "label": "Full Legal Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "dob",
+   "fieldtype": "Date",
+   "label": "Date of Birth"
+  },
+  {
+   "fieldname": "place_of_birth",
+   "fieldtype": "Data",
+   "label": "Place of Birth"
+  },
+  {
+   "fieldname": "nationality",
+   "fieldtype": "Link",
+   "label": "Primary Nationality",
+   "options": "Country Framework"
+  },
+  {
+   "fieldname": "additional_nationalities",
+   "fieldtype": "Data",
+   "label": "Other Nationalities (CSV)"
+  },
+  {
+   "fieldname": "col_break_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tax_residence",
+   "fieldtype": "Data",
+   "label": "Tax Residence"
+  },
+  {
+   "fieldname": "current_residence",
+   "fieldtype": "Data",
+   "label": "Current Residence"
+  },
+  {
+   "fieldname": "occupation",
+   "fieldtype": "Data",
+   "label": "Occupation"
+  },
+  {
+   "fieldname": "current_employer",
+   "fieldtype": "Data",
+   "label": "Current Employer / Company"
+  },
+  {
+   "fieldname": "is_pep",
+   "fieldtype": "Check",
+   "label": "Politically Exposed"
+  },
+  {
+   "fieldname": "section_contact",
+   "fieldtype": "Section Break",
+   "label": "Contact"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone"
+  },
+  {
+   "fieldname": "section_dec",
+   "fieldtype": "Section Break",
+   "label": "Declarations"
+  },
+  {
+   "fieldname": "arrested_ever",
+   "fieldtype": "Check",
+   "label": "Ever Arrested"
+  },
+  {
+   "fieldname": "pending_criminal",
+   "fieldtype": "Check",
+   "label": "Pending Criminal Proceedings"
+  },
+  {
+   "fieldname": "convicted_ever",
+   "fieldtype": "Check",
+   "label": "Convicted"
+  },
+  {
+   "fieldname": "under_investigation",
+   "fieldtype": "Check",
+   "label": "Under Investigation"
+  },
+  {
+   "fieldname": "tax_disputes",
+   "fieldtype": "Check",
+   "label": "Tax Disputes"
+  },
+  {
+   "fieldname": "sanctioned_ever",
+   "fieldtype": "Check",
+   "label": "Sanctions History"
+  },
+  {
+   "fieldname": "visa_refused",
+   "fieldtype": "Check",
+   "label": "Visa/Passport Refused"
+  },
+  {
+   "fieldname": "held_public_office",
+   "fieldtype": "Check",
+   "label": "Held Public Office"
+  },
+  {
+   "fieldname": "diplomatic_role_past",
+   "fieldtype": "Check",
+   "label": "Past Diplomatic/Consular Role"
+  },
+  {
+   "fieldname": "declarations_notes",
+   "fieldtype": "Long Text",
+   "label": "Declarations Detail"
+  },
+  {
+   "fieldname": "section_skills",
+   "fieldtype": "Section Break",
+   "label": "Skills / Background"
+  },
+  {
+   "fieldname": "skills",
+   "fieldtype": "Long Text",
+   "label": "Skills (CSV)"
+  },
+  {
+   "fieldname": "languages_spoken",
+   "fieldtype": "Data",
+   "label": "Languages Spoken"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Applicant Profile",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

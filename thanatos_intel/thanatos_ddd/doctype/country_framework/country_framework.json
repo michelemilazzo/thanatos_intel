@@ -1,0 +1,170 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:country",
+ "creation": "2026-06-04 16:30:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "country",
+  "iso3",
+  "official_languages",
+  "ocr_lang_codes",
+  "section_passport",
+  "passport_types",
+  "diplomatic_authority",
+  "legal_basis",
+  "section_legal",
+  "bilateral_agreements",
+  "required_documents",
+  "risk_indicators",
+  "section_active",
+  "is_active",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "country",
+   "fieldtype": "Data",
+   "label": "Country",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "iso3",
+   "fieldtype": "Data",
+   "label": "ISO3"
+  },
+  {
+   "fieldname": "official_languages",
+   "fieldtype": "Data",
+   "label": "Official Languages (CSV)"
+  },
+  {
+   "fieldname": "ocr_lang_codes",
+   "fieldtype": "Data",
+   "label": "Tesseract Lang Codes"
+  },
+  {
+   "fieldname": "section_passport",
+   "fieldtype": "Section Break",
+   "label": "Passport"
+  },
+  {
+   "fieldname": "passport_types",
+   "fieldtype": "Small Text",
+   "label": "Passport Types Supported"
+  },
+  {
+   "fieldname": "diplomatic_authority",
+   "fieldtype": "Data",
+   "label": "Diplomatic Authority"
+  },
+  {
+   "fieldname": "legal_basis",
+   "fieldtype": "Long Text",
+   "label": "Legal Basis"
+  },
+  {
+   "fieldname": "section_legal",
+   "fieldtype": "Section Break",
+   "label": "Bilateral / Framework"
+  },
+  {
+   "fieldname": "bilateral_agreements",
+   "fieldtype": "Long Text",
+   "label": "Bilateral Agreements (notes)"
+  },
+  {
+   "fieldname": "required_documents",
+   "fieldtype": "Long Text",
+   "label": "Required Documents Checklist"
+  },
+  {
+   "fieldname": "risk_indicators",
+   "fieldtype": "Long Text",
+   "label": "Risk Indicators"
+  },
+  {
+   "fieldname": "section_active",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Long Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-04 16:30:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Ddd",
+ "name": "Country Framework",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Intake Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Compliance Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Legal Officer",
+   "write": 1,
+   "print": 1,
+   "report": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "Thanatos Director",
+   "write": 1,
+   "print": 1,
+   "report": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "role": "Thanatos Auditor",
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

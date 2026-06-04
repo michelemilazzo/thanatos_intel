@@ -5,6 +5,12 @@ THANATOS_ROLES = [
     "Thanatos Investigator",
     "Thanatos Analyst",
     "Thanatos Supervisor",
+    "Thanatos Intake Officer",
+    "Thanatos Compliance Officer",
+    "Thanatos Legal Officer",
+    "Thanatos Director",
+    "Thanatos Auditor",
+    "Thanatos Applicant Portal User",
 ]
 
 

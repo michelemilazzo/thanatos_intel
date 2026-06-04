@@ -1,0 +1,83 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<div style="max-width:1200px;margin:30px auto;font-family:system-ui,sans-serif;color:#1a1f3a">
+  <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">Diplomatic Due Diligence</h1>
+
+  <div style="background:#fff3e0;border-left:4px solid #c8a96e;padding:12px 16px;margin:14px 0;font-size:13px">
+    <b>Compliance Notice.</b> {{ disclaimer }}
+  </div>
+
+  <h2 style="margin-top:30px">Apri un nuovo case</h2>
+  <form id="ddd-new" style="background:#0A0E1A;color:#eee;padding:18px;border-radius:12px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <label>Full Legal Name<br><input name="full_legal_name" required style="width:100%;padding:6px"></label>
+      <label>Date of Birth<br><input name="dob" type="date" required style="width:100%;padding:6px"></label>
+      <label>Primary Nationality (Country)<br>
+        <select name="nationality" required style="width:100%;padding:6px">
+          {% for c in countries %}<option value="{{c.name}}">{{c.name}}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Target Country (assessment)<br>
+        <select name="country" required style="width:100%;padding:6px">
+          {% for c in countries %}<option value="{{c.name}}">{{c.name}}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Request Type<br>
+        <select name="request_type" required style="width:100%;padding:6px">
+          <option>Diplomatic Assessment</option>
+          <option>Consular Assessment</option>
+          <option>Honorary Consul Assessment</option>
+          <option>Embassy Opening Assessment</option>
+          <option>Consulate Opening Assessment</option>
+          <option>Representative Office Assessment</option>
+          <option>Institutional Dossier</option>
+        </select>
+      </label>
+      <label>Email<br><input name="email" type="email" style="width:100%;padding:6px"></label>
+      <label style="grid-column:1/-1">Institutional Purpose<br>
+        <textarea name="institutional_purpose" rows="3" style="width:100%;padding:6px"></textarea>
+      </label>
+    </div>
+    <button style="margin-top:14px;background:#c8a96e;color:#0A0E1A;border:0;padding:10px 22px;border-radius:6px;font-weight:600">Apri Case</button>
+  </form>
+
+  <div id="ddd-result" style="margin-top:14px"></div>
+
+  <h2 style="margin-top:30px">I miei case</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead style="background:#f3f1ec"><tr>
+      <th style="padding:6px;text-align:left">Case</th><th>Applicant</th><th>Country</th>
+      <th>Tipo</th><th>State</th><th>Risk</th><th>Decision</th>
+    </tr></thead>
+    <tbody>
+    {% for c in my_cases %}
+      <tr style="border-bottom:1px solid #eee">
+        <td style="padding:6px"><a href="/app/diplomatic-dd-case/{{c.name}}">{{c.name}}</a></td>
+        <td>{{c.applicant}}</td><td>{{c.country}}</td>
+        <td>{{c.request_type}}</td><td>{{c.workflow_state}}</td>
+        <td style="font-weight:600">{{c.risk_score or 0}} {{c.risk_band or ''}}</td>
+        <td>{{c.final_decision or '-'}}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.getElementById("ddd-new").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const obj = Object.fromEntries(fd.entries());
+  const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.api.intake.create_case", {
+    method: "POST", body: new URLSearchParams(obj),
+    headers: {"X-Frappe-CSRF-Token": frappe.csrf_token,
+              "Content-Type": "application/x-www-form-urlencoded"}
+  });
+  const j = await r.json();
+  document.getElementById("ddd-result").innerHTML =
+    "<pre style='background:#f7f4ee;padding:14px;border-radius:8px'>"
+    + JSON.stringify(j.message || j, null, 2) + "</pre>";
+  setTimeout(() => location.reload(), 1500);
+});
+</script>
+{% endblock %}
