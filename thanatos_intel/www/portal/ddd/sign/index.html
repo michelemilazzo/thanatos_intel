@@ -56,6 +56,14 @@
 
   <div style="margin-top:14px">
     <button id="submit" disabled style="background:#c8a96e;color:#0A0E1A;border:0;padding:10px 24px;border-radius:5px;font-weight:600">Firma Mandato</button>
+    <button id="qr-btn" disabled style="margin-left:10px;background:#0A0E1A;color:#c8a96e;border:0;padding:10px 24px;border-radius:5px;font-weight:600">📱 Firma da mobile (QR)</button>
+  </div>
+
+  <div id="qr-box" style="display:none;text-align:center;margin-top:20px;background:#f3f1ec;padding:20px;border-radius:10px">
+    <h3>Scansiona col telefono</h3>
+    <img id="qr-img" style="width:260px;height:260px;background:white;padding:14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.15)">
+    <p style="font-size:13px;color:#555">In attesa della firma… <span id="qr-status" style="color:#c8a96e;font-weight:600">pending</span></p>
+    <p style="font-size:11px;color:#888;word-break:break-all">URL: <span id="qr-url"></span></p>
   </div>
 
   <pre id="result" style="background:#0A0E1A;color:#c8a96e;padding:14px;margin-top:14px;border-radius:8px;display:none;white-space:pre-wrap"></pre>
@@ -99,6 +107,9 @@ function check(){
   if (m==="SES" || m==="SES_OTP") ok = ok && hasDrawn;
   if (m==="SES_OTP") ok = ok && document.getElementById("otp-code").value.length === 6;
   document.getElementById("submit").disabled = !ok;
+  // QR button: enabled solo per metodi che hanno sign_url (provider esterni)
+  const QR_OK = ["DOCUSEAL","DOCUMENSO","OPENSIGN","LIBRESIGN","DOCUSIGN","ADOBE_SIGN","HELLOSIGN"];
+  document.getElementById("qr-btn").disabled = !(accepted && QR_OK.includes(m));
 }
 document.getElementById("otp-code").addEventListener("input", check);
 
@@ -128,6 +139,40 @@ document.getElementById("submit").onclick = async ()=>{
   out.style.display="block";
   out.innerText=JSON.stringify(j.message||j, null, 2);
 };
+
+document.getElementById("qr-btn").onclick = async ()=>{
+  const method = document.querySelector('input[name=sigmethod]:checked').value;
+  const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.qr_handoff.create_qr_signing",
+    {method:"POST", body:new URLSearchParams({mandate:MANDATE, method}),
+     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,
+              "Content-Type":"application/x-www-form-urlencoded"}});
+  const j=(await r.json()).message;
+  if (j.error){
+    document.getElementById("result").style.display="block";
+    document.getElementById("result").innerText=JSON.stringify(j,null,2);
+    return;
+  }
+  document.getElementById("qr-img").src = j.qr_png_base64;
+  document.getElementById("qr-url").innerText = j.sign_url;
+  document.getElementById("qr-box").style.display="block";
+  pollStatus();
+};
+
+let pollTimer=null;
+async function pollStatus(){
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async ()=>{
+    const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.qr_handoff.status?mandate="+MANDATE);
+    const j=(await r.json()).message;
+    document.getElementById("qr-status").innerText = j.status || "?";
+    if (j.status === "Signed"){
+      clearInterval(pollTimer);
+      document.getElementById("qr-status").innerText = "✓ FIRMATO";
+      document.getElementById("qr-status").style.color="#080";
+      setTimeout(()=>location.href="/portal/ddd/case?name={{ mandate.ddd_case }}", 2500);
+    }
+  }, 4000);
+}
 
 showUI();
 </script>
