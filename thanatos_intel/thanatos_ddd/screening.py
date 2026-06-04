@@ -41,6 +41,27 @@ def screen_applicant(ddd_case: str):
         }
     }
     out = []
+    # 0. Local OpenSanctions cache (offline, instant)
+    try:
+        from thanatos_intel.thanatos_ddd.opensanctions_sync import lookup as _local
+        local = _local(app.full_legal_name, str(app.dob or ""), app.nationality or "")
+        if local["matches"]:
+            scr = frappe.get_doc({
+                "doctype": "Sanctions Screening",
+                "ddd_case": ddd_case,
+                "subject_name": app.full_legal_name,
+                "screening_type": "Sanctions",
+                "source": "OpenSanctions (local cache)",
+                "matches_found": len(local["matches"]),
+                "outcome": "Hit",
+                "raw_payload": json.dumps(local["matches"][:5], indent=2, default=str)[:8000],
+                "screened_on": now_datetime(),
+            })
+            scr.insert(ignore_permissions=True)
+            out.append({"type": "Sanctions (local)", "matches": len(local["matches"]),
+                        "outcome": scr.outcome, "name": scr.name})
+    except Exception as e:
+        frappe.log_error(str(e), "DddLocalScreening")
     for stype in ("sanctions", "peps"):
         res = _post(f"/match/{'default' if stype=='sanctions' else 'peps'}", query)
         results = ((res or {}).get("responses", {}).get("q1", {}).get("results")) or []
