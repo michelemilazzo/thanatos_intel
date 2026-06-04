@@ -1,0 +1,48 @@
+version: "3.9"
+name: thanatos-oss
+
+services:
+
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: thanatos-libretranslate
+    restart: unless-stopped
+    environment:
+      LT_LOAD_ONLY: "en,it,bg,ro,fr,de,es,ru,uk,sq,tr,el,ar,pt,nl,pl"
+      LT_DISABLE_WEB_UI: "false"
+      LT_DISABLE_FILES_TRANSLATION: "false"
+      LT_THREADS: "2"
+    ports:
+      - "172.17.0.1:5000:5000"
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - libretranslate_data:/home/libretranslate/.local
+
+  spiderfoot:
+    image: cdburkhart/spiderfoot:latest
+    container_name: thanatos-spiderfoot
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5001:5001"
+    volumes:
+      - spiderfoot_data:/spiderfoot/data
+    command: ["-l", "0.0.0.0:5001"]
+
+  docuseal:
+    image: docuseal/docuseal:latest
+    container_name: thanatos-docuseal
+    restart: unless-stopped
+    environment:
+      HOST: "0.0.0.0"
+      FORCE_SSL: "false"
+      WORKERS: "1"
+    ports:
+      - "172.17.0.1:3001:3000"
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - docuseal_data:/data/docuseal
+
+volumes:
+  libretranslate_data:
+  spiderfoot_data:
+  docuseal_data:
