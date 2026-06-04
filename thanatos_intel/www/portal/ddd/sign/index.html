@@ -1,0 +1,75 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<div style="max-width:900px;margin:30px auto;font-family:system-ui,sans-serif;color:#1a1f3a">
+  <p><a href="/portal/ddd/case?name={{ mandate.ddd_case }}" style="color:#c8a96e">← Torna al case</a></p>
+  <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">Firma Mandato — {{ mandate.name }}</h1>
+
+  <div style="background:#fff3e0;border-left:4px solid #c8a96e;padding:12px;font-size:13px;margin:14px 0">
+    <b>Firma Elettronica Semplice (eIDAS SES — Reg. UE 910/2014).</b><br>
+    La firma viene tracciata con IP, User-Agent, timestamp e hash SHA256
+    del documento. Pienamente valida ai sensi dell'art. 25 eIDAS per
+    documenti contrattuali tra le parti.
+  </div>
+
+  <p><b>Mandatario:</b> Thanatos Intel — OneKey Co.<br>
+     <b>Firmatario:</b> {{ signer }}<br>
+     <b>Importo:</b> € {{ "%.2f"|format(mandate.fee_total or 0) }} ({{ mandate.currency or 'EUR' }})<br>
+     <b>Oggetto:</b> {{ mandate.subject_matter or '—' }}<br>
+     <b>PDF preliminare:</b> <a href="{{ mandate.mandate_pdf }}" target="_blank">apri documento</a></p>
+
+  <h3>Tracciare la firma nel riquadro</h3>
+  <canvas id="sigpad" width="800" height="220"
+          style="border:2px dashed #c8a96e;border-radius:8px;background:#fff;width:100%;height:220px;touch-action:none"></canvas>
+  <div style="margin-top:10px">
+    <button id="clear" style="background:#7a1c1c;color:#fff;border:0;padding:8px 16px;border-radius:5px">Cancella</button>
+    <label style="margin-left:14px"><input type="checkbox" id="accept">
+      Confermo di aver letto e accettato il mandato</label>
+    <button id="submit" disabled style="margin-left:14px;background:#c8a96e;color:#0A0E1A;border:0;padding:10px 22px;border-radius:5px;font-weight:600">Firma con SES</button>
+  </div>
+
+  <pre id="result" style="background:#0A0E1A;color:#c8a96e;padding:14px;margin-top:14px;border-radius:8px;display:none;white-space:pre-wrap"></pre>
+</div>
+
+<script>
+const c = document.getElementById("sigpad");
+const ctx = c.getContext("2d");
+ctx.strokeStyle = "#0A0E1A"; ctx.lineWidth = 2; ctx.lineCap = "round";
+let drawing = false, hasDrawn = false;
+
+function pos(e){
+  const r=c.getBoundingClientRect();
+  const t=e.touches?e.touches[0]:e;
+  return {x:(t.clientX-r.left)*(c.width/r.width),
+          y:(t.clientY-r.top)*(c.height/r.height)};
+}
+c.addEventListener("mousedown", e=>{drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);});
+c.addEventListener("mousemove", e=>{ if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasDrawn=true; check();});
+c.addEventListener("mouseup", ()=>drawing=false);
+c.addEventListener("mouseout", ()=>drawing=false);
+c.addEventListener("touchstart", e=>{e.preventDefault(); drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y);});
+c.addEventListener("touchmove", e=>{e.preventDefault(); if(!drawing) return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasDrawn=true; check();});
+c.addEventListener("touchend", e=>{e.preventDefault(); drawing=false;});
+
+document.getElementById("clear").onclick = ()=>{ctx.clearRect(0,0,c.width,c.height); hasDrawn=false; check();};
+document.getElementById("accept").onchange = check;
+function check(){
+  document.getElementById("submit").disabled = !(hasDrawn && document.getElementById("accept").checked);
+}
+
+document.getElementById("submit").onclick = async ()=>{
+  const dataUrl = c.toDataURL("image/png");
+  const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.signature.sign_mandate", {
+    method:"POST",
+    body: new URLSearchParams({mandate:"{{ mandate.name }}",
+                               signature_base64: dataUrl,
+                               signer_name: "{{ signer }}"}),
+    headers:{"X-Frappe-CSRF-Token": frappe.csrf_token,
+             "Content-Type":"application/x-www-form-urlencoded"}
+  });
+  const j = await r.json();
+  const out = document.getElementById("result");
+  out.style.display="block";
+  out.innerText = JSON.stringify(j.message||j, null, 2);
+};
+</script>
+{% endblock %}
