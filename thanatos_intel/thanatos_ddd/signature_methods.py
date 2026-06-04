@@ -223,55 +223,173 @@ def hellosign_send(mandate: str) -> dict:
 
 
 # ---------- DocuSeal (17k⭐, single container, MIT) ------------------------
-def docuseal_send(mandate: str) -> dict:
-    """Crea submission DocuSeal via API REST.
+def _docuseal_login_session():
+    """Crea sessione web Rails autenticata come admin. Cache cookie 1h."""
+    base = frappe.conf.get("docuseal_base_url")
+    user = frappe.conf.get("docuseal_admin_email") or "admin@thanatos.agency"
+    pw = frappe.conf.get("docuseal_admin_password")
+    if not pw:
+        raise Exception("site_config.docuseal_admin_password mancante")
 
-    Community edition NON espone POST /api/templates → uso template
-    pre-creato (id in site_config.docuseal_template_id), invio solo la
-    submission per il firmatario. Il PDF specifico del mandato resta
-    su Thanatos (allegato nell'email DocuSeal o link).
+    cache_key = "ddd:ds_session"
+    cached = frappe.cache().get_value(cache_key)
+    if cached:
+        s = requests.Session()
+        s.cookies.update(json.loads(cached))
+        return s
+
+    s = requests.Session()
+    r = s.get(f"{base}/sign_in", timeout=15)
+    import re
+    tok = re.search(r'csrf-token" content="([^"]+)"', r.text)
+    if not tok:
+        raise Exception("CSRF token non trovato nella login page")
+    csrf = tok.group(1)
+    s.headers["X-CSRF-Token"] = csrf
+    s.headers["Accept"] = "text/vnd.turbo-stream.html, text/html, */*"
+    r = s.post(f"{base}/sign_in",
+               data={"authenticity_token": csrf,
+                     "user[email]": user, "user[password]": pw},
+               allow_redirects=True, timeout=15)
+    if "sign_in" in r.url or r.status_code >= 400:
+        raise Exception(f"login fallito http={r.status_code}")
+    frappe.cache().set_value(cache_key,
+                             json.dumps(dict(s.cookies.get_dict())),
+                             expires_in_sec=3600)
+    return s
+
+
+@frappe.whitelist(allow_guest=True)
+def fetch_mandate_pdf(mandate: str, token: str):
+    """Endpoint pubblico signed per servire il PDF del mandate a DocuSeal.
+
+    Token = HMAC-SHA256(site_secret, mandate|expiry).
+    Scadenza 10 minuti dal momento della generazione.
+    """
+    import hmac, hashlib, time
+    try:
+        ts, sig = token.split(".", 1)
+        if int(ts) < int(time.time()):
+            frappe.throw("Token scaduto", frappe.PermissionError)
+        secret = (frappe.conf.get("encryption_key") or "").encode()
+        expected = hmac.new(secret, f"{mandate}|{ts}".encode(),
+                            hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            frappe.throw("Token non valido", frappe.PermissionError)
+    except (ValueError, AttributeError):
+        frappe.throw("Token malformato", frappe.PermissionError)
+
+    m = frappe.get_doc("Agency Mandate", mandate)
+    path = frappe.get_site_path("private", "files",
+        m.mandate_pdf.split("/private/files/")[-1])
+    with open(path, "rb") as f:
+        content = f.read()
+    frappe.local.response.filename = f"Mandate-{mandate}.pdf"
+    frappe.local.response.filecontent = content
+    frappe.local.response.type = "download"
+    frappe.local.response.headers = {"Content-Type": "application/pdf"}
+    return
+
+
+def _signed_pdf_url(mandate: str) -> str:
+    import hmac, hashlib, time
+    ts = str(int(time.time()) + 600)  # 10 min validity
+    secret = (frappe.conf.get("encryption_key") or "").encode()
+    sig = hmac.new(secret, f"{mandate}|{ts}".encode(), hashlib.sha256).hexdigest()
+    token = f"{ts}.{sig}"
+    return (f"{frappe.utils.get_url()}/api/method/"
+            f"thanatos_intel.thanatos_ddd.signature_methods.fetch_mandate_pdf"
+            f"?mandate={mandate}&token={token}")
+
+
+def docuseal_send(mandate: str) -> dict:
+    """FULL AUTO: upload PDF mandate Thanatos su DocuSeal + crea submission.
+
+    Flow zero-touch:
+    1. Genera signed URL temporaneo del PDF mandate
+    2. POST /templates_upload (UI endpoint) con url= → DocuSeal scarica
+       il PDF, crea Template, autodetecta i campi (signature, date,
+       text). Ritorna template_id.
+    3. POST /api/submissions con quel template_id + submitter
+    4. Mandate.status='Pending Signature', signature_ref=DocuSeal:<id>
     """
     base = frappe.conf.get("docuseal_base_url")
     key = frappe.conf.get("docuseal_api_key")
-    tpl_id = frappe.conf.get("docuseal_template_id")
     if not (base and key):
         return {"error": "docuseal_not_configured",
-                "hint": "site_config: docuseal_base_url + docuseal_api_key + docuseal_template_id"}
-    if not tpl_id:
-        return {"error": "docuseal_template_missing",
-                "hint": "Crea un template via UI o Rails runner, salva "
-                        "l'id in site_config.docuseal_template_id"}
+                "hint": "site_config: docuseal_base_url + docuseal_api_key + docuseal_admin_password"}
     m = frappe.get_doc("Agency Mandate", mandate)
+    if not m.mandate_pdf:
+        return {"error": "mandate_pdf_missing",
+                "hint": "Generare prima il PDF mandato (thanatos_ddd.pdf.mandate.generate)"}
     app = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
     if not app or not app.email:
         return {"error": "applicant_email_missing"}
 
-    pdf_url = frappe.utils.get_url() + (m.mandate_pdf or "")
+    signed = _signed_pdf_url(mandate)
     try:
+        # Step 1: login + upload via UI endpoint
+        s = _docuseal_login_session()
+        # Fresh CSRF token (Rails ruota dopo login)
+        import re
+        rp = s.get(f"{base}/templates", timeout=15)
+        tok2 = re.search(r'csrf-token" content="([^"]+)"', rp.text)
+        if tok2:
+            s.headers["X-CSRF-Token"] = tok2.group(1)
+        u = s.post(f"{base}/templates_upload",
+                   data={"url": signed,
+                         "filename": f"Mandate-{mandate}.pdf",
+                         "authenticity_token": tok2.group(1) if tok2 else ""},
+                   allow_redirects=False, timeout=60)
+        if u.status_code not in (200, 302):
+            return {"error": f"templates_upload http={u.status_code}",
+                    "body": u.text[:200]}
+        # Redirect Location punta a /templates/<id>/edit
+        loc = u.headers.get("Location", "")
+        import re
+        m_id = re.search(r"/templates/(\d+)", loc) or \
+               re.search(r"template_id[\":\s]+(\d+)", u.text)
+        if not m_id:
+            return {"error": "template_id_not_found", "body": loc or u.text[:200]}
+        tpl_id = int(m_id.group(1))
+
+        # Step 2: leggi submitters[0].uuid e aggiungi signature+date fields
+        info = requests.get(f"{base}/api/templates/{tpl_id}",
+                            headers={"X-Auth-Token": key}, timeout=20).json()
+        sub_uuid = info["submitters"][0]["uuid"]
+        sub_role = info["submitters"][0]["name"]
+        requests.put(f"{base}/api/templates/{tpl_id}",
+            json={"fields": [
+                {"name": "signature", "type": "signature",
+                 "submitter_uuid": sub_uuid, "required": True,
+                 "areas": [{"x": 0.55, "y": 0.85, "w": 0.35, "h": 0.05, "page": 0}]},
+                {"name": "date", "type": "date",
+                 "submitter_uuid": sub_uuid, "required": True,
+                 "areas": [{"x": 0.10, "y": 0.92, "w": 0.20, "h": 0.03, "page": 0}]},
+            ]}, headers={"X-Auth-Token": key}, timeout=20)
+
+        # Step 3: create submission via API
         r = requests.post(f"{base}/api/submissions",
-            json={"template_id": int(tpl_id), "send_email": True,
-                  "message": {"subject": f"Firma Mandato {m.name}",
-                              "body": f"Mandato Thanatos: {pdf_url}"},
+            json={"template_id": tpl_id, "send_email": True,
                   "submitters": [{"email": app.email,
-                                  "role": "Firmatario",
+                                  "role": sub_role,
                                   "name": app.full_legal_name}]},
             headers={"X-Auth-Token": key}, timeout=30)
         r.raise_for_status()
         body = r.json()
         sub = body[0] if isinstance(body, list) else body
         sub_id = sub.get("id")
-        sign_url = sub.get("embed_src") or sub.get("url") \
-                   or f"{base}/s/{sub.get('slug')}"
-        m.signature_ref = f"DocuSeal:{sub_id}"
+        slug = sub.get("slug")
+        sign_url = sub.get("embed_src") or (f"{base}/s/{slug}" if slug else None)
+
+        m.signature_ref = f"DocuSeal:{tpl_id}/{sub_id}"
         m.status = "Pending Signature"
         m.save(ignore_permissions=True)
-        return {"method": "DOCUSEAL", "submission_id": sub_id,
-                "sign_url": sign_url, "status": "sent"}
+        return {"method": "DOCUSEAL", "template_id": tpl_id,
+                "submission_id": sub_id, "sign_url": sign_url,
+                "status": "sent"}
     except Exception as e:
-        body_err = ""
-        try: body_err = r.text[:200]
-        except: pass
-        return {"error": str(e)[:200], "body": body_err, "method": "DOCUSEAL"}
+        return {"error": str(e)[:300], "method": "DOCUSEAL"}
 
 
 # ---------- Documenso (13k⭐, Next.js, supporta PAdES) ---------------------
