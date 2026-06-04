@@ -1,0 +1,34 @@
+/* Desk chrome override: sostituisce icona "T" generica del Workspace Thanatos
+   Intel con il logo angelo dorato. Applicato su /app, /desk, /apps. */
+
+a[href*="/app/thanatos-intel"] .app-icon,
+a[href*="/desk/thanatos-intel"] .app-icon,
+a[href*="thanatos-intel"] .icon-container > svg,
+.desktop-icon[data-app="thanatos_intel"] .app-icon,
+.desktop-icon a[href*="thanatos-intel"] .app-icon {
+  background-image: url('/assets/thanatos_intel/images/thanatos-icon-192.png') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-color: #0A0E1A !important;
+  border-radius: 12px !important;
+}
+
+a[href*="thanatos-intel"] .icon-container > svg > use,
+.desktop-icon a[href*="thanatos-intel"] svg use {
+  display: none !important;
+}
+
+a[href*="thanatos-intel"] .icon-container > svg {
+  background-image: url('/assets/thanatos_intel/images/thanatos-icon-192.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: #0A0E1A;
+  border-radius: 12px;
+}
+
+/* Sidebar icon */
+.standard-sidebar-item a[href*="thanatos-intel"] svg {
+  filter: brightness(0) saturate(100%) invert(73%) sepia(28%) saturate(434%) hue-rotate(8deg) brightness(94%) contrast(89%);
+}
