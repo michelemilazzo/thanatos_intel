@@ -37,7 +37,7 @@ doc_events={
    'after_insert': 'thanatos_intel.billing.erp_sync.on_infrastructure_cost_save',
    'on_update': 'thanatos_intel.billing.erp_sync.on_infrastructure_cost_save',
  },
- 'Diplomatic DD Case': {
+ 'Diplomatic Eligibility Case': {
    'after_insert': 'thanatos_intel.thanatos_ddd.audit.on_after_insert_case',
    'on_update': 'thanatos_intel.thanatos_ddd.audit.on_update_case',
  },

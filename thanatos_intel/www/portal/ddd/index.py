@@ -17,7 +17,7 @@ def get_context(context):
     context.countries = frappe.get_all("Country Framework",
         filters={"is_active": 1}, fields=["name", "iso3", "diplomatic_authority"],
         order_by="name")
-    context.my_cases = frappe.get_all("Diplomatic DD Case",
+    context.my_cases = frappe.get_all("Diplomatic Eligibility Case",
         fields=["name", "applicant", "country", "request_type",
                 "workflow_state", "risk_score", "risk_band", "final_decision",
                 "modified"],

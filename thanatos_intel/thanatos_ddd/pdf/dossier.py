@@ -19,7 +19,7 @@ DISCLAIMER = ("Thanatos performs investigative, due diligence, compliance and "
 @frappe.whitelist()
 def generate(dossier_name: str) -> str:
     d = frappe.get_doc("Final Dossier", dossier_name)
-    case = frappe.get_doc("Diplomatic DD Case", d.ddd_case)
+    case = frappe.get_doc("Diplomatic Eligibility Case", d.ddd_case)
     applicant = frappe.get_doc("Applicant Profile", case.applicant) if case.applicant else None
     country = frappe.get_doc("Country Framework", case.country) if case.country else None
 

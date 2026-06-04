@@ -1,5 +1,5 @@
-"""Audit hooks: ogni status change e decisione su Diplomatic DD Case
-crea automaticamente un record Ddd Audit Log immutabile."""
+"""Audit hooks: ogni status change e decisione su Diplomatic Eligibility Case
+crea automaticamente un record Diplomatic Audit Log immutabile."""
 import frappe
 from frappe.utils import now_datetime
 
@@ -23,7 +23,7 @@ def on_update_case(doc, method=None):
         old, new = before.get(f), doc.get(f)
         if (old or "") != (new or ""):
             frappe.get_doc({
-                "doctype": "Ddd Audit Log",
+                "doctype": "Diplomatic Audit Log",
                 "ddd_case": doc.name,
                 "ts": now_datetime(),
                 "user": frappe.session.user,
@@ -39,7 +39,7 @@ def on_update_case(doc, method=None):
 
 def on_after_insert_case(doc, method=None):
     frappe.get_doc({
-        "doctype": "Ddd Audit Log",
+        "doctype": "Diplomatic Audit Log",
         "ddd_case": doc.name,
         "ts": now_datetime(),
         "user": frappe.session.user,

@@ -75,7 +75,7 @@
    "fieldname": "proforma",
    "fieldtype": "Link",
    "label": "Proforma",
-   "options": "Ddd Proforma"
+   "options": "Diplomatic Proforma"
   }
  ],
  "index_web_pages_for_search": 0,

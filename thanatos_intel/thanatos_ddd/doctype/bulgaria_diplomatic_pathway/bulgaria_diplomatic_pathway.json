@@ -22,7 +22,7 @@
    "fieldname": "ddd_case",
    "fieldtype": "Link",
    "label": "Case",
-   "options": "Diplomatic DD Case",
+   "options": "Diplomatic Eligibility Case",
    "reqd": 1
   },
   {

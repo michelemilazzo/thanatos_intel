@@ -1,4 +1,4 @@
-"""Intake API: crea Applicant + Diplomatic DD Case + checklist documenti."""
+"""Intake API: crea Applicant + Diplomatic Eligibility Case + checklist documenti."""
 import frappe
 from frappe.utils import now_datetime
 
@@ -26,7 +26,7 @@ def create_case(full_legal_name: str, dob: str, nationality: str,
     app.insert(ignore_permissions=True)
 
     case = frappe.get_doc({
-        "doctype": "Diplomatic DD Case",
+        "doctype": "Diplomatic Eligibility Case",
         "applicant": app.name,
         "country": country,
         "request_type": request_type,

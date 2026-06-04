@@ -1,65 +1,92 @@
 {
  "actions": [],
  "allow_rename": 0,
- "autoname": "format:AUDIT-{YYYY}-{#####}",
+ "autoname": "format:PRO-{YYYY}-{#####}",
  "creation": "2026-06-04 16:30:00",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "ddd_case",
-  "ts",
-  "user",
-  "event_type",
-  "old_value",
-  "new_value",
-  "reason",
-  "ip"
+  "mandate",
+  "issued_on",
+  "due_date",
+  "currency",
+  "step_title",
+  "amount",
+  "vat_pct",
+  "total",
+  "status",
+  "stripe_session",
+  "pdf_file"
  ],
  "fields": [
   {
    "fieldname": "ddd_case",
    "fieldtype": "Link",
    "label": "Case",
-   "options": "Diplomatic DD Case",
+   "options": "Diplomatic Eligibility Case",
    "reqd": 1
   },
   {
-   "fieldname": "ts",
-   "fieldtype": "Datetime",
-   "label": "Timestamp"
-  },
-  {
-   "fieldname": "user",
+   "fieldname": "mandate",
    "fieldtype": "Link",
-   "label": "User",
-   "options": "User"
+   "label": "Mandate",
+   "options": "Agency Mandate"
   },
   {
-   "fieldname": "event_type",
+   "fieldname": "issued_on",
+   "fieldtype": "Date",
+   "label": "Issued On"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "default": "EUR"
+  },
+  {
+   "fieldname": "step_title",
+   "fieldtype": "Data",
+   "label": "Step Title"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount"
+  },
+  {
+   "fieldname": "vat_pct",
+   "fieldtype": "Float",
+   "label": "VAT %"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "label": "Total"
+  },
+  {
+   "fieldname": "status",
    "fieldtype": "Select",
-   "label": "Event Type",
-   "options": "Status Change\nDocument Upload\nRisk Override\nLegal Conclusion\nDecision\nNote\nCheck Result\nSubmission\nPayment"
+   "label": "Status",
+   "options": "Draft\nSent\nPaid\nVoid\nOverdue",
+   "default": "Draft"
   },
   {
-   "fieldname": "old_value",
+   "fieldname": "stripe_session",
    "fieldtype": "Data",
-   "label": "Old Value"
+   "label": "Stripe Checkout Session"
   },
   {
-   "fieldname": "new_value",
-   "fieldtype": "Data",
-   "label": "New Value"
-  },
-  {
-   "fieldname": "reason",
-   "fieldtype": "Small Text",
-   "label": "Reason"
-  },
-  {
-   "fieldname": "ip",
-   "fieldtype": "Data",
-   "label": "IP"
+   "fieldname": "pdf_file",
+   "fieldtype": "Attach",
+   "label": "PDF"
   }
  ],
  "index_web_pages_for_search": 0,
@@ -67,7 +94,7 @@
  "modified": "2026-06-04 16:30:00",
  "modified_by": "Administrator",
  "module": "Thanatos Ddd",
- "name": "Ddd Audit Log",
+ "name": "Diplomatic Proforma",
  "owner": "Administrator",
  "permissions": [
   {

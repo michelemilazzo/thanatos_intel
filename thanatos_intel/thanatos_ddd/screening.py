@@ -23,7 +23,7 @@ def _post(path, payload, timeout=20):
 @frappe.whitelist()
 def screen_applicant(ddd_case: str):
     """Esegue screening completo (sanctions+PEP+watchlist) sull'applicant del case."""
-    case = frappe.get_doc("Diplomatic DD Case", ddd_case)
+    case = frappe.get_doc("Diplomatic Eligibility Case", ddd_case)
     if not case.applicant:
         frappe.throw("Case senza applicant")
     app = frappe.get_doc("Applicant Profile", case.applicant)

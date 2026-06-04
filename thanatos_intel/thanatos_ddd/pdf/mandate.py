@@ -29,7 +29,7 @@ def _style():
 @frappe.whitelist()
 def generate(mandate_name: str) -> str:
     m = frappe.get_doc("Agency Mandate", mandate_name)
-    case = frappe.get_doc("Diplomatic DD Case", m.ddd_case) if m.ddd_case else None
+    case = frappe.get_doc("Diplomatic Eligibility Case", m.ddd_case) if m.ddd_case else None
     applicant = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
     steps = frappe.get_all("Mandate Service Step", filters={"mandate": mandate_name},
                            fields=["step_no", "title", "description", "fee", "vat_pct",
