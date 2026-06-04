@@ -6,26 +6,29 @@ a[href*="/desk/thanatos-intel"] .app-icon,
 a[href*="thanatos-intel"] .icon-container > svg,
 .desktop-icon[data-app="thanatos_intel"] .app-icon,
 .desktop-icon a[href*="thanatos-intel"] .app-icon {
-  background-image: url('/assets/thanatos_intel/images/thanatos-icon-192.png') !important;
-  background-size: contain !important;
+  background-image: url('/assets/thanatos_intel/images/thanatos-logo-mark.png') !important;
+  background-size: 110% auto !important;
   background-repeat: no-repeat !important;
-  background-position: center !important;
+  background-position: center 48% !important;
   background-color: #0A0E1A !important;
-  border-radius: 12px !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 14px rgba(200,169,110,.18) !important;
 }
 
 a[href*="thanatos-intel"] .icon-container > svg > use,
-.desktop-icon a[href*="thanatos-intel"] svg use {
+.desktop-icon a[href*="thanatos-intel"] svg use,
+a[href*="thanatos-intel"] .app-icon svg,
+a[href*="thanatos-intel"] .app-icon img {
   display: none !important;
 }
 
 a[href*="thanatos-intel"] .icon-container > svg {
-  background-image: url('/assets/thanatos_intel/images/thanatos-icon-192.png');
-  background-size: contain;
+  background-image: url('/assets/thanatos_intel/images/thanatos-logo-mark.png');
+  background-size: 110% auto;
   background-repeat: no-repeat;
-  background-position: center;
+  background-position: center 48%;
   background-color: #0A0E1A;
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 /* Sidebar icon */
