@@ -116,7 +116,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 
 <script>
 const CLIENT = {{ (client.name if client else '')|tojson }};
-const CSRF = "{{ frappe.sessions.get_csrf_token() }}";
+const CSRF = "{{ csrf_token }}";
 
 async function checkout(planName) {
   if (!CLIENT) { alert("Cliente non collegato"); return; }

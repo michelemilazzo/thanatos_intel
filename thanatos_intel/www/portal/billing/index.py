@@ -36,6 +36,12 @@ def get_context(context):
         context.current_sub = subs[0] if subs else None
 
     context.stripe_configured = bool(frappe.conf.get("stripe_secret_key"))
+    context.stripe_publishable_key = frappe.conf.get("stripe_publishable_key") or ""
+    try:
+        from frappe.sessions import get_csrf_token
+        context.csrf_token = get_csrf_token()
+    except Exception:
+        context.csrf_token = frappe.local.session.get("csrf_token") if frappe.local.session else ""
     context.title = "Billing — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context
