@@ -225,53 +225,53 @@ def hellosign_send(mandate: str) -> dict:
 # ---------- DocuSeal (17k⭐, single container, MIT) ------------------------
 def docuseal_send(mandate: str) -> dict:
     """Crea submission DocuSeal via API REST.
-    site_config: docuseal_base_url + docuseal_api_key"""
+
+    Community edition NON espone POST /api/templates → uso template
+    pre-creato (id in site_config.docuseal_template_id), invio solo la
+    submission per il firmatario. Il PDF specifico del mandato resta
+    su Thanatos (allegato nell'email DocuSeal o link).
+    """
     base = frappe.conf.get("docuseal_base_url")
     key = frappe.conf.get("docuseal_api_key")
+    tpl_id = frappe.conf.get("docuseal_template_id")
     if not (base and key):
         return {"error": "docuseal_not_configured",
-                "hint": "site_config: docuseal_base_url + docuseal_api_key"}
+                "hint": "site_config: docuseal_base_url + docuseal_api_key + docuseal_template_id"}
+    if not tpl_id:
+        return {"error": "docuseal_template_missing",
+                "hint": "Crea un template via UI o Rails runner, salva "
+                        "l'id in site_config.docuseal_template_id"}
     m = frappe.get_doc("Agency Mandate", mandate)
     app = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
     if not app or not app.email:
         return {"error": "applicant_email_missing"}
 
-    src = frappe.get_site_path("private", "files",
-        m.mandate_pdf.split("/private/files/")[-1])
-    import base64
-    with open(src, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode()
+    pdf_url = frappe.utils.get_url() + (m.mandate_pdf or "")
     try:
-        # 1. Create template
-        t = requests.post(f"{base}/api/templates/pdf",
-            json={"name": f"Thanatos Mandate {m.name}",
-                  "documents": [{"name": f"{m.name}.pdf", "file": b64,
-                                 "fields": [{"name": "signature",
-                                             "type": "signature",
-                                             "page": 0,
-                                             "areas": [{"x": 0.55, "y": 0.85,
-                                                        "w": 0.35, "h": 0.06}]}]}]},
-            headers={"X-Auth-Token": key}, timeout=30)
-        t.raise_for_status()
-        tid = t.json().get("id")
-        # 2. Create submission
-        s = requests.post(f"{base}/api/submissions",
-            json={"template_id": tid,
-                  "submitters": [{"email": app.email, "role": "Firmatario",
+        r = requests.post(f"{base}/api/submissions",
+            json={"template_id": int(tpl_id), "send_email": True,
+                  "message": {"subject": f"Firma Mandato {m.name}",
+                              "body": f"Mandato Thanatos: {pdf_url}"},
+                  "submitters": [{"email": app.email,
+                                  "role": "Firmatario",
                                   "name": app.full_legal_name}]},
             headers={"X-Auth-Token": key}, timeout=30)
-        s.raise_for_status()
-        sub = s.json()
-        sub_id = sub.get("id") or (sub[0].get("id") if isinstance(sub, list) else None)
-        sign_url = (sub[0].get("embed_src") if isinstance(sub, list)
-                    else sub.get("embed_src"))
+        r.raise_for_status()
+        body = r.json()
+        sub = body[0] if isinstance(body, list) else body
+        sub_id = sub.get("id")
+        sign_url = sub.get("embed_src") or sub.get("url") \
+                   or f"{base}/s/{sub.get('slug')}"
         m.signature_ref = f"DocuSeal:{sub_id}"
         m.status = "Pending Signature"
         m.save(ignore_permissions=True)
         return {"method": "DOCUSEAL", "submission_id": sub_id,
                 "sign_url": sign_url, "status": "sent"}
     except Exception as e:
-        return {"error": str(e)[:300], "method": "DOCUSEAL"}
+        body_err = ""
+        try: body_err = r.text[:200]
+        except: pass
+        return {"error": str(e)[:200], "body": body_err, "method": "DOCUSEAL"}
 
 
 # ---------- Documenso (13k⭐, Next.js, supporta PAdES) ---------------------
