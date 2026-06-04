@@ -222,6 +222,133 @@ def hellosign_send(mandate: str) -> dict:
             "configured": True}
 
 
+# ---------- DocuSeal (17k⭐, single container, MIT) ------------------------
+def docuseal_send(mandate: str) -> dict:
+    """Crea submission DocuSeal via API REST.
+    site_config: docuseal_base_url + docuseal_api_key"""
+    base = frappe.conf.get("docuseal_base_url")
+    key = frappe.conf.get("docuseal_api_key")
+    if not (base and key):
+        return {"error": "docuseal_not_configured",
+                "hint": "site_config: docuseal_base_url + docuseal_api_key"}
+    m = frappe.get_doc("Agency Mandate", mandate)
+    app = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
+    if not app or not app.email:
+        return {"error": "applicant_email_missing"}
+
+    src = frappe.get_site_path("private", "files",
+        m.mandate_pdf.split("/private/files/")[-1])
+    import base64
+    with open(src, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+    try:
+        # 1. Create template
+        t = requests.post(f"{base}/api/templates/pdf",
+            json={"name": f"Thanatos Mandate {m.name}",
+                  "documents": [{"name": f"{m.name}.pdf", "file": b64,
+                                 "fields": [{"name": "signature",
+                                             "type": "signature",
+                                             "page": 0,
+                                             "areas": [{"x": 0.55, "y": 0.85,
+                                                        "w": 0.35, "h": 0.06}]}]}]},
+            headers={"X-Auth-Token": key}, timeout=30)
+        t.raise_for_status()
+        tid = t.json().get("id")
+        # 2. Create submission
+        s = requests.post(f"{base}/api/submissions",
+            json={"template_id": tid,
+                  "submitters": [{"email": app.email, "role": "Firmatario",
+                                  "name": app.full_legal_name}]},
+            headers={"X-Auth-Token": key}, timeout=30)
+        s.raise_for_status()
+        sub = s.json()
+        sub_id = sub.get("id") or (sub[0].get("id") if isinstance(sub, list) else None)
+        sign_url = (sub[0].get("embed_src") if isinstance(sub, list)
+                    else sub.get("embed_src"))
+        m.signature_ref = f"DocuSeal:{sub_id}"
+        m.status = "Pending Signature"
+        m.save(ignore_permissions=True)
+        return {"method": "DOCUSEAL", "submission_id": sub_id,
+                "sign_url": sign_url, "status": "sent"}
+    except Exception as e:
+        return {"error": str(e)[:300], "method": "DOCUSEAL"}
+
+
+# ---------- Documenso (13k⭐, Next.js, supporta PAdES) ---------------------
+def documenso_send(mandate: str) -> dict:
+    base = frappe.conf.get("documenso_base_url")
+    key = frappe.conf.get("documenso_api_key")
+    if not (base and key):
+        return {"error": "documenso_not_configured",
+                "hint": "site_config: documenso_base_url + documenso_api_key"}
+    m = frappe.get_doc("Agency Mandate", mandate)
+    app = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
+    if not app or not app.email:
+        return {"error": "applicant_email_missing"}
+    src = frappe.get_site_path("private", "files",
+        m.mandate_pdf.split("/private/files/")[-1])
+    try:
+        # Step 1: upload document
+        with open(src, "rb") as f:
+            up = requests.post(f"{base}/api/v1/documents",
+                files={"file": (f"{m.name}.pdf", f, "application/pdf")},
+                headers={"Authorization": f"Bearer {key}"}, timeout=30)
+        up.raise_for_status()
+        doc_id = up.json().get("id")
+        # Step 2: add recipient + send
+        r = requests.post(f"{base}/api/v1/documents/{doc_id}/recipients",
+            json={"name": app.full_legal_name, "email": app.email,
+                  "role": "SIGNER"},
+            headers={"Authorization": f"Bearer {key}"}, timeout=30)
+        r.raise_for_status()
+        s = requests.post(f"{base}/api/v1/documents/{doc_id}/send",
+            headers={"Authorization": f"Bearer {key}"}, timeout=30)
+        s.raise_for_status()
+        m.signature_ref = f"Documenso:{doc_id}"
+        m.status = "Pending Signature"
+        m.save(ignore_permissions=True)
+        return {"method": "DOCUMENSO", "document_id": doc_id, "status": "sent"}
+    except Exception as e:
+        return {"error": str(e)[:300], "method": "DOCUMENSO"}
+
+
+# ---------- OpenSign vero (org opensign, 6.5k⭐ AGPL) ---------------------
+def opensign_real_send(mandate: str) -> dict:
+    base = frappe.conf.get("opensign_base_url")
+    key = frappe.conf.get("opensign_api_key")
+    if not (base and key):
+        return {"error": "opensign_not_configured",
+                "hint": "site_config: opensign_base_url + opensign_api_key. "
+                        "Docker image: opensign/opensign + opensign/opensignserver"}
+    m = frappe.get_doc("Agency Mandate", mandate)
+    app = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
+    if not app or not app.email:
+        return {"error": "applicant_email_missing"}
+    src = frappe.get_site_path("private", "files",
+        m.mandate_pdf.split("/private/files/")[-1])
+    import base64
+    with open(src, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+    try:
+        r = requests.post(
+            f"{base}/api/app/functions/savetemplate",
+            json={"Name": f"Thanatos Mandate {m.name}",
+                  "URL": f"data:application/pdf;base64,{b64}",
+                  "Signers": [{"email": app.email,
+                               "name": app.full_legal_name}]},
+            headers={"X-Parse-Application-Id": "opensign",
+                     "sessionToken": key},
+            timeout=60)
+        r.raise_for_status()
+        tpl_id = r.json().get("objectId")
+        m.signature_ref = f"OpenSign:{tpl_id}"
+        m.status = "Pending Signature"
+        m.save(ignore_permissions=True)
+        return {"method": "OPENSIGN", "template_id": tpl_id, "status": "sent"}
+    except Exception as e:
+        return {"error": str(e)[:300], "method": "OPENSIGN"}
+
+
 # ---------- LibreSign (Nextcloud app, AGPL OSS, cert ICP-Brasil + X.509) ----
 def libresign_send(mandate: str) -> dict:
     """Crea sign request via LibreSign su Nextcloud self-hosted.
@@ -308,6 +435,12 @@ def dispatch(mandate: str, method: str, **kw) -> dict:
         return hellosign_send(mandate)
     if method == "LIBRESIGN":
         return libresign_send(mandate)
+    if method == "DOCUSEAL":
+        return docuseal_send(mandate)
+    if method == "DOCUMENSO":
+        return documenso_send(mandate)
+    if method == "OPENSIGN":
+        return opensign_real_send(mandate)
     frappe.throw(f"Metodo firma sconosciuto: {method}")
 
 
@@ -334,4 +467,13 @@ def list_methods() -> list:
         {"id": "LIBRESIGN", "label": "LibreSign (Nextcloud self-hosted, AGPL OSS)",
          "scope": "Globale + ICP-Brasil", "level": "Provider self-hosted",
          "enabled": bool(frappe.conf.get("libresign_base_url"))},
+        {"id": "DOCUSEAL", "label": "DocuSeal self-hosted (17k⭐ MIT)",
+         "scope": "Globale", "level": "Provider self-hosted",
+         "enabled": bool(frappe.conf.get("docuseal_base_url"))},
+        {"id": "DOCUMENSO", "label": "Documenso self-hosted (13k⭐ AGPL)",
+         "scope": "Globale + PAdES nativo", "level": "Provider self-hosted",
+         "enabled": bool(frappe.conf.get("documenso_base_url"))},
+        {"id": "OPENSIGN", "label": "OpenSign self-hosted (6.5k⭐ AGPL)",
+         "scope": "Globale", "level": "Provider self-hosted",
+         "enabled": bool(frappe.conf.get("opensign_base_url"))},
     ]
