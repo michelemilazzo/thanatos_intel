@@ -219,6 +219,21 @@ def emit_monthly_invoice_on_erp(for_month: str | None = None) -> dict:
 	if not items:
 		return {"skipped": "all_zero"}
 
+	# Italian region requires at least one Tax row.
+	# We prefer a "Reverse Charge EU" template if it exists, else fall back
+	# to the configured default or the first Italy VAT 22% template.
+	tax_template = frappe.conf.get("erpnext_tax_template")
+	if not tax_template:
+		tx = _erp_get("/api/resource/Sales Taxes and Charges Template",
+		              params={"limit_page_length": 50,
+		                      "fields": '["name","title"]'})
+		choices = [t.get("name", "") for t in (tx.get("data") or [])]
+		for needle in ("Reverse Charge", "Esente", "Italy VAT 22"):
+			match = next((c for c in choices if needle.lower() in c.lower()), None)
+			if match:
+				tax_template = match
+				break
+
 	payload = {
 		"customer": buyer,
 		"company": company,
@@ -230,6 +245,21 @@ def emit_monthly_invoice_on_erp(for_month: str | None = None) -> dict:
 		"remarks": f"Costi infrastruttura Thanatos {month_label}",
 		"items": items,
 	}
+	if tax_template:
+		payload["taxes_and_charges"] = tax_template
+		tpl = _erp_get(f"/api/resource/Sales Taxes and Charges Template/{tax_template}")
+		tpl_data = tpl.get("data") or {}
+		tax_rows = []
+		for t in tpl_data.get("taxes", []):
+			tax_rows.append({
+				"charge_type": t.get("charge_type"),
+				"account_head": t.get("account_head"),
+				"rate": t.get("rate"),
+				"description": t.get("description"),
+				"cost_center": t.get("cost_center"),
+			})
+		if tax_rows:
+			payload["taxes"] = tax_rows
 	r = _erp_post("/api/resource/Sales Invoice", payload)
 	if r.get("error"):
 		frappe.log_error(f"ERP SI create fail: {r}", "erp_sync")
