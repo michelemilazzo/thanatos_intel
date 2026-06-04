@@ -222,6 +222,64 @@ def hellosign_send(mandate: str) -> dict:
             "configured": True}
 
 
+# ---------- LibreSign (Nextcloud app, AGPL OSS, cert ICP-Brasil + X.509) ----
+def libresign_send(mandate: str) -> dict:
+    """Crea sign request via LibreSign su Nextcloud self-hosted.
+
+    Richiede in site_config:
+      libresign_base_url   : es. https://nextcloud.thanatos.local
+      libresign_user       : utente Nextcloud con cert installato
+      libresign_app_token  : app-password Nextcloud (Settings > Security)
+    """
+    import base64
+    base = frappe.conf.get("libresign_base_url")
+    user = frappe.conf.get("libresign_user")
+    token = frappe.conf.get("libresign_app_token")
+    if not (base and user and token):
+        return {"error": "libresign_not_configured",
+                "hint": "site_config: libresign_base_url + libresign_user + libresign_app_token"}
+
+    m = frappe.get_doc("Agency Mandate", mandate)
+    if not m.mandate_pdf:
+        frappe.throw("PDF mandato non disponibile")
+    src = frappe.get_site_path("private", "files",
+        m.mandate_pdf.split("/private/files/")[-1])
+    with open(src, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+
+    app = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
+    if not app or not app.email:
+        return {"error": "applicant_email_missing"}
+
+    # LibreSign API: POST /ocs/v2.php/apps/libresign/api/v1/request-signature
+    payload = {
+        "name": f"Thanatos Mandate {m.name}",
+        "file": {"base64": f"data:application/pdf;base64,{b64}"},
+        "users": [{
+            "email": app.email,
+            "display_name": app.full_legal_name,
+        }],
+    }
+    try:
+        r = requests.post(
+            f"{base}/ocs/v2.php/apps/libresign/api/v1/request-signature",
+            json=payload, auth=(user, token),
+            headers={"OCS-APIREQUEST": "true",
+                     "Accept": "application/json"},
+            timeout=60)
+        r.raise_for_status()
+        body = r.json().get("ocs", {}).get("data", {})
+        request_id = body.get("uuid") or body.get("id")
+        m.signature_ref = f"LibreSign:{request_id}"
+        m.status = "Pending Signature"
+        m.save(ignore_permissions=True)
+        return {"method": "LIBRESIGN", "request_id": request_id,
+                "sign_url": body.get("links", [{}])[0].get("href"),
+                "status": "sent"}
+    except Exception as e:
+        return {"error": str(e)[:300], "method": "LIBRESIGN"}
+
+
 # ---------- Dispatcher -------------------------------------------------------
 @frappe.whitelist(methods=["POST"])
 def dispatch(mandate: str, method: str, **kw) -> dict:
@@ -248,6 +306,8 @@ def dispatch(mandate: str, method: str, **kw) -> dict:
         return adobe_sign_send(mandate)
     if method == "HELLOSIGN":
         return hellosign_send(mandate)
+    if method == "LIBRESIGN":
+        return libresign_send(mandate)
     frappe.throw(f"Metodo firma sconosciuto: {method}")
 
 
@@ -271,4 +331,7 @@ def list_methods() -> list:
         {"id": "HELLOSIGN", "label": "Dropbox Sign (HelloSign)",
          "scope": "Globale", "level": "Provider esterno",
          "enabled": bool(frappe.conf.get("hellosign_api_key"))},
+        {"id": "LIBRESIGN", "label": "LibreSign (Nextcloud self-hosted, AGPL OSS)",
+         "scope": "Globale + ICP-Brasil", "level": "Provider self-hosted",
+         "enabled": bool(frappe.conf.get("libresign_base_url"))},
     ]
