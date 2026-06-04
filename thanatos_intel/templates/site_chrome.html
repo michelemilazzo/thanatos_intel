@@ -4,6 +4,13 @@
 
 {% macro thanatos_header(active='') -%}
 <style>
+/* Hide Frappe default navbar + footer (we render our own chrome) */
+.navbar.navbar-expand-lg, .website-top-bar, .web-footer, footer.web-footer,
+.navbar.navbar-light, body > nav.navbar, .footer-powered, .container > .web-footer {
+  display: none !important;
+}
+/* Reset web.html body padding/container constraints on home/portal pages */
+.page_content, .web-page-content { padding: 0 !important; max-width: 100% !important; }
 .tx-nav{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.92);backdrop-filter:blur(8px);
   border-bottom:1px solid #1F2742;}
 .tx-nav-inner{max-width:1240px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;

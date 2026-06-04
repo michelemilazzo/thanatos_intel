@@ -1,4 +1,5 @@
 {% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
 {% block title %}News — Thanatos Intel{% endblock %}
 
 {% block head_include %}
@@ -33,6 +34,7 @@ body.news-list{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
 {% endblock %}
 
 {% block content %}
+{{ thanatos_header('news') }}
 <body class="news-list">
 <header class="news-head">
   <a href="/"><img src="/assets/thanatos_intel/images/thanatos-logo-mark.png" alt="Thanatos"/></a>
@@ -80,4 +82,5 @@ body.news-list{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
   {% endif %}
 </div>
 </body>
+{{ thanatos_footer() }}
 {% endblock %}
