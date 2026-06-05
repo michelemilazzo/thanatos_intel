@@ -1,0 +1,18 @@
+{
+  "doctype": "DocType",
+  "name": "Thanatos FX Rate",
+  "module": "Thanatos Core",
+  "autoname": "format:FX-{YYYY}{MM}{DD}-{HH}{mm}{ss}",
+  "title_field": "source",
+  "track_changes": 0,
+  "fields": [
+    {"fieldname": "source", "fieldtype": "Data", "label": "Source", "default": "ECB", "in_list_view": 1, "reqd": 1},
+    {"fieldname": "base", "fieldtype": "Data", "label": "Base Currency", "default": "EUR", "in_list_view": 1, "reqd": 1},
+    {"fieldname": "fetched_at", "fieldtype": "Datetime", "label": "Fetched At", "default": "Now", "in_list_view": 1},
+    {"fieldname": "payload", "fieldtype": "Long Text", "label": "Rates JSON"}
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigation Manager", "read": 1}
+  ]
+}

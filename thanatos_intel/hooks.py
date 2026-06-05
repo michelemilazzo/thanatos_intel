@@ -13,7 +13,9 @@ app_country='IT'
 
 app_logo_url='/assets/thanatos_intel/images/thanatos-icon-192.png'
 app_include_css=['/assets/thanatos_intel/css/desk_chrome.css']
-app_include_js=['/assets/thanatos_intel/js/desk_chrome.js']
+app_include_js=['/assets/thanatos_intel/js/desk_chrome.js',
+                '/assets/thanatos_intel/js/fx_widget.js']
+web_include_js=['/assets/thanatos_intel/js/fx_widget.js']
 brand_html='<img src="/assets/thanatos_intel/images/thanatos-logo-mark.png" alt="Thanatos Intel" style="height:32px"/>'
 website_context={
  'favicon': '/assets/thanatos_intel/images/thanatos-icon-192.png',
@@ -45,7 +47,8 @@ doc_events={
 scheduler_events={
  'cron':{},
  'all':[],
- 'hourly':['thanatos_intel.news.ingestion.hourly_ingest'],
+ 'hourly':['thanatos_intel.news.ingestion.hourly_ingest',
+           'thanatos_intel.thanatos_core.currency.converter.fetch_rates'],
  'daily':['thanatos_intel.news.ingestion.daily_case_digest',
           'thanatos_intel.thanatos_ddd.opensanctions_sync.daily_refresh'],
  'daily_long':[],
@@ -67,4 +70,14 @@ has_permission={
  'Investigation Report':'thanatos_intel.permissions.can_read_thanatos_doc',
  'Risk Score':'thanatos_intel.permissions.can_read_thanatos_doc',
  'Chain Of Custody Event':'thanatos_intel.permissions.can_read_thanatos_doc'
+}
+# Jinja helpers — usabili in Print Format e portali:
+#   {{ thanatos_fx(amount, "USD") }}
+#   {{ thanatos_fx_block(amount) }}  -> tabella HTML multi-valuta
+jinja={
+ 'methods':[
+   'thanatos_intel.thanatos_core.currency.converter.jinja_fx:thanatos_fx',
+   'thanatos_intel.thanatos_core.currency.converter.jinja_fx_block:thanatos_fx_block',
+   'thanatos_intel.thanatos_core.currency.converter.convert_all:thanatos_fx_all',
+ ],
 }
