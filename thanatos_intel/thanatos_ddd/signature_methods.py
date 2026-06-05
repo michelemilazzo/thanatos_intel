@@ -392,6 +392,113 @@ def docuseal_send(mandate: str) -> dict:
         return {"error": str(e)[:300], "method": "DOCUSEAL"}
 
 
+# ---------- DocuSeal webhook callback -------------------------------------
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+def docuseal_webhook():
+    """DocuSeal posts: form.viewed, form.started, form.completed, form.declined,
+    submission.created, submission.completed.
+    Body: {event_type, timestamp, data:{...submission/submitter...}}.
+    Auth: HMAC-SHA256 of raw body con docuseal_webhook_secret → header
+    X-DocuSeal-Signature (hex).
+    """
+    import hashlib, hmac as _hmac
+    secret = frappe.conf.get("docuseal_webhook_secret") or ""
+    raw = frappe.request.get_data() or b""
+    sig = frappe.get_request_header("X-DocuSeal-Signature") or ""
+    if secret:
+        expected = _hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+        if not _hmac.compare_digest(expected, sig):
+            frappe.local.response["http_status_code"] = 401
+            return {"error": "invalid_signature"}
+    try:
+        payload = frappe.parse_json(raw.decode("utf-8") or "{}")
+    except Exception:
+        payload = {}
+    evt = (payload or {}).get("event_type") or ""
+    data = (payload or {}).get("data") or {}
+    sub_id = data.get("submission_id") or data.get("id") or (data.get("submission") or {}).get("id")
+    tpl_id = data.get("template_id") or (data.get("template") or {}).get("id")
+    if not sub_id:
+        return {"ok": True, "skipped": "no_submission_id", "event": evt}
+    # Find Mandate by signature_ref pattern "DocuSeal:<tpl_id>/<sub_id>"
+    needle = f"DocuSeal:%/{sub_id}" if not tpl_id else f"DocuSeal:{tpl_id}/{sub_id}"
+    rows = frappe.db.sql(
+        """SELECT name FROM `tabAgency Mandate`
+           WHERE signature_ref LIKE %s LIMIT 1""", (needle,))
+    if not rows and tpl_id:
+        rows = frappe.db.sql(
+            """SELECT name FROM `tabAgency Mandate`
+               WHERE signature_ref LIKE %s LIMIT 1""",
+            (f"DocuSeal:{tpl_id}/%",))
+    if not rows:
+        return {"ok": True, "skipped": "mandate_not_found",
+                "event": evt, "sub_id": sub_id}
+    mname = rows[0][0]
+    m = frappe.get_doc("Agency Mandate", mname)
+    status_map = {
+        "form.viewed":          ("Pending Signature", "viewed"),
+        "form.started":         ("Pending Signature", "started"),
+        "submission.created":   ("Pending Signature", "created"),
+        "form.completed":       ("Signed",            "completed"),
+        "submission.completed": ("Signed",            "completed"),
+        "form.declined":        ("Terminated",        "declined"),
+    }
+    if evt not in status_map:
+        return {"ok": True, "ignored_event": evt}
+    new_status, short = status_map[evt]
+    if new_status == "Signed":
+        # Pull final signed PDF + audit_log + completed_at
+        try:
+            base = frappe.conf.get("docuseal_base_url")
+            key = frappe.conf.get("docuseal_api_key")
+            info = requests.get(f"{base}/api/submissions/{sub_id}",
+                headers={"X-Auth-Token": key}, timeout=20).json()
+            docs = info.get("documents") or []
+            pdf_url = None
+            for d in docs:
+                if (d.get("filename") or "").lower().endswith(".pdf"):
+                    pdf_url = d.get("url"); break
+            if pdf_url:
+                p = requests.get(pdf_url, timeout=60)
+                if p.ok:
+                    fname = f"Mandate-{m.name}-signed.pdf"
+                    saved = frappe.get_doc({
+                        "doctype": "File",
+                        "file_name": fname,
+                        "is_private": 1,
+                        "content": p.content,
+                        "attached_to_doctype": "Agency Mandate",
+                        "attached_to_name": m.name,
+                    }).insert(ignore_permissions=True)
+                    # File attached_to → visibile sotto Mandate
+                    _ = saved
+            m.signed_on = frappe.utils.now_datetime()
+        except Exception as e:
+            frappe.log_error(f"DocuSeal pull signed pdf: {e}", "docuseal_webhook")
+    m.status = new_status
+    try:
+        m.save(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception as e:
+        frappe.log_error(f"Mandate save: {e}", "docuseal_webhook")
+    # Audit log
+    try:
+        frappe.get_doc({
+            "doctype": "Diplomatic Audit Log",
+            "ddd_case": m.ddd_case,
+            "event_type": f"docuseal.{short}",
+            "new_value": new_status,
+            "reason": frappe.as_json({"mandate": m.name,
+                                      "submission_id": sub_id,
+                                      "template_id": tpl_id,
+                                      "event": evt})[:500],
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        pass
+    return {"ok": True, "mandate": m.name, "status": new_status, "event": evt}
+
+
 # ---------- Documenso (13k⭐, Next.js, supporta PAdES) ---------------------
 def documenso_send(mandate: str) -> dict:
     base = frappe.conf.get("documenso_base_url")
