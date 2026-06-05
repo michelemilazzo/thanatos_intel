@@ -76,8 +76,8 @@ has_permission={
 #   {{ thanatos_fx_block(amount) }}  -> tabella HTML multi-valuta
 jinja={
  'methods':[
-   'thanatos_intel.thanatos_core.currency.converter.jinja_fx:thanatos_fx',
-   'thanatos_intel.thanatos_core.currency.converter.jinja_fx_block:thanatos_fx_block',
-   'thanatos_intel.thanatos_core.currency.converter.convert_all:thanatos_fx_all',
+   'thanatos_intel.thanatos_core.currency.converter.jinja_fx',
+   'thanatos_intel.thanatos_core.currency.converter.jinja_fx_block',
+   'thanatos_intel.thanatos_core.currency.converter.convert_all',
  ],
 }
