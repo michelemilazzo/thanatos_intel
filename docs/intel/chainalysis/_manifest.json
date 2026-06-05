@@ -1,0 +1,86 @@
+[
+  {
+    "case_id": "THAN-CRYPTO-2024-PIG",
+    "title": "2024 Pig Butchering Crypto Scam Revenue Grows 40% YoY as Industry Increases Sophistication",
+    "slug": "2024-pig-butchering-scam-revenue-grows-yoy",
+    "published": "2025-02-13",
+    "scam_type": "Pig Butchering",
+    "risk": "High",
+    "chains": "BSC,BTC,ETH,SOL,TRX",
+    "wallets_count": 0,
+    "hash": "6e59c21183fa107eb292b0d68575169f4f834f73f176c956158263ae33d7647d",
+    "file": "docs/intel/chainalysis/2024-pig-butchering-scam-revenue-grows-yoy.md"
+  },
+  {
+    "case_id": "THAN-CRYPTO-AI-ARTIF",
+    "title": "AI-Powered Crypto Scams: How AI is Being Used for Fraud",
+    "slug": "ai-artificial-intelligence-powered-crypto-scams",
+    "published": "2025-05-28",
+    "scam_type": "Pig Butchering",
+    "risk": "High",
+    "chains": "BSC,ETH",
+    "wallets_count": 0,
+    "hash": "de33f9325e784fffe89fcfe55a2e89bef6420f3cbb30256f2d624792262acc7b",
+    "file": "docs/intel/chainalysis/ai-artificial-intelligence-powered-crypto-scams.md"
+  },
+  {
+    "case_id": "THAN-CRYPTO-CRYPTO-S",
+    "title": "2026 Crypto Crime Report: Scams",
+    "slug": "crypto-scams-2026",
+    "published": "2026-01-13",
+    "scam_type": "Pig Butchering",
+    "risk": "High",
+    "chains": "BSC,BTC,ETH,TRX",
+    "wallets_count": 0,
+    "hash": "b8b095fcc44c746479cbe1df565d7436566d1d04aeab2da325d7f8792eac5bb6",
+    "file": "docs/intel/chainalysis/crypto-scams-2026.md"
+  },
+  {
+    "case_id": "THAN-CRYPTO-MONEY-LA",
+    "title": "[REPORT PREVIEW] Money Laundering and Cryptocurrency: Trends and new techniques for detection and investigation - Chainalysis",
+    "slug": "money-laundering-cryptocurrency",
+    "published": "2024-07-11",
+    "scam_type": "Mixer Abuse",
+    "risk": "Medium",
+    "chains": "BSC,ETH",
+    "wallets_count": 0,
+    "hash": "f479e52de187305e9cef22a4a5081db4376d713123b0880ccdea1cd346894cb3",
+    "file": "docs/intel/chainalysis/money-laundering-cryptocurrency.md"
+  },
+  {
+    "case_id": "THAN-CRYPTO-OFAC-TAR",
+    "title": "U.S. Launches New Strike Force to Combat $10 Billion Scam Industry",
+    "slug": "ofac-targets-pig-butchering-scams-november-2025",
+    "published": "2025-11-12",
+    "scam_type": "Pig Butchering",
+    "risk": "High",
+    "chains": "BSC,BTC,ETH",
+    "wallets_count": 0,
+    "hash": "1b03773da34ce946a5c6765c47c334a99285eb290ae3561795e97e86decc95d8",
+    "file": "docs/intel/chainalysis/ofac-targets-pig-butchering-scams-november-2025.md"
+  },
+  {
+    "case_id": "THAN-CRYPTO-ORGANIZE",
+    "title": "Organized Crime Shows High Level of Professionalization, Low Level of Crypto Sophistication - Chainalysis",
+    "slug": "organized-crime-crypto",
+    "published": "2025-05-02",
+    "scam_type": "Phishing",
+    "risk": "Medium",
+    "chains": "BSC,BTC,ETH,TRX",
+    "wallets_count": 0,
+    "hash": "13b4554842c3e186d87609142ccc52d67ba3ad7b44d7d7cc42f677e435ab60aa",
+    "file": "docs/intel/chainalysis/organized-crime-crypto.md"
+  },
+  {
+    "case_id": "THAN-CRYPTO-SOUTHEAS",
+    "title": "DOJ Seizes $15 Billion in Bitcoin",
+    "slug": "southeast-asia-crypto-scam-network-mining-pig-butchering-october-2025",
+    "published": "2025-10-14",
+    "scam_type": "Pig Butchering",
+    "risk": "High",
+    "chains": "BSC,BTC,ETH",
+    "wallets_count": 29,
+    "hash": "a1e66515cc3edb9baaf3f1e5a1ae8644e493925642ddf0483cc0035f90672342",
+    "file": "docs/intel/chainalysis/southeast-asia-crypto-scam-network-mining-pig-butchering-october-2025.md"
+  }
+]
