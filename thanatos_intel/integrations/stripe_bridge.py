@@ -308,4 +308,41 @@ def handle_event(event: dict) -> dict:
         if sub_id:
             return sync_subscription(sub_id)
 
+    if etype.startswith("setup_intent."):
+        # SetupIntent: cliente sta salvando un metodo di pagamento (no charge).
+        # Use case: trial, retainer, SCA pre-auth, abbonamento senza fatturazione immediata.
+        intent_id = obj.get("id")
+        customer_id = obj.get("customer")
+        status = obj.get("status")
+        usage = obj.get("usage")  # "off_session" | "on_session"
+        pm = obj.get("payment_method")
+        meta = obj.get("metadata") or {}
+        try:
+            frappe.get_doc({
+                "doctype": "Diplomatic Audit Log",
+                "event_type": f"stripe.{etype}",
+                "new_value": status or "",
+                "reason": frappe.as_json({
+                    "setup_intent_id": intent_id,
+                    "stripe_customer_id": customer_id,
+                    "payment_method": pm,
+                    "usage": usage,
+                    "metadata": meta,
+                })[:500],
+            }).insert(ignore_permissions=True)
+            frappe.db.commit()
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "setup_intent audit log failed")
+        # Optional: link payment method to Investigation Client if metadata.client_name
+        client_name = meta.get("client_name") or meta.get("investigation_client")
+        if client_name and pm and frappe.db.exists("Investigation Client", client_name):
+            try:
+                frappe.db.set_value("Investigation Client", client_name,
+                                    "stripe_payment_method", pm)
+                frappe.db.commit()
+            except Exception:
+                pass  # field may not exist yet — non-blocking
+        return {"ok": True, "event": etype, "setup_intent_id": intent_id,
+                "status": status, "client_linked": client_name}
+
     return {"ignored": etype}
