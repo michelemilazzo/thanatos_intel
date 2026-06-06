@@ -130,11 +130,18 @@ def do_signup(**kwargs) -> dict:
         except Exception:
             frappe.log_error(frappe.get_traceback(), "signup welcome email")
 
+        # Auto-login the newly created user (simplifies UX: signup → onboarding)
+        try:
+            frappe.local.login_manager.login_as(email)
+        except Exception:
+            pass
+
         return {
             "ok": True,
             "user": email,
             "client": client.name,
-            "message": "Account creato. Controlla la tua email per il link di verifica.",
+            "next_url": "/onboarding/card",
+            "message": "Account creato. Procedi con la verifica del metodo di pagamento.",
         }
     except Exception as e:
         frappe.db.rollback()

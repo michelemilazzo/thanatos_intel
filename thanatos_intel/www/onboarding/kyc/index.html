@@ -1,0 +1,167 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}KYC — Thanatos Intel{% endblock %}
+{% block head_include %}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;--muted:#7A8294;--text:#E6E8EE;--line:#1F2742;--ok:#7AC58A;--err:#E07A6E;}
+body.kyc-page,body.kyc-page .page_content,body.kyc-page .container,body.kyc-page .container-fluid,body.kyc-page main,body.kyc-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;font-family:-apple-system,Inter,sans-serif!important;
+}
+.k-hero{padding:60px 24px 28px;text-align:center;border-bottom:1px solid var(--line);}
+.k-hero .eyebrow{font-size:11px;letter-spacing:5px;color:var(--gold);text-transform:uppercase;}
+.k-hero h1{font-family:'Cinzel Decorative',Georgia,serif;color:var(--gold);font-size:32px;margin:12px 0 8px;letter-spacing:1px;}
+.k-hero .steps{display:flex;justify-content:center;gap:6px;margin-top:14px;font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.k-hero .steps span.act{color:var(--gold);}
+.k-wrap{max-width:720px;margin:40px auto 60px;padding:0 24px;}
+.k-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);padding:32px;}
+.k-section{margin-bottom:28px;}
+.k-section h3{font-family:Georgia,serif;color:var(--gold);font-size:15px;letter-spacing:1px;margin:0 0 6px;}
+.k-section .hint{color:var(--muted);font-size:12px;margin-bottom:14px;}
+.k-drop{border:2px dashed var(--line);padding:24px;text-align:center;cursor:pointer;background:var(--navy);}
+.k-drop:hover{border-color:var(--gold);}
+.k-drop.has-file{border-color:var(--ok);border-style:solid;}
+.k-drop input{display:none;}
+.k-drop .label{color:var(--muted);font-size:13px;}
+.k-drop.has-file .label{color:var(--ok);}
+.k-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:600px){.k-grid{grid-template-columns:1fr;}}
+.k-btn{display:block;width:100%;padding:14px;background:var(--gold);color:var(--navy);border:0;font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:pointer;font-family:inherit;}
+.k-btn:hover{background:var(--gold2);}
+.k-btn:disabled{background:var(--muted);cursor:not-allowed;}
+.k-alert{padding:12px 14px;border-left:3px solid var(--err);background:rgba(224,122,110,.08);color:var(--err);margin-bottom:16px;font-size:13px;}
+.k-alert.ok{border-left-color:var(--ok);background:rgba(122,197,138,.08);color:var(--ok);}
+.k-legal{font-size:11px;color:var(--muted);margin-top:18px;line-height:1.6;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('') }}
+<body class="kyc-page">
+
+<section class="k-hero">
+  <div class="eyebrow">Step 3 di 3</div>
+  <h1>Verifica identità (KYC)</h1>
+  <div class="steps"><span>✓ Account</span> · <span>✓ Carta</span> · <span class="act">3. KYC</span></div>
+</section>
+
+<div class="k-wrap">
+  <div class="k-card">
+    <div id="alert" style="display:none"></div>
+    <p style="color:#B8BCCC;font-size:14px;line-height:1.6;margin:0 0 28px;">
+      Carica il tuo <strong>documento d'identità</strong> (passaporto, carta d'identità o patente) e una <strong>foto selfie</strong>
+      per la verifica KYC ai sensi della <strong>L.129/2019</strong> (Romania) e della <strong>Dir.UE 2015/849</strong> (AML).
+    </p>
+
+    <div class="k-grid">
+      <div class="k-section">
+        <h3>Documento d'identità (fronte)</h3>
+        <div class="hint">Passaporto, carta d'identità o patente. Max 10 MB.</div>
+        <label class="k-drop" id="drop-id-front">
+          <input type="file" id="file-id-front" accept="image/*,application/pdf">
+          <div class="label">📄 Clicca o trascina qui</div>
+        </label>
+      </div>
+      <div class="k-section">
+        <h3>Documento d'identità (retro)</h3>
+        <div class="hint">Solo per carta d'identità o patente.</div>
+        <label class="k-drop" id="drop-id-back">
+          <input type="file" id="file-id-back" accept="image/*,application/pdf">
+          <div class="label">📄 Clicca o trascina qui</div>
+        </label>
+      </div>
+    </div>
+
+    <div class="k-section">
+      <h3>Selfie</h3>
+      <div class="hint">Foto del tuo viso ben illuminata, in primo piano. Usata per il face match con il documento.</div>
+      <label class="k-drop" id="drop-selfie">
+        <input type="file" id="file-selfie" accept="image/*" capture="user">
+        <div class="label">📷 Clicca o trascina qui (o usa la webcam)</div>
+      </label>
+    </div>
+
+    <button id="submit-btn" class="k-btn" disabled>Invia per verifica →</button>
+
+    <p class="k-legal">
+      I documenti caricati sono cifrati, conservati nei sistemi Thanatos in Romania (server compliance UE),
+      analizzati dal team Compliance e cancellati al termine del rapporto contrattuale o dopo 5 anni (L.129/2019 art.31).
+      Trattamento dati: Reg.UE 679/2016, L.190/2018.
+    </p>
+  </div>
+</div>
+
+<script>
+let uploaded = {idFront:false, idBack:false, selfie:false};
+
+function setupDrop(dropId, inputId, key, required){
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  const onFile = async file => {
+    if (!file) return;
+    drop.querySelector('.label').textContent = 'Caricamento…';
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('is_private', '1');
+    fd.append('doctype', 'Investigation Client');
+    fd.append('docname', '{{ client.name }}');
+    try {
+      const r = await fetch('/api/method/upload_file',{method:'POST',body:fd,
+        headers:{'X-Frappe-CSRF-Token':window.frappe?.csrf_token||''}});
+      const j = await r.json();
+      if (j.message?.file_url || j.message?.name) {
+        drop.classList.add('has-file');
+        drop.querySelector('.label').textContent = '✓ ' + (file.name.length>32 ? file.name.slice(0,30)+'…' : file.name);
+        uploaded[key] = true;
+        updateSubmit();
+      } else throw new Error(j._error_message || 'upload failed');
+    } catch (err) {
+      drop.querySelector('.label').textContent = 'Errore upload — riprova';
+    }
+  };
+  input.addEventListener('change', e => onFile(e.target.files[0]));
+  drop.addEventListener('dragover', e => {e.preventDefault();});
+  drop.addEventListener('drop', e => {e.preventDefault(); onFile(e.dataTransfer.files[0]);});
+}
+
+setupDrop('drop-id-front','file-id-front','idFront',true);
+setupDrop('drop-id-back','file-id-back','idBack',false);
+setupDrop('drop-selfie','file-selfie','selfie',true);
+
+function updateSubmit(){
+  const ok = uploaded.idFront && uploaded.selfie;
+  document.getElementById('submit-btn').disabled = !ok;
+}
+
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('submit-btn');
+  const al = document.getElementById('alert');
+  btn.disabled = true; btn.textContent = 'Invio…';
+  try {
+    const r = await fetch('/api/method/thanatos_intel.api.onboarding.submit_kyc',
+      {method:'POST', headers:{'Content-Type':'application/json','X-Frappe-CSRF-Token':window.frappe?.csrf_token||''}, body:'{}'});
+    const j = await r.json();
+    if (j.message?.ok) {
+      al.className = 'k-alert ok';
+      al.innerHTML = '<strong>✓ KYC inviato.</strong> Reindirizzamento…';
+      al.style.display = 'block';
+      setTimeout(() => window.location.href = j.message.next_url || '/onboarding', 1500);
+    } else {
+      al.className = 'k-alert';
+      al.textContent = j.message?.error || 'Errore submit';
+      al.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Invia per verifica →';
+    }
+  } catch (err) {
+    al.className = 'k-alert';
+    al.textContent = String(err);
+    al.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Invia per verifica →';
+  }
+});
+</script>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}

@@ -199,10 +199,11 @@ document.getElementById('signupForm').addEventListener('submit', async function(
     const j = await r.json();
     if (r.ok && j.message?.ok) {
       alertBox.className = 's-alert ok';
-      alertBox.innerHTML = '<strong>Account creato.</strong> Controlla la tua email <strong>' + data.email + '</strong>: ti abbiamo inviato un link di verifica. Al click sarai reindirizzato al portale.';
+      alertBox.innerHTML = '<strong>✓ Account creato.</strong> Reindirizzamento al prossimo step (verifica carta)…';
       alertBox.style.display = 'block';
       this.querySelectorAll('input,select,button').forEach(el => el.disabled = true);
       alertBox.scrollIntoView({behavior:'smooth', block:'center'});
+      setTimeout(() => window.location.href = j.message.next_url || '/onboarding', 1500);
     } else {
       const msg = j.message?.error || j._error_message || 'Errore creazione account';
       alertBox.className = 's-alert';

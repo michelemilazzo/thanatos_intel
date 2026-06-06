@@ -1,0 +1,47 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Onboarding — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--panel:#111729;--gold:#C8A96E;--muted:#7A8294;--text:#E6E8EE;--line:#1F2742;--ok:#7AC58A;}
+body.ob-page,body.ob-page .page_content,body.ob-page .container,body.ob-page .container-fluid,body.ob-page main,body.ob-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;font-family:-apple-system,Inter,sans-serif!important;
+}
+.ob{max-width:640px;margin:80px auto;padding:48px;background:var(--panel);border-left:3px solid var(--gold);text-align:center;}
+.ob h1{font-family:'Cinzel Decorative',Georgia,serif;color:var(--gold);font-size:30px;margin:0 0 18px;letter-spacing:2px;}
+.ob p{color:#B8BCCC;font-size:15px;line-height:1.6;margin:0 0 18px;}
+.ob .badge{display:inline-block;padding:8px 16px;background:rgba(122,197,138,.08);color:var(--ok);border-left:2px solid var(--ok);font-size:12px;letter-spacing:2px;text-transform:uppercase;margin:18px 0;}
+.ob a{color:var(--gold);}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('') }}
+<body class="ob-page">
+<div class="ob">
+  {% if status == 'Under Review' %}
+    <h1>Verifica in corso</h1>
+    <p>Il tuo profilo <strong>{{ client.client_name }}</strong> è in revisione dal nostro team Compliance.</p>
+    <div class="badge">In review · ETA 1-3 giorni lavorativi</div>
+    <p>Riceverai un'email appena la verifica sarà completata. Nel frattempo puoi esplorare la <a href="/">homepage</a> o la <a href="/pay-per-use">lista servizi pay-per-use</a>.</p>
+  {% elif status == 'Active' %}
+    <h1>Account attivo</h1>
+    <p>Benvenuto <strong>{{ client.client_name }}</strong>. La tua verifica è completata.</p>
+    <div class="badge">✓ Account verificato</div>
+    <p><a href="/portal">Vai al portale →</a></p>
+  {% elif status == 'Rejected' %}
+    <h1>Verifica non superata</h1>
+    <p>Il tuo profilo non ha superato la verifica Compliance. Contatta <a href="mailto:compliance@thanatos.agency">compliance@thanatos.agency</a> per maggiori informazioni.</p>
+  {% else %}
+    <h1>Onboarding</h1>
+    <p>Status: <strong>{{ status }}</strong></p>
+    <p><a href="/portal">Vai al portale</a></p>
+  {% endif %}
+</div>
+</body>
+{{ thanatos_footer() }}
+{% endblock %}

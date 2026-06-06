@@ -1,0 +1,140 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}Verifica metodo di pagamento — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<script src="https://js.stripe.com/v3/"></script>
+<style>
+:root{--navy:#0A0E1A;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;--muted:#7A8294;--text:#E6E8EE;--line:#1F2742;--err:#E07A6E;--ok:#7AC58A;}
+body.card-page,body.card-page .page_content,body.card-page .container,body.card-page .container-fluid,body.card-page main,body.card-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;font-family:-apple-system,Inter,sans-serif!important;
+}
+.c-hero{padding:60px 24px 28px;text-align:center;border-bottom:1px solid var(--line);}
+.c-hero .eyebrow{font-size:11px;letter-spacing:5px;color:var(--gold);text-transform:uppercase;}
+.c-hero h1{font-family:'Cinzel Decorative',Georgia,serif;color:var(--gold);font-size:32px;margin:12px 0 8px;letter-spacing:1px;}
+.c-hero .steps{display:flex;justify-content:center;gap:6px;margin-top:14px;font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.c-hero .steps span.act{color:var(--gold);}
+.c-hero p{color:#B8BCCC;font-size:14px;max-width:640px;margin:14px auto 0;line-height:1.5;}
+.c-wrap{max-width:520px;margin:40px auto 60px;padding:0 24px;}
+.c-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);padding:32px;}
+.c-section-title{font-family:Georgia,serif;color:var(--gold);font-size:14px;letter-spacing:1px;margin:0 0 14px;}
+.c-info{background:rgba(200,169,110,.06);border:1px solid var(--line);padding:14px 18px;font-size:12px;color:#B8BCCC;line-height:1.5;margin-bottom:24px;}
+.c-info strong{color:var(--gold);}
+#card-element{padding:14px;background:var(--navy);border:1px solid var(--line);}
+#card-element.StripeElement--focus{border-color:var(--gold);}
+#card-element.StripeElement--invalid{border-color:var(--err);}
+#card-errors{color:var(--err);font-size:13px;margin-top:8px;min-height:18px;}
+.c-btn{display:block;width:100%;padding:14px;background:var(--gold);color:var(--navy);border:0;font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:pointer;margin-top:24px;font-family:inherit;}
+.c-btn:hover{background:var(--gold2);}
+.c-btn:disabled{background:var(--muted);cursor:not-allowed;}
+.c-skip{text-align:center;margin-top:14px;font-size:12px;color:var(--muted);}
+.c-skip a{color:var(--muted);}
+.c-trust{display:flex;gap:14px;justify-content:center;margin-top:18px;color:var(--muted);font-size:10px;letter-spacing:2px;}
+.c-trust span{color:var(--gold);}
+.c-alert.ok{background:rgba(122,197,138,.08);border-left:3px solid var(--ok);color:var(--ok);padding:14px;margin-bottom:18px;font-size:13px;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('') }}
+<body class="card-page">
+
+<section class="c-hero">
+  <div class="eyebrow">Step 2 di 3</div>
+  <h1>Verifica metodo di pagamento</h1>
+  <div class="steps"><span>✓ Account</span> · <span class="act">2. Carta</span> · <span>3. {% if is_individual %}KYC{% else %}KYB{% endif %}</span></div>
+  <p>Salviamo la tua carta in modo sicuro tramite <strong>Stripe</strong>. Non addebitiamo nulla ora — la useremo solo per acquisti pay-per-use o abbonamenti che tu autorizzi esplicitamente.</p>
+</section>
+
+<div class="c-wrap">
+  <div class="c-card">
+    <div class="c-info">
+      Profilo: <strong>{{ client.client_name }}</strong> · {{ client_type_label }}<br>
+      Salvare la carta è una <strong>verifica aggiuntiva di identità</strong> richiesta dalle normative AML L.129/2019 (Romania) e Dir.UE 2015/849.
+      La carta deve essere intestata a te.
+    </div>
+
+    <div id="payment-success" class="c-alert ok" style="display:none">
+      <strong>✓ Carta salvata.</strong> Reindirizzamento al prossimo step…
+    </div>
+
+    <form id="payment-form">
+      <h3 class="c-section-title">Dati carta</h3>
+      <div id="card-element"></div>
+      <div id="card-errors" role="alert"></div>
+
+      <button type="submit" id="submit-btn" class="c-btn">
+        Salva carta →
+      </button>
+    </form>
+
+    <div class="c-trust">
+      <div><span>STRIPE</span> · PCI-DSS</div>
+      <div><span>3D SECURE</span> · SCA</div>
+      <div><span>NO CHARGE</span></div>
+    </div>
+
+    <div class="c-skip">
+      Vuoi farlo dopo? <a href="{{ next_step }}">Salta a {% if is_individual %}KYC{% else %}KYB{% endif %} →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const STRIPE_PK = "{{ stripe_publishable_key }}";
+const NEXT_STEP = "{{ next_step }}";
+
+if (!STRIPE_PK || !STRIPE_PK.startsWith("pk_")) {
+  document.getElementById('card-errors').textContent = 'Stripe non configurato. Contatta admin.';
+} else {
+  const stripe = Stripe(STRIPE_PK);
+  const elements = stripe.elements();
+  const card = elements.create('card', {
+    style: {
+      base: {color: '#E6E8EE', fontFamily: 'inherit', fontSize: '15px',
+             '::placeholder': {color: '#7A8294'}},
+      invalid: {color: '#E07A6E'},
+    },
+  });
+  card.mount('#card-element');
+  card.on('change', e => {
+    document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
+  });
+
+  document.getElementById('payment-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true; btn.textContent = 'Verifica carta…';
+    try {
+      const r = await fetch('/api/method/thanatos_intel.api.onboarding.create_setup_intent',
+        {method:'POST', headers:{'Content-Type':'application/json','X-Frappe-CSRF-Token':window.frappe?.csrf_token||''}, body:'{}'});
+      const j = await r.json();
+      const cs = j.message?.client_secret;
+      if (!cs) throw new Error(j.message?.error || 'create_setup_intent failed');
+
+      const res = await stripe.confirmCardSetup(cs, {payment_method: {card}});
+      if (res.error) throw new Error(res.error.message);
+
+      const pmId = res.setupIntent.payment_method;
+      const cf = await fetch('/api/method/thanatos_intel.api.onboarding.confirm_payment_method',
+        {method:'POST', headers:{'Content-Type':'application/json','X-Frappe-CSRF-Token':window.frappe?.csrf_token||''},
+         body: JSON.stringify({payment_method_id: pmId})});
+      const cj = await cf.json();
+      if (!cj.message?.ok) throw new Error(cj.message?.error || 'confirm failed');
+
+      document.getElementById('payment-success').style.display = 'block';
+      document.getElementById('payment-form').style.display = 'none';
+      setTimeout(() => window.location.href = NEXT_STEP, 1500);
+    } catch (err) {
+      document.getElementById('card-errors').textContent = err.message || String(err);
+      btn.disabled = false; btn.textContent = 'Salva carta →';
+    }
+  });
+}
+</script>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}

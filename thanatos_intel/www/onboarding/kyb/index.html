@@ -1,0 +1,169 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}KYB — Thanatos Intel{% endblock %}
+{% block head_include %}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;--muted:#7A8294;--text:#E6E8EE;--line:#1F2742;--ok:#7AC58A;--err:#E07A6E;}
+body.kyb-page,body.kyb-page .page_content,body.kyb-page .container,body.kyb-page .container-fluid,body.kyb-page main,body.kyb-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;font-family:-apple-system,Inter,sans-serif!important;
+}
+.b-hero{padding:60px 24px 28px;text-align:center;border-bottom:1px solid var(--line);}
+.b-hero .eyebrow{font-size:11px;letter-spacing:5px;color:var(--gold);text-transform:uppercase;}
+.b-hero h1{font-family:'Cinzel Decorative',Georgia,serif;color:var(--gold);font-size:32px;margin:12px 0 8px;letter-spacing:1px;}
+.b-hero .steps{display:flex;justify-content:center;gap:6px;margin-top:14px;font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+.b-hero .steps span.act{color:var(--gold);}
+.b-wrap{max-width:720px;margin:40px auto 60px;padding:0 24px;}
+.b-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);padding:32px;}
+.b-section{margin-bottom:24px;}
+.b-section h3{font-family:Georgia,serif;color:var(--gold);font-size:15px;letter-spacing:1px;margin:0 0 6px;}
+.b-section .hint{color:var(--muted);font-size:12px;margin-bottom:12px;}
+.b-drop{border:2px dashed var(--line);padding:20px;text-align:center;cursor:pointer;background:var(--navy);}
+.b-drop:hover{border-color:var(--gold);}
+.b-drop.has-file{border-color:var(--ok);border-style:solid;}
+.b-drop input{display:none;}
+.b-drop .label{color:var(--muted);font-size:13px;}
+.b-drop.has-file .label{color:var(--ok);}
+.b-input{width:100%;padding:11px 14px;background:var(--navy);border:1px solid var(--line);color:var(--text);font-family:inherit;font-size:14px;outline:none;}
+.b-input:focus{border-color:var(--gold);}
+.b-textarea{width:100%;padding:11px 14px;background:var(--navy);border:1px solid var(--line);color:var(--text);font-family:inherit;font-size:13px;outline:none;min-height:100px;resize:vertical;}
+.b-textarea:focus{border-color:var(--gold);}
+.b-btn{display:block;width:100%;padding:14px;background:var(--gold);color:var(--navy);border:0;font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:pointer;font-family:inherit;}
+.b-btn:hover{background:var(--gold2);}
+.b-btn:disabled{background:var(--muted);cursor:not-allowed;}
+.b-alert{padding:12px 14px;border-left:3px solid var(--err);background:rgba(224,122,110,.08);color:var(--err);margin-bottom:16px;font-size:13px;}
+.b-alert.ok{border-left-color:var(--ok);background:rgba(122,197,138,.08);color:var(--ok);}
+.b-legal{font-size:11px;color:var(--muted);margin-top:18px;line-height:1.6;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('') }}
+<body class="kyb-page">
+
+<section class="b-hero">
+  <div class="eyebrow">Step 3 di 3</div>
+  <h1>Verifica azienda (KYB)</h1>
+  <div class="steps"><span>✓ Account</span> · <span>✓ Carta</span> · <span class="act">3. KYB</span></div>
+</section>
+
+<div class="b-wrap">
+  <div class="b-card">
+    <div id="alert" style="display:none"></div>
+    <p style="color:#B8BCCC;font-size:14px;line-height:1.6;margin:0 0 24px;">
+      Carica i documenti societari di <strong>{{ client.client_name }}</strong> ({{ type_label }}) per la verifica KYB
+      ai sensi della <strong>L.129/2019</strong> (Romania) e della <strong>Dir.UE 2015/849</strong> (AML).
+    </p>
+
+    <div class="b-section">
+      <h3>1. Visura camerale (obbligatorio)</h3>
+      <div class="hint">Certificato Camera di Commercio / ONRC / Companies House. Max 10 MB.</div>
+      <label class="b-drop" id="drop-registry">
+        <input type="file" id="file-registry" accept="image/*,application/pdf">
+        <div class="label">📄 Clicca o trascina qui</div>
+      </label>
+    </div>
+
+    <div class="b-section">
+      <h3>2. Lista amministratori</h3>
+      <div class="hint">Nomi, ruoli, % di possesso (uno per riga: "Nome Cognome — Amministratore Delegato — 0%")</div>
+      <textarea class="b-textarea" id="directors" placeholder="Mario Rossi — Amministratore Unico — 60%&#10;Anna Bianchi — Consigliere — 0%"></textarea>
+    </div>
+
+    <div class="b-section">
+      <h3>3. Beneficiari effettivi (UBO ≥ 25%)</h3>
+      <div class="hint">Persone fisiche che possiedono direttamente o indirettamente almeno il 25% del capitale (uno per riga: "Nome Cognome — % — Nazionalità")</div>
+      <textarea class="b-textarea" id="ubo" placeholder="Mario Rossi — 60% — IT&#10;Anna Bianchi — 30% — IT"></textarea>
+    </div>
+
+    <div class="b-section">
+      <h3>4. Documento identità rappresentante legale</h3>
+      <div class="hint">Passaporto o carta d'identità della persona che firma per la società.</div>
+      <label class="b-drop" id="drop-rep-id">
+        <input type="file" id="file-rep-id" accept="image/*,application/pdf">
+        <div class="label">📄 Clicca o trascina qui</div>
+      </label>
+    </div>
+
+    <button id="submit-btn" class="b-btn" disabled>Invia per verifica →</button>
+
+    <p class="b-legal">
+      I documenti caricati sono cifrati, conservati nei sistemi Thanatos in Romania (server compliance UE),
+      analizzati dal team Compliance entro 1-3 giorni lavorativi e cancellati al termine del rapporto contrattuale o dopo 5 anni
+      (L.129/2019 art.31). Trattamento dati: Reg.UE 679/2016, L.190/2018, leg. rumena 190/2018.
+    </p>
+  </div>
+</div>
+
+<script>
+let uploaded = {registry:false, repId:false};
+let directors = "", ubo = "";
+
+function setupDrop(dropId, inputId, key){
+  const drop = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  const onFile = async file => {
+    if (!file) return;
+    drop.querySelector('.label').textContent = 'Caricamento…';
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('is_private', '1');
+    fd.append('doctype', 'Investigation Client');
+    fd.append('docname', '{{ client.name }}');
+    try {
+      const r = await fetch('/api/method/upload_file',{method:'POST',body:fd,
+        headers:{'X-Frappe-CSRF-Token':window.frappe?.csrf_token||''}});
+      const j = await r.json();
+      if (j.message?.file_url || j.message?.name) {
+        drop.classList.add('has-file');
+        drop.querySelector('.label').textContent = '✓ ' + (file.name.length>32 ? file.name.slice(0,30)+'…' : file.name);
+        uploaded[key] = true;
+        updateSubmit();
+      } else throw new Error(j._error_message || 'upload failed');
+    } catch (err) {
+      drop.querySelector('.label').textContent = 'Errore upload — riprova';
+    }
+  };
+  input.addEventListener('change', e => onFile(e.target.files[0]));
+  drop.addEventListener('dragover', e => {e.preventDefault();});
+  drop.addEventListener('drop', e => {e.preventDefault(); onFile(e.dataTransfer.files[0]);});
+}
+setupDrop('drop-registry','file-registry','registry');
+setupDrop('drop-rep-id','file-rep-id','repId');
+
+function updateSubmit(){
+  document.getElementById('submit-btn').disabled = !uploaded.registry;
+}
+
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('submit-btn');
+  const al = document.getElementById('alert');
+  btn.disabled = true; btn.textContent = 'Invio…';
+  try {
+    const r = await fetch('/api/method/thanatos_intel.api.onboarding.submit_kyb',
+      {method:'POST', headers:{'Content-Type':'application/json','X-Frappe-CSRF-Token':window.frappe?.csrf_token||''}, body:'{}'});
+    const j = await r.json();
+    if (j.message?.ok) {
+      al.className = 'b-alert ok';
+      al.innerHTML = '<strong>✓ KYB inviato.</strong> Reindirizzamento…';
+      al.style.display = 'block';
+      setTimeout(() => window.location.href = j.message.next_url || '/onboarding', 1500);
+    } else {
+      al.className = 'b-alert';
+      al.textContent = j.message?.error || 'Errore submit';
+      al.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Invia per verifica →';
+    }
+  } catch (err) {
+    al.className = 'b-alert';
+    al.textContent = String(err);
+    al.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Invia per verifica →';
+  }
+});
+</script>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}
