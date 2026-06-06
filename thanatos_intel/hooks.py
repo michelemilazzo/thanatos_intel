@@ -43,6 +43,16 @@ doc_events={
    'after_insert': 'thanatos_intel.thanatos_ddd.audit.on_after_insert_case',
    'on_update': 'thanatos_intel.thanatos_ddd.audit.on_update_case',
  },
+ 'Communication': {
+   'after_insert': 'thanatos_intel.integrations.intel_inbox.on_communication_insert',
+ },
+ 'Investigation Report': {
+   'before_save': 'thanatos_intel.integrations.intel_inbox.before_save_report',
+   'on_update':   'thanatos_intel.integrations.intel_inbox.on_update_report',
+ },
+ 'Investigation Case': {
+   'after_insert': 'thanatos_intel.integrations.intel_inbox.ensure_case_folder_hook',
+ },
 }
 scheduler_events={
  'cron':{},

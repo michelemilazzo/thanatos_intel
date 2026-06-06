@@ -1,0 +1,256 @@
+"""Email auto-linker per Investigation Case.
+
+Hook on Communication insert: parsa mittente, lo associa al caso aperto del
+Investigation Client, oppure crea Lead/Ticket se mittente sconosciuto.
+
+Integrazione naturale con Frappe Email Account (IMAP fetch ogni 5 min) +
+Communication (reference_doctype/name nativo per agganciare al caso).
+
+Setup: in Frappe Desk → Email Account → cases@thanatos.agency:
+  enable_incoming=1
+  enable_auto_reply=0
+  uid_validity (per dedup)
+  default_incoming_link_field e Append-To DocType = Investigation Case
+  (Frappe lo usa per auto-link via threading Message-ID; questo file aggiunge
+   il fallback sender-email lookup quando il threading non basta).
+"""
+from __future__ import annotations
+import re
+import frappe
+from frappe.utils import now_datetime
+
+EMAIL_RE = re.compile(r"<([^>]+)>|([^\s,;<>]+@[^\s,;<>]+)")
+
+
+def on_communication_insert(doc, method=None):
+    """Auto-link Communication a Investigation Case via mittente email.
+
+    Logica:
+    1. Skip se già linkato a un doctype
+    2. Estrai email mittente
+    3. Cerca Investigation Client per email
+    4. Cerca caso aperto più recente del client (status != Closed/Rejected/Archived)
+    5. Linka Communication.reference_doctype/name al caso
+    6. Audit log
+    7. Se non trova client → crea Lead (CRM) o opens HelpDesk Ticket
+    """
+    if doc.communication_type != "Communication":
+        return
+    if doc.reference_doctype and doc.reference_name:
+        return  # già linkato (es. da threading Message-ID)
+    if doc.sent_or_received != "Received":
+        return  # solo inbound
+
+    sender = _extract_email(doc.sender or "")
+    if not sender:
+        return
+
+    client_name = frappe.db.get_value(
+        "Investigation Client",
+        {"email": sender}, "name")
+
+    if not client_name:
+        # fallback: cerca per qualsiasi Contact / User con quell'email
+        user = frappe.db.get_value("User", {"email": sender}, "name")
+        if user:
+            client_name = frappe.db.get_value(
+                "Investigation Client",
+                {"platform_user": user}, "name")
+
+    if not client_name:
+        _create_lead_from_unknown(doc, sender)
+        return
+
+    # Find latest open case for this client
+    cases = frappe.get_all(
+        "Investigation Case",
+        filters={"client": client_name,
+                 "status": ["not in", ["Closed", "Rejected", "Archived"]]},
+        fields=["name", "case_title", "status"],
+        order_by="creation desc",
+        limit=1,
+    )
+    if not cases:
+        # client noto ma senza caso aperto → linka comunque al client
+        doc.reference_doctype = "Investigation Client"
+        doc.reference_name = client_name
+        doc.save(ignore_permissions=True)
+        _audit("email.linked_to_client", client_name,
+               {"sender": sender, "subject": doc.subject})
+        return
+
+    case_name = cases[0].name
+    doc.reference_doctype = "Investigation Case"
+    doc.reference_name = case_name
+    doc.save(ignore_permissions=True)
+
+    _audit("email.linked_to_case", case_name,
+           {"sender": sender, "client": client_name,
+            "subject": doc.subject})
+
+    # Ensure Drive folder exists for this case (creation idempotent)
+    try:
+        ensure_case_folder(case_name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "intel_inbox folder")
+
+
+def _extract_email(s: str) -> str | None:
+    m = EMAIL_RE.search(s or "")
+    if not m:
+        return None
+    email = m.group(1) or m.group(2)
+    return email.lower().strip() if email else None
+
+
+def _create_lead_from_unknown(doc, sender: str) -> None:
+    """Mittente non riconosciuto → crea Lead + HelpDesk Ticket fallback."""
+    try:
+        if frappe.db.exists("DocType", "Lead"):
+            if not frappe.db.exists("Lead", {"email_id": sender}):
+                lead = frappe.get_doc({
+                    "doctype": "Lead",
+                    "lead_name": (doc.sender_full_name or sender)[:140],
+                    "email_id": sender,
+                    "company_name": "Unknown",
+                    "source": "Email",
+                    "notes": f"Auto-creato da Communication {doc.name}. "
+                             f"Subject: {(doc.subject or '')[:100]}",
+                }).insert(ignore_permissions=True)
+                doc.reference_doctype = "Lead"
+                doc.reference_name = lead.name
+                doc.save(ignore_permissions=True)
+                _audit("email.lead_created", lead.name,
+                       {"sender": sender, "subject": doc.subject})
+                return
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "intel_inbox lead")
+
+    # HelpDesk fallback
+    try:
+        if frappe.db.exists("DocType", "HD Ticket"):
+            ticket = frappe.get_doc({
+                "doctype": "HD Ticket",
+                "subject": (doc.subject or "Untagged email")[:140],
+                "description": doc.content or "",
+                "raised_by": sender,
+                "status": "Open",
+                "via_customer_portal": 0,
+            }).insert(ignore_permissions=True)
+            doc.reference_doctype = "HD Ticket"
+            doc.reference_name = ticket.name
+            doc.save(ignore_permissions=True)
+            _audit("email.ticket_created", ticket.name,
+                   {"sender": sender, "subject": doc.subject})
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "intel_inbox ticket")
+
+
+def ensure_case_folder(case_name: str) -> str:
+    """Crea (se non esiste) la folder Drive per il caso. Struttura:
+       /Investigation Cases/CASE-NNN/
+         ├── Evidence/
+         ├── Reports/
+         ├── Email/
+         └── Documents/
+    """
+    parent = "Home"
+    # Try Frappe Drive first
+    if frappe.db.exists("DocType", "Drive File"):
+        return _ensure_drive_folder(case_name)
+    # Fallback: pure Frappe File (per app drive non installato)
+    return _ensure_file_folder(case_name)
+
+
+def _ensure_drive_folder(case_name: str) -> str:
+    root = "Investigation Cases"
+    base = f"{root}/{case_name}"
+    # Use Drive File mechanism (creation idempotent on title path)
+    for sub in [root, base,
+                f"{base}/Evidence", f"{base}/Reports",
+                f"{base}/Email", f"{base}/Documents"]:
+        if not frappe.db.exists("Drive File", {"title": sub.split("/")[-1],
+                                               "is_group": 1,
+                                               "parent_drive_file":
+                                                 sub.rsplit("/", 1)[0] if "/" in sub else ""}):
+            try:
+                frappe.get_doc({
+                    "doctype": "Drive File",
+                    "title": sub.split("/")[-1],
+                    "is_group": 1,
+                    "parent_drive_file": sub.rsplit("/", 1)[0] if "/" in sub else "",
+                }).insert(ignore_permissions=True)
+            except Exception:
+                pass
+    return base
+
+
+def _ensure_file_folder(case_name: str) -> str:
+    """Fallback se Drive non c'è: usa Frappe File con is_folder."""
+    base = f"home/investigation-cases/{case_name}"
+    for folder in [
+        "home/investigation-cases",
+        base,
+        f"{base}/evidence", f"{base}/reports",
+        f"{base}/email", f"{base}/documents",
+    ]:
+        name = folder.replace("/", "-")
+        if not frappe.db.exists("File", {"file_name": folder.split("/")[-1],
+                                         "is_folder": 1}):
+            try:
+                frappe.get_doc({
+                    "doctype": "File",
+                    "file_name": folder.split("/")[-1],
+                    "is_folder": 1,
+                    "folder": ("/".join(folder.split("/")[:-1]) or "Home"),
+                }).insert(ignore_permissions=True)
+            except Exception:
+                pass
+    return base
+
+
+def ensure_case_folder_hook(doc, method=None):
+    """Wrapper called by Frappe doc_events on Investigation Case after_insert."""
+    try:
+        ensure_case_folder(doc.name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ensure_case_folder_hook")
+
+
+def _audit(event: str, ref: str, payload: dict) -> None:
+    try:
+        frappe.get_doc({
+            "doctype": "Diplomatic Audit Log",
+            "event_type": event,
+            "new_value": ref,
+            "reason": frappe.as_json(payload)[:500],
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        pass
+
+
+# -----------------------------------------------------------------------------
+# Investigation Report review workflow enforcement
+# -----------------------------------------------------------------------------
+
+REPORT_STATUSES = ["Draft", "Pending Review", "Approved", "Sent", "Archived"]
+
+
+def before_save_report(doc, method=None):
+    """Set first creation status to Draft."""
+    if doc.is_new() and not doc.review_status:
+        doc.review_status = "Draft"
+
+
+def on_update_report(doc, method=None):
+    """Block submission/email if review_status not Approved.
+    Triggered by hooks on Investigation Report.
+    """
+    if doc.has_value_changed("review_status"):
+        if doc.review_status == "Approved":
+            doc.approved_by = frappe.session.user
+            doc.approved_at = now_datetime()
+        elif doc.review_status == "Sent" and doc.get_doc_before_save() and \
+             doc.get_doc_before_save().review_status not in ("Approved", "Sent"):
+            frappe.throw("Un report può essere inviato solo dopo l'approvazione del responsabile.")

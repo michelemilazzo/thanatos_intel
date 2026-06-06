@@ -6,31 +6,190 @@
   "title_field": "report_title",
   "autoname": "format:REP-{YYYY}-{####}",
   "fields": [
-    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Investigation Case", "options": "Investigation Case", "reqd": 1, "in_list_view": 1},
-    {"fieldname": "report_title", "fieldtype": "Data", "label": "Report Title", "reqd": 1, "in_list_view": 1},
-    {"fieldname": "report_type", "fieldtype": "Select", "label": "Report Type", "options": "Preliminary\nInterim\nFinal\nExpert Witness\nDue Diligence", "default": "Preliminary"},
-    {"fieldname": "report_status", "fieldtype": "Select", "label": "Status", "options": "Draft\nReview\nFinal\nDelivered\nArchived", "default": "Draft", "in_list_view": 1},
-    {"fieldname": "col_break_1", "fieldtype": "Column Break"},
-    {"fieldname": "report_date", "fieldtype": "Date", "label": "Report Date", "default": "Today"},
-    {"fieldname": "lead_investigator", "fieldtype": "Link", "label": "Lead Investigator", "options": "Investigator"},
-    {"fieldname": "language", "fieldtype": "Select", "label": "Language", "options": "it\nen\nro", "default": "it"},
-    {"fieldname": "section_executive", "fieldtype": "Section Break", "label": "Executive Summary"},
-    {"fieldname": "executive_summary", "fieldtype": "Text Editor", "label": "Executive Summary"},
-    {"fieldname": "section_content", "fieldtype": "Section Break", "label": "Content"},
-    {"fieldname": "report_content", "fieldtype": "Text Editor", "label": "Findings"},
-    {"fieldname": "methodology", "fieldtype": "Text Editor", "label": "Methodology"},
-    {"fieldname": "conclusions", "fieldtype": "Text Editor", "label": "Conclusions"},
-    {"fieldname": "section_pdf", "fieldtype": "Section Break", "label": "PDF & Custody"},
-    {"fieldname": "pdf_file", "fieldtype": "Attach", "label": "Generated PDF", "read_only": 1},
-    {"fieldname": "pdf_hash", "fieldtype": "Data", "label": "PDF SHA-256", "read_only": 1, "length": 64},
-    {"fieldname": "col_break_2", "fieldtype": "Column Break"},
-    {"fieldname": "generated_at", "fieldtype": "Datetime", "label": "Generated At", "read_only": 1},
-    {"fieldname": "signed_by", "fieldtype": "Link", "label": "Signed By", "options": "User", "read_only": 1}
+    {
+      "fieldname": "investigation_case",
+      "fieldtype": "Link",
+      "label": "Investigation Case",
+      "options": "Investigation Case",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "report_title",
+      "fieldtype": "Data",
+      "label": "Report Title",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "report_type",
+      "fieldtype": "Select",
+      "label": "Report Type",
+      "options": "Preliminary\nInterim\nFinal\nExpert Witness\nDue Diligence",
+      "default": "Preliminary"
+    },
+    {
+      "fieldname": "report_status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nReview\nFinal\nDelivered\nArchived",
+      "default": "Draft",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "col_break_1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "report_date",
+      "fieldtype": "Date",
+      "label": "Report Date",
+      "default": "Today"
+    },
+    {
+      "fieldname": "lead_investigator",
+      "fieldtype": "Link",
+      "label": "Lead Investigator",
+      "options": "Investigator"
+    },
+    {
+      "fieldname": "language",
+      "fieldtype": "Select",
+      "label": "Language",
+      "options": "it\nen\nro",
+      "default": "it"
+    },
+    {
+      "fieldname": "section_executive",
+      "fieldtype": "Section Break",
+      "label": "Executive Summary"
+    },
+    {
+      "fieldname": "executive_summary",
+      "fieldtype": "Text Editor",
+      "label": "Executive Summary"
+    },
+    {
+      "fieldname": "section_content",
+      "fieldtype": "Section Break",
+      "label": "Content"
+    },
+    {
+      "fieldname": "report_content",
+      "fieldtype": "Text Editor",
+      "label": "Findings"
+    },
+    {
+      "fieldname": "methodology",
+      "fieldtype": "Text Editor",
+      "label": "Methodology"
+    },
+    {
+      "fieldname": "conclusions",
+      "fieldtype": "Text Editor",
+      "label": "Conclusions"
+    },
+    {
+      "fieldname": "section_pdf",
+      "fieldtype": "Section Break",
+      "label": "PDF & Custody"
+    },
+    {
+      "fieldname": "pdf_file",
+      "fieldtype": "Attach",
+      "label": "Generated PDF",
+      "read_only": 1
+    },
+    {
+      "fieldname": "pdf_hash",
+      "fieldtype": "Data",
+      "label": "PDF SHA-256",
+      "read_only": 1,
+      "length": 64
+    },
+    {
+      "fieldname": "col_break_2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "generated_at",
+      "fieldtype": "Datetime",
+      "label": "Generated At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "signed_by",
+      "fieldtype": "Link",
+      "label": "Signed By",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "sb_review",
+      "fieldtype": "Section Break",
+      "label": "Review Workflow",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "review_status",
+      "fieldtype": "Select",
+      "label": "Review Status",
+      "options": "Draft\nPending Review\nApproved\nSent\nArchived",
+      "default": "Draft",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "reviewer",
+      "fieldtype": "Link",
+      "label": "Reviewer",
+      "options": "User"
+    },
+    {
+      "fieldname": "cb_review",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "approved_by",
+      "fieldtype": "Link",
+      "label": "Approved By",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "approved_at",
+      "fieldtype": "Datetime",
+      "label": "Approved At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "review_notes",
+      "fieldtype": "Small Text",
+      "label": "Review Notes"
+    }
   ],
   "permissions": [
-    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 0, "submit": 1},
-    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
-    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0,
+      "submit": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    },
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
   ],
   "is_submittable": 1
 }

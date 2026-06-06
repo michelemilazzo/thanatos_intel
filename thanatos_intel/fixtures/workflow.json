@@ -1,0 +1,26 @@
+[
+ {
+  "doctype": "Workflow",
+  "name": "Investigation Report Review",
+  "workflow_name": "Investigation Report Review",
+  "document_type": "Investigation Report",
+  "is_active": 1,
+  "override_status": 1,
+  "workflow_state_field": "review_status",
+  "send_email_alert": 1,
+  "states": [
+   {"state": "Draft",          "doc_status": "0", "allow_edit": "Investigator",          "next_action_email_template": null},
+   {"state": "Pending Review", "doc_status": "0", "allow_edit": "Investigation Manager", "next_action_email_template": null},
+   {"state": "Approved",       "doc_status": "0", "allow_edit": "Investigation Manager", "next_action_email_template": null},
+   {"state": "Sent",           "doc_status": "1", "allow_edit": "Investigation Manager", "next_action_email_template": null},
+   {"state": "Archived",       "doc_status": "1", "allow_edit": "Investigation Manager", "next_action_email_template": null}
+  ],
+  "transitions": [
+   {"state": "Draft",          "action": "Submit for Review", "next_state": "Pending Review", "allowed": "Investigator",          "allow_self_approval": 1, "condition": ""},
+   {"state": "Pending Review", "action": "Approve",           "next_state": "Approved",       "allowed": "Investigation Manager", "allow_self_approval": 0, "condition": ""},
+   {"state": "Pending Review", "action": "Reject",            "next_state": "Draft",          "allowed": "Investigation Manager", "allow_self_approval": 0, "condition": ""},
+   {"state": "Approved",       "action": "Send to Client",    "next_state": "Sent",           "allowed": "Investigation Manager", "allow_self_approval": 1, "condition": ""},
+   {"state": "Sent",           "action": "Archive",           "next_state": "Archived",       "allowed": "Investigation Manager", "allow_self_approval": 1, "condition": ""}
+  ]
+ }
+]
