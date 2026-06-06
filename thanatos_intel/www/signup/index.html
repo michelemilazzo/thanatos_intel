@@ -1,0 +1,226 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Registrati — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="Registrati a Thanatos Intel — piattaforma investigativa, antifrode, due diligence, OSINT. Pay-per-use e abbonamenti."/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
+  --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;--err:#E07A6E;--ok:#7AC58A;}
+body.signup-page,body.signup-page .page_content,body.signup-page .container,body.signup-page .container-fluid,body.signup-page main,body.signup-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif!important;
+}
+.s-hero{padding:80px 24px 32px;text-align:center;background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.s-hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;}
+.s-hero h1{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:38px;color:#fff;margin:14px 0 12px;letter-spacing:1px;}
+.s-hero p{color:#B8BCCC;max-width:640px;margin:0 auto;font-size:15px;line-height:1.6;}
+.s-form-wrap{max-width:640px;margin:36px auto 60px;padding:0 24px;}
+.s-form{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);padding:36px;}
+.s-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+@media(max-width:560px){.s-row{grid-template-columns:1fr;}}
+.s-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.s-field label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);}
+.s-field input,.s-field select,.s-field textarea{
+  background:var(--navy);border:1px solid var(--line);color:var(--text);
+  padding:11px 14px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;
+}
+.s-field input:focus,.s-field select:focus,.s-field textarea:focus{border-color:var(--gold);}
+.s-field .hint{font-size:11px;color:var(--muted);}
+.s-check{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:13px;line-height:1.5;color:#B8BCCC;}
+.s-check input{margin-top:3px;flex-shrink:0;width:16px;height:16px;accent-color:var(--gold);}
+.s-check a{color:var(--gold);text-decoration:underline;}
+.s-check.required label::after{content:" *";color:var(--err);}
+.s-divider{border-top:1px solid var(--line);margin:24px 0;}
+.s-section-title{font-family:Georgia,serif;font-size:16px;color:var(--gold);margin:0 0 14px;letter-spacing:1px;}
+.s-btn{display:block;width:100%;padding:14px;background:var(--gold);color:var(--navy);border:0;
+  font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:pointer;transition:background .15s;font-family:inherit;}
+.s-btn:hover{background:var(--gold2);}
+.s-btn:disabled{background:var(--muted);cursor:not-allowed;}
+.s-alert{padding:12px 14px;border-left:3px solid var(--err);background:rgba(224,122,110,.08);color:var(--err);margin-bottom:16px;font-size:13px;}
+.s-alert.ok{border-left-color:var(--ok);background:rgba(122,197,138,.08);color:var(--ok);}
+.s-login-link{text-align:center;margin-top:18px;font-size:13px;color:var(--muted);}
+.s-login-link a{color:var(--gold);text-decoration:none;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('signup') }}
+<body class="signup-page">
+
+<section class="s-hero">
+  <div class="eyebrow">Crea account</div>
+  <h1>Registrati a Thanatos Intel</h1>
+  <p>Accesso alla piattaforma investigativa: antifrode, due diligence, OSINT, cyber intelligence,
+     recupero crediti internazionale. Riceverai email di verifica al termine.</p>
+</section>
+
+<div class="s-form-wrap">
+  <form class="s-form" id="signupForm">
+    <div id="alert" style="display:none;"></div>
+
+    <h2 class="s-section-title">Identità</h2>
+    <div class="s-row">
+      <div class="s-field">
+        <label for="first_name">Nome *</label>
+        <input type="text" id="first_name" name="first_name" required maxlength="80">
+      </div>
+      <div class="s-field">
+        <label for="last_name">Cognome *</label>
+        <input type="text" id="last_name" name="last_name" required maxlength="80">
+      </div>
+    </div>
+    <div class="s-field">
+      <label for="email">Email *</label>
+      <input type="email" id="email" name="email" required maxlength="140">
+      <span class="hint">Ti invieremo un link di verifica a questo indirizzo.</span>
+    </div>
+    <div class="s-field">
+      <label for="phone">Telefono</label>
+      <input type="tel" id="phone" name="phone" placeholder="+39 ..." maxlength="32">
+    </div>
+
+    <div class="s-divider"></div>
+    <h2 class="s-section-title">Profilo cliente</h2>
+    <div class="s-row">
+      <div class="s-field">
+        <label for="client_type">Tipo cliente *</label>
+        <select id="client_type" name="client_type" required>
+          <option value="">— seleziona —</option>
+          {% for ct in client_types %}<option value="{{ ct.value }}">{{ ct.label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="s-field">
+        <label for="preferred_language">Lingua *</label>
+        <select id="preferred_language" name="preferred_language" required>
+          {% for l in languages %}<option value="{{ l.value }}" {% if l.value == 'Italian' %}selected{% endif %}>{{ l.label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="s-field">
+      <label for="company_name">Ragione sociale / Studio</label>
+      <input type="text" id="company_name" name="company_name" maxlength="140" placeholder="(richiesto per aziende, studi legali, commercialisti)">
+    </div>
+    <div class="s-row">
+      <div class="s-field">
+        <label for="vat_number">Partita IVA / CUI</label>
+        <input type="text" id="vat_number" name="vat_number" maxlength="32">
+      </div>
+      <div class="s-field">
+        <label for="country">Paese *</label>
+        <select id="country" name="country" required>
+          <option value="">— seleziona —</option>
+          {% for c in countries %}<option value="{{ c }}" {% if c == 'Italy' %}selected{% endif %}>{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="s-divider"></div>
+    <h2 class="s-section-title">Sicurezza accesso</h2>
+    <div class="s-field">
+      <label for="password">Password *</label>
+      <input type="password" id="password" name="password" required minlength="10" maxlength="60">
+      <span class="hint">Minimo 10 caratteri. Consigliato: maiuscole + numeri + simboli.</span>
+    </div>
+
+    <div class="s-divider"></div>
+    <h2 class="s-section-title">Conformità (obbligatori)</h2>
+
+    <div class="s-check required">
+      <input type="checkbox" id="gdpr_consent" name="gdpr_consent" required>
+      <label for="gdpr_consent">
+        Confermo di aver letto e accetto l'<a href="/privacy-policy" target="_blank">Informativa Privacy</a>
+        ai sensi del <strong>Reg. UE 2016/679 (GDPR)</strong> e della <strong>Legge 190/2018</strong>
+        (Codice Privacy italiano), nonché della legislazione rumena di protezione dati.
+      </label>
+    </div>
+
+    <div class="s-check required">
+      <input type="checkbox" id="aml_disclosure" name="aml_disclosure" required>
+      <label for="aml_disclosure">
+        Dichiaro sotto la mia responsabilità di non essere in liste di sanzioni internazionali
+        (OFAC, EU, UN, UK HMT), di non essere oggetto di indagini per riciclaggio o finanziamento del terrorismo,
+        e accetto che Thanatos esegua verifiche di <strong>Anti-Money Laundering (AML/KYC)</strong>
+        ai sensi della <strong>Legge 129/2019</strong> (Romania) e della <strong>Direttiva UE 2015/849</strong>.
+      </label>
+    </div>
+
+    <div class="s-check required">
+      <input type="checkbox" id="terms" name="terms" required>
+      <label for="terms">
+        Accetto i <a href="/terms" target="_blank">Termini e Condizioni</a> del servizio Thanatos Intel
+        e riconosco che il servizio è erogato da <strong>THANATOS INVESTIGAZIONI S.R.L.</strong>
+        (CUI RO 46901022, Constanța, Romania), agenzia investigativa autorizzata ai sensi della Legge 329/2003.
+      </label>
+    </div>
+
+    <div class="s-check">
+      <input type="checkbox" id="marketing_consent" name="marketing_consent">
+      <label for="marketing_consent">
+        Acconsento alla ricezione di comunicazioni informative (newsroom, alert truffe, aggiornamenti servizi).
+        Facoltativo. Revocabile in ogni momento.
+      </label>
+    </div>
+
+    <button type="submit" class="s-btn" id="submitBtn">Crea account →</button>
+
+    <div class="s-login-link">
+      Già registrato? <a href="/login">Accedi</a>
+    </div>
+  </form>
+</div>
+
+<script>
+document.getElementById('signupForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const alertBox = document.getElementById('alert');
+  alertBox.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Creazione in corso…';
+
+  const fd = new FormData(this);
+  const data = {};
+  fd.forEach((v,k)=> data[k] = v);
+  data.gdpr_consent = !!data.gdpr_consent;
+  data.aml_disclosure = !!data.aml_disclosure;
+  data.terms = !!data.terms;
+  data.marketing_consent = !!data.marketing_consent;
+
+  try {
+    const r = await fetch('/api/method/thanatos_intel.api.signup.do_signup', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-Frappe-CSRF-Token': frappe?.csrf_token || ''},
+      body: JSON.stringify(data),
+    });
+    const j = await r.json();
+    if (r.ok && j.message?.ok) {
+      alertBox.className = 's-alert ok';
+      alertBox.innerHTML = '<strong>Account creato.</strong> Controlla la tua email <strong>' + data.email + '</strong>: ti abbiamo inviato un link di verifica. Al click sarai reindirizzato al portale.';
+      alertBox.style.display = 'block';
+      this.querySelectorAll('input,select,button').forEach(el => el.disabled = true);
+      alertBox.scrollIntoView({behavior:'smooth', block:'center'});
+    } else {
+      const msg = j.message?.error || j._error_message || 'Errore creazione account';
+      alertBox.className = 's-alert';
+      alertBox.textContent = msg;
+      alertBox.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Crea account →';
+    }
+  } catch (err) {
+    alertBox.className = 's-alert';
+    alertBox.textContent = 'Errore di rete. Riprova tra qualche istante.';
+    alertBox.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Crea account →';
+  }
+});
+</script>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}
