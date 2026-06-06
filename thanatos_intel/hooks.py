@@ -28,7 +28,6 @@ fixtures=[
  'Role',
  {'doctype': 'Investigation Subscription Plan', 'filters': []},
  {'doctype': 'Service Catalog', 'filters': []},
- {'doctype': 'Infrastructure Cost', 'filters': []},
  {'doctype': 'News Category', 'filters': []},
  {'doctype': 'News Source', 'filters': []},
  {'doctype': 'Country Framework', 'filters': []},
