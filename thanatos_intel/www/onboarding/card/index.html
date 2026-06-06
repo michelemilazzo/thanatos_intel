@@ -34,6 +34,16 @@ body.card-page,body.card-page .page_content,body.card-page .container,body.card-
 .c-trust{display:flex;gap:14px;justify-content:center;margin-top:18px;color:var(--muted);font-size:10px;letter-spacing:2px;}
 .c-trust span{color:var(--gold);}
 .c-alert.ok{background:rgba(122,197,138,.08);border-left:3px solid var(--ok);color:var(--ok);padding:14px;margin-bottom:18px;font-size:13px;}
+@media(max-width:760px){
+  .c-hero{padding:40px 16px 22px !important;}
+  .c-hero h1{font-size:24px;}
+  .c-wrap{margin:24px auto 40px !important;padding:0 14px !important;}
+  .c-card{padding:18px 14px !important;}
+  .c-trust{flex-direction:column !important;align-items:flex-start !important;gap:10px !important;}
+  .c-hero .steps{flex-wrap:wrap;}
+  .c-card form,.c-card #card-element{width:100%;box-sizing:border-box;}
+  .c-btn,button{width:100%;box-sizing:border-box;}
+}
 </style>
 {% endblock %}
 

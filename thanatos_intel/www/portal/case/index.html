@@ -48,6 +48,17 @@ tr:hover td{background:var(--panel)}
 
 .footer-note{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);
   font-size:10px;color:var(--grey);text-align:center;letter-spacing:1.5px}
+.tbl-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{min-width:520px}
+@media(max-width:760px){
+  .shell{padding:18px 14px 60px}
+  .grid{grid-template-columns:1fr;gap:12px;margin:18px 0}
+  .tagrow{gap:6px}
+  .actions{flex-direction:column}
+  .actions .btn{width:100%;text-align:center;box-sizing:border-box}
+  table{font-size:12px}
+  table th,table td{padding:8px 10px}
+}
 </style>
 {% endblock %}
 
@@ -81,6 +92,7 @@ tr:hover td{background:var(--panel)}
   <div class="section">
     <div class="section-title">Evidenze ({{ evidences|length }})</div>
     {% if evidences %}
+    <div class="tbl-scroll">
     <table>
       <thead><tr><th>Nome</th><th>Tipo</th><th>SHA-256</th><th>Acquisita</th><th>Stato</th>{% if is_investigator %}<th></th>{% endif %}</tr></thead>
       <tbody>
@@ -96,6 +108,7 @@ tr:hover td{background:var(--panel)}
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% else %}
     <div class="empty">Nessuna evidenza registrata.</div>
     {% endif %}
@@ -104,6 +117,7 @@ tr:hover td{background:var(--panel)}
   <div class="section">
     <div class="section-title">Report ({{ reports|length }})</div>
     {% if reports %}
+    <div class="tbl-scroll">
     <table>
       <thead><tr><th>Titolo</th><th>Stato</th><th>Data</th><th>SHA-256</th><th></th></tr></thead>
       <tbody>
@@ -118,6 +132,7 @@ tr:hover td{background:var(--panel)}
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% else %}
     <div class="empty">Nessun report ancora generato.</div>
     {% endif %}

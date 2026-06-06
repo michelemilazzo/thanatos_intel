@@ -226,6 +226,15 @@ def create_and_run(target_type: str, target_value: str,
                    investigation_case: str = None,
                    client: str = None) -> dict:
     """Crea un OSINT Job e lo esegue subito. Ritorna name + risultato."""
+    if frappe.session.user == "Guest":
+        frappe.throw("Accesso negato.", frappe.PermissionError)
+    # mode elevati riservati a ruoli operativi
+    if mode in ("Deep Investigation", "Legal Review"):
+        allowed = {"Investigator", "Investigation Manager", "Lawyer",
+                   "Accountant", "System Manager"}
+        if not (set(frappe.get_roles()) & allowed):
+            frappe.throw("Modalità riservata: il tuo profilo può eseguire solo Quick Scan.",
+                         frappe.PermissionError)
     from thanatos_intel.thanatos_osint.doctype.entity.entity import upsert
     entity = upsert(_entity_type(target_type), target_value)
     job = frappe.get_doc({

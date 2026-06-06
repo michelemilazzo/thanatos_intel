@@ -31,17 +31,19 @@ def get_context(context):
         "Client"
     )
 
+    from thanatos_intel.permissions import is_full_access, visible_case_names
     case_fields = ["name", "case_number", "case_title", "status", "case_type",
                    "priority", "creation"]
-    if is_investigator:
+    if is_full_access(user):
+        # Administrator / Investigation Manager / System Manager → tutto
         cases = frappe.get_all("Investigation Case", fields=case_fields,
                                order_by="creation desc", limit=50)
     else:
-        client_names = frappe.get_all("Investigation Client",
-                                      filters={"platform_user": user}, pluck="name")
-        if client_names:
+        # ognuno vede solo i propri casi (assegnati, owner, o dei propri client)
+        names = visible_case_names(user) or []
+        if names:
             cases = frappe.get_all("Investigation Case",
-                                   filters={"client": ["in", client_names]},
+                                   filters={"name": ["in", names]},
                                    fields=case_fields, order_by="creation desc", limit=50)
         else:
             cases = []
@@ -59,7 +61,7 @@ def get_context(context):
 
     context.cases = cases
     context.case_count = len(cases)
-    context.recent_activity = _recent_activity(cases, is_investigator)
+    context.recent_activity = _recent_activity(cases, is_full_access(user))
     context.title = "Portal — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context

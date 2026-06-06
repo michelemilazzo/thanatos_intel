@@ -31,6 +31,20 @@ table.jobs th,table.jobs td{padding:10px 12px;border-bottom:1px solid var(--line
 table.jobs th{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:normal;}
 table.jobs tr:hover{background:rgba(200,169,110,.04);}
 .empty{color:var(--muted);text-align:center;padding:32px;border:1px dashed var(--line);}
+.jobs-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+@media(max-width:760px){
+  .osint-wrap{padding:20px 14px;}
+  .osint-head{flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:16px;}
+  .osint-head h1{font-size:20px;letter-spacing:3px;}
+  .card{padding:16px;}
+  .row{grid-template-columns:1fr;gap:6px;margin-bottom:14px;}
+  .row label{font-size:10px;}
+  .row input,.row select{font-size:16px;width:100%;box-sizing:border-box;}
+  .btn{width:100%;padding:14px;}
+  table.jobs{font-size:12px;min-width:560px;}
+  table.jobs th,table.jobs td{padding:8px 10px;}
+  .result{font-size:11px;max-height:340px;}
+}
 </style>
 {% endblock %}
 
@@ -81,6 +95,7 @@ table.jobs tr:hover{background:rgba(200,169,110,.04);}
   <div class="card">
     <h2>Job recenti</h2>
     {% if recent_jobs %}
+    <div class="jobs-scroll">
     <table class="jobs">
       <thead><tr>
         <th>Target</th><th>Tipo</th><th>Mode</th><th>Status</th><th>Risk</th><th>Summary</th><th>Quando</th>
@@ -99,6 +114,7 @@ table.jobs tr:hover{background:rgba(200,169,110,.04);}
       {% endfor %}
       </tbody>
     </table>
+    </div>
     {% else %}
     <div class="empty">Nessun job ancora eseguito.</div>
     {% endif %}

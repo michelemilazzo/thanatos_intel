@@ -20,6 +20,11 @@ body.cat-page{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
 .tile .ex{color:var(--muted);font-size:12px;line-height:1.5;}
 .tile .meta{color:#5B6276;font-size:10px;letter-spacing:1px;margin-top:6px;}
 .empty{text-align:center;color:var(--muted);padding:48px;border:1px dashed var(--line);}
+@media(max-width:760px){
+  .cat-wrap{padding:18px 14px !important;}
+  .cat-head{flex-direction:column !important;align-items:flex-start !important;gap:10px !important;padding:18px 14px !important;}
+  .grid{grid-template-columns:1fr !important;gap:12px !important;}
+}
 </style>
 {% endblock %}
 

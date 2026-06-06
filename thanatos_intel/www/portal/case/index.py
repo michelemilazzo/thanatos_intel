@@ -15,18 +15,12 @@ def get_context(context):
         raise frappe.Redirect
 
     user = frappe.session.user
-    roles = set(frappe.get_roles(user))
-    is_investigator = "Investigator" in roles or "Investigation Manager" in roles
+    from thanatos_intel.permissions import is_full_access, visible_case_names
+    is_investigator = is_full_access(user)
 
-    if not is_investigator:
-        client_names = frappe.get_all(
-            "Investigation Client",
-            filters={"platform_user": user},
-            pluck="name",
-        )
-        owns = frappe.db.exists("Investigation Case",
-                                {"name": case_id, "client": ["in", client_names or [""]]})
-        if not owns:
+    if not is_full_access(user):
+        names = visible_case_names(user) or []
+        if case_id not in names:
             frappe.throw(_("Accesso negato a questo caso."), frappe.PermissionError)
 
     case = frappe.get_doc("Investigation Case", case_id)

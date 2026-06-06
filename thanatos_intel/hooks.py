@@ -72,9 +72,17 @@ website_route_rules=[
  {'from_route': '/portal/case/<name>', 'to_route': 'portal/case'},
  {'from_route': '/news/categoria/<slug>', 'to_route': 'news/categoria'},
 ]
-permission_query_conditions={}
+permission_query_conditions={
+ 'Investigation Case':'thanatos_intel.permissions.case_query_conditions',
+ 'Investigation Client':'thanatos_intel.permissions.client_query_conditions',
+ 'OSINT Job':'thanatos_intel.permissions.osint_job_query_conditions',
+ 'Investigation Evidence':'thanatos_intel.permissions.evidence_query_conditions',
+ 'Investigation Report':'thanatos_intel.permissions.report_query_conditions',
+}
 has_permission={
  'Investigation Case':'thanatos_intel.permissions.can_read_thanatos_doc',
+ 'Investigation Client':'thanatos_intel.permissions.can_read_client',
+ 'OSINT Job':'thanatos_intel.permissions.can_read_osint_job',
  'Investigation Entity':'thanatos_intel.permissions.can_read_thanatos_doc',
  'Investigation Evidence':'thanatos_intel.permissions.can_read_thanatos_doc',
  'Investigation Report':'thanatos_intel.permissions.can_read_thanatos_doc',

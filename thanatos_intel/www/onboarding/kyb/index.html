@@ -35,6 +35,15 @@ body.kyb-page,body.kyb-page .page_content,body.kyb-page .container,body.kyb-page
 .b-alert{padding:12px 14px;border-left:3px solid var(--err);background:rgba(224,122,110,.08);color:var(--err);margin-bottom:16px;font-size:13px;}
 .b-alert.ok{border-left-color:var(--ok);background:rgba(122,197,138,.08);color:var(--ok);}
 .b-legal{font-size:11px;color:var(--muted);margin-top:18px;line-height:1.6;}
+@media(max-width:760px){
+  .b-hero{padding:40px 16px 22px !important;}
+  .b-hero h1{font-size:24px;}
+  .b-hero .steps{flex-wrap:wrap;}
+  .b-wrap{margin:24px auto 40px !important;padding:0 14px !important;}
+  .b-card{padding:18px 14px !important;}
+  input,select,textarea,.b-input,.b-textarea{font-size:16px !important;width:100%;box-sizing:border-box;}
+  .b-btn,button{width:100%;box-sizing:border-box;}
+}
 </style>
 {% endblock %}
 
