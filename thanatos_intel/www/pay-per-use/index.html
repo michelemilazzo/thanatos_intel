@@ -1,0 +1,130 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Pay-per-use — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="Servizi investigativi Thanatos Intel pay-per-use: antifrode crypto, cyber intelligence, verifiche rapide. Pagamento sicuro Stripe."/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
+  --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;}
+body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page .container-fluid,body.ppu-page main,body.ppu-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif!important;
+}
+
+.ppu-hero{padding:96px 24px 56px;text-align:center;background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.ppu-hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;}
+.ppu-hero h1{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:46px;color:#fff;margin:14px 0 12px;letter-spacing:1px;}
+.ppu-hero h1 em{font-style:normal;color:var(--gold);}
+.ppu-hero p{color:#B8BCCC;max-width:720px;margin:0 auto;font-size:16px;line-height:1.6;}
+.ppu-count{font-family:Georgia,serif;color:var(--gold);font-size:20px;margin-top:18px;}
+
+.ppu-cats{padding:64px 24px;max-width:1280px;margin:0 auto;}
+.ppu-cat{margin-bottom:64px;}
+.ppu-cat-head{text-align:center;margin-bottom:32px;}
+.ppu-cat-head .ico{font-size:42px;display:block;margin-bottom:8px;}
+.ppu-cat-head h2{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:30px;color:var(--gold);margin:0 0 8px;letter-spacing:2px;text-transform:uppercase;}
+.ppu-cat-head p{color:var(--muted);font-size:14px;max-width:600px;margin:0 auto;}
+.ppu-cat-line{width:80px;height:1px;background:var(--gold);margin:14px auto;opacity:.6;}
+
+.ppu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+@media(max-width:980px){.ppu-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:640px){.ppu-grid{grid-template-columns:1fr;}}
+
+.ppu-card{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);
+  padding:22px;display:flex;flex-direction:column;transition:transform .15s,border-color .15s;}
+.ppu-card:hover{transform:translateY(-3px);border-color:var(--gold2);}
+.ppu-card .name{font-family:Georgia,serif;font-size:17px;color:#fff;margin-bottom:8px;line-height:1.3;}
+.ppu-card .code{font-size:10px;color:var(--muted);letter-spacing:2px;font-family:monospace;margin-bottom:14px;}
+.ppu-card .desc{color:#B8BCCC;font-size:13px;line-height:1.5;margin-bottom:16px;flex:1;}
+.ppu-card .price{display:flex;align-items:baseline;gap:6px;margin-bottom:6px;}
+.ppu-card .price .from{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.ppu-card .price .v{font-family:Georgia,serif;color:var(--gold);font-size:26px;line-height:1;}
+.ppu-card .price .v small{font-size:13px;color:var(--muted);}
+.ppu-card .meta{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;}
+.ppu-card .meta .sla{color:var(--gold2);}
+.ppu-card .btn{display:block;text-align:center;padding:12px;border:1px solid var(--gold);background:var(--gold);
+  color:var(--navy);text-decoration:none;font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  font-weight:700;cursor:pointer;transition:background .15s;}
+.ppu-card .btn:hover{background:var(--gold2);}
+.ppu-card .btn.disabled{background:transparent;color:var(--muted);border-color:var(--line);cursor:not-allowed;}
+
+.ppu-trust{background:var(--navy2);padding:48px 24px;text-align:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+.ppu-trust h3{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:16px;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;}
+.ppu-trust .row{display:flex;justify-content:center;gap:48px;flex-wrap:wrap;color:var(--muted);font-size:12px;letter-spacing:1px;}
+.ppu-trust .row span{color:var(--gold);}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('pay-per-use') }}
+<body class="ppu-page">
+
+<section class="ppu-hero">
+  <div class="eyebrow">Servizi on-demand</div>
+  <h1>Pay-per-use Thanatos <em>Intel</em></h1>
+  <p>Verifiche, antifrode crypto, cyber intelligence. Pagamento sicuro Stripe, fatturazione immediata, consegna SLA.
+     Senza vincoli, senza abbonamento.</p>
+  <div class="ppu-count">{{ total_count }} servizi disponibili</div>
+</section>
+
+<div class="ppu-cats">
+  {% for cat in allowed_categories %}
+  {% set meta = cat_meta.get(cat, {}) %}
+  <section class="ppu-cat">
+    <div class="ppu-cat-head">
+      <span class="ico">{{ meta.icon or '·' }}</span>
+      <h2>{{ cat }}</h2>
+      <div class="ppu-cat-line"></div>
+      <p>{{ meta.subtitle or '' }}</p>
+    </div>
+    <div class="ppu-grid">
+      {% for it in by_cat[cat] %}
+      <div class="ppu-card" data-service-code="{{ it.service_code }}">
+        <div class="name">{{ it.service_name }}</div>
+        <div class="code">{{ it.service_code }}</div>
+        {% if it.description %}
+        <div class="desc">{{ it.description|striptags|truncate(160) }}</div>
+        {% endif %}
+        <div class="price">
+          <span class="from">da</span>
+          <span class="v">{% if it.currency == 'EUR' %}€{% endif %}{{ "%.0f"|format(it.price_min or it.price or 0) }}</span>
+          {% if it.price_max and it.price_max != it.price_min %}
+          <span class="from">·</span>
+          <span class="v"><small>fino a {% if it.currency == 'EUR' %}€{% endif %}{{ "%.0f"|format(it.price_max) }}</small></span>
+          {% endif %}
+        </div>
+        <div class="meta">
+          {% if it.delivery_hours %}<span class="sla">SLA {{ it.delivery_hours }}h</span>{% endif %}
+          {% if it.requires_analyst %}<span>· con analista</span>{% endif %}
+        </div>
+        {% if is_logged_in %}
+        <a class="btn" href="/portal/billing?service={{ it.service_code }}">Acquista →</a>
+        {% else %}
+        <a class="btn" href="/login?redirect-to=/pay-per-use">Accedi per acquistare</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+<section class="ppu-trust">
+  <h3>Pagamento sicuro · Fatturazione immediata · SLA garantiti</h3>
+  <div class="row">
+    <div><span>STRIPE</span> · pagamento PCI-DSS</div>
+    <div><span>SHA-256</span> · chain of custody</div>
+    <div><span>ISO 27001</span> · ready</div>
+    <div><span>GDPR</span> · L. 190/2018</div>
+    <div><span>Romania</span> · CUI RO 46901022</div>
+  </div>
+</section>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}
