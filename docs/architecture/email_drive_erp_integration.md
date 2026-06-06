@@ -26,10 +26,13 @@ OUTBOUND emails (responses)
     ↓
 Auto-linked al doc origine via reply tracking nativo
 
-CASE → ERPNEXT
-    │ erp_sync.py già attivo
+CASE → ERPNEXT LOCALE (thanatos.onekeyco.com)
+    │ internal_invoicing.py NUOVO
     ↓
-Quotation/Sales Order creati su erp.onekeyco.com (customer = client.client_name)
+Quotation/Sales Order/Sales Invoice creati sul DB locale (zero rete)
+Customer = mapping da Investigation Client (idempotente)
+Item = mapping da Service Catalog code (idempotente)
+Pay-per-use → Sales Invoice diretto + Payment Entry (Stripe ref)
 
 REPORT REVIEW
     │ workflow "Investigation Report Review" applicato
@@ -53,8 +56,15 @@ REPORT REVIEW
 
 ### Custom Thanatos
 - `integrations/intel_inbox.py` — auto-link Communication → Case + folder structure
-- `billing/erp_sync.py` — già crea Quotation/Sales Invoice su erp.onekeyco.com
+- `billing/internal_invoicing.py` — **fatturazione clienti Thanatos via ERPNext locale (stesso DB)**
+- `billing/erp_sync.py` — **separato**: tracking consumo infrastruttura + revenue fee dovuti a OneKeyCo, sync via REST verso `erp.onekeyco.com` (book-keeping esterno OneKeyCo, NON i clienti Thanatos)
 - `fixtures/workflow.json` — workflow Investigation Report Review
+
+### ⚠️ Due flussi di fatturazione separati
+| Modulo | DB target | Cosa fattura | A chi |
+|---|---|---|---|
+| `internal_invoicing.py` | `thanatos.onekeyco.com` (locale, stesso bench) | Servizi investigativi, pay-per-use, abbonamenti | Clienti Thanatos (Avvocati, Aziende, Privati) |
+| `erp_sync.py` | `erp.onekeyco.com` (remoto via REST) | Costi infrastruttura + revenue fee da Thanatos | OneKeyCo (società che eroga la piattaforma) |
 
 ## Email Account setup (operatore admin)
 
