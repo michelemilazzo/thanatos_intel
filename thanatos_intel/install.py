@@ -17,10 +17,17 @@ THANATOS_ROLES = [
 def after_install():
     create_roles()
     ensure_pdf_settings()
+    _ensure_case_billing_fields()
 
 
 def after_migrate():
     ensure_pdf_settings()
+    _ensure_case_billing_fields()
+
+
+def _ensure_case_billing_fields():
+    from thanatos_intel.billing.case_billing import ensure_case_billing_fields
+    ensure_case_billing_fields()
 
 
 def create_roles():
