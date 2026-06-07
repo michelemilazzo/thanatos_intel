@@ -35,6 +35,9 @@ fixtures=[
 ]
 
 doc_events={
+ 'Investigation Client': {
+   'on_update': 'thanatos_intel.billing.case_billing.on_client_update',
+ },
  'CRM Deal': {
    'on_update': 'thanatos_intel.billing.crm_pipeline.on_deal_update',
  },
