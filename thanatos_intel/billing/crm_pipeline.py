@@ -46,11 +46,56 @@ _BUTTON_SCRIPT = """frappe.ui.form.on('CRM Deal', {
 });"""
 
 
+# Bottone nella SPA CRM (frappe/crm) via 'CRM Form Script' (setupForm -> actions).
+_CRM_SPA_SCRIPT = """function setupForm({ doc, call, createToast }) {
+  let actions = []
+  if (doc.investigation_case) {
+    actions.push({
+      label: 'Apri fascicolo',
+      icon: 'folder',
+      onClick: () => window.open('/app/investigation-case/' + doc.investigation_case, '_blank'),
+    })
+  } else {
+    actions.push({
+      label: 'Crea fascicolo',
+      icon: 'folder-plus',
+      onClick: async (close) => {
+        try {
+          let name = await call('thanatos_intel.billing.crm_pipeline.create_case_from_deal', { deal: doc.name })
+          createToast({ title: 'Fascicolo creato: ' + name, icon: 'check', iconClasses: 'text-green-600' })
+          close && close()
+          setTimeout(() => location.reload(), 800)
+        } catch (e) {
+          createToast({ title: 'Errore creazione fascicolo', icon: 'x', iconClasses: 'text-red-600' })
+        }
+      },
+    })
+  }
+  return { actions }
+}"""
+
+
 def setup_pipeline():
-    """Idempotente, da after_migrate: custom field sul Deal + bottone desk."""
+    """Idempotente, da after_migrate: custom field sul Deal + bottone desk + bottone SPA CRM."""
     from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
     create_custom_fields(CRM_FIELDS, ignore_validate=True)
     _ensure_button_script()
+    _ensure_crm_form_script()
+
+
+def _ensure_crm_form_script():
+    if not frappe.db.exists("DocType", "CRM Form Script"):
+        return
+    name = "Thanatos — Crea fascicolo da Deal (SPA)"
+    if frappe.db.exists("CRM Form Script", name):
+        frappe.db.set_value("CRM Form Script", name, "script", _CRM_SPA_SCRIPT)
+        frappe.db.set_value("CRM Form Script", name, "enabled", 1)
+    else:
+        frappe.get_doc({
+            "doctype": "CRM Form Script", "name": name,
+            "dt": "CRM Deal", "view": "Form", "enabled": 1, "is_standard": 0,
+            "script": _CRM_SPA_SCRIPT,
+        }).insert(ignore_permissions=True)
 
 
 def _ensure_button_script():
