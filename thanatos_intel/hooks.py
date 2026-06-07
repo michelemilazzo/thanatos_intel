@@ -35,6 +35,9 @@ fixtures=[
 ]
 
 doc_events={
+ 'CRM Deal': {
+   'on_update': 'thanatos_intel.billing.crm_pipeline.on_deal_update',
+ },
  'Infrastructure Cost': {
    'after_insert': 'thanatos_intel.billing.erp_sync.on_infrastructure_cost_save',
    'on_update': 'thanatos_intel.billing.erp_sync.on_infrastructure_cost_save',

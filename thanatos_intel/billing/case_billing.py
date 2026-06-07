@@ -47,10 +47,16 @@ def ensure_billing_project(case):
     if doc.get("client"):
         customer = frappe.db.get_value("Investigation Client", doc.client, "customer")
 
+    company = (
+        frappe.defaults.get_user_default("Company")
+        or frappe.defaults.get_global_default("company")
+        or frappe.db.get_value("Company", {}, "name")
+    )
     project = frappe.get_doc({
         "doctype": "Project",
         "project_name": doc.get("case_title") or doc.name,
         "customer": customer,
+        "company": company,
     }).insert(ignore_permissions=True)
 
     doc.db_set("project", project.name)

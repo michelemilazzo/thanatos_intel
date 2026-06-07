@@ -17,17 +17,19 @@ THANATOS_ROLES = [
 def after_install():
     create_roles()
     ensure_pdf_settings()
-    _ensure_case_billing_fields()
+    _setup_pipeline()
 
 
 def after_migrate():
     ensure_pdf_settings()
-    _ensure_case_billing_fields()
+    _setup_pipeline()
 
 
-def _ensure_case_billing_fields():
+def _setup_pipeline():
     from thanatos_intel.billing.case_billing import ensure_case_billing_fields
+    from thanatos_intel.billing.crm_pipeline import setup_pipeline
     ensure_case_billing_fields()
+    setup_pipeline()
 
 
 def create_roles():
