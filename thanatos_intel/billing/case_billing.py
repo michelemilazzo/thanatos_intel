@@ -45,7 +45,7 @@ def sync_client_to_billing(client):
     ctype = "Company" if ic.get("client_type") in ("Company", "Law Firm", "Accounting Firm") else "Individual"
     tax_id = ic.get("codice_fiscale") or ic.get("vat_number")
 
-    customer = ic.get("customer") or frappe.db.get_value("Customer", {"customer_name": ic.client_name})
+    customer = ic.get("customer") or _pick_existing_customer(ic.client_name)
     if customer:
         if tax_id and frappe.db.get_value("Customer", customer, "tax_id") != tax_id:
             frappe.db.set_value("Customer", customer, "tax_id", tax_id)
@@ -75,6 +75,31 @@ def sync_client_to_billing(client):
         ic.db_set("customer", customer)
     frappe.db.commit()
     return customer
+
+
+def _pick_existing_customer(customer_name):
+    """Se esistono più Customer con lo stesso nome (omonimi/duplicati), preferisci
+    quello 'canonico' = con almeno una fattura; evita di linkare a un duplicato vuoto."""
+    matches = frappe.get_all("Customer", filters={"customer_name": customer_name}, pluck="name")
+    if not matches:
+        return None
+    if len(matches) == 1:
+        return matches[0]
+    with_inv = [m for m in matches if frappe.db.count("Sales Invoice", {"customer": m})]
+    return (with_inv or matches)[0]
+
+
+def warn_duplicate_customer(doc, method=None):
+    """doc_event Customer.validate: avvisa (NON blocca) se si crea un omonimo —
+    due persone con lo stesso nome sono legittime, ma spesso è un duplicato per errore."""
+    if not doc.is_new():
+        return
+    others = frappe.get_all("Customer", filters={"customer_name": doc.customer_name, "name": ["!=", doc.name or ""]}, pluck="name")
+    if others:
+        frappe.msgprint(
+            f"Esiste già un cliente con questo nome ({', '.join(others[:5])}). "
+            "Verifica che non sia un duplicato prima di salvare.",
+            title="Possibile cliente duplicato", indicator="orange")
 
 
 def on_client_update(doc, method=None):

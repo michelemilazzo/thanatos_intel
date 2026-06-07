@@ -35,6 +35,9 @@ fixtures=[
 ]
 
 doc_events={
+ 'Customer': {
+   'validate': 'thanatos_intel.billing.case_billing.warn_duplicate_customer',
+ },
  'Investigation Client': {
    'on_update': 'thanatos_intel.billing.case_billing.on_client_update',
  },
