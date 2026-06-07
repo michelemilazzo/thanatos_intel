@@ -24,6 +24,7 @@ website_context={
 }
 
 after_install='thanatos_intel.install.after_install'
+after_migrate='thanatos_intel.install.after_migrate'
 fixtures=[
  'Role',
  {'doctype': 'Investigation Subscription Plan', 'filters': []},

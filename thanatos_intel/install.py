@@ -16,6 +16,11 @@ THANATOS_ROLES = [
 
 def after_install():
     create_roles()
+    ensure_pdf_settings()
+
+
+def after_migrate():
+    ensure_pdf_settings()
 
 
 def create_roles():
@@ -28,3 +33,20 @@ def create_roles():
             })
             role.insert(ignore_permissions=True)
     frappe.db.commit()
+
+
+def ensure_pdf_settings():
+    """PDF stampe: letter head inline (repeat_header_footer=0) e A4.
+    Con repeat_header_footer=1 il letter head finisce nella header-zone ad
+    altezza fissa di wkhtmltopdf e logo+intestazione vengono tagliati."""
+    ps = frappe.get_single("Print Settings")
+    changed = False
+    if ps.repeat_header_footer:
+        ps.repeat_header_footer = 0
+        changed = True
+    if ps.pdf_page_size != "A4":
+        ps.pdf_page_size = "A4"
+        changed = True
+    if changed:
+        ps.save(ignore_permissions=True)
+        frappe.db.commit()
