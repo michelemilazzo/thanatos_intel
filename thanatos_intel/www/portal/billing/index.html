@@ -72,6 +72,15 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     <p>Gestione abbonamento Thanatos Intel · pagamento sicuro Stripe</p>
   </div>
 
+  {% if requested_service %}
+  <div class="banner" style="background:rgba(200,169,110,.1);border:1px solid rgba(200,169,110,.4);color:#E6E8EE;padding:14px 18px;border-radius:8px;margin-bottom:18px">
+    Servizio richiesto dall'articolo: <strong style="color:#C8A96E">{{ requested_service.service_name }}</strong>
+    <span style="color:#7A8294">· {{ requested_service.category }} · {{ requested_service.service_code }}
+    {% if requested_service.price %}· {{ "%.0f"|format(requested_service.price) }} {{ requested_service.currency or 'EUR' }}{% endif %}</span><br>
+    <span style="color:#7A8294;font-size:13px">Scegli un piano qui sotto o contatta il tuo referente per attivarlo sulla tua pratica.</span>
+  </div>
+  {% endif %}
+
   {% if not stripe_configured %}
   <div class="banner warn">⚠ Stripe non configurato. I bottoni di checkout sono disabilitati finché l'admin imposta stripe_secret_key.</div>
   {% endif %}

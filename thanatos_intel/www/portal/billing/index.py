@@ -35,6 +35,14 @@ def get_context(context):
         )
         context.current_sub = subs[0] if subs else None
 
+    context.requested_service = None
+    svc = frappe.form_dict.get("svc")
+    if svc:
+        row = frappe.db.get_value("Service Catalog", {"service_code": svc, "is_active": 1},
+                                  ["service_code", "service_name", "category", "price", "currency"],
+                                  as_dict=True)
+        context.requested_service = row
+
     context.stripe_configured = bool(frappe.conf.get("stripe_secret_key"))
     context.stripe_publishable_key = frappe.conf.get("stripe_publishable_key") or ""
     try:

@@ -44,9 +44,20 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
   border:1px solid rgba(200,169,110,.35);border-radius:10px;}
 .tx-pitch .lbl{color:var(--gold);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;}
 .tx-pitch h4{color:#F2F3F6;font-weight:400;font-size:18px;margin:0 0 8px;}
-.tx-pitch p{color:#C8CBD4;font-size:14px;line-height:1.6;margin:0 0 14px;}
-.tx-pitch a{display:inline-block;padding:9px 18px;background:var(--gold);color:#0A0E1A;text-decoration:none;
-  border-radius:6px;font-size:11px;letter-spacing:2px;text-transform:uppercase;}
+.tx-pitch p{color:#C8CBD4;font-size:14px;line-height:1.6;margin:0 0 16px;}
+.tx-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;}
+@media(max-width:620px){.tx-grid{grid-template-columns:1fr;}}
+.tx-card{background:rgba(10,14,26,.5);border:1px solid var(--line);border-radius:8px;padding:16px 16px 14px;display:flex;flex-direction:column;}
+.tx-card .k{font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
+.tx-card.prev .k{color:#6aa66a;}
+.tx-card.acc .k{color:#C8A96E;}
+.tx-card .kd{color:var(--muted);font-size:12px;line-height:1.5;margin-bottom:12px;}
+.tx-card .svc{color:#F2F3F6;font-size:14px;font-family:Georgia,serif;margin-bottom:2px;}
+.tx-card .pr{color:var(--gold);font-size:12px;font-family:-apple-system,system-ui,sans-serif;letter-spacing:.5px;margin-bottom:12px;}
+.tx-card .cta{margin-top:auto;display:inline-block;text-align:center;padding:9px 14px;text-decoration:none;
+  border-radius:6px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-family:-apple-system,system-ui,sans-serif;}
+.tx-card.prev .cta{background:rgba(106,166,106,.16);color:#8fd08f;border:1px solid rgba(106,166,106,.4);}
+.tx-card.acc .cta{background:var(--gold);color:#0A0E1A;}
 </style>
 {% endblock %}
 
@@ -68,18 +79,63 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
   </div>{% else %}<div class="art-hero-ph"><span class="phc">{{ doc.category or 'Intelligence' }}</span></div>{% endif %}
   {% if doc.excerpt %}<p class="art-excerpt">{{ doc.excerpt }}</p>{% endif %}
   <div class="art-content">{{ doc.content or '' | safe }}</div>
-  {% set ns = namespace(pitch="Thanatos può supportarti con intelligence investigativa, due diligence e analisi del rischio applicate a questo caso.") %}
+  {#- Mappa categoria → pitch + servizio di PREVENZIONE e di ACCERTAMENTO (codici reali Service Catalog) -#}
+  {% set SVC = {
+    'default': {'pitch': "Thanatos può supportarti con intelligence investigativa e analisi del rischio applicate a un caso come questo.",
+        'pc':'SVC-VR-006','pn':'Verifica azienda base','pp':'€100','pd':"Controllo preventivo prima di firmare o versare denaro.",
+        'ac':'SVC-IC-001','an':'Investigazione digitale base','ap':'€1.400','ad':"Accertamento completo se sei già stato colpito."},
+    'cyber': {'pitch': "Thanatos può proteggerti dalle minacce cyber: monitoraggio del brand, analisi IOC e valutazione dell'esposizione.",
+        'pc':'SVC-CY-008','pn':'Monitoraggio brand abuse','pp':'€200/mese','pd':"Sorveglianza continua su abusi del marchio, domini e profili falsi.",
+        'ac':'SVC-CY-005','an':'Analisi IOC completa','ap':'€300','ad':"Analisi tecnica di file, URL e indicatori di compromissione del caso."},
+    'crypto': {'pitch': "Thanatos può verificare wallet e controparti prima dell'investimento e ricostruire i flussi se sei stato truffato.",
+        'pc':'SVC-VR-010','pn':'Verifica wallet crypto','pp':'€60','pd':"Controllo rapido di un wallet o di una piattaforma prima di versare.",
+        'ac':'SVC-AF-004','an':'Analisi crypto / Ponzi scam','ap':'€350','ad':"Ricostruzione dello schema e dei flussi per denuncia e recupero."},
+    'frodi': {'pitch': "Thanatos può prevenire e accertare le frodi: alert di settore, analisi dello schema e ricostruzione della rete di soggetti.",
+        'pc':'SVC-AB-006','pn':'Alert truffe di settore','pp':'€200/mese','pd':"Avvisi tempestivi sulle truffe emergenti nel tuo settore.",
+        'ac':'SVC-AF-001','an':'Analisi schema truffa','ap':'€225','ad':"Smontiamo il meccanismo della truffa con prove a supporto della denuncia."},
+    'due': {'pitch': "Thanatos può fare due diligence su soci, fornitori e partner prima di ogni accordo, e indagare a fondo in caso di sospetti.",
+        'pc':'SVC-CO-003','pn':'Verifica reputazione aziendale','pp':'€275','pd':"Screening preventivo di una controparte commerciale.",
+        'ac':'SVC-CO-002','an':'Due diligence aziendale full','ap':'€2.000','ad':"Indagine approfondita su gruppo, beneficiari e contenziosi."},
+    'osint': {'pitch': "Thanatos può condurre indagini OSINT su persone, aziende, domini e dati esposti.",
+        'pc':'SVC-VR-007','pn':'Verifica persona base','pp':'€60','pd':"Controllo rapido OSINT su una persona prima di fidarti.",
+        'ac':'SVC-IC-009','an':'OSINT investigation completa','ap':'€1.900','ad':"Indagine OSINT estesa con dossier strutturato."},
+    'sequestri': {'pitch': "Thanatos può analizzare provvedimenti di sequestro o confisca e costruire il dossier per il riesame.",
+        'pc':'SVC-SE-001','pn':'Analisi preliminare provvedimento','pp':'€325','pd':"Valutazione iniziale di vizi e margini di opposizione.",
+        'ac':'SVC-SE-005','an':'Dossier completo per riesame','ap':'€1.850','ad':"Fascicolo tecnico pronto per il riesame."},
+    'finanza': {'pitch': "Thanatos può valutare il rischio finanziario di una controparte e svolgere due diligence economica.",
+        'pc':'SVC-FI-004','pn':'Analisi rischio insolvenza','pp':'€375','pd':"Stima preventiva del rischio di insolvenza di una controparte.",
+        'ac':'SVC-FI-009','an':'Due diligence finanziaria','ap':'€2.500','ad':"Analisi finanziaria approfondita a supporto di decisioni o contenzioso."}
+  } %}
   {% set _cat = (doc.category or '')|lower %}
-  {% if 'cyber' in _cat %}{% set ns.pitch = "Thanatos può proteggerti: threat monitoring, valutazione dell'esposizione dati e crypto-scam intelligence per la tua organizzazione." %}
-  {% elif 'frod' in _cat or 'truff' in _cat or 'antifrod' in _cat %}{% set ns.pitch = "Thanatos può aiutarti: analisi antifrode, verifica wallet e controparti, recupero e supporto a denunce." %}
-  {% elif 'due' in _cat or 'diligence' in _cat %}{% set ns.pitch = "Thanatos può svolgere due diligence su controparti, soci e fornitori prima di ogni accordo." %}
-  {% elif 'osint' in _cat %}{% set ns.pitch = "Thanatos può condurre indagini OSINT su persone, aziende, domini e dati esposti." %}
+  {% set _key = 'default' %}
+  {% if 'crypto' in _cat %}{% set _key = 'crypto' %}
+  {% elif 'cyber' in _cat %}{% set _key = 'cyber' %}
+  {% elif 'frod' in _cat or 'truff' in _cat or 'antifrod' in _cat %}{% set _key = 'frodi' %}
+  {% elif 'due' in _cat or 'diligence' in _cat or 'corporate' in _cat %}{% set _key = 'due' %}
+  {% elif 'osint' in _cat %}{% set _key = 'osint' %}
+  {% elif 'sequestr' in _cat or 'confisc' in _cat %}{% set _key = 'sequestri' %}
+  {% elif 'finanz' in _cat or 'financ' in _cat %}{% set _key = 'finanza' %}
   {% endif %}
+  {% set s = SVC[_key] %}
   <div class="tx-pitch">
-    <div class="lbl">Come può aiutarti Thanatos</div>
-    <h4>Su un caso come questo</h4>
-    <p>{{ ns.pitch }}</p>
-    <a href="/portal/billing">Richiedi un'analisi →</a>
+    <div class="lbl">Cosa può fare Thanatos per questa news</div>
+    <p>{{ s.pitch }}</p>
+    <div class="tx-grid">
+      <div class="tx-card prev">
+        <div class="k">◇ In prevenzione</div>
+        <div class="kd">{{ s.pd }}</div>
+        <div class="svc">{{ s.pn }}</div>
+        <div class="pr">{{ s.pp }} · {{ s.pc }}</div>
+        <a class="cta" href="/portal/billing?svc={{ s.pc }}">Attiva la prevenzione →</a>
+      </div>
+      <div class="tx-card acc">
+        <div class="k">◎ In accertamento</div>
+        <div class="kd">{{ s.ad }}</div>
+        <div class="svc">{{ s.an }}</div>
+        <div class="pr">{{ s.ap }} · {{ s.ac }}</div>
+        <a class="cta" href="/portal/billing?svc={{ s.ac }}">Richiedi l'accertamento →</a>
+      </div>
+    </div>
   </div>
   {% if doc.source_url %}<div class="art-source">Fonte originale: <a href="{{ doc.source_url }}" rel="noopener nofollow" target="_blank">{{ doc.source_name_label or doc.source_url }}</a></div>{% endif %}
 </article>
