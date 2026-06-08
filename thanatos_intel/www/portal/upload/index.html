@@ -1,0 +1,142 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);--grey:#7A8294;
+  --bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;--border:#1F2842;
+  --ok:#6aa66a;--err:#d05a5a;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:840px;margin:0 auto;padding:40px 24px 60px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 6px}
+.sub{color:var(--grey);font-size:13px;margin:0 0 28px}
+label{display:block;color:var(--grey);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+select{width:100%;background:var(--panel);color:#E8E9F0;border:1px solid var(--border);
+  padding:12px 14px;border-radius:4px;font-size:14px;font-family:inherit;margin-bottom:24px}
+select:focus{outline:none;border-color:var(--gold)}
+.dropzone{padding:52px 24px;border:2px dashed var(--border);border-radius:6px;
+  background:var(--panel);text-align:center;cursor:pointer;transition:all .15s}
+.dropzone:hover,.dropzone.dragover{background:var(--panel-2);border-color:var(--gold)}
+.dropzone .ic{font-size:46px;color:var(--gold);line-height:1;margin-bottom:12px}
+.dropzone .t{color:#fff;font-size:16px;margin-bottom:4px}
+.dropzone .h{color:var(--grey);font-size:12px}
+.files{margin-top:18px}
+.file{display:flex;align-items:center;gap:14px;padding:11px 16px;margin:6px 0;
+  background:var(--panel);border:1px solid var(--border);border-radius:4px}
+.file .name{flex:1;font-size:13px;word-break:break-all}
+.file .size{color:#5B6276;font-size:11px;font-family:monospace}
+.file .st{font-size:10px;padding:3px 9px;border-radius:2px;letter-spacing:1px;text-transform:uppercase;font-family:monospace}
+.st-pending{background:var(--gold-soft);color:var(--gold)}
+.st-ok{background:rgba(106,166,106,.18);color:var(--ok)}
+.st-err{background:rgba(208,90,90,.18);color:var(--err)}
+.btn{margin-top:24px;display:inline-block;background:var(--gold);color:#0A0E1A;border:0;
+  padding:14px 32px;border-radius:4px;font-size:13px;letter-spacing:2px;text-transform:uppercase;
+  font-weight:600;cursor:pointer;font-family:inherit}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.note{margin-top:14px;color:#5B6276;font-size:11px;letter-spacing:.3px}
+.empty{padding:40px 20px;text-align:center;color:var(--grey);border:1px dashed var(--border);border-radius:4px}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('portal') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> › Carica documento</div>
+  <h1>Carica documento</h1>
+  <p class="sub">Invia file in modo sicuro e tracciato a una delle tue pratiche. Ogni file è cifrato e registrato con hash SHA-256.</p>
+
+  {% if cases %}
+  <label for="case">Pratica di destinazione</label>
+  <select id="case">
+    {% for c in cases %}
+    <option value="{{ c.name }}" {% if c.name == preselect %}selected{% endif %}>
+      {{ c.case_number or c.name }} — {{ c.case_title or "(senza titolo)" }}</option>
+    {% endfor %}
+  </select>
+
+  <div class="dropzone" id="dz">
+    <div class="ic">⇪</div>
+    <div class="t">Trascina qui i file o clicca per selezionare</div>
+    <div class="h">PDF, immagini, documenti · max 25 MB per file</div>
+    <input type="file" id="fileInput" multiple style="display:none">
+  </div>
+  <div class="files" id="fileList"></div>
+  <button class="btn" id="sendBtn" disabled>Invia documenti</button>
+  <div class="note">I file restano privati e visibili solo al team Thanatos assegnato alla tua pratica.</div>
+  {% else %}
+  <div class="empty">Non hai ancora pratiche attive a cui allegare documenti.<br>Contatta il tuo referente Thanatos.</div>
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+
+<script>
+const CSRF = "{{ csrf_token }}";
+const dz = document.getElementById('dz');
+const input = document.getElementById('fileInput');
+const list = document.getElementById('fileList');
+const btn = document.getElementById('sendBtn');
+let files = [];
+
+if (dz) {
+  dz.addEventListener('click', () => input.click());
+  ['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.remove('dragover'); }));
+  dz.addEventListener('drop', ev => addFiles(ev.dataTransfer.files));
+  input.addEventListener('change', () => addFiles(input.files));
+}
+
+function fmt(n){ return n>1048576 ? (n/1048576).toFixed(1)+' MB' : (n/1024).toFixed(0)+' KB'; }
+
+function addFiles(fl){
+  for (const f of fl){
+    if (f.size > 25*1048576){ alert(f.name+': supera 25 MB'); continue; }
+    files.push(f);
+  }
+  render();
+}
+
+function render(){
+  list.innerHTML = '';
+  files.forEach((f,i) => {
+    const d = document.createElement('div');
+    d.className = 'file';
+    d.innerHTML = `<span class="name">${f.name}</span><span class="size">${fmt(f.size)}</span>`+
+      `<span class="st st-pending" id="st-${i}">in attesa</span>`;
+    list.appendChild(d);
+  });
+  btn.disabled = files.length === 0;
+}
+
+if (btn) btn.addEventListener('click', async () => {
+  btn.disabled = true;
+  const fd = new FormData();
+  fd.append('case', document.getElementById('case').value);
+  files.forEach(f => fd.append('files', f));
+  files.forEach((f,i) => { const s=document.getElementById('st-'+i); s.className='st st-pending'; s.textContent='invio…'; });
+  try {
+    const r = await fetch('/api/method/thanatos_intel.www.portal.upload.index.client_upload', {
+      method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd });
+    const data = await r.json();
+    const msg = data.message || data;
+    if (msg && msg.count >= 0){
+      files.forEach((f,i) => { const s=document.getElementById('st-'+i);
+        const ok = (msg.uploaded||[]).some(u => u.name === f.name);
+        s.className = 'st '+(ok?'st-ok':'st-err'); s.textContent = ok?'caricato':'errore'; });
+      setTimeout(() => { window.location.href = '/portal/case/'+document.getElementById('case').value; }, 1200);
+    } else {
+      throw new Error(msg.error || 'errore');
+    }
+  } catch(e){
+    files.forEach((f,i) => { const s=document.getElementById('st-'+i); s.className='st st-err'; s.textContent='errore'; });
+    btn.disabled = false;
+    alert('Errore upload: '+e.message);
+  }
+});
+</script>
+{% endblock %}

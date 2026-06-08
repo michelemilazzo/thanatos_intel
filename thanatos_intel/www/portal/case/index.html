@@ -143,6 +143,11 @@ table{min-width:520px}
     <a class="btn solid" href="/app/evidence-upload">⇪ Carica Evidenza</a>
     <a class="btn" href="/app/investigation-case/{{ case.name }}">Apri nel desk →</a>
   </div>
+  {% else %}
+  <div class="actions">
+    <a class="btn solid" href="/portal/upload?case={{ case.name }}">⇪ Carica documento</a>
+    <a class="btn" href="/portal">← Torna al portale</a>
+  </div>
   {% endif %}
 
   <div class="footer-note">

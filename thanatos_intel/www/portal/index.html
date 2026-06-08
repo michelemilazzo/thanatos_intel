@@ -79,12 +79,38 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     </div>
   </div>
 
+  {% if is_client %}
+  <div class="stats">
+    <div class="stat"><div class="v">{{ case_count }}</div><div class="l">Le tue pratiche</div><div class="d">aperte con noi</div></div>
+    <div class="stat"><div class="v">{{ in_progress }}</div><div class="l">In corso</div><div class="d">in lavorazione</div></div>
+    <div class="stat"><div class="v">{{ documents_total }}</div><div class="l">Documenti</div><div class="d">pronti da scaricare</div></div>
+    <div class="stat"><div class="v">{{ invoice_unpaid }}</div><div class="l">Da saldare</div><div class="d">fatture aperte</div></div>
+  </div>
+  {% else %}
   <div class="stats">
     <div class="stat"><div class="v">{{ case_count }}</div><div class="l">Casi totali</div><div class="d">visibili a te</div></div>
     <div class="stat"><div class="v">{{ in_progress }}</div><div class="l">Attivi</div><div class="d">in lavorazione</div></div>
     <div class="stat"><div class="v">{{ closed }}</div><div class="l">Chiusi</div><div class="d">archiviati</div></div>
     <div class="stat"><div class="v">{{ evidence_total }}</div><div class="l">Evidenze</div><div class="d">SHA-256 custody</div></div>
   </div>
+  {% endif %}
+
+  {% if is_client %}
+  <div class="quick-actions">
+    <a class="qa" href="#pratiche">
+      <div class="ic">▤</div><div><div class="t">Le mie pratiche</div><div class="s">Stato e avanzamento</div></div>
+    </a>
+    <a class="qa" href="#documenti">
+      <div class="ic">▤</div><div><div class="t">Documenti</div><div class="s">Report e file</div></div>
+    </a>
+    <a class="qa" href="/portal/billing">
+      <div class="ic">€</div><div><div class="t">Fatture & Proforme</div><div class="s">Pagamenti e piano</div></div>
+    </a>
+    <a class="qa" href="/portal/upload">
+      <div class="ic">⇪</div><div><div class="t">Carica documento</div><div class="s">Invia file alla tua pratica</div></div>
+    </a>
+  </div>
+  {% endif %}
 
   {% if is_investigator %}
   <div class="quick-actions">
@@ -104,8 +130,8 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
   {% endif %}
 
   <div class="two-col">
-    <div>
-      <h2 class="section-title">Casi recenti <small>{{ cases|length }} totali</small></h2>
+    <div id="pratiche">
+      <h2 class="section-title">{% if is_client %}Le tue pratiche{% else %}Casi recenti{% endif %} <small>{{ cases|length }} totali</small></h2>
       {% if cases %}
       <div class="case-grid">
         {% for c in cases[:9] %}
@@ -118,7 +144,11 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
             <span class="tag {% if c.case_status == 'In Progress' %}active{% endif %}">{{ c.case_status or 'Open' }}</span>
           </div>
           <div class="ft">
+            {% if is_client %}
+            <span>{{ c.report_count }} document{{ 'o' if c.report_count == 1 else 'i' }}</span>
+            {% else %}
             <span>{{ c.evidence_count }} evidenze · {{ c.report_count }} report</span>
+            {% endif %}
             <span>{{ frappe.utils.format_datetime(c.creation, 'dd/MM/yy') }}</span>
           </div>
         </a>
@@ -126,13 +156,56 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
       </div>
       {% else %}
       <div class="empty">
-        <strong>NESSUN CASO</strong>
-        Non ci sono ancora casi associati al tuo account.
+        <strong>NESSUNA PRATICA</strong>
+        Non ci sono ancora pratiche associate al tuo account.
       </div>
+      {% endif %}
+
+      {% if is_client %}
+      <h2 class="section-title" id="documenti" style="margin-top:36px">Documenti <small>scaricabili</small></h2>
+      {% if client_documents %}
+      <div class="activity">
+        {% for d in client_documents %}
+        <div class="row">
+          <div><span class="badge">PDF</span>{{ d.title }}
+            <span style="color:var(--grey);font-size:11px"> · {{ d.case }}</span></div>
+          <div class="when"><a class="dl" style="color:var(--gold);text-decoration:none;letter-spacing:1px" href="{{ d.url }}">⇩ scarica</a></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><strong>—</strong>Nessun documento pronto. Te li troverai qui appena finalizzati.</div>
+      {% endif %}
       {% endif %}
     </div>
 
     <div>
+      {% if is_client %}
+      <h2 class="section-title">Fatture &amp; Proforme <small><a href="/portal/billing" style="color:var(--gold);text-decoration:none">gestisci →</a></small></h2>
+      {% if invoices or proformas %}
+      <div class="activity">
+        {% for i in invoices %}
+        <div class="row">
+          <div><span class="badge">Fattura</span>{{ i.name }}</div>
+          <div class="when">
+            {{ "%.2f"|format(i.grand_total or 0) }} {{ i.currency or 'EUR' }}
+            <span style="margin-left:6px;color:{{ '#d05a5a' if (i.outstanding_amount or 0) > 0 else '#6aa66a' }}">
+              {{ 'da saldare' if (i.outstanding_amount or 0) > 0 else 'pagata' }}</span>
+          </div>
+        </div>
+        {% endfor %}
+        {% for q in proformas %}
+        <div class="row">
+          <div><span class="badge">Proforma</span>{{ q.name }}</div>
+          <div class="when">{{ "%.2f"|format(q.grand_total or 0) }} {{ q.currency or 'EUR' }}
+            <span style="margin-left:6px;color:var(--grey)">{{ q.status }}</span></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><strong>—</strong>Nessuna fattura o proforma al momento.</div>
+      {% endif %}
+      {% else %}
       <h2 class="section-title">Attività recente</h2>
       {% if recent_activity %}
       <div class="activity">
@@ -145,6 +218,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
       </div>
       {% else %}
       <div class="empty"><strong>—</strong>Nessuna attività recente.</div>
+      {% endif %}
       {% endif %}
     </div>
   </div>

@@ -62,9 +62,84 @@ def get_context(context):
     context.cases = cases
     context.case_count = len(cases)
     context.recent_activity = _recent_activity(cases, is_full_access(user))
+
+    # Vista cliente: documenti (report scaricabili) + billing (proforme/fatture)
+    if is_client:
+        context.client_documents = _client_documents(cases)
+        bill = _client_billing(user)
+        context.proformas = bill["proformas"]
+        context.invoices = bill["invoices"]
+        context.proforma_open = bill["proforma_open"]
+        context.invoice_unpaid = bill["invoice_unpaid"]
+        context.documents_total = len(context.client_documents)
+    else:
+        context.client_documents = []
+        context.proformas = []
+        context.invoices = []
+        context.proforma_open = 0
+        context.invoice_unpaid = 0
+        context.documents_total = 0
+
     context.title = "Portal — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context
+
+
+def _client_documents(cases):
+    """Report finalizzati/scaricabili dei casi del cliente."""
+    case_names = [c["name"] for c in cases] if cases else []
+    if not case_names:
+        return []
+    docs = []
+    try:
+        for r in frappe.get_all(
+            "Investigation Report",
+            filters={"investigation_case": ["in", case_names]},
+            fields=["name", "report_title", "report_status", "report_date",
+                    "pdf_file", "investigation_case"],
+            order_by="report_date desc, creation desc", limit=12):
+            if not r.pdf_file:
+                continue
+            docs.append({
+                "title": r.report_title or r.name,
+                "case": r.investigation_case,
+                "status": r.report_status,
+                "date": r.report_date,
+                "url": r.pdf_file,
+            })
+    except Exception:
+        pass
+    return docs
+
+
+def _client_billing(user):
+    """Proforme (Quotation) e fatture (Sales Invoice) del cliente."""
+    out = {"proformas": [], "invoices": [], "proforma_open": 0, "invoice_unpaid": 0}
+    customer = frappe.db.get_value("Investigation Client", {"platform_user": user}, "erp_customer_id")
+    if not customer:
+        return out
+    try:
+        out["proformas"] = frappe.get_all(
+            "Quotation",
+            filters={"party_name": customer, "quotation_to": "Customer"},
+            fields=["name", "transaction_date", "grand_total", "currency", "status"],
+            order_by="transaction_date desc", limit=8) or []
+        out["proforma_open"] = sum(1 for q in out["proformas"]
+                                   if (q.get("status") or "") in ("Draft", "Open", "Submitted"))
+    except Exception:
+        pass
+    try:
+        out["invoices"] = frappe.get_all(
+            "Sales Invoice",
+            filters={"customer": customer},
+            fields=["name", "posting_date", "grand_total", "outstanding_amount",
+                    "currency", "status"],
+            order_by="posting_date desc", limit=8) or []
+        out["invoice_unpaid"] = sum(1 for i in out["invoices"]
+                                    if (i.get("outstanding_amount") or 0) > 0)
+    except Exception:
+        pass
+    return out
 
 
 def _recent_activity(cases, is_investigator):
