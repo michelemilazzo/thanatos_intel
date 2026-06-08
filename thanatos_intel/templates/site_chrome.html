@@ -30,6 +30,14 @@
 .tx-cta.solid{background:#C8A96E;color:#0A0E1A;}
 .tx-cta.solid:hover{background:#B8975A;}
 @media(max-width:780px){.tx-links a{padding:6px 8px;font-size:10px;letter-spacing:1.5px;}.tx-brand .wm{display:none;}}
+.tx-user{position:relative;display:inline-block;margin-left:8px;}
+.tx-user>.tx-cta{margin-left:0;cursor:pointer;}
+.tx-menu{position:absolute;right:0;top:100%;min-width:180px;background:#111729;border:1px solid #1F2742;
+  border-radius:6px;padding:6px;display:none;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:60;}
+.tx-user:hover>.tx-menu{display:flex;}
+.tx-menu a{color:#A4A9BC;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  padding:9px 12px;border-bottom:none;border-radius:4px;}
+.tx-menu a:hover{color:#C8A96E;background:#0A0E1A;}
 </style>
 <nav class="tx-nav">
   <div class="tx-nav-inner">
@@ -39,15 +47,27 @@
     </a>
     <div class="tx-links">
       <a href="/" class="{% if active=='home' %}act{% endif %}">Home</a>
+      <a href="/about" class="{% if active=='about' %}act{% endif %}">Chi siamo</a>
       <a href="/news" class="{% if active=='news' %}act{% endif %}">Newsroom</a>
       <a href="/portal" class="{% if active=='portal' %}act{% endif %}">Portale</a>
-      <a href="/portal/osint" class="{% if active=='osint' %}act{% endif %}">OSINT</a>
-      <a href="/portal/billing" class="{% if active=='billing' %}act{% endif %}">Billing</a>
+      <a href="/portal/billing" class="{% if active=='billing' %}act{% endif %}">Piani</a>
       {% if frappe.session.user == 'Guest' %}
-      <a class="tx-cta" href="/signup">Registrati</a>
       <a class="tx-cta solid" href="/login?redirect-to=/portal">Accedi</a>
       {% else %}
-      <a class="tx-cta" href="/api/method/logout">Esci</a>
+      {% set _staff = 'System Manager' in frappe.get_roles() or 'Investigation Manager' in frappe.get_roles() %}
+      <div class="tx-user">
+        <a class="tx-cta solid" href="{% if _staff %}/app{% else %}/portal{% endif %}">Area riservata ▾</a>
+        <div class="tx-menu">
+          {% if _staff %}
+          <a href="/app/thanatos-intel">App Thanatos</a>
+          <a href="/app">Desk</a>
+          <a href="/drive">Drive</a>
+          <a href="/crm">CRM</a>
+          {% endif %}
+          <a href="/portal">Portale</a>
+          <a href="/api/method/logout">Esci</a>
+        </div>
+      </div>
       {% endif %}
     </div>
   </div>

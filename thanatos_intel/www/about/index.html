@@ -1,0 +1,68 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Chi siamo — Thanatos Agency{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="Thanatos Agency: intelligence investigativa europea. Antifrode, due diligence, OSINT, due diligence diplomatica, cyber e corporate intelligence."/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body.thanatos-about, body.thanatos-about .page_content, body.thanatos-about .container,
+body.thanatos-about main { background:#0A0E1A !important; color:#E6E8EE; max-width:100% !important; }
+.ab-wrap{max-width:980px;margin:0 auto;padding:64px 24px;}
+.ab-kicker{color:#C8A96E;font-family:Georgia,serif;letter-spacing:4px;text-transform:uppercase;font-size:12px;}
+.ab-h1{font-family:'Cinzel Decorative',Georgia,serif;font-size:40px;line-height:1.1;margin:10px 0 18px;color:#fff;}
+.ab-lead{font-size:17px;line-height:1.7;color:#C7CCDA;max-width:760px;}
+.ab-sec-title{font-family:Georgia,serif;color:#C8A96E;letter-spacing:3px;text-transform:uppercase;font-size:13px;
+  margin:48px 0 18px;border-bottom:1px solid #1F2742;padding-bottom:10px;}
+.ab-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.ab-card{background:#111729;border:1px solid #1F2742;border-radius:10px;padding:20px 22px;}
+.ab-card h3{color:#E0C58A;font-family:Georgia,serif;font-size:16px;margin:0 0 8px;}
+.ab-card p{color:#A4A9BC;font-size:14px;line-height:1.6;margin:0;}
+.ab-cta{margin-top:48px;display:flex;gap:14px;flex-wrap:wrap;}
+.ab-btn{display:inline-block;padding:12px 22px;border:1px solid #C8A96E;color:#C8A96E;text-decoration:none;
+  letter-spacing:2px;text-transform:uppercase;font-size:12px;border-radius:6px;}
+.ab-btn.solid{background:#C8A96E;color:#0A0E1A;}
+@media(max-width:780px){.ab-grid{grid-template-columns:1fr;}.ab-h1{font-size:30px;}}
+</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header('about') }}
+<body class="thanatos-about">
+<div class="ab-wrap">
+  <div class="ab-kicker">Chi siamo</div>
+  <h1 class="ab-h1">Thanatos Agency</h1>
+  <p class="ab-lead">
+    Siamo un'agenzia europea di <strong>intelligence investigativa</strong> al servizio di studi legali,
+    commercialisti, investigatori, aziende e istituzioni. Trasformiamo dati e fonti in <strong>prove
+    solide e decisioni sicure</strong>: con rigore metodologico, riservatezza assoluta e una catena di
+    custodia digitale (hash SHA-256) ammissibile in giudizio. Operiamo in modalità pay-per-use o in
+    abbonamento, con un portale dedicato per ogni cliente.
+  </p>
+
+  <div class="ab-sec-title">I nostri servizi</div>
+  <div class="ab-grid">
+    {% for name, desc in services %}
+    <div class="ab-card">
+      <h3>{{ name }}</h3>
+      <p>{{ desc }}</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="ab-sec-title">Come lavoriamo</div>
+  <p class="ab-lead">
+    Ogni incarico segue un percorso tracciato: <strong>KYC/KYB</strong> e identificazione a distanza,
+    <strong>screening sanzioni</strong> (OFAC/UE/ONU) e PEP, <strong>OSINT</strong> multi-fonte,
+    verifica documentale e, dove richiesto, <strong>legal opinion</strong>. Ogni report è revisionato
+    dal responsabile prima dell'invio. I documenti restano nell'archivio sicuro del cliente, immutabili.
+  </p>
+
+  <div class="ab-cta">
+    <a class="ab-btn solid" href="/portal/billing">Vedi i piani →</a>
+    <a class="ab-btn" href="/login?redirect-to=/portal">Accedi al portale</a>
+  </div>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}
