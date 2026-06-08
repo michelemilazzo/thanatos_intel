@@ -2,6 +2,17 @@ import frappe
 
 no_cache = 1
 
+CLIENT_TYPE_MAP = {
+    "privato":      "Individual",
+    "avvocato":     "Law Firm",
+    "commercialista": "Accounting Firm",
+    "azienda":      "Company",
+    "immobiliare":  "Company",
+    "banca":        "Company",
+    "finanziaria":  "Company",
+    "altro":        "Other",
+}
+
 
 def get_context(context):
     if frappe.session.user != "Guest":
@@ -18,7 +29,8 @@ def get_context(context):
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-def register_client(full_name, email, password, phone=None, company=None):
+def register_client(full_name, email, password, phone=None,
+                    client_type_key=None, vat_number=None, extra_info=None):
     full_name = (full_name or "").strip()
     email = (email or "").strip().lower()
     if not full_name or not email or not password:
@@ -30,6 +42,8 @@ def register_client(full_name, email, password, phone=None, company=None):
     if frappe.db.exists("User", email):
         frappe.throw("Esiste già un account con questa email.")
 
+    ctype = CLIENT_TYPE_MAP.get((client_type_key or "altro").lower(), "Other")
+
     user = frappe.get_doc({
         "doctype": "User",
         "email": email,
@@ -39,23 +53,24 @@ def register_client(full_name, email, password, phone=None, company=None):
         "send_welcome_email": 0,
         "roles": [{"role": "Investigation Client"}],
     })
-    user.flags.ignore_permissions = True
     user.insert(ignore_permissions=True)
     user.update_password(password)
 
-    # Crea Investigation Client collegato
-    client = frappe.get_doc({
+    client_data = {
         "doctype": "Investigation Client",
         "client_name": full_name,
         "email": email,
-        "phone": phone,
-        "company_name": company,
+        "phone": phone or "",
+        "client_type": ctype,
         "platform_user": email,
         "status": "Active",
         "kyc_status": "Not Started",
         "kyb_status": "Not Started",
-    })
-    client.flags.ignore_permissions = True
+    }
+    if vat_number:
+        client_data["vat_number"] = vat_number
+
+    client = frappe.get_doc(client_data)
     client.insert(ignore_permissions=True)
     frappe.db.commit()
     return {"ok": True, "redirect": "/portal"}
