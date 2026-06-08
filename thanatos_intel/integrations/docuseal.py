@@ -8,9 +8,11 @@ Pipeline:
      → aggiorna mandato: status=Signed, signed_on, docuseal_signed_pdf
   4. signed PDF salvato come file privato Frappe + Drive entity se Drive configurato
 """
+import base64
 import hashlib
 import hmac
 import json
+import time
 
 import frappe
 import requests
@@ -24,6 +26,9 @@ def _conf():
         "api_key": c.get("docuseal_api_key", ""),
         "template_id": c.get("docuseal_template_id"),
         "webhook_secret": c.get("docuseal_webhook_secret", ""),
+        # hmac_secret auto-generato da DocuSeal (formato: whsec_<base64>)
+        # firma: "{ts}.{HMAC_SHA256(hmac_secret, '{ts}.{body}')}"
+        "hmac_secret": c.get("docuseal_hmac_secret", ""),
     }
 
 
@@ -127,11 +132,37 @@ def webhook():
     raw = frappe.request.get_data()
     conf = _conf()
 
-    # Verifica firma HMAC
-    if conf["webhook_secret"]:
+    # Verifica firma HMAC DocuSeal
+    # Formato header: "{timestamp}.{HMAC_SHA256(hmac_secret, '{timestamp}.{body}')}"
+    hmac_secret = conf.get("hmac_secret", "")
+    if hmac_secret:
         sig_header = frappe.request.headers.get("X-Docuseal-Signature", "")
-        expected = hmac.new(conf["webhook_secret"].encode(), raw, hashlib.sha256).hexdigest()
-        if not hmac.compare_digest(sig_header, expected):
+        parts = sig_header.split(".", 1)
+        if len(parts) != 2:
+            frappe.response["http_status_code"] = 401
+            return {"error": "Invalid signature format"}
+        ts_str, sig = parts
+        try:
+            ts = int(ts_str)
+        except ValueError:
+            frappe.response["http_status_code"] = 401
+            return {"error": "Invalid timestamp"}
+        # tolleranza 10 minuti
+        if abs(int(time.time()) - ts) > 600:
+            frappe.response["http_status_code"] = 401
+            return {"error": "Timestamp out of range"}
+        # decodifica il secret (prefisso whsec_ + base64)
+        raw_secret = hmac_secret
+        if raw_secret.startswith("whsec_"):
+            try:
+                raw_secret = base64.b64decode(hmac_secret[6:])
+            except Exception:
+                raw_secret = hmac_secret.encode()
+        elif isinstance(raw_secret, str):
+            raw_secret = raw_secret.encode()
+        signed_payload = f"{ts_str}.{raw.decode('utf-8', errors='replace')}".encode()
+        expected = hmac.new(raw_secret, signed_payload, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
             frappe.response["http_status_code"] = 401
             return {"error": "Invalid signature"}
 
