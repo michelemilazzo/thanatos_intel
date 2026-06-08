@@ -244,12 +244,8 @@ def _push_signed_to_drive(mandate_name: str, file_url: str):
             from drive.utils.files import FileManager
             from drive.api.files import create_folder
 
-            # Team Administrator (root Drive)
-            admin_team = frappe.db.get_value("Drive File",
-                                              {"parent_entity": None}, ["team", "name"], as_dict=1)
-            if not admin_team:
-                return
-            team = admin_team.team
+            # Team Drive per i mandati firmati — configurabile via site_config drive_admin_team
+            team = frappe.conf.get("drive_admin_team", "c6o2dfl3t7")
             home = get_home_folder(team)
 
             # Cartella "Mandati Firmati" sotto root
