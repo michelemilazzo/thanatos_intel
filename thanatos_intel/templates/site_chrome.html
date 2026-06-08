@@ -54,7 +54,7 @@
       {% if frappe.session.user == 'Guest' %}
       <a class="tx-cta solid" href="/login?redirect-to=/portal">Accedi</a>
       {% else %}
-      {% set _staff = 'System Manager' in frappe.get_roles() or 'Investigation Manager' in frappe.get_roles() %}
+      {% set _staff = is_full_access() %}
       <div class="tx-user">
         <a class="tx-cta solid" href="{% if _staff %}/app{% else %}/portal{% endif %}">Area riservata ▾</a>
         <div class="tx-menu">

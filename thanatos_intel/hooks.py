@@ -110,5 +110,6 @@ jinja={
    'thanatos_intel.thanatos_core.currency.converter.jinja_fx',
    'thanatos_intel.thanatos_core.currency.converter.jinja_fx_block',
    'thanatos_intel.thanatos_core.currency.converter.convert_all',
+   'thanatos_intel.permissions.is_full_access',
  ],
 }
