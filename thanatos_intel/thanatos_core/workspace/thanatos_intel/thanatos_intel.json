@@ -611,6 +611,15 @@
    "doctype": "Workspace Link"
   },
   {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Blacklist Report",
+   "link_to": "Blacklist Report",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "name": "rq7726lb4t",
    "type": "Card Break",
    "label": "Corporate & Financial",
@@ -815,6 +824,33 @@
    "doctype": "Workspace Link"
   },
   {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "KYC Check",
+   "link_to": "KYC Check",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "KYB Check",
+   "link_to": "KYB Check",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Affiliate Application",
+   "link_to": "Affiliate Application",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "name": "rq7m5bodjo",
    "type": "Card Break",
    "label": "Newsroom",
@@ -881,6 +917,15 @@
    "is_query_report": 0,
    "link_count": 0,
    "doctype": "Workspace Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Wallet & Pagamenti",
+   "link_to": null,
+   "link_type": null,
+   "onboard": 0,
+   "type": "Card Break"
   },
   {
    "name": "rq7p92r0if",
@@ -966,6 +1011,42 @@
    "is_query_report": 0,
    "link_count": 0,
    "doctype": "Workspace Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Credit Ledger",
+   "link_to": "Credit Ledger",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Party Payout",
+   "link_to": "Party Payout",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Billing Entity",
+   "link_to": "Billing Entity",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Thanatos Billing Settings",
+   "link_to": "Thanatos Billing Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
  "roles": []
