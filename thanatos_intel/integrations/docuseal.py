@@ -70,11 +70,20 @@ def submit_mandate_for_signing(mandate_name: str) -> dict:
         frappe.throw("Nessuna email trovata per il richiedente. Impossibile inviare a DocuSeal.")
 
     # Costruisci payload submission
+    # Legge i ruoli dal template per usare il nome esatto
+    tmpl_resp = requests.get(f"{conf['base_url']}/api/templates/{conf['template_id']}",
+                             headers=_headers(), timeout=10)
+    submitter_role = "First Party"
+    if tmpl_resp.status_code == 200:
+        roles = [s.get("name", "") for s in tmpl_resp.json().get("submitters", [])]
+        if roles:
+            submitter_role = roles[0]
+
     payload = {
         "template_id": conf["template_id"],
         "send_email": True,
         "submitters": [{
-            "role": "First Party",
+            "role": submitter_role,
             "email": email,
             "name": name,
             "fields": [
