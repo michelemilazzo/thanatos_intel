@@ -39,10 +39,26 @@ def get_context(context):
         order_by="creation desc",
     )
 
+    # Pipeline steps (solo per cliente: filtra step operator interni)
+    from thanatos_intel.pipeline.pipeline import get_pipeline
+    client_rec = frappe.db.get_value("Investigation Client",
+        {"platform_user": user}, ["name", "client_type"], as_dict=1) if not is_investigator else None
+    case_dict = case.as_dict()
+    if client_rec:
+        case_dict["client_type"] = client_rec.client_type
+    all_steps = get_pipeline(case_dict)
+    # Il cliente vede TUTTI gli step ma solo quelli actor=client hanno azione
+    pipeline = all_steps
+
     context.case = case
     context.evidences = evidences
     context.reports = reports
     context.is_investigator = is_investigator
+    context.pipeline = pipeline
+    context.pipeline_done = sum(1 for s in pipeline if s["status"] == "done")
+    context.pipeline_total = len(pipeline)
+    context.pipeline_pct = int(context.pipeline_done / context.pipeline_total * 100) if pipeline else 0
+    context.current_step = next((s for s in pipeline if s["status"] == "current"), None)
     context.title = f"{case.case_number or case.name} — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context

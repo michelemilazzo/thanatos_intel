@@ -75,6 +75,43 @@ table{min-width:520px}
     </div>
   </div>
 
+  {% if pipeline %}
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:28px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">Avanzamento pratica</span>
+      <span style="color:var(--grey);font-size:11px">{{ pipeline_done }}/{{ pipeline_total }} step</span>
+    </div>
+    <div style="background:var(--border);height:6px;border-radius:3px;margin-bottom:18px;overflow:hidden">
+      <div style="background:var(--gold);height:6px;width:{{ pipeline_pct }}%"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0">
+      {% for step in pipeline %}
+      {% set ic = '✓' if step.status=='done' else ('▶' if step.status=='current' else '○') %}
+      {% set col = '#2ecc71' if step.status=='done' else ('' if step.status=='current' else 'var(--grey)') %}
+      <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #1A2035{% if loop.last %};border-bottom:none{% endif %}{% if step.status=='current' %};background:rgba(200,169,110,.04);margin:0 -10px;padding:10px{% endif %}">
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid {% if step.status=='done' %}#2ecc71{% elif step.status=='current' %}var(--gold){% else %}var(--border){% endif %};
+          display:flex;align-items:center;justify-content:center;font-size:10px;color:{% if step.status=='done' %}#2ecc71{% elif step.status=='current' %}var(--gold){% else %}var(--grey){% endif %};flex-shrink:0;margin-top:2px">{{ ic }}</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:13px;color:{% if step.status=='done' %}var(--grey){% else %}#E8E9F0{% endif %};{% if step.status=='done' %}text-decoration:line-through;{% endif %}{% if step.status=='current' %}font-weight:600;{% endif %}">{{ step.label }}</span>
+            <span style="font-size:9px;padding:2px 7px;border-radius:10px;letter-spacing:1px;text-transform:uppercase;
+              background:{% if step.actor=='client' %}rgba(106,159,216,.15){% else %}rgba(200,169,110,.1){% endif %};
+              color:{% if step.actor=='client' %}#6A9FD8{% else %}var(--gold){% endif %}">
+              {{ 'Tu' if step.actor=='client' else 'Operatore' }}</span>
+          </div>
+          {% if step.status=='current' and step.description %}
+          <div style="color:var(--grey);font-size:11px;margin-top:3px">{{ step.description }}</div>
+          {% endif %}
+          {% if step.status=='current' and step.actor=='client' and step.portal_url %}
+          <a href="{{ step.portal_url }}" style="display:inline-block;margin-top:8px;padding:6px 14px;background:var(--gold);color:#0A0E1A;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none">Procedi ›</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="grid">
     <div class="kv"><div class="l">Cliente</div><div class="v">{{ case.client or '—' }}</div></div>
     <div class="kv"><div class="l">Apertura</div><div class="v">{{ frappe.utils.format_datetime(case.creation, 'dd/MM/yyyy HH:mm') }}</div></div>
