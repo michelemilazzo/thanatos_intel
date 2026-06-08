@@ -33,6 +33,11 @@ fixtures=[
  {'doctype': 'News Category', 'filters': []},
  {'doctype': 'News Source', 'filters': []},
  {'doctype': 'Country Framework', 'filters': []},
+ {'doctype': 'Number Card', 'filters': [['name', 'in', [
+   'Casi aperti', 'Casi in lavorazione', 'Evidenze da custodire',
+   'Mandati DDD attivi', 'OSINT job attivi', 'Clienti']]]},
+ {'doctype': 'Dashboard Chart', 'filters': [['name', 'in', [
+   'Casi per stato', 'Mandati DDD per fase', 'Nuovi casi nel tempo']]]},
 ]
 
 doc_events={
