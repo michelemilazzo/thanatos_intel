@@ -1,225 +1,232 @@
 {
-  "doctype": "DocType",
-  "name": "Investigation Client",
-  "module": "Thanatos Core",
-  "track_changes": 1,
-  "autoname": "field:email",
-  "title_field": "client_name",
-  "fields": [
-    {
-      "fieldname": "sb_main",
-      "fieldtype": "Section Break",
-      "label": "Client"
-    },
-    {
-      "fieldname": "client_name",
-      "fieldtype": "Data",
-      "label": "Client Name",
-      "reqd": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "client_type",
-      "fieldtype": "Select",
-      "label": "Client Type",
-      "options": "Individual\nCompany\nLaw Firm\nAccounting Firm\nOther",
-      "default": "Individual",
-      "in_list_view": 1,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "email",
-      "fieldtype": "Data",
-      "label": "Email",
-      "reqd": 1,
-      "options": "Email",
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "phone",
-      "fieldtype": "Data",
-      "label": "Phone",
-      "options": "Phone"
-    },
-    {
-      "fieldname": "cb_main",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "country",
-      "fieldtype": "Link",
-      "label": "Country",
-      "options": "Country"
-    },
-    {
-      "fieldname": "vat_number",
-      "fieldtype": "Data",
-      "label": "VAT / CUI"
-    },
-    {
-      "fieldname": "preferred_language",
-      "fieldtype": "Select",
-      "label": "Preferred Language",
-      "options": "Italian\nRomanian\nEnglish",
-      "default": "English"
-    },
-    {
-      "fieldname": "address",
-      "fieldtype": "Text",
-      "label": "Address"
-    },
-    {
-      "fieldname": "sb_link",
-      "fieldtype": "Section Break",
-      "label": "Platform & ERP"
-    },
-    {
-      "fieldname": "platform_user",
-      "fieldtype": "Link",
-      "label": "Platform User",
-      "options": "User"
-    },
-    {
-      "fieldname": "erp_customer_id",
-      "fieldtype": "Data",
-      "label": "ERP Customer ID"
-    },
-    {
-      "fieldname": "cb_link",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "subscription_plan",
-      "fieldtype": "Link",
-      "label": "Subscription Plan",
-      "options": "Investigation Subscription Plan"
-    },
-    {
-      "fieldname": "subscription_status",
-      "fieldtype": "Select",
-      "label": "Subscription Status",
-      "options": "None\nPending\nActive\nPast Due\nSuspended\nCancelled\nExpired",
-      "default": "None"
-    },
-    {
-      "fieldname": "stripe_customer_id",
-      "fieldtype": "Data",
-      "label": "Stripe Customer ID",
-      "read_only": 1,
-      "length": 64
-    },
-    {
-      "fieldname": "subscription_started_at",
-      "fieldtype": "Datetime",
-      "label": "Subscription Started At"
-    },
-    {
-      "fieldname": "subscription_renews_at",
-      "fieldtype": "Datetime",
-      "label": "Subscription Renews At"
-    },
-    {
-      "fieldname": "sb_stats",
-      "fieldtype": "Section Break",
-      "label": "Statistics"
-    },
-    {
-      "fieldname": "total_cases",
-      "fieldtype": "Int",
-      "label": "Total Cases",
-      "read_only": 1
-    },
-    {
-      "fieldname": "cb_stats",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "total_spent",
-      "fieldtype": "Currency",
-      "label": "Total Spent",
-      "read_only": 1
-    },
-    {
-      "fieldname": "sb_onboarding",
-      "fieldtype": "Section Break",
-      "label": "Onboarding",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "onboarding_status",
-      "fieldtype": "Select",
-      "label": "Onboarding Status",
-      "options": "Pending Email\nPending Card\nPending KYC\nPending KYB\nUnder Review\nActive\nRejected\nSuspended",
-      "default": "Pending Email",
-      "in_list_view": 1,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "kyc_status",
-      "fieldtype": "Select",
-      "label": "KYC Status",
-      "options": "Not Required\nNot Started\nIn Progress\nPending Review\nPassed\nFailed",
-      "default": "Not Started"
-    },
-    {
-      "fieldname": "kyb_status",
-      "fieldtype": "Select",
-      "label": "KYB Status",
-      "options": "Not Required\nNot Started\nIn Progress\nPending Review\nPassed\nFailed",
-      "default": "Not Required"
-    },
-    {
-      "fieldname": "cb_onb",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "payment_method_added",
-      "fieldtype": "Check",
-      "label": "Payment Method Added",
-      "default": 0
-    },
-    {
-      "fieldname": "stripe_payment_method",
-      "fieldtype": "Data",
-      "label": "Stripe Payment Method ID",
-      "read_only": 1,
-      "length": 64
-    },
-    {
-      "fieldname": "onboarding_started_at",
-      "fieldtype": "Datetime",
-      "label": "Onboarding Started"
-    },
-    {
-      "fieldname": "onboarding_completed_at",
-      "fieldtype": "Datetime",
-      "label": "Onboarding Completed"
-    }
-  ],
-  "permissions": [
-    {
-      "role": "Investigation Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 1,
-      "report": 1,
-      "export": 1,
-      "print": 1,
-      "email": 1,
-      "share": 1
-    },
-    {
-      "role": "Billing Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "report": 1,
-      "print": 1
-    },
-    {
-      "role": "Investigator",
-      "read": 1
-    }
-  ]
+ "doctype": "DocType",
+ "name": "Investigation Client",
+ "module": "Thanatos Core",
+ "track_changes": 1,
+ "autoname": "field:email",
+ "title_field": "client_name",
+ "fields": [
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Client"
+  },
+  {
+   "fieldname": "client_name",
+   "fieldtype": "Data",
+   "label": "Client Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "client_type",
+   "fieldtype": "Select",
+   "label": "Client Type",
+   "options": "Individual\nCompany\nLaw Firm\nAccounting Firm\nOther",
+   "default": "Individual",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "reqd": 1,
+   "options": "Email",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country"
+  },
+  {
+   "fieldname": "vat_number",
+   "fieldtype": "Data",
+   "label": "VAT / CUI"
+  },
+  {
+   "fieldname": "preferred_language",
+   "fieldtype": "Select",
+   "label": "Preferred Language",
+   "options": "Italian\nRomanian\nEnglish",
+   "default": "English"
+  },
+  {
+   "fieldname": "address",
+   "fieldtype": "Text",
+   "label": "Address"
+  },
+  {
+   "fieldname": "sb_link",
+   "fieldtype": "Section Break",
+   "label": "Platform & ERP"
+  },
+  {
+   "fieldname": "platform_user",
+   "fieldtype": "Link",
+   "label": "Platform User",
+   "options": "User"
+  },
+  {
+   "fieldname": "erp_customer_id",
+   "fieldtype": "Data",
+   "label": "ERP Customer ID"
+  },
+  {
+   "fieldname": "cb_link",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "subscription_plan",
+   "fieldtype": "Link",
+   "label": "Subscription Plan",
+   "options": "Investigation Subscription Plan"
+  },
+  {
+   "fieldname": "subscription_status",
+   "fieldtype": "Select",
+   "label": "Subscription Status",
+   "options": "None\nPending\nActive\nPast Due\nSuspended\nCancelled\nExpired",
+   "default": "None"
+  },
+  {
+   "fieldname": "stripe_customer_id",
+   "fieldtype": "Data",
+   "label": "Stripe Customer ID",
+   "read_only": 1,
+   "length": 64
+  },
+  {
+   "fieldname": "subscription_started_at",
+   "fieldtype": "Datetime",
+   "label": "Subscription Started At"
+  },
+  {
+   "fieldname": "subscription_renews_at",
+   "fieldtype": "Datetime",
+   "label": "Subscription Renews At"
+  },
+  {
+   "fieldname": "sb_stats",
+   "fieldtype": "Section Break",
+   "label": "Statistics"
+  },
+  {
+   "fieldname": "total_cases",
+   "fieldtype": "Int",
+   "label": "Total Cases",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_stats",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_spent",
+   "fieldtype": "Currency",
+   "label": "Total Spent",
+   "read_only": 1
+  },
+  {
+   "fieldname": "service_credit",
+   "fieldtype": "Currency",
+   "label": "Credito servizi (€)",
+   "read_only": 1,
+   "description": "Bonus segnalazioni spendibile sui servizi"
+  },
+  {
+   "fieldname": "sb_onboarding",
+   "fieldtype": "Section Break",
+   "label": "Onboarding",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "onboarding_status",
+   "fieldtype": "Select",
+   "label": "Onboarding Status",
+   "options": "Pending Email\nPending Card\nPending KYC\nPending KYB\nUnder Review\nActive\nRejected\nSuspended",
+   "default": "Pending Email",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "kyc_status",
+   "fieldtype": "Select",
+   "label": "KYC Status",
+   "options": "Not Required\nNot Started\nIn Progress\nPending Review\nPassed\nFailed",
+   "default": "Not Started"
+  },
+  {
+   "fieldname": "kyb_status",
+   "fieldtype": "Select",
+   "label": "KYB Status",
+   "options": "Not Required\nNot Started\nIn Progress\nPending Review\nPassed\nFailed",
+   "default": "Not Required"
+  },
+  {
+   "fieldname": "cb_onb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_method_added",
+   "fieldtype": "Check",
+   "label": "Payment Method Added",
+   "default": 0
+  },
+  {
+   "fieldname": "stripe_payment_method",
+   "fieldtype": "Data",
+   "label": "Stripe Payment Method ID",
+   "read_only": 1,
+   "length": 64
+  },
+  {
+   "fieldname": "onboarding_started_at",
+   "fieldtype": "Datetime",
+   "label": "Onboarding Started"
+  },
+  {
+   "fieldname": "onboarding_completed_at",
+   "fieldtype": "Datetime",
+   "label": "Onboarding Completed"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Billing Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Investigator",
+   "read": 1
+  }
+ ]
 }

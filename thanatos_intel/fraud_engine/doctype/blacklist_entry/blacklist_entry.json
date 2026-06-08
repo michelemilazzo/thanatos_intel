@@ -7,29 +7,150 @@
  "title_field": "entry_value",
  "search_fields": "entry_value,entry_type",
  "fields": [
-  {"fieldname":"sb_main","fieldtype":"Section Break","label":"Blacklist Entry"},
-  {"fieldname":"entry_type","fieldtype":"Select","label":"Entry Type","options":"Email\nDomain\nIP\nPhone\nCompany\nPerson\nWallet\nIBAN","reqd":1,"in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"entry_value","fieldtype":"Data","label":"Entry Value","reqd":1,"in_list_view":1,"in_standard_filter":1,"description":"Email, domain, IP, IBAN, ecc."},
-  {"fieldname":"cb_main","fieldtype":"Column Break"},
-  {"fieldname":"risk_level","fieldtype":"Select","label":"Risk Level","options":"Medium\nHigh\nCritical","default":"High","in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"is_active","fieldtype":"Check","label":"Is Active","default":1,"in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"verified","fieldtype":"Check","label":"Verified","default":0},
-  {"fieldname":"sb_src","fieldtype":"Section Break","label":"Source"},
-  {"fieldname":"source","fieldtype":"Select","label":"Source","options":"Internal\nHIBP\nAbuseIPDB\nManual\nCourt\nPolice\nPartner","default":"Internal","reqd":1,"in_standard_filter":1},
-  {"fieldname":"case_ref","fieldtype":"Link","label":"Originating Case","options":"Investigation Case"},
-  {"fieldname":"cb_src","fieldtype":"Column Break"},
-  {"fieldname":"added_by","fieldtype":"Link","label":"Added By","options":"User","default":"__user"},
-  {"fieldname":"sb_stats","fieldtype":"Section Break","label":"Statistics","collapsible":1},
-  {"fieldname":"occurrences","fieldtype":"Int","label":"Occurrences (hits)","default":0,"read_only":1},
-  {"fieldname":"cb_stats","fieldtype":"Column Break"},
-  {"fieldname":"last_seen","fieldtype":"Date","label":"Last Seen","read_only":1},
-  {"fieldname":"sb_reason","fieldtype":"Section Break","label":"Reason"},
-  {"fieldname":"reason","fieldtype":"Text","label":"Reason","reqd":1}
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Blacklist Entry"
+  },
+  {
+   "fieldname": "entry_type",
+   "fieldtype": "Select",
+   "label": "Entry Type",
+   "options": "Email\nDomain\nIP\nPhone\nCompany\nPerson\nWallet\nIBAN",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "entry_value",
+   "fieldtype": "Data",
+   "label": "Entry Value",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Email, domain, IP, IBAN, ecc."
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "risk_level",
+   "fieldtype": "Select",
+   "label": "Risk Level",
+   "options": "Medium\nHigh\nCritical",
+   "default": "High",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active",
+   "default": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "verified",
+   "fieldtype": "Check",
+   "label": "Verified",
+   "default": 0
+  },
+  {
+   "fieldname": "sb_src",
+   "fieldtype": "Section Break",
+   "label": "Source"
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "options": "Internal\nHIBP\nAbuseIPDB\nManual\nCourt\nPolice\nPartner\nCommunity",
+   "default": "Internal",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "case_ref",
+   "fieldtype": "Link",
+   "label": "Originating Case",
+   "options": "Investigation Case"
+  },
+  {
+   "fieldname": "cb_src",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "added_by",
+   "fieldtype": "Link",
+   "label": "Added By",
+   "options": "User",
+   "default": "__user"
+  },
+  {
+   "fieldname": "sb_stats",
+   "fieldtype": "Section Break",
+   "label": "Statistics",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "occurrences",
+   "fieldtype": "Int",
+   "label": "Occurrences (hits)",
+   "default": 0,
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_stats",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_seen",
+   "fieldtype": "Date",
+   "label": "Last Seen",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_reason",
+   "fieldtype": "Section Break",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Text",
+   "label": "Reason",
+   "reqd": 1
+  }
  ],
  "permissions": [
-  {"role":"Investigation Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1,"print":1,"email":1,"share":1},
-  {"role":"Investigator","read":1,"write":1,"create":1,"report":1,"print":1},
-  {"role":"Lawyer","read":1},
-  {"role":"Accountant","read":1}
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Investigator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Lawyer",
+   "read": 1
+  },
+  {
+   "role": "Accountant",
+   "read": 1
+  }
  ]
 }
