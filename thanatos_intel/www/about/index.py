@@ -15,3 +15,10 @@ def get_context(context):
 		("Sequestri & Confische", "Supporto investigativo e documentale per procedure di sequestro e confisca, con tracciabilità delle prove."),
 		("Newsroom", "Analisi e notizie quotidiane su frodi, cyber e investigazioni, contestualizzate per i professionisti."),
 	]
+	# Agenzie affiliate (es. ARES per le DD dei passaporti) — niente dati bancari sul sito
+	context.affiliates = frappe.get_all(
+		"Billing Entity",
+		filters={"is_active": 1, "is_affiliate": 1},
+		fields=["legal_name", "entity_name", "country", "notes"],
+		order_by="entity_name",
+	)

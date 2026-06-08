@@ -59,6 +59,20 @@ body.thanatos-about main { background:#0A0E1A !important; color:#E6E8EE; max-wid
     dal responsabile prima dell'invio. I documenti restano nell'archivio sicuro del cliente, immutabili.
   </p>
 
+  {% if affiliates %}
+  <div class="ab-sec-title">Agenzie affiliate</div>
+  <p class="ab-lead">Per alcuni servizi specialistici — come la <strong>due diligence dei passaporti diplomatici</strong> —
+    Thanatos opera con agenzie investigative affiliate, che curano e fatturano direttamente l'incarico.</p>
+  <div class="ab-grid">
+    {% for a in affiliates %}
+    <div class="ab-card">
+      <h3>{{ a.legal_name or a.entity_name }}</h3>
+      <p>Agenzia investigativa affiliata{% if a.country %} · {{ a.country }}{% endif %}{% if a.notes %} — {{ a.notes }}{% endif %}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div class="ab-cta">
     <a class="ab-btn solid" href="/portal/billing">Vedi i piani →</a>
     <a class="ab-btn" href="/login?redirect-to=/portal">Accedi al portale</a>

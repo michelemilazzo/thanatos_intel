@@ -11,6 +11,7 @@
   {"fieldname": "vat_number", "fieldtype": "Data", "label": "Partita IVA / VAT"},
   {"fieldname": "registration_number", "fieldtype": "Data", "label": "Numero registro / SIREN"},
   {"fieldname": "is_active", "fieldtype": "Check", "label": "Attiva", "default": "1"},
+  {"fieldname": "is_affiliate", "fieldtype": "Check", "label": "Agenzia affiliata (mostra sul sito)", "default": "0"},
   {"fieldname": "cb_1", "fieldtype": "Column Break"},
   {"fieldname": "country", "fieldtype": "Link", "label": "Paese", "options": "Country"},
   {"fieldname": "address", "fieldtype": "Small Text", "label": "Indirizzo"},

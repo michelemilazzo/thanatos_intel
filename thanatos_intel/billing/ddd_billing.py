@@ -90,6 +90,12 @@ def _run(doc):
 		q.quotation_to = "Customer"
 		q.party_name = cust
 		q.company = company
+		# Numerazione dedicata dell'agenzia che fattura le DD passaporti (es. ARES-QTN-AAAA-)
+		if doc.get("billing_entity"):
+			series = "ARES-QTN-.YYYY.-"
+			opts = (frappe.get_meta("Quotation").get_field("naming_series").options or "")
+			if series in opts.split("\n"):
+				q.naming_series = series
 		q.currency = doc.get("currency") or "EUR"
 		q.append("items", {"item_code": item, "qty": 1, "rate": fee,
 			"description": f"Due Diligence diplomatica — {intest} (case {doc.get('ddd_case')})"})
