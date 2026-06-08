@@ -54,9 +54,9 @@ def submit_mandate_for_signing(mandate_name: str) -> dict:
     name = ""
     if mandate.applicant:
         ap = frappe.db.get_value("Applicant Profile", mandate.applicant,
-                                  ["full_name", "email"], as_dict=1) or {}
+                                  ["full_legal_name", "email"], as_dict=1) or {}
         email = ap.get("email", "")
-        name = ap.get("full_name", mandate.applicant)
+        name = ap.get("full_legal_name", mandate.applicant)
 
     if not email:
         # fallback: client del caso DDD
@@ -214,49 +214,75 @@ def _on_submission_completed(mandate_name: str, submission: dict):
 # ---------------------------------------------------------------------------
 
 def _push_signed_to_drive(mandate_name: str, file_url: str):
-    """Crea un Drive Entity nella cartella del caso."""
+    """Copia il PDF firmato in Drive sotto Mandati Firmati/{case_name}/."""
     if not file_url:
         return
     try:
+        import os, shutil
+        from pathlib import Path
+
         mandate = frappe.get_doc("Agency Mandate", mandate_name)
         case_name = mandate.ddd_case
         if not case_name:
             return
-        folder = _get_or_create_case_drive_folder(case_name)
-        if not folder:
+
+        filename = f"{mandate_name}_signed.pdf"
+        src_path = frappe.get_site_path("private", "files", filename)
+        if not os.path.exists(src_path):
             return
 
-        frappe.get_doc({
-            "doctype": "Drive Entity",
-            "title": f"{mandate_name}_signed.pdf",
-            "file_size": 0,
-            "mime_type": "application/pdf",
-            "parent_drive_entity": folder,
-            "file_ext": "pdf",
-        }).insert(ignore_permissions=True)
-        frappe.db.commit()
+        file_size = os.path.getsize(src_path)
+
+        # Esegui come Administrator per avere accesso Drive
+        prev_user = frappe.session.user
+        frappe.set_user("Administrator")
+        try:
+            from drive.utils import get_home_folder, create_drive_file
+            from drive.utils.files import FileManager
+            from drive.api.files import create_folder
+
+            # Team Administrator (root Drive)
+            admin_team = frappe.db.get_value("Drive File",
+                                              {"parent_entity": None}, ["team", "name"], as_dict=1)
+            if not admin_team:
+                return
+            team = admin_team.team
+            home = get_home_folder(team)
+
+            # Cartella "Mandati Firmati" sotto root
+            mandati = frappe.db.get_value("Drive File", {
+                "title": "Mandati Firmati", "parent_entity": home["name"],
+                "is_group": 1, "team": team, "is_active": 1,
+            }, "name")
+            if not mandati:
+                mandati = create_folder(team, "Mandati Firmati", home["name"]).name
+
+            # Cartella per il caso
+            case_folder = frappe.db.get_value("Drive File", {
+                "title": case_name, "parent_entity": mandati,
+                "is_group": 1, "team": team, "is_active": 1,
+            }, "name")
+            if not case_folder:
+                case_folder = create_folder(team, case_name, mandati).name
+
+            manager = FileManager()
+
+            drive_file = create_drive_file(
+                team, filename, case_folder, "application/pdf",
+                lambda entity: manager.get_disk_path(entity, home),
+                file_size,
+            )
+
+            dst_path = manager.site_folder / drive_file.path
+            dst_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src_path, str(dst_path))
+            frappe.db.commit()
+
+        finally:
+            frappe.set_user(prev_user)
+
     except Exception as e:
         frappe.log_error(f"Drive push error: {e}", "DocuSeal Drive")
-
-
-def _get_or_create_case_drive_folder(case_name: str) -> str | None:
-    """Trova o crea la cartella Drive per il caso. Restituisce il name del Drive Entity."""
-    existing = frappe.db.get_value("Drive Entity",
-                                    {"title": case_name, "is_group": 1}, "name")
-    if existing:
-        return existing
-    try:
-        folder = frappe.get_doc({
-            "doctype": "Drive Entity",
-            "title": case_name,
-            "is_group": 1,
-            "mime_type": "frappe_drive/folder",
-        }).insert(ignore_permissions=True)
-        frappe.db.commit()
-        return folder.name
-    except Exception as e:
-        frappe.log_error(f"Drive folder creation error: {e}", "DocuSeal Drive")
-        return None
 
 
 # ---------------------------------------------------------------------------

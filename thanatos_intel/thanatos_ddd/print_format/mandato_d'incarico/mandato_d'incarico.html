@@ -126,11 +126,11 @@
   <div class="party-block">
     <h3>Mandante (Cliente)</h3>
     {% if applicant %}
-    <p class="party-name">{{ applicant.full_name }}</p>
+    <p class="party-name">{{ applicant.full_legal_name }}</p>
     <p class="small">{{ applicant.nationality or "" }}
-      {% if applicant.birth_date %} · nata/o il {{ frappe.utils.formatdate(applicant.birth_date, "dd/MM/yyyy") }}{% endif %}
+      {% if applicant.dob %} · nata/o il {{ frappe.utils.formatdate(applicant.dob, "dd/MM/yyyy") }}{% endif %}
     </p>
-    <p class="small">Documento: {{ applicant.document_type or "" }} {{ applicant.document_number or "" }}</p>
+    {% if applicant.phone %}<p class="small">Tel: {{ applicant.phone }}</p>{% endif %}
     {% else %}
     <p>—</p>
     {% endif %}
@@ -230,7 +230,7 @@
   </div>
   <div class="sig-block">
     <div class="sig-label">Per il Mandante</div>
-    <div class="sig-name">{{ applicant.full_name if applicant else "—" }}</div>
+    <div class="sig-name">{{ applicant.full_legal_name if applicant else "—" }}</div>
     {% if doc.docuseal_signed_pdf %}
     <p class="small">Firmato digitalmente il {{ frappe.utils.formatdate(doc.signed_on, "dd/MM/yyyy") if doc.signed_on else "—" }}</p>
     {% else %}
