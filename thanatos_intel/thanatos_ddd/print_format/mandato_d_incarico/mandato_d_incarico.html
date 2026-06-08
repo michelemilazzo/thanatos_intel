@@ -1,0 +1,251 @@
+{%- set be = {} -%}
+{%- if doc.billing_entity -%}
+  {%- set be = frappe.get_doc("Billing Entity", doc.billing_entity) -%}
+{%- endif -%}
+{%- set emittente = be.legal_name if be and be.legal_name else "THANATOS INVESTIGAZIONI S.R.L." -%}
+{%- set emittente_vat = be.vat_number if be and be.vat_number else "RO 46901022" -%}
+{%- set emittente_addr = be.address if be and be.address else "Str. Traian nr. 22, Constanța, România" -%}
+{%- set emittente_email = be.email if be and be.email else "info@thanatos.agency" -%}
+{%- set emittente_iban = be.iban if be and be.iban else "" -%}
+{%- set gov_law = be.governing_law if be and be.governing_law else "Legea Română" -%}
+{%- set foro = be.jurisdiction if be and be.jurisdiction else "instanțele competente din Constanța" -%}
+{%- set license_line = "" -%}
+{%- if be and be.license_authority -%}
+  {%- set license_line = "Autorizzata da " ~ be.license_authority ~ ((" n. " ~ be.license_number) if be.license_number else "") -%}
+{%- endif -%}
+
+{%- set applicant = {} -%}
+{%- if doc.applicant -%}
+  {%- set applicant = frappe.get_doc("Applicant Profile", doc.applicant) -%}
+{%- endif -%}
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @page { margin: 22mm 18mm 28mm 18mm; size: A4; }
+  * { box-sizing: border-box; }
+  body { font-family: "Times New Roman", Times, serif; font-size: 10.5pt;
+         color: #1A1A2E; line-height: 1.55; margin: 0; }
+
+  /* Header brand */
+  .tx-header { display: flex; align-items: flex-start; justify-content: space-between;
+               padding-bottom: 14px; border-bottom: 2px solid #C8A96E; margin-bottom: 18px; }
+  .tx-logo { height: 48px; }
+  .tx-header-right { text-align: right; font-size: 8.5pt; color: #555; line-height: 1.4; }
+  .tx-header-right strong { font-size: 9.5pt; color: #1A1A2E; display: block; }
+
+  /* Titolo documento */
+  .doc-title { text-align: center; margin: 24px 0 8px; }
+  .doc-title h1 { font-family: Georgia, serif; font-size: 15pt; letter-spacing: 3px;
+                  text-transform: uppercase; color: #1A1A2E; margin: 0 0 4px; font-weight: normal; }
+  .doc-title .doc-number { font-size: 9pt; color: #888; letter-spacing: 2px; }
+
+  /* Riquadro parti */
+  .parties-box { display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+                 border: 1px solid #C8A96E; padding: 14px 18px; margin: 20px 0; border-radius: 2px; }
+  .party-block h3 { font-size: 8pt; letter-spacing: 2px; text-transform: uppercase;
+                    color: #C8A96E; font-family: Georgia, serif; margin: 0 0 6px; font-weight: normal; }
+  .party-block p { margin: 0; font-size: 9.5pt; line-height: 1.5; }
+  .party-block .party-name { font-weight: bold; font-size: 10.5pt; }
+
+  /* Corpo contratto */
+  .clause { margin-bottom: 14px; }
+  .clause .clause-num { font-weight: bold; font-size: 9.5pt; color: #C8A96E;
+                        font-family: Georgia, serif; display: block; margin-bottom: 3px; }
+  .clause p { margin: 0; text-align: justify; }
+
+  /* Tabella importi */
+  .fee-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9.5pt; }
+  .fee-table th { background: #0A0E1A; color: #C8A96E; padding: 7px 12px;
+                  text-align: left; font-size: 8.5pt; letter-spacing: 1px; text-transform: uppercase; }
+  .fee-table td { padding: 7px 12px; border-bottom: 1px solid #E0E0E0; }
+  .fee-table tr:last-child td { border-bottom: none; }
+  .fee-table .total-row td { font-weight: bold; border-top: 2px solid #C8A96E; }
+
+  /* Firma */
+  .signature-section { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .sig-block { border-top: 1px solid #333; padding-top: 8px; }
+  .sig-block .sig-label { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .sig-block .sig-name { font-size: 9.5pt; margin-top: 4px; }
+
+  /* Footer legale */
+  .legal-footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #ddd;
+                  font-size: 7.5pt; color: #888; text-align: center; line-height: 1.5; }
+
+  /* Watermark BOZZA */
+  {% if not doc.docuseal_signed_pdf %}
+  .watermark { position: fixed; top: 45%; left: 20%; transform: rotate(-30deg);
+               font-size: 72pt; color: rgba(200,169,110,0.07); font-family: Georgia, serif;
+               letter-spacing: 12px; z-index: -1; pointer-events: none; }
+  {% endif %}
+
+  /* Utilità */
+  .gold { color: #C8A96E; }
+  .small { font-size: 8.5pt; color: #666; }
+  .mt-20 { margin-top: 20px; }
+  .mb-10 { margin-bottom: 10px; }
+  hr.gold { border: none; border-top: 1px solid #C8A96E; margin: 18px 0; }
+</style>
+</head>
+<body>
+
+{% if not doc.docuseal_signed_pdf %}<div class="watermark">BOZZA</div>{% endif %}
+
+<!-- HEADER -->
+<div class="tx-header">
+  <img class="tx-logo"
+       src="{{ frappe.utils.get_url() }}/assets/thanatos_intel/images/thanatos-logo-mark.png"
+       alt="Thanatos Intel"/>
+  <div class="tx-header-right">
+    <strong>{{ emittente }}</strong>
+    {{ emittente_addr }}<br/>
+    C.F./P.IVA: {{ emittente_vat }}<br/>
+    {{ emittente_email }}
+    {% if license_line %}<br/><em>{{ license_line }}</em>{% endif %}
+  </div>
+</div>
+
+<!-- TITOLO -->
+<div class="doc-title">
+  <h1>Mandato d'Incarico Investigativo</h1>
+  <div class="doc-number">{{ doc.name }} &nbsp;·&nbsp; {{ frappe.utils.formatdate(doc.creation, "dd MMMM yyyy") }}</div>
+</div>
+
+<hr class="gold"/>
+
+<!-- PARTI -->
+<div class="parties-box">
+  <div class="party-block">
+    <h3>Mandatario</h3>
+    <p class="party-name">{{ emittente }}</p>
+    <p class="small">{{ emittente_addr }}</p>
+    {% if emittente_iban %}<p class="small mt-20">IBAN: <strong>{{ emittente_iban }}</strong></p>{% endif %}
+  </div>
+  <div class="party-block">
+    <h3>Mandante (Cliente)</h3>
+    {% if applicant %}
+    <p class="party-name">{{ applicant.full_name }}</p>
+    <p class="small">{{ applicant.nationality or "" }}
+      {% if applicant.birth_date %} · nata/o il {{ frappe.utils.formatdate(applicant.birth_date, "dd/MM/yyyy") }}{% endif %}
+    </p>
+    <p class="small">Documento: {{ applicant.document_type or "" }} {{ applicant.document_number or "" }}</p>
+    {% else %}
+    <p>—</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- OGGETTO -->
+<div class="clause">
+  <span class="clause-num">Art. 1 — Oggetto dell'incarico</span>
+  <p>{{ doc.subject_matter or "Il Mandante conferisce al Mandatario l'incarico di svolgere attività investigativa, di due diligence e di verifica documentale nell'ambito della pratica collegata." }}</p>
+  {% if doc.ddd_case %}
+  <p class="small mt-20">Pratica di riferimento: <strong>{{ doc.ddd_case }}</strong></p>
+  {% endif %}
+</div>
+
+<!-- AMBITO TERRITORIALE -->
+{% if doc.territorial_scope %}
+<div class="clause">
+  <span class="clause-num">Art. 2 — Ambito territoriale</span>
+  <p>{{ doc.territorial_scope }}</p>
+</div>
+{% endif %}
+
+<!-- AUTORIZZAZIONI -->
+<div class="clause">
+  <span class="clause-num">Art. 3 — Autorizzazioni rilasciate dal Mandante</span>
+  <p>Il Mandante autorizza espressamente il Mandatario a:</p>
+  <ul style="margin: 6px 0; padding-left: 20px;">
+    {% if doc.osint_authorization %}<li>Attività di OSINT (ricerca in fonti aperte, web, social, database pubblici)</li>{% endif %}
+    {% if doc.doc_verification_authorization %}<li>Verifica e analisi di documenti di identità e di viaggio</li>{% endif %}
+    {% if doc.third_party_contact_authorization %}<li>Contatto con terze parti nell'ambito delle verifiche</li>{% endif %}
+  </ul>
+</div>
+
+<!-- COMPENSO -->
+<div class="clause">
+  <span class="clause-num">Art. 4 — Compenso</span>
+  <p>Il compenso pattuito per l'esecuzione del presente incarico è il seguente:</p>
+  <table class="fee-table">
+    <thead>
+      <tr><th>Descrizione</th><th>Importo</th><th>Valuta</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Servizio investigativo — {{ doc.subject_matter or "Due Diligence" }}</td>
+        <td>{{ "%.2f"|format(doc.fee_total or 0) }}</td>
+        <td>{{ doc.currency or "EUR" }}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td>Totale</td>
+        <td><strong>{{ "%.2f"|format(doc.fee_total or 0) }} {{ doc.currency or "EUR" }}</strong></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  {% if emittente_iban %}
+  <p class="small">Pagamento tramite bonifico bancario: IBAN <strong>{{ emittente_iban }}</strong>
+    {% if be and be.bic_swift %} · BIC/SWIFT <strong>{{ be.bic_swift }}</strong>{% endif %}
+  </p>
+  {% endif %}
+</div>
+
+<!-- DISCLAIMER NO GARANZIA -->
+<div class="clause">
+  <span class="clause-num">Art. 5 — Limitazione di responsabilità</span>
+  <p>{{ doc.no_guarantee_clause }}</p>
+</div>
+
+<!-- RISERVATEZZA -->
+<div class="clause">
+  <span class="clause-num">Art. 6 — Riservatezza e protezione dei dati</span>
+  <p>Le parti si impegnano a mantenere la massima riservatezza su tutte le informazioni scambiate nell'esecuzione del presente incarico. Il trattamento dei dati personali avviene nel rispetto del GDPR (Reg. UE 2016/679){% if gov_law == "Legea Română" %} e della Legea nr. 190/2018 (Romania){% endif %}.</p>
+</div>
+
+<!-- LEGGE APPLICABILE -->
+<div class="clause">
+  <span class="clause-num">Art. 7 — Legge applicabile e foro competente</span>
+  <p>Il presente contratto è regolato da <strong>{{ gov_law }}</strong>. Per qualsiasi controversia è competente <strong>{{ foro }}</strong>.</p>
+  {% if be and be.legal_disclaimer %}
+  <p class="small mt-20">{{ be.legal_disclaimer }}</p>
+  {% endif %}
+</div>
+
+<!-- FIRMA -->
+<div class="signature-section">
+  <div class="sig-block">
+    <div class="sig-label">Per il Mandatario</div>
+    <div class="sig-name">{{ emittente }}</div>
+    {% if doc.docuseal_signed_pdf %}
+    <p class="small">Firmato digitalmente il {{ frappe.utils.formatdate(doc.signed_on, "dd/MM/yyyy") if doc.signed_on else "—" }}</p>
+    {% else %}
+    <div style="height: 40px; margin-top: 10px;"></div>
+    <p class="small">Firma e timbro</p>
+    {% endif %}
+  </div>
+  <div class="sig-block">
+    <div class="sig-label">Per il Mandante</div>
+    <div class="sig-name">{{ applicant.full_name if applicant else "—" }}</div>
+    {% if doc.docuseal_signed_pdf %}
+    <p class="small">Firmato digitalmente il {{ frappe.utils.formatdate(doc.signed_on, "dd/MM/yyyy") if doc.signed_on else "—" }}</p>
+    {% else %}
+    <div style="height: 40px; margin-top: 10px;"></div>
+    <p class="small">Firma</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- FOOTER LEGALE -->
+<div class="legal-footer">
+  {{ emittente }} · {{ emittente_vat }} · {{ emittente_addr }}<br/>
+  {% if license_line %}{{ license_line }} · {% endif %}
+  Documento n. {{ doc.name }} generato il {{ frappe.utils.now_datetime().strftime("%d/%m/%Y %H:%M") }} UTC
+</div>
+
+</body>
+</html>

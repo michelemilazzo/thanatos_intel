@@ -29,6 +29,7 @@ after_install='thanatos_intel.install.after_install'
 after_migrate='thanatos_intel.install.after_migrate'
 fixtures=[
  'Role',
+ {'doctype': 'Print Format', 'filters': [['name', 'in', ["Mandato d'Incarico", "Proforma DDD"]]]},
  {'doctype': 'Investigation Subscription Plan', 'filters': []},
  {'doctype': 'Service Catalog', 'filters': []},
  {'doctype': 'News Category', 'filters': []},

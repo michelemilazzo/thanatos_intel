@@ -1,0 +1,169 @@
+{%- set be = {} -%}
+{%- if doc.billing_entity -%}
+  {%- set be = frappe.get_doc("Billing Entity", doc.billing_entity) -%}
+{%- endif -%}
+{%- set emittente = be.legal_name if be and be.legal_name else "THANATOS INVESTIGAZIONI S.R.L." -%}
+{%- set emittente_vat = be.vat_number if be and be.vat_number else "RO 46901022" -%}
+{%- set emittente_addr = be.address if be and be.address else "Str. Traian nr. 22, Constanța, România" -%}
+{%- set emittente_iban = be.iban if be and be.iban else "" -%}
+{%- set gov_law = be.governing_law if be and be.governing_law else "Legea Română" -%}
+
+{%- set client = {} -%}
+{%- if doc.client -%}{%- set client = frappe.get_doc("Investigation Client", doc.client) -%}{%- endif -%}
+{%- set applicant = {} -%}
+{%- if doc.applicant -%}{%- set applicant = frappe.get_doc("Applicant Profile", doc.applicant) -%}{%- endif -%}
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8"/>
+<style>
+  @page { margin: 22mm 18mm 28mm 18mm; size: A4; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #1A1A2E; line-height: 1.5; margin: 0; }
+  .tx-header { display: flex; align-items: flex-start; justify-content: space-between;
+               padding-bottom: 14px; border-bottom: 2px solid #C8A96E; margin-bottom: 18px; }
+  .tx-logo { height: 44px; }
+  .tx-header-right { text-align: right; font-size: 8.5pt; color: #555; line-height: 1.4; }
+  .tx-header-right strong { font-size: 9.5pt; color: #1A1A2E; display: block; }
+  .doc-title { text-align: center; margin: 20px 0; }
+  .doc-title h1 { font-size: 16pt; letter-spacing: 3px; text-transform: uppercase;
+                  color: #1A1A2E; margin: 0 0 4px; font-weight: 600; font-family: Georgia, serif; }
+  .doc-title .doc-sub { font-size: 9pt; color: #888; letter-spacing: 2px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 20px 0;
+               border: 1px solid #C8A96E; }
+  .info-cell { padding: 10px 14px; border-bottom: 1px solid #eee; }
+  .info-cell:nth-child(odd) { border-right: 1px solid #eee; }
+  .info-cell .lbl { font-size: 7.5pt; color: #C8A96E; text-transform: uppercase; letter-spacing: 1.5px; }
+  .info-cell .val { font-size: 10pt; font-weight: 600; margin-top: 2px; }
+  table.items { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 9.5pt; }
+  table.items th { background: #0A0E1A; color: #C8A96E; padding: 8px 12px; font-size: 8pt;
+                   letter-spacing: 1px; text-transform: uppercase; text-align: left; }
+  table.items td { padding: 9px 12px; border-bottom: 1px solid #eee; }
+  table.items .subtotal td { font-weight: 600; border-top: 2px solid #C8A96E;
+                              background: #f9f7f3; font-size: 10.5pt; }
+  .payment-box { background: #f9f7f3; border-left: 3px solid #C8A96E; padding: 12px 16px; margin: 18px 0; }
+  .payment-box .lbl { font-size: 8pt; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+  .payment-box .val { font-size: 10pt; font-weight: 600; margin-top: 3px; }
+  .legal-box { font-size: 7.5pt; color: #888; margin-top: 28px; padding-top: 12px;
+               border-top: 1px solid #ddd; text-align: center; line-height: 1.5; }
+  .status-badge { display: inline-block; padding: 3px 10px; font-size: 8pt; letter-spacing: 1px;
+                  text-transform: uppercase; border-radius: 2px; font-weight: 600;
+                  background: {% if doc.payment_status == 'Paid' %}#d4edda{% else %}#fff3cd{% endif %};
+                  color: {% if doc.payment_status == 'Paid' %}#155724{% else %}#856404{% endif %}; }
+  .note-box { font-size: 9pt; color: #555; margin: 14px 0; padding: 10px 14px;
+              border: 1px dashed #ccc; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="tx-header">
+  <img class="tx-logo"
+       src="{{ frappe.utils.get_url() }}/assets/thanatos_intel/images/thanatos-logo-mark.png"
+       alt="Thanatos"/>
+  <div class="tx-header-right">
+    <strong>{{ emittente }}</strong>
+    {{ emittente_addr }}<br/>P.IVA/CUI: {{ emittente_vat }}
+  </div>
+</div>
+
+<!-- TITOLO -->
+<div class="doc-title">
+  <h1>Preventivo / Proforma</h1>
+  <div class="doc-sub">{{ doc.name }}
+    &nbsp;·&nbsp; {{ frappe.utils.formatdate(doc.creation, "dd MMMM yyyy") }}
+    &nbsp;·&nbsp; <span class="status-badge">{{ doc.payment_status or "Da saldare" }}</span>
+  </div>
+</div>
+
+<!-- INFO GRID -->
+<div class="info-grid">
+  <div class="info-cell">
+    <div class="lbl">Cliente</div>
+    <div class="val">{{ client.client_name if client else doc.client }}</div>
+  </div>
+  <div class="info-cell">
+    <div class="lbl">Pratica</div>
+    <div class="val">{{ doc.ddd_case or "—" }}</div>
+  </div>
+  <div class="info-cell">
+    <div class="lbl">Richiedente</div>
+    <div class="val">{{ applicant.full_name if applicant else "—" }}</div>
+  </div>
+  <div class="info-cell">
+    <div class="lbl">Scadenza pagamento</div>
+    <div class="val">{{ frappe.utils.formatdate(doc.due_date, "dd/MM/yyyy") if doc.get("due_date") else "—" }}</div>
+  </div>
+</div>
+
+<!-- VOCI -->
+<table class="items">
+  <thead>
+    <tr>
+      <th style="width:50%">Descrizione servizio</th>
+      <th style="width:20%">Quantità</th>
+      <th style="width:15%">Prezzo unit.</th>
+      <th style="width:15%">Totale</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if doc.get("services") %}
+      {% for s in doc.services %}
+      <tr>
+        <td>{{ s.service_name or s.description or "—" }}</td>
+        <td>{{ s.qty or 1 }}</td>
+        <td>{{ "%.2f"|format(s.unit_price or s.rate or 0) }} {{ doc.currency or "EUR" }}</td>
+        <td>{{ "%.2f"|format(s.amount or (s.qty or 1) * (s.unit_price or s.rate or 0)) }} {{ doc.currency or "EUR" }}</td>
+      </tr>
+      {% endfor %}
+    {% else %}
+    <tr>
+      <td>Servizio DDD — {{ doc.ddd_case or "Pratica" }}</td>
+      <td>1</td>
+      <td>{{ "%.2f"|format(doc.total_amount or 0) }} {{ doc.currency or "EUR" }}</td>
+      <td>{{ "%.2f"|format(doc.total_amount or 0) }} {{ doc.currency or "EUR" }}</td>
+    </tr>
+    {% endif %}
+  </tbody>
+  <tfoot>
+    <tr class="subtotal">
+      <td colspan="3">Totale dovuto</td>
+      <td><strong>{{ "%.2f"|format(doc.total_amount or 0) }} {{ doc.currency or "EUR" }}</strong>
+        {% if doc.get("total_amount_ron") %}
+        <br/><span style="font-size:8pt;color:#888">≈ {{ "%.2f"|format(doc.total_amount_ron) }} RON</span>
+        {% endif %}
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
+<!-- PAGAMENTO -->
+{% if emittente_iban %}
+<div class="payment-box">
+  <div class="lbl">Coordinate bancarie per il pagamento</div>
+  <div class="val">{{ emittente }}</div>
+  <div style="margin-top:4px;font-size:9.5pt">
+    IBAN: <strong>{{ emittente_iban }}</strong>
+    {% if be and be.bic_swift %} &nbsp;·&nbsp; BIC/SWIFT: <strong>{{ be.bic_swift }}</strong>{% endif %}
+    {% if be and be.bank_name %} &nbsp;·&nbsp; {{ be.bank_name }}{% endif %}
+  </div>
+  <div style="margin-top:4px;font-size:9pt;color:#666">
+    Causale: {{ doc.name }}{% if doc.ddd_case %} — {{ doc.ddd_case }}{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if doc.get("notes") %}
+<div class="note-box">{{ doc.notes }}</div>
+{% endif %}
+
+<!-- FOOTER -->
+<div class="legal-box">
+  {{ emittente }} · {{ emittente_vat }} · {{ emittente_addr }}<br/>
+  Proforma n. {{ doc.name }} — Il presente documento non costituisce fattura fiscale ai sensi di legge.<br/>
+  Legge applicabile: {{ gov_law }}
+</div>
+
+</body>
+</html>
