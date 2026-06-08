@@ -1,0 +1,100 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{{ thanatos_header('collabora') }}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2742;--ok:#6aa66a;--err:#d05a5a;}
+.cw{background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif}
+.hero{max-width:900px;margin:0 auto;padding:64px 24px 28px;text-align:center}
+.kick{color:var(--gold);font-size:12px;letter-spacing:4px;text-transform:uppercase}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:40px;color:#fff;margin:14px 0 14px}
+.hero p{color:#C8CBD4;font-size:17px;line-height:1.6;max-width:680px;margin:0 auto}
+.wrap{max-width:1080px;margin:0 auto;padding:24px}
+.perks{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:24px 0 8px}
+.perk{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:18px 20px}
+.perk h3{color:var(--gold);font-weight:400;font-size:15px;letter-spacing:1px;margin:0 0 8px}
+.perk p{color:var(--grey);font-size:13px;line-height:1.55;margin:0}
+.sec{font-family:Georgia,serif;font-size:18px;color:#fff;letter-spacing:2px;text-transform:uppercase;margin:42px 0 18px;text-align:center}
+.roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.role{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px 20px}
+.role h4{color:#fff;font-weight:500;font-size:15px;margin:0 0 6px}
+.role p{color:var(--grey);font-size:12.5px;line-height:1.5;margin:0}
+.form{max-width:640px;margin:36px auto 0;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:26px}
+label{display:block;color:var(--grey);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin:12px 0 6px}
+input,select,textarea{width:100%;background:var(--bg);color:#E8E9F0;border:1px solid var(--border);padding:12px 14px;border-radius:5px;font-size:14px;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+textarea{min-height:80px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.grid2{grid-template-columns:1fr}}
+.btn{margin-top:18px;width:100%;background:var(--gold);color:#0A0E1A;border:0;padding:15px;border-radius:6px;font-size:13px;letter-spacing:2px;text-transform:uppercase;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.4}
+.msg{margin-top:14px;padding:12px 16px;border-radius:6px;font-size:13px;display:none}
+.msg.ok{display:block;background:rgba(106,166,106,.14);border:1px solid rgba(106,166,106,.4);color:#8fd08f}
+.msg.err{display:block;background:rgba(208,90,90,.14);border:1px solid rgba(208,90,90,.4);color:#e79a9a}
+</style>
+<div class="cw">
+  <div class="hero">
+    <div class="kick">Collabora con Thanatos</div>
+    <h1>Lavora con noi, guadagna con noi</h1>
+    <p>Investigatori, agenzie, avvocati e commercialisti: ricevi incarichi qualificati, strumenti professionali e <strong>pagamenti tracciati</strong>. Con il tuo <strong>wallet</strong> vedi in ogni momento quanto Thanatos ti ha fatto guadagnare.</p>
+  </div>
+  <div class="wrap">
+    <div class="perks">
+      <div class="perk"><h3>Incarichi qualificati</h3><p>Un flusso costante di pratiche selezionate, nella tua area e specializzazione.</p></div>
+      <div class="perk"><h3>Wallet trasparente</h3><p>Guadagni maturati, in attesa e già liquidati: tutto visibile, in tempo reale.</p></div>
+      <div class="perk"><h3>Strumenti inclusi</h3><p>OSINT, antifrode, dossier compliance e catena di custodia con SHA-256.</p></div>
+      <div class="perk"><h3>Pagamenti tracciati</h3><p>Compensi gestiti e liquidati con regole chiare, niente sorprese.</p></div>
+    </div>
+
+    <div class="sec">Per chi</div>
+    <div class="roles">
+      {% for code, name, desc in roles %}
+      <div class="role"><h4>{{ name }}</h4><p>{{ desc }}</p></div>
+      {% endfor %}
+    </div>
+
+    <div class="sec">Candidati</div>
+    <div class="form">
+      <div class="grid2">
+        <div><label>Nome / Ragione sociale *</label><input id="aname"></div>
+        <div><label>Ruolo *</label><select id="arole">
+          {% for code, name, desc in roles %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
+        </select></div>
+      </div>
+      <div class="grid2">
+        <div><label>Email *</label><input id="aemail" type="email"></div>
+        <div><label>Telefono</label><input id="aphone"></div>
+      </div>
+      <div class="grid2">
+        <div><label>Area / Regione</label><input id="aregion"></div>
+        <div><label>Licenza / iscrizione albo</label><input id="alicense"></div>
+      </div>
+      <label>Presentazione / esperienza</label>
+      <textarea id="amsg"></textarea>
+      <button class="btn" id="send">Invia candidatura</button>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+</div>
+{{ thanatos_footer() }}
+<script>
+const CSRF="{{ csrf_token }}";
+const btn=document.getElementById('send'),msg=document.getElementById('msg');
+btn.addEventListener('click',async()=>{
+  const g=id=>document.getElementById(id).value.trim();
+  if(!g('aname')||!g('aemail')||!g('arole')){msg.className='msg err';msg.textContent='Nome, email e ruolo sono obbligatori.';return;}
+  btn.disabled=true;
+  try{
+    const fd=new FormData();
+    fd.append('applicant_name',g('aname'));fd.append('role',g('arole'));fd.append('email',g('aemail'));
+    fd.append('phone',g('aphone'));fd.append('region',g('aregion'));fd.append('license_info',g('alicense'));fd.append('message',g('amsg'));
+    const r=await fetch('/api/method/thanatos_intel.www.collabora.index.submit_application',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd});
+    const d=await r.json();const m=d.message||d;
+    if(m&&m.ok){msg.className='msg ok';msg.textContent='Candidatura inviata. Ti ricontatteremo presto.';['aname','aemail','aphone','aregion','alicense','amsg'].forEach(i=>document.getElementById(i).value='');}
+    else throw new Error((m&&m.exc)||'errore');
+  }catch(e){msg.className='msg err';msg.textContent='Errore: '+e.message;}
+  btn.disabled=false;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{
+ "doctype": "DocType", "name": "Affiliate Application", "module": "Billing",
+ "autoname": "format:AFF-{YYYY}-{#####}", "track_changes": 1, "title_field": "applicant_name",
+ "fields": [
+  {"fieldname": "applicant_name", "fieldtype": "Data", "label": "Nome / Ragione sociale", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "role", "fieldtype": "Select", "label": "Ruolo", "options": "Investigator\nAgency\nLawyer\nAccountant\nConsultant", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "email", "fieldtype": "Data", "label": "Email", "options": "Email", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "phone", "fieldtype": "Data", "label": "Telefono"},
+  {"fieldname": "cb_1", "fieldtype": "Column Break"},
+  {"fieldname": "country", "fieldtype": "Link", "label": "Paese", "options": "Country"},
+  {"fieldname": "region", "fieldtype": "Data", "label": "Area / Regione"},
+  {"fieldname": "license_info", "fieldtype": "Data", "label": "Licenza / iscrizione albo"},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Stato", "options": "New\nContacted\nApproved\nRejected", "default": "New", "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "sb_msg", "fieldtype": "Section Break", "label": "Messaggio"},
+  {"fieldname": "message", "fieldtype": "Small Text", "label": "Presentazione / esperienza"}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
+ ]
+}
