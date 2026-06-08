@@ -35,6 +35,14 @@
    "options": "Agency Mandate"
   },
   {
+   "fieldname": "billing_entity",
+   "fieldtype": "Link",
+   "label": "Entità di fatturazione",
+   "options": "Billing Entity",
+   "read_only": 1,
+   "description": "Agenzia che emette il documento (da Impostazioni Fatturazione)"
+  },
+  {
    "fieldname": "issued_on",
    "fieldtype": "Date",
    "label": "Issued On"

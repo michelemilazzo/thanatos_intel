@@ -1,0 +1,14 @@
+{
+ "doctype": "DocType",
+ "name": "Thanatos Billing Settings",
+ "module": "Billing",
+ "issingle": 1,
+ "fields": [
+  {"fieldname": "sb_entities", "fieldtype": "Section Break", "label": "Entità di fatturazione (piattaforma)"},
+  {"fieldname": "default_billing_entity", "fieldtype": "Link", "label": "Entità di fatturazione predefinita", "options": "Billing Entity"},
+  {"fieldname": "ddd_billing_entity", "fieldtype": "Link", "label": "Fattura le DD passaporti (DDD)", "options": "Billing Entity", "description": "Agenzia che emette proforma/fatture per le due diligence dei passaporti — vale su tutta la piattaforma"}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+ ]
+}

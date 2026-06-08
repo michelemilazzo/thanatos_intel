@@ -31,6 +31,15 @@ def generate(mandate_name: str) -> str:
     m = frappe.get_doc("Agency Mandate", mandate_name)
     case = frappe.get_doc("Diplomatic Eligibility Case", m.ddd_case) if m.ddd_case else None
     applicant = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
+
+    # Entità di fatturazione (agenzia che emette/fattura le DD passaporti — config di piattaforma)
+    from thanatos_intel.billing.billing_entity import get_ddd_billing_entity
+    entity = None
+    if m.get("billing_entity") and frappe.db.exists("Billing Entity", m.billing_entity):
+        entity = frappe.get_doc("Billing Entity", m.billing_entity)
+    else:
+        entity = get_ddd_billing_entity()
+    mandatario = (entity.legal_name or entity.entity_name) if entity else "Thanatos Intel — OneKey Co."
     steps = frappe.get_all("Mandate Service Step", filters={"mandate": mandate_name},
                            fields=["step_no", "title", "description", "fee", "vat_pct",
                                    "due_date", "status", "payment_status"],
@@ -54,8 +63,15 @@ def generate(mandate_name: str) -> str:
                               f"nato il {applicant.dob} a {applicant.place_of_birth or '-'}, "
                               f"residente in {applicant.current_residence or '-'}.", s["BodyText"]))
     story += [Spacer(1, 0.3*cm),
-              Paragraph(f"<b>Mandatario:</b> Thanatos Intel — OneKey Co.", s["BodyText"]),
-              Spacer(1, 0.4*cm),
+              Paragraph(f"<b>Mandatario:</b> {mandatario}", s["BodyText"])]
+    if entity and (entity.iban or entity.bank_name):
+        story.append(Paragraph(
+            f"<b>Coordinate per il pagamento:</b> {entity.bank_name or ''} — "
+            f"Titolare: {entity.account_holder or mandatario}"
+            + (f" — IBAN: {entity.iban}" if entity.iban else "")
+            + (f" — BIC: {entity.bic_swift}" if entity.bic_swift else ""),
+            s["BodyText"]))
+    story += [Spacer(1, 0.4*cm),
               Paragraph("<b>1. Oggetto</b>", s["H2g"]),
               Paragraph(m.subject_matter or "Due diligence, OSINT e preparazione dossier istituzionale.", s["BodyText"]),
               Spacer(1, 0.3*cm),

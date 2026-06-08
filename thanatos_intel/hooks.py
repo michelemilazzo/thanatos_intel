@@ -76,13 +76,17 @@ doc_events={
    'after_insert': 'thanatos_intel.integrations.intel_inbox.ensure_case_folder_hook',
  },
  'Agency Mandate': {
+   'validate': 'thanatos_intel.billing.billing_entity.stamp_ddd_billing_entity',
    'on_update': 'thanatos_intel.billing.ddd_billing.on_mandate_update',
  },
  'Revenue Distribution': {
    'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
  },
  'Diplomatic Proforma': {
-   'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
+   'validate': [
+     'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
+     'thanatos_intel.billing.billing_entity.stamp_ddd_billing_entity',
+   ],
  },
  'Usage Event': {
    'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
