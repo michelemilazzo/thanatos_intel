@@ -63,6 +63,9 @@ doc_events={
  'Investigation Case': {
    'after_insert': 'thanatos_intel.integrations.intel_inbox.ensure_case_folder_hook',
  },
+ 'Agency Mandate': {
+   'on_update': 'thanatos_intel.billing.ddd_billing.on_mandate_update',
+ },
 }
 scheduler_events={
  'cron':{},
