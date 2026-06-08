@@ -1,7 +1,15 @@
-{% extends "thanatos_intel/templates/standalone.html" %}
+{% extends "templates/web.html" %}
 {% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
 {% block title %}{{ title }}{% endblock %}
-{% block content %}
+
+{% block head_include %}
+<style>
+body, body .page_content, body .container { background:#0A0E1A !important; max-width:100% !important; }
+</style>
+{% endblock %}
+
+{% block page_content %}
 {{ thanatos_header('registrati') }}
 <style>
 :root{--gold:#C8A96E;--dark:#0A0E1A;--panel:#111729;--border:#1F2742;--grey:#7A8294;--ok:#6aa66a;--err:#d05a5a;}
