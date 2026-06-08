@@ -53,6 +53,7 @@
       <a href="/portal" class="{% if active=='portal' %}act{% endif %}">Portale</a>
       <a href="/portal/billing" class="{% if active=='billing' %}act{% endif %}">Piani</a>
       {% if frappe.session.user == 'Guest' %}
+      <a class="tx-cta" href="/registrati">Registrati</a>
       <a class="tx-cta solid" href="/login?redirect-to=/portal">Accedi</a>
       {% else %}
       {% set _staff = is_full_access() %}
