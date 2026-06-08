@@ -99,13 +99,12 @@ def submit_mandate_for_signing(mandate_name: str) -> dict:
         frappe.throw(f"DocuSeal error {resp.status_code}: {resp.text[:300]}")
 
     data = resp.json()
-    submission_id = data.get("id")
-    # signing URL: first submitter's embed_src or slug
-    submitters = data.get("submitters", [])
-    signing_url = ""
-    if submitters:
-        slug = submitters[0].get("slug", "")
-        signing_url = f"{conf['base_url']}/s/{slug}" if slug else submitters[0].get("embed_src", "")
+    # DocuSeal POST /api/submissions returns a list of submitter objects
+    submitters = data if isinstance(data, list) else data.get("submitters", [])
+    first = submitters[0] if submitters else {}
+    submission_id = first.get("submission_id") or first.get("id")
+    slug = first.get("slug", "")
+    signing_url = f"{conf['base_url']}/s/{slug}" if slug else first.get("embed_src", "")
 
     mandate.db_set("docuseal_submission_id", submission_id, update_modified=False)
     mandate.db_set("docuseal_signing_url", signing_url, update_modified=False)
