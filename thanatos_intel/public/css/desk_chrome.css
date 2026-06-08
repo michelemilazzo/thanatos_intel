@@ -35,3 +35,7 @@ a[href*="thanatos-intel"] .icon-container > svg {
 .standard-sidebar-item a[href*="thanatos-intel"] svg {
   filter: brightness(0) saturate(100%) invert(73%) sepia(28%) saturate(434%) hue-rotate(8deg) brightness(94%) contrast(89%);
 }
+
+/* Posizionamento FAB: Assistente (guida) a sinistra, MMOS AI a destra */
+#mmos-guide-btn { left: 22px !important; right: auto !important; }
+#mmos-ai-fab    { right: 22px !important; left: auto !important; }
