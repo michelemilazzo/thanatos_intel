@@ -36,6 +36,17 @@ a[href*="thanatos-intel"] .icon-container > svg {
   filter: brightness(0) saturate(100%) invert(73%) sepia(28%) saturate(434%) hue-rotate(8deg) brightness(94%) contrast(89%);
 }
 
-/* Posizionamento FAB: Assistente (guida) a sinistra, MMOS AI a destra */
-#mmos-guide-btn { left: 22px !important; right: auto !important; }
-#mmos-ai-fab    { right: 22px !important; left: auto !important; }
+/* FAB ancorati nello spazio bianco (contenuto), fissi e sempre nella stessa posizione,
+   impilati in basso a destra: MMOS AI in basso, Assistente sopra. Mai sopra la sidebar. */
+#mmos-ai-fab {
+  position: fixed !important;
+  right: 22px !important; left: auto !important;
+  bottom: 22px !important; top: auto !important;
+  z-index: 1030 !important;
+}
+#mmos-guide-btn {
+  position: fixed !important;
+  right: 22px !important; left: auto !important;
+  bottom: 84px !important; top: auto !important;
+  z-index: 1030 !important;
+}
