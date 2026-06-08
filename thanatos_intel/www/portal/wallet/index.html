@@ -1,0 +1,83 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}{{ title }}{% endblock %}
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2842;--ok:#6aa66a;}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:840px;margin:0 auto;padding:40px 24px 60px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 22px}
+.section-title{font-family:Georgia,serif;font-size:16px;color:#fff;letter-spacing:2px;text-transform:uppercase;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid rgba(200,169,110,.15)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:8px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px 20px}
+.card .v{font-family:Georgia,serif;font-size:30px;color:var(--gold);line-height:1}
+.card.big .v{font-size:34px}
+.card .l{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;margin-top:8px}
+.card .d{font-size:10px;color:#5B6276;margin-top:3px}
+.led{background:var(--panel);border:1px solid var(--border);border-radius:6px;margin-top:12px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px}
+.row:last-child{border-bottom:0}
+.badge{font-size:9px;padding:2px 7px;border-radius:3px;letter-spacing:1px;text-transform:uppercase;margin-right:8px}
+.b-Earned,.b-Commission{background:rgba(106,166,106,.18);color:#8fd08f}
+.b-Spent,.b-Payout{background:rgba(200,169,110,.18);color:var(--gold)}
+.amt.pos{color:#8fd08f}.amt.neg{color:var(--gold)}
+.when{color:var(--grey);font-size:11px;white-space:nowrap}
+.cta{display:inline-block;margin:6px 8px 0 0;padding:9px 16px;background:var(--gold);color:#0A0E1A;text-decoration:none;border-radius:6px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase}
+.cta.ghost{background:transparent;border:1px solid var(--border);color:#E8E9F0}
+.empty{padding:28px 20px;text-align:center;color:var(--grey);border:1px dashed var(--border);border-radius:6px}
+</style>
+{% endblock %}
+{% block content %}
+{{ thanatos_header('portal') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> › Wallet</div>
+  <h1>Il tuo wallet</h1>
+
+  {% if client %}
+  <div class="section-title">Credito servizi</div>
+  <div class="cards">
+    <div class="card big"><div class="v">{{ "%.2f"|format(credit) }}€</div><div class="l">Credito disponibile</div><div class="d">spendibile sui servizi nel portale</div></div>
+  </div>
+  <a class="cta" href="/portal/segnala">Segnala e guadagna credito →</a>
+  <a class="cta ghost" href="/portal/verifica-blacklist">Usa il credito (verifica blacklist)</a>
+  {% if client_moves %}
+  <div class="led">
+    {% for m in client_moves %}
+    <div class="row">
+      <div><span class="badge b-{{ m.kind }}">{{ m.kind }}</span>{{ m.notes or m.kind }}</div>
+      <div><span class="amt {{ 'pos' if m.kind=='Earned' else 'neg' }}">{{ '+' if m.kind=='Earned' else '−' }}{{ "%.2f"|format(m.amount) }}€</span>
+        <span class="when"> · {{ frappe.utils.format_datetime(m.creation, 'dd/MM/yy') }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}<div class="empty">Nessun movimento ancora. Segnala alla blacklist per guadagnare credito.</div>{% endif %}
+  {% endif %}
+
+  {% if earnings %}
+  <div class="section-title">Quanto hai guadagnato con Thanatos</div>
+  <div class="cards">
+    <div class="card big"><div class="v">{{ "%.2f"|format(earnings.earned) }}€</div><div class="l">Guadagnato (totale)</div><div class="d">incarichi tramite Thanatos</div></div>
+    <div class="card"><div class="v">{{ "%.2f"|format(earnings.pending) }}€</div><div class="l">In attesa</div><div class="d">da liquidare</div></div>
+    <div class="card"><div class="v">{{ "%.2f"|format(earnings.paid) }}€</div><div class="l">Già pagato</div><div class="d">liquidato</div></div>
+  </div>
+  {% if agent_moves %}
+  <div class="led">
+    {% for m in agent_moves %}
+    <div class="row">
+      <div><span class="badge b-{{ m.kind }}">{{ 'Guadagno' if m.kind=='Commission' else 'Pagamento' }}</span>{{ m.notes or m.reference_name }}</div>
+      <div><span class="amt {{ 'pos' if m.kind=='Commission' else 'neg' }}">{{ '+' if m.kind=='Commission' else '−' }}{{ "%.2f"|format(m.amount) }}€</span>
+        <span class="when"> · {{ frappe.utils.format_datetime(m.creation, 'dd/MM/yy') }}</span></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endif %}
+
+  {% if not client and not earnings %}
+  <div class="empty">Il tuo account non è ancora collegato a un profilo cliente o agente.</div>
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

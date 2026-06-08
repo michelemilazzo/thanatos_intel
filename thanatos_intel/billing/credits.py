@@ -1,39 +1,109 @@
-"""Wallet credito servizi del cliente (bonus segnalazioni, spesa su interrogazioni)."""
+"""Wallet unificato per controparte (Credit Ledger).
+
+- Clienti: credito bonus (Earned dalle segnalazioni) − Spent (interrogazioni/servizi).
+  Saldo spendibile su Investigation Client.service_credit (solo portale).
+- Agenti / Agenzie / Avvocati / Commercialisti: guadagni maturati tramite Thanatos
+  (Commission, accreditati dai Party Payout) − Payout (pagati). Mostra "quanto
+  Thanatos ha fatto guadagnare".
+"""
 import frappe
 from frappe.utils import flt, get_first_day, today
 
+PAID_STATUSES = ("Transferred", "Manual Bonifico")
+
+
+# ---------------- core ----------------
+
+def _post(party_type, party, kind, amount, client=None, balance_after=None,
+          ref_dt=None, ref_name=None, notes=None):
+    frappe.get_doc({
+        "doctype": "Credit Ledger", "party_type": party_type, "party": party,
+        "client": client, "kind": kind, "amount": abs(flt(amount)),
+        "balance_after": balance_after, "reference_doctype": ref_dt,
+        "reference_name": ref_name, "notes": notes,
+    }).insert(ignore_permissions=True)
+
+
+def _ledger_exists(kind, ref_name):
+    return bool(ref_name) and frappe.db.exists(
+        "Credit Ledger", {"kind": kind, "reference_name": ref_name})
+
+
+# ---------------- credito CLIENTE (bonus spendibile in portale) ----------------
 
 def get_balance(client):
     return flt(frappe.db.get_value("Investigation Client", client, "service_credit"))
 
 
-def _post(client, kind, amount, ref_dt=None, ref_name=None, notes=None):
-    amount = flt(amount)
+def _client_move(client, kind, amount):
     bal = get_balance(client)
-    delta = amount if kind == "Earned" else (-amount if kind == "Spent" else amount)
+    delta = flt(amount) if kind == "Earned" else -flt(amount)
     new_bal = flt(bal + delta)
-    frappe.get_doc({
-        "doctype": "Credit Ledger", "client": client, "kind": kind, "amount": abs(amount),
-        "balance_after": new_bal, "reference_doctype": ref_dt, "reference_name": ref_name,
-        "notes": notes,
-    }).insert(ignore_permissions=True)
     frappe.db.set_value("Investigation Client", client, "service_credit", new_bal, update_modified=False)
     return new_bal
 
 
 def grant_credit(client, amount, ref_dt=None, ref_name=None, notes=None):
-    return _post(client, "Earned", amount, ref_dt, ref_name, notes)
+    new_bal = _client_move(client, "Earned", amount)
+    _post("Client", client, "Earned", amount, client=client, balance_after=new_bal,
+          ref_dt=ref_dt, ref_name=ref_name, notes=notes)
+    return new_bal
 
 
 def spend_credit(client, amount, ref_dt=None, ref_name=None, notes=None):
     if get_balance(client) < flt(amount):
         frappe.throw("Credito insufficiente.")
-    return _post(client, "Spent", amount, ref_dt, ref_name, notes)
+    new_bal = _client_move(client, "Spent", amount)
+    _post("Client", client, "Spent", amount, client=client, balance_after=new_bal,
+          ref_dt=ref_dt, ref_name=ref_name, notes=notes)
+    return new_bal
 
 
 def monthly_earned(client):
     start = get_first_day(today())
     rows = frappe.get_all("Credit Ledger",
-                          filters={"client": client, "kind": "Earned", "creation": [">=", start]},
+                          filters={"party": client, "kind": "Earned", "creation": [">=", start]},
                           fields=["amount"])
     return sum(flt(r.amount) for r in rows)
+
+
+# ---------------- guadagni AGENTI / AGENZIE (via Thanatos) ----------------
+
+def credit_commission(party_type, party, amount, ref_dt=None, ref_name=None, notes=None):
+    """Accredita un guadagno maturato tramite Thanatos (idempotente per ref)."""
+    if _ledger_exists("Commission", ref_name):
+        return
+    _post(party_type, party, "Commission", amount, ref_dt=ref_dt, ref_name=ref_name, notes=notes)
+
+
+def record_payout(party_type, party, amount, ref_dt=None, ref_name=None, notes=None):
+    """Registra il pagamento effettuato alla controparte (idempotente per ref)."""
+    if _ledger_exists("Payout", ref_name):
+        return
+    _post(party_type, party, "Payout", amount, ref_dt=ref_dt, ref_name=ref_name, notes=notes)
+
+
+def party_earnings(party_type, party):
+    """Riepilogo guadagni di una controparte."""
+    rows = frappe.get_all("Credit Ledger",
+                          filters={"party_type": party_type, "party": party},
+                          fields=["kind", "amount"])
+    commission = sum(flt(r.amount) for r in rows if r.kind == "Commission")
+    payout = sum(flt(r.amount) for r in rows if r.kind == "Payout")
+    return {"earned": commission, "paid": payout, "pending": flt(commission - payout)}
+
+
+# ---------------- hook Party Payout ----------------
+
+def on_party_payout_update(doc, method=None):
+    """Ogni Party Payout alimenta il wallet della controparte: Commission alla creazione,
+    Payout quando risulta pagato."""
+    if not doc.get("beneficiary_name"):
+        return
+    pt = doc.beneficiary_type or "Agency"
+    party = doc.beneficiary_name
+    credit_commission(pt, party, doc.amount, "Party Payout", doc.name,
+                      f"Guadagno da {doc.get('investigation_case') or doc.name}")
+    if doc.status in PAID_STATUSES:
+        record_payout(pt, party, doc.amount, "Party Payout", doc.name,
+                      f"Pagamento {doc.name}")

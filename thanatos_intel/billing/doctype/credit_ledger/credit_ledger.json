@@ -1,12 +1,15 @@
 {
  "doctype": "DocType", "name": "Credit Ledger", "module": "Billing",
  "autoname": "format:CRL-{YYYY}-{#####}",
+ "title_field": "party",
  "fields": [
-  {"fieldname": "client", "fieldtype": "Link", "label": "Cliente", "options": "Investigation Client", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "kind", "fieldtype": "Select", "label": "Tipo", "options": "Earned\nSpent\nAdjustment", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "amount", "fieldtype": "Currency", "label": "Importo (€)", "reqd": 1, "in_list_view": 1, "description": "Sempre positivo; il tipo determina il segno sul saldo"},
+  {"fieldname": "party_type", "fieldtype": "Select", "label": "Tipo controparte", "options": "Client\nInvestigator\nAgency\nLawyer\nAccountant\nConsultant\nMMOS\nThanatos", "reqd": 1, "default": "Client", "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "party", "fieldtype": "Data", "label": "Controparte", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1, "description": "Cliente = Investigation Client; agenti/agenzie = nome beneficiario"},
+  {"fieldname": "client", "fieldtype": "Link", "label": "Cliente", "options": "Investigation Client", "in_standard_filter": 1},
+  {"fieldname": "kind", "fieldtype": "Select", "label": "Movimento", "options": "Earned\nSpent\nCommission\nPayout\nAdjustment", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "amount", "fieldtype": "Currency", "label": "Importo (€)", "reqd": 1, "in_list_view": 1, "description": "Sempre positivo; il tipo determina il segno"},
   {"fieldname": "cb_1", "fieldtype": "Column Break"},
-  {"fieldname": "balance_after", "fieldtype": "Currency", "label": "Saldo dopo", "read_only": 1, "in_list_view": 1},
+  {"fieldname": "balance_after", "fieldtype": "Currency", "label": "Saldo dopo (clienti)", "read_only": 1, "in_list_view": 1},
   {"fieldname": "reference_doctype", "fieldtype": "Data", "label": "Rif. doctype"},
   {"fieldname": "reference_name", "fieldtype": "Data", "label": "Rif. nome"},
   {"fieldname": "notes", "fieldtype": "Small Text", "label": "Note"}
