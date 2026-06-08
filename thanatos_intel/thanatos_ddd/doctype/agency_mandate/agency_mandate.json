@@ -7,6 +7,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "billing_entity",
   "ddd_case",
   "applicant",
   "subject_matter",
@@ -23,7 +24,11 @@
   "section_pdf",
   "mandate_pdf",
   "signed_on",
-  "signature_ref"
+  "signature_ref",
+  "section_docuseal",
+  "docuseal_submission_id",
+  "docuseal_signing_url",
+  "docuseal_signed_pdf"
  ],
  "fields": [
   {
@@ -32,20 +37,25 @@
    "label": "Entità di fatturazione",
    "options": "Billing Entity",
    "read_only": 1,
+   "in_list_view": 1,
    "description": "Agenzia che emette il documento (da Impostazioni Fatturazione)"
   },
   {
    "fieldname": "ddd_case",
    "fieldtype": "Link",
-   "label": "Case",
+   "label": "Pratica DDD",
    "options": "Diplomatic Eligibility Case",
-   "reqd": 1
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
   },
   {
    "fieldname": "applicant",
    "fieldtype": "Link",
-   "label": "Applicant",
-   "options": "Applicant Profile"
+   "label": "Richiedente",
+   "options": "Applicant Profile",
+   "in_list_view": 1
   },
   {
    "fieldname": "subject_matter",
@@ -60,26 +70,31 @@
   {
    "fieldname": "fee_total",
    "fieldtype": "Currency",
-   "label": "Fee Total (EUR)"
+   "label": "Fee Total (EUR)",
+   "options": "currency",
+   "in_list_view": 1
   },
   {
    "fieldname": "currency",
    "fieldtype": "Link",
    "label": "Currency",
    "options": "Currency",
-   "default": "EUR"
+   "default": "EUR",
+   "hidden": 1
   },
   {
    "fieldname": "status",
    "fieldtype": "Select",
-   "label": "Status",
+   "label": "Stato",
    "options": "Draft\nPending Signature\nSigned\nActive\nCompleted\nTerminated",
-   "default": "Draft"
+   "default": "Draft",
+   "in_list_view": 1,
+   "in_standard_filter": 1
   },
   {
    "fieldname": "section_clauses",
    "fieldtype": "Section Break",
-   "label": "Clauses"
+   "label": "Clausole"
   },
   {
    "fieldname": "no_guarantee_clause",
@@ -114,22 +129,47 @@
   {
    "fieldname": "section_pdf",
    "fieldtype": "Section Break",
-   "label": "PDF / Signature"
+   "label": "PDF / Firma"
   },
   {
    "fieldname": "mandate_pdf",
    "fieldtype": "Attach",
-   "label": "Mandate PDF"
+   "label": "Mandate PDF (bozza)"
   },
   {
    "fieldname": "signed_on",
    "fieldtype": "Date",
-   "label": "Signed On"
+   "label": "Firmato il",
+   "read_only": 1
   },
   {
    "fieldname": "signature_ref",
    "fieldtype": "Data",
-   "label": "Signature Ref (OpenSign)"
+   "label": "Ref firma legacy",
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_docuseal",
+   "fieldtype": "Section Break",
+   "label": "DocuSeal"
+  },
+  {
+   "fieldname": "docuseal_submission_id",
+   "fieldtype": "Int",
+   "label": "DocuSeal Submission ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "docuseal_signing_url",
+   "fieldtype": "Data",
+   "label": "Link firma (invia al cliente)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "docuseal_signed_pdf",
+   "fieldtype": "Attach",
+   "label": "PDF firmato",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
