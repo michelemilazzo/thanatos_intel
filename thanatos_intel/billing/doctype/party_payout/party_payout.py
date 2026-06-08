@@ -14,10 +14,10 @@ class PartyPayout(Document):
             self.amount_ron = 0
             self.exchange_rate_ron = 0
             return
-        from thanatos_intel.thanatos_core.currency.converter import convert
+        from thanatos_intel.thanatos_core.currency.ron_accounting import to_ron, ron_rate
         src = self.currency or "EUR"
-        self.exchange_rate_ron = convert(1, "RON", src)
-        self.amount_ron = convert(self.amount, "RON", src)
+        self.exchange_rate_ron = ron_rate(src)
+        self.amount_ron = to_ron(self.amount, src)
 
     @frappe.whitelist()
     def execute(self):

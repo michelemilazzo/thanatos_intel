@@ -38,6 +38,13 @@ fixtures=[
    'Mandati DDD attivi', 'OSINT job attivi', 'Clienti']]]},
  {'doctype': 'Dashboard Chart', 'filters': [['name', 'in', [
    'Casi per stato', 'Mandati DDD per fase', 'Nuovi casi nel tempo']]]},
+ {'doctype': 'Custom Field', 'filters': [['name', 'in', [
+   'Sales Invoice-custom_sb_ron', 'Sales Invoice-custom_eur_ron_rate',
+   'Sales Invoice-custom_ron_ccy', 'Sales Invoice-custom_net_total_ron',
+   'Sales Invoice-custom_grand_total_ron',
+   'Quotation-custom_sb_ron', 'Quotation-custom_eur_ron_rate',
+   'Quotation-custom_ron_ccy', 'Quotation-custom_net_total_ron',
+   'Quotation-custom_grand_total_ron']]]},
 ]
 
 doc_events={
@@ -82,6 +89,12 @@ doc_events={
  },
  'Investigation Subscription Plan': {
    'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
+ },
+ 'Sales Invoice': {
+   'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron_erp',
+ },
+ 'Quotation': {
+   'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron_erp',
  },
 }
 scheduler_events={

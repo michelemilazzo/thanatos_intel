@@ -124,6 +124,74 @@ def convert(amount, to_ccy: str, from_ccy: str = "EUR") -> float:
     return float(result.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
 
+# ---------------------------------------------------------------------------
+# BNR — Banca Națională a României (cambio ufficiale per contabilità ANAF)
+# XML: https://www.bnr.ro/nbrfxrates.xml — base RON, <Rate currency multiplier>valore</Rate>
+# ---------------------------------------------------------------------------
+BNR_URL = "https://www.bnr.ro/nbrfxrates.xml"
+BNR_CACHE_KEY = "thanatos_bnr_rates_ron"
+
+
+def _fetch_from_bnr() -> Dict[str, float]:
+    """BNR XML → dict CCY → RON per 1 unità (base RON)."""
+    r = requests.get(BNR_URL, headers={"User-Agent": USER_AGENT}, timeout=15)
+    r.raise_for_status()
+    rates = {"RON": 1.0}
+    for m in re.finditer(r'<Rate\s+currency="([A-Z]{3})"(?:\s+multiplier="(\d+)")?\s*>([\d.]+)</Rate>', r.text):
+        mult = float(m.group(2) or 1)
+        rates[m.group(1)] = float(m.group(3)) / mult
+    return rates
+
+
+def bnr_rates(force: bool = False) -> Dict[str, float]:
+    """Cambi ufficiali BNR (cache → BNR → fallback snapshot DB → ECB)."""
+    if not force:
+        cached = frappe.cache().get_value(BNR_CACHE_KEY)
+        if cached:
+            return cached
+    try:
+        rates = _fetch_from_bnr()
+        frappe.cache().set_value(BNR_CACHE_KEY, rates, expires_in_sec=CACHE_TTL)
+        if frappe.db.exists("DocType", "Thanatos FX Rate"):
+            try:
+                snap = frappe.new_doc("Thanatos FX Rate")
+                snap.source = "BNR"
+                snap.base = "RON"
+                snap.payload = frappe.as_json(rates)
+                snap.insert(ignore_permissions=True)
+                frappe.db.commit()
+            except Exception as e:
+                frappe.log_error(f"BNR persist: {e}", "thanatos_fx")
+        return rates
+    except Exception as e:
+        frappe.log_error(f"BNR fetch failed: {e}", "thanatos_fx")
+        if frappe.db.exists("DocType", "Thanatos FX Rate"):
+            last = frappe.db.sql(
+                "SELECT payload FROM `tabThanatos FX Rate` WHERE source='BNR' "
+                "ORDER BY creation DESC LIMIT 1")
+            if last:
+                try:
+                    return frappe.parse_json(last[0][0])
+                except Exception:
+                    pass
+        # ultimo fallback: usa il cross ECB EUR→RON
+        return {"RON": 1.0, "EUR": fetch_rates().get("RON", 4.98)}
+
+
+def to_ron_bnr(amount, from_ccy: str = "EUR") -> float:
+    """Valore in RON al cambio ufficiale BNR. Per valute non BNR usa cross ECB."""
+    if amount is None:
+        return 0.0
+    from_ccy = (from_ccy or "EUR").upper()
+    if from_ccy == "RON":
+        return float(amount)
+    rate = bnr_rates().get(from_ccy)
+    if not rate:
+        return convert(amount, "RON", from_ccy)
+    result = Decimal(str(amount)) * Decimal(str(rate))
+    return float(result.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
+
 def convert_all(eur_amount, ccys: Optional[Iterable[str]] = None) -> Dict[str, dict]:
     """Per importo EUR ritorna dict CCY → {amount, symbol, formatted}."""
     if eur_amount is None:
