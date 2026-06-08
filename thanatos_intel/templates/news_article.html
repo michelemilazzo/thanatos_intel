@@ -44,7 +44,12 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
   border:1px solid rgba(200,169,110,.35);border-radius:10px;}
 .tx-pitch .lbl{color:var(--gold);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;}
 .tx-pitch h4{color:#F2F3F6;font-weight:400;font-size:18px;margin:0 0 8px;}
-.tx-pitch p{color:#C8CBD4;font-size:14px;line-height:1.6;margin:0 0 16px;}
+.tx-pitch p{color:#C8CBD4;font-size:14px;line-height:1.6;margin:0 0 12px;}
+.tx-pitch .tx-explain{color:#AEB4C2;font-size:13.5px;line-height:1.65;margin:0 0 12px;}
+.tx-caps{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-wrap:wrap;gap:8px;}
+.tx-caps li{position:relative;font-size:12px;color:#D4D7E0;background:rgba(10,14,26,.5);
+  border:1px solid var(--line);border-radius:20px;padding:6px 14px 6px 26px;letter-spacing:.2px;}
+.tx-caps li::before{content:"✓";position:absolute;left:11px;color:#6aa66a;font-weight:700;}
 .tx-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;}
 @media(max-width:620px){.tx-grid{grid-template-columns:1fr;}}
 .tx-card{background:rgba(10,14,26,.5);border:1px solid var(--line);border-radius:8px;padding:16px 16px 14px;display:flex;flex-direction:column;}
@@ -74,35 +79,46 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
     {% if doc.reading_time_min %} · {{ doc.reading_time_min }} min di lettura{% endif %}
     {% if doc.source_name_label %} · Fonte: {{ doc.source_name_label }}{% endif %}
   </div>
-  {% if doc.featured_image %}<div class="art-hero"><img src="{{ doc.featured_image }}" alt="{{ doc.image_caption or doc.title }}"/>
-    {% if doc.image_caption %}<small style="color:#5B6276;font-size:11px">{{ doc.image_caption }}</small>{% endif %}
-  </div>{% else %}<div class="art-hero-ph"><span class="phc">{{ doc.category or 'Intelligence' }}</span></div>{% endif %}
-  {% if doc.excerpt %}<p class="art-excerpt">{{ doc.excerpt }}</p>{% endif %}
-  <div class="art-content">{{ doc.content or '' | safe }}</div>
-  {#- Mappa categoria → pitch + servizio di PREVENZIONE e di ACCERTAMENTO (codici reali Service Catalog) -#}
+  {#- Mappa categoria → spiegazione + capability + servizio di PREVENZIONE e ACCERTAMENTO (codici reali Service Catalog) -#}
   {% set SVC = {
     'default': {'pitch': "Thanatos può supportarti con intelligence investigativa e analisi del rischio applicate a un caso come questo.",
+        'explain': "Thanatos trasforma una notizia come questa in azioni concrete: verifichiamo soggetti e documenti, analizziamo il rischio e i collegamenti e produciamo un report utilizzabile anche in sede legale.",
+        'caps': ["Verifica di persone, aziende e documenti","Analisi del rischio e dei collegamenti","Report investigativo tribunale-ready"],
         'pc':'SVC-VR-006','pn':'Verifica azienda base','pp':'€100','pd':"Controllo preventivo prima di firmare o versare denaro.",
         'ac':'SVC-IC-001','an':'Investigazione digitale base','ap':'€1.400','ad':"Accertamento completo se sei già stato colpito."},
     'cyber': {'pitch': "Thanatos può proteggerti dalle minacce cyber: monitoraggio del brand, analisi IOC e valutazione dell'esposizione.",
+        'explain': "Di fronte a una minaccia cyber Thanatos identifica come potresti essere colpito e cosa fare: analizziamo file, URL e domini sospetti, misuriamo l'esposizione dei tuoi dati e monitoriamo gli abusi del tuo brand.",
+        'caps': ["Analisi IOC: file, URL, domini, hash","Monitoraggio brand abuse e dati esposti","Report cyber risk per la tua organizzazione"],
         'pc':'SVC-CY-008','pn':'Monitoraggio brand abuse','pp':'€200/mese','pd':"Sorveglianza continua su abusi del marchio, domini e profili falsi.",
         'ac':'SVC-CY-005','an':'Analisi IOC completa','ap':'€300','ad':"Analisi tecnica di file, URL e indicatori di compromissione del caso."},
     'crypto': {'pitch': "Thanatos può verificare wallet e controparti prima dell'investimento e ricostruire i flussi se sei stato truffato.",
+        'explain': "Sulle truffe e i movimenti in criptovalute Thanatos verifica wallet e piattaforme prima che tu investa e, se sei già stato truffato, ricostruisce i flussi on-chain a supporto di denuncia e recupero.",
+        'caps': ["Verifica di wallet e piattaforme crypto","Ricostruzione dei flussi on-chain","Dossier per denuncia e recupero fondi"],
         'pc':'SVC-VR-010','pn':'Verifica wallet crypto','pp':'€60','pd':"Controllo rapido di un wallet o di una piattaforma prima di versare.",
         'ac':'SVC-AF-004','an':'Analisi crypto / Ponzi scam','ap':'€350','ad':"Ricostruzione dello schema e dei flussi per denuncia e recupero."},
     'frodi': {'pitch': "Thanatos può prevenire e accertare le frodi: alert di settore, analisi dello schema e ricostruzione della rete di soggetti.",
+        'explain': "Davanti a una truffa Thanatos ne smonta il meccanismo: identifichiamo lo schema, verifichiamo controparti e documenti e mappiamo la rete dei soggetti coinvolti, con prove pronte per la denuncia.",
+        'caps': ["Analisi dello schema di truffa","Verifica di controparti e documenti","Mappa della rete di soggetti collegati"],
         'pc':'SVC-AB-006','pn':'Alert truffe di settore','pp':'€200/mese','pd':"Avvisi tempestivi sulle truffe emergenti nel tuo settore.",
         'ac':'SVC-AF-001','an':'Analisi schema truffa','ap':'€225','ad':"Smontiamo il meccanismo della truffa con prove a supporto della denuncia."},
     'due': {'pitch': "Thanatos può fare due diligence su soci, fornitori e partner prima di ogni accordo, e indagare a fondo in caso di sospetti.",
+        'explain': "Prima di un accordo Thanatos indaga chi hai davanti: soci, beneficiari effettivi, reputazione e contenziosi; in caso di sospetti approfondiamo fino al dettaglio del gruppo societario.",
+        'caps': ["Screening di reputazione e contenziosi","Beneficiari effettivi e struttura societaria","Due diligence completa su partner e fornitori"],
         'pc':'SVC-CO-003','pn':'Verifica reputazione aziendale','pp':'€275','pd':"Screening preventivo di una controparte commerciale.",
         'ac':'SVC-CO-002','an':'Due diligence aziendale full','ap':'€2.000','ad':"Indagine approfondita su gruppo, beneficiari e contenziosi."},
     'osint': {'pitch': "Thanatos può condurre indagini OSINT su persone, aziende, domini e dati esposti.",
+        'explain': "Thanatos raccoglie e collega informazioni da fonti aperte su persone, aziende, domini e dati esposti, restituendoti un quadro verificato e un dossier strutturato.",
+        'caps': ["Profilazione OSINT di persone e aziende","Domini, account e dati esposti","Dossier strutturato e verificato"],
         'pc':'SVC-VR-007','pn':'Verifica persona base','pp':'€60','pd':"Controllo rapido OSINT su una persona prima di fidarti.",
         'ac':'SVC-IC-009','an':'OSINT investigation completa','ap':'€1.900','ad':"Indagine OSINT estesa con dossier strutturato."},
     'sequestri': {'pitch': "Thanatos può analizzare provvedimenti di sequestro o confisca e costruire il dossier per il riesame.",
+        'explain': "Su sequestri e confische Thanatos analizza il provvedimento, individua vizi procedurali e margini di opposizione e costruisce il fascicolo tecnico per il riesame.",
+        'caps': ["Analisi del provvedimento e dei vizi","Provenienza lecita e valore dei beni","Dossier tecnico per il riesame"],
         'pc':'SVC-SE-001','pn':'Analisi preliminare provvedimento','pp':'€325','pd':"Valutazione iniziale di vizi e margini di opposizione.",
         'ac':'SVC-SE-005','an':'Dossier completo per riesame','ap':'€1.850','ad':"Fascicolo tecnico pronto per il riesame."},
     'finanza': {'pitch': "Thanatos può valutare il rischio finanziario di una controparte e svolgere due diligence economica.",
+        'explain': "Thanatos valuta la solidità finanziaria di una controparte — bilanci, esposizione, rischio di insolvenza e patrimonio — a supporto di decisioni di business o di contenzioso.",
+        'caps': ["Analisi di bilancio ed esposizione","Rischio di insolvenza e patrimonio","Due diligence finanziaria approfondita"],
         'pc':'SVC-FI-004','pn':'Analisi rischio insolvenza','pp':'€375','pd':"Stima preventiva del rischio di insolvenza di una controparte.",
         'ac':'SVC-FI-009','an':'Due diligence finanziaria','ap':'€2.500','ad':"Analisi finanziaria approfondita a supporto di decisioni o contenzioso."}
   } %}
@@ -117,9 +133,16 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
   {% elif 'finanz' in _cat or 'financ' in _cat %}{% set _key = 'finanza' %}
   {% endif %}
   {% set s = SVC[_key] %}
+  {% if doc.featured_image %}<div class="art-hero"><img src="{{ doc.featured_image }}" alt="{{ doc.image_caption or doc.title }}"/>
+    {% if doc.image_caption %}<small style="color:#5B6276;font-size:11px">{{ doc.image_caption }}</small>{% endif %}
+  </div>{% else %}<div class="art-hero"><img src="/assets/thanatos_intel/images/news/{{ _key }}.svg" alt="{{ doc.category or 'Intelligence' }}"/></div>{% endif %}
+  {% if doc.excerpt %}<p class="art-excerpt">{{ doc.excerpt }}</p>{% endif %}
+  <div class="art-content">{{ doc.content or '' | safe }}</div>
   <div class="tx-pitch">
     <div class="lbl">Cosa può fare Thanatos per questa news</div>
     <p>{{ s.pitch }}</p>
+    <p class="tx-explain">{{ s.explain }}</p>
+    <ul class="tx-caps">{% for c in s.caps %}<li>{{ c }}</li>{% endfor %}</ul>
     <div class="tx-grid">
       <div class="tx-card prev">
         <div class="k">◇ In prevenzione</div>

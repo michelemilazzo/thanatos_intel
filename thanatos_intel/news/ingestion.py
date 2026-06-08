@@ -26,6 +26,27 @@ def _strip_html(s: str) -> str:
 	return re.sub(r"\s+", " ", s).strip()
 
 
+_IMG_RX = re.compile(r'<img[^>]+src=["\']([^"\']+)', re.I)
+
+
+def _entry_image(entry, *contents) -> str | None:
+	"""Estrae la migliore immagine dall'entry RSS (thumbnail/media/enclosure/<img>)."""
+	for thumb in (entry.get("media_thumbnail") or []):
+		if thumb.get("url"):
+			return thumb["url"]
+	for media in (entry.get("media_content") or []):
+		if media.get("url") and (media.get("medium") == "image" or "image" in (media.get("type") or "")):
+			return media["url"]
+	for link in (entry.get("links") or []):
+		if link.get("rel") == "enclosure" and "image" in (link.get("type") or "") and link.get("href"):
+			return link["href"]
+	for c in contents:
+		m = _IMG_RX.search(c or "")
+		if m:
+			return m.group(1)
+	return None
+
+
 def _parse_datetime(raw) -> datetime | None:
 	if not raw:
 		return None
@@ -107,6 +128,8 @@ def fetch_source(name: str) -> dict:
 			excerpt = plain[:280] + ("…" if len(plain) > 280 else "")
 			content = raw_content or f"<p>{plain}</p>"
 
+		image_url = _entry_image(entry, raw_content, content)
+
 		try:
 			doc = frappe.get_doc({
 				"doctype": "News Article",
@@ -123,6 +146,7 @@ def fetch_source(name: str) -> dict:
 				"source_name_label": src.source_name,
 				"external_published_at": ext_pub,
 				"external_id": fp,
+				"featured_image": image_url,
 				"published": 1 if src.auto_publish else 0,
 				"published_at": now_datetime() if src.auto_publish else None,
 			})
