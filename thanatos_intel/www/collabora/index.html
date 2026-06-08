@@ -35,30 +35,30 @@ textarea{min-height:80px;resize:vertical}
 </style>
 <div class="cw">
   <div class="hero">
-    <div class="kick">Collabora con Thanatos</div>
-    <h1>Lavora con noi, guadagna con noi</h1>
-    <p>Investigatori, agenzie, avvocati e commercialisti: ricevi incarichi qualificati, strumenti professionali e <strong>pagamenti tracciati</strong>. Con il tuo <strong>wallet</strong> vedi in ogni momento quanto Thanatos ti ha fatto guadagnare.</p>
+    <div class="kick">Rete investigativa Thanatos</div>
+    <h1>Diventa affiliato operativo</h1>
+    <p>Assegniamo mandati di incarico ad investigatori e agenzie selezionate, per competenza <strong>territoriale</strong> e tipologia di pratica. Tu lavori sul campo, noi gestiamo il cliente.</p>
   </div>
   <div class="wrap">
     <div class="perks">
-      <div class="perk"><h3>Incarichi qualificati</h3><p>Un flusso costante di pratiche selezionate, nella tua area e specializzazione.</p></div>
-      <div class="perk"><h3>Wallet trasparente</h3><p>Guadagni maturati, in attesa e già liquidati: tutto visibile, in tempo reale.</p></div>
-      <div class="perk"><h3>Strumenti inclusi</h3><p>OSINT, antifrode, dossier compliance e catena di custodia con SHA-256.</p></div>
-      <div class="perk"><h3>Pagamenti tracciati</h3><p>Compensi gestiti e liquidati con regole chiare, niente sorprese.</p></div>
+      <div class="perk"><h3>Mandati territoriali</h3><p>Riceviamo pratiche su tutto il territorio: ti assegniamo gli incarichi compatibili con la tua area operativa.</p></div>
+      <div class="perk"><h3>Mandato scritto sempre</h3><p>Ogni incarico è formalizzato con un mandato firmato digitalmente. Nessuna ambiguità.</p></div>
+      <div class="perk"><h3>Wallet trasparente</h3><p>Guadagni maturati, in attesa e liquidati: tutto visibile in tempo reale dal tuo pannello.</p></div>
+      <div class="perk"><h3>Pagamenti tracciati</h3><p>Compensi definiti nel mandato, liquidati con regole fisse. Niente sorprese.</p></div>
     </div>
 
-    <div class="sec">Per chi</div>
+    <div class="sec">Chi stiamo cercando</div>
     <div class="roles">
       {% for code, name, desc in roles %}
       <div class="role"><h4>{{ name }}</h4><p>{{ desc }}</p></div>
       {% endfor %}
     </div>
 
-    <div class="sec">Candidati</div>
+    <div class="sec">Entra nella rete</div>
     <div class="form">
       <div class="grid2">
         <div><label>Nome / Ragione sociale *</label><input id="aname"></div>
-        <div><label>Ruolo *</label><select id="arole">
+        <div><label>Tipo *</label><select id="arole">
           {% for code, name, desc in roles %}<option value="{{ code }}">{{ name }}</option>{% endfor %}
         </select></div>
       </div>
@@ -66,13 +66,15 @@ textarea{min-height:80px;resize:vertical}
         <div><label>Email *</label><input id="aemail" type="email"></div>
         <div><label>Telefono</label><input id="aphone"></div>
       </div>
-      <div class="grid2">
-        <div><label>Area / Regione</label><input id="aregion"></div>
-        <div><label>Licenza / iscrizione albo</label><input id="alicense"></div>
+      <label>Territorio operativo (province / regioni / paesi) *</label>
+      <input id="aregion" placeholder="es. Milano, Monza, Brianza — oppure Romania, Bulgaria">
+      <div class="grid2" style="margin-top:0">
+        <div><label>Licenza / n. autorizzazione</label><input id="alicense" placeholder="es. Prefettura di Milano n. …"></div>
+        <div><label>Specializzazione</label><input id="aspecialty" placeholder="es. DDD passaporti, sorveglianza, OSINT"></div>
       </div>
-      <label>Presentazione / esperienza</label>
-      <textarea id="amsg"></textarea>
-      <button class="btn" id="send">Invia candidatura</button>
+      <label>Note aggiuntive</label>
+      <textarea id="amsg" placeholder="Esperienza, lingue, disponibilità…"></textarea>
+      <button class="btn" id="send">Invia richiesta di affiliazione</button>
       <div class="msg" id="msg"></div>
     </div>
   </div>
@@ -88,10 +90,11 @@ btn.addEventListener('click',async()=>{
   try{
     const fd=new FormData();
     fd.append('applicant_name',g('aname'));fd.append('role',g('arole'));fd.append('email',g('aemail'));
-    fd.append('phone',g('aphone'));fd.append('region',g('aregion'));fd.append('license_info',g('alicense'));fd.append('message',g('amsg'));
+    fd.append('phone',g('aphone'));fd.append('region',g('aregion'));fd.append('license_info',g('alicense'));
+    fd.append('message',(g('aspecialty')?'Specializzazione: '+g('aspecialty')+'\n':'')+(g('amsg')||''));
     const r=await fetch('/api/method/thanatos_intel.www.collabora.index.submit_application',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd});
     const d=await r.json();const m=d.message||d;
-    if(m&&m.ok){msg.className='msg ok';msg.textContent='Candidatura inviata. Ti ricontatteremo presto.';['aname','aemail','aphone','aregion','alicense','amsg'].forEach(i=>document.getElementById(i).value='');}
+    if(m&&m.ok){msg.className='msg ok';msg.textContent='Richiesta inviata. Ti contatteremo per i prossimi passi.';['aname','aemail','aphone','aregion','alicense','aspecialty','amsg'].forEach(i=>document.getElementById(i).value='');}
     else throw new Error((m&&m.exc)||'errore');
   }catch(e){msg.className='msg err';msg.textContent='Errore: '+e.message;}
   btn.disabled=false;

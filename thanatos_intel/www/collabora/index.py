@@ -7,11 +7,8 @@ no_cache = 0
 def get_context(context):
     context.no_cache = 0
     context.roles = [
-        ("Investigator", "Investigatore", "Ricevi incarichi di indagine, OSINT e dossier. Strumenti e supporto inclusi."),
-        ("Agency", "Agenzia investigativa", "Collabora su pratiche complesse e internazionali, anche come entità fatturante."),
-        ("Lawyer", "Avvocato", "Ricevi dossier tribunale-ready e supporto investigativo per i tuoi assistiti."),
-        ("Accountant", "Commercialista", "Due diligence e financial intelligence a supporto dei tuoi clienti."),
-        ("Consultant", "Consulente", "Porta competenze specialistiche su cyber, antifrode, corporate."),
+        ("Investigator", "Investigatore privato", "Ricevi incarichi nella tua area operativa: indagini, OSINT, sopralluoghi, sorveglianza."),
+        ("Agency", "Agenzia investigativa", "Collabora su pratiche complesse o internazionali. Assegnazione per competenza territoriale."),
     ]
     try:
         from frappe.sessions import get_csrf_token
