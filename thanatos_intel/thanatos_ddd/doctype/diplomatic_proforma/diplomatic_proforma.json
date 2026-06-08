@@ -87,6 +87,40 @@
    "fieldname": "pdf_file",
    "fieldtype": "Attach",
    "label": "PDF"
+  },
+  {
+   "fieldname": "sb_ron",
+   "fieldtype": "Section Break",
+   "label": "Contabilità RON (lei)"
+  },
+  {
+   "fieldname": "exchange_rate_ron",
+   "fieldtype": "Float",
+   "label": "Cambio EUR→RON",
+   "precision": "4",
+   "read_only": 1,
+   "description": "Cambio ECB del giorno"
+  },
+  {
+   "fieldname": "ron_ccy",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "default": "RON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_ron",
+   "fieldtype": "Currency",
+   "label": "Amount (lei)",
+   "options": "ron_ccy",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_ron",
+   "fieldtype": "Currency",
+   "label": "Total (lei)",
+   "options": "ron_ccy",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,

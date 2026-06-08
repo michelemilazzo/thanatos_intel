@@ -71,6 +71,18 @@ doc_events={
  'Agency Mandate': {
    'on_update': 'thanatos_intel.billing.ddd_billing.on_mandate_update',
  },
+ 'Revenue Distribution': {
+   'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
+ },
+ 'Diplomatic Proforma': {
+   'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
+ },
+ 'Usage Event': {
+   'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
+ },
+ 'Investigation Subscription Plan': {
+   'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
+ },
 }
 scheduler_events={
  'cron':{},

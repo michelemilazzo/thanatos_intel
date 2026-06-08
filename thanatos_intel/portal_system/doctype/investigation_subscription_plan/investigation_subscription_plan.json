@@ -6,43 +6,241 @@
  "autoname": "field:plan_name",
  "title_field": "plan_name",
  "fields": [
-  {"fieldname":"sb_main","fieldtype":"Section Break","label":"Plan"},
-  {"fieldname":"plan_name","fieldtype":"Data","label":"Plan Name","reqd":1,"in_list_view":1,"description":"Basic / Professional / Legal / Enterprise"},
-  {"fieldname":"plan_level","fieldtype":"Select","label":"Plan Level","options":"Basic\nProfessional\nLegal\nEnterprise","reqd":1,"in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"cb_main","fieldtype":"Column Break"},
-  {"fieldname":"monthly_price","fieldtype":"Currency","label":"Monthly Price","reqd":1,"in_list_view":1},
-  {"fieldname":"currency","fieldtype":"Select","label":"Currency","options":"EUR\nRON\nUSD","default":"EUR"},
-  {"fieldname":"is_active","fieldtype":"Check","label":"Is Active","default":1},
-  {"fieldname":"sb_limits","fieldtype":"Section Break","label":"Included Quotas (monthly)"},
-  {"fieldname":"included_verifications","fieldtype":"Int","label":"Included Verifications","description":"0 = unlimited"},
-  {"fieldname":"included_analyses","fieldtype":"Int","label":"Included Analyses","description":"0 = unlimited"},
-  {"fieldname":"cb_limits","fieldtype":"Column Break"},
-  {"fieldname":"included_reports","fieldtype":"Int","label":"Included Reports","description":"0 = unlimited"},
-  {"fieldname":"max_users","fieldtype":"Int","label":"Max Users"},
-  {"fieldname":"sb_features","fieldtype":"Section Break","label":"Features"},
-  {"fieldname":"has_client_portal","fieldtype":"Check","label":"Client Portal","default":1},
-  {"fieldname":"has_lawyer_portal","fieldtype":"Check","label":"Lawyer Portal"},
-  {"fieldname":"has_accountant_portal","fieldtype":"Check","label":"Accountant Portal"},
-  {"fieldname":"cb_features","fieldtype":"Column Break"},
-  {"fieldname":"has_consultant_portal","fieldtype":"Check","label":"Consultant Portal"},
-  {"fieldname":"has_api_access","fieldtype":"Check","label":"API Access"},
-  {"fieldname":"has_white_label","fieldtype":"Check","label":"White Label"},
-  {"fieldname":"sb_support","fieldtype":"Section Break","label":"Support"},
-  {"fieldname":"support_level","fieldtype":"Select","label":"Support Level","options":"Email\nPriority\nDedicated Account Manager","default":"Email"},
-  {"fieldname":"sb_erp","fieldtype":"Section Break","label":"ERPNext","collapsible":1},
-  {"fieldname":"erp_item_code","fieldtype":"Data","label":"ERP Item Code"},
-  {"fieldname":"sb_stripe","fieldtype":"Section Break","label":"Stripe","collapsible":1},
-  {"fieldname":"stripe_product_id","fieldtype":"Data","label":"Stripe Product ID","read_only":1,"length":64},
-  {"fieldname":"cb_stripe","fieldtype":"Column Break"},
-  {"fieldname":"stripe_price_id","fieldtype":"Data","label":"Stripe Price ID","read_only":1,"length":64},
-  {"fieldname":"sb_desc","fieldtype":"Section Break","label":"Description"},
-  {"fieldname":"description","fieldtype":"Text Editor","label":"Description"}
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Plan"
+  },
+  {
+   "fieldname": "plan_name",
+   "fieldtype": "Data",
+   "label": "Plan Name",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Basic / Professional / Legal / Enterprise"
+  },
+  {
+   "fieldname": "plan_level",
+   "fieldtype": "Select",
+   "label": "Plan Level",
+   "options": "Basic\nProfessional\nLegal\nEnterprise",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "monthly_price",
+   "fieldtype": "Currency",
+   "label": "Monthly Price",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Select",
+   "label": "Currency",
+   "options": "EUR\nRON\nUSD",
+   "default": "EUR"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active",
+   "default": 1
+  },
+  {
+   "fieldname": "sb_limits",
+   "fieldtype": "Section Break",
+   "label": "Included Quotas (monthly)"
+  },
+  {
+   "fieldname": "included_verifications",
+   "fieldtype": "Int",
+   "label": "Included Verifications",
+   "description": "0 = unlimited"
+  },
+  {
+   "fieldname": "included_analyses",
+   "fieldtype": "Int",
+   "label": "Included Analyses",
+   "description": "0 = unlimited"
+  },
+  {
+   "fieldname": "cb_limits",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "included_reports",
+   "fieldtype": "Int",
+   "label": "Included Reports",
+   "description": "0 = unlimited"
+  },
+  {
+   "fieldname": "max_users",
+   "fieldtype": "Int",
+   "label": "Max Users"
+  },
+  {
+   "fieldname": "sb_features",
+   "fieldtype": "Section Break",
+   "label": "Features"
+  },
+  {
+   "fieldname": "has_client_portal",
+   "fieldtype": "Check",
+   "label": "Client Portal",
+   "default": 1
+  },
+  {
+   "fieldname": "has_lawyer_portal",
+   "fieldtype": "Check",
+   "label": "Lawyer Portal"
+  },
+  {
+   "fieldname": "has_accountant_portal",
+   "fieldtype": "Check",
+   "label": "Accountant Portal"
+  },
+  {
+   "fieldname": "cb_features",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "has_consultant_portal",
+   "fieldtype": "Check",
+   "label": "Consultant Portal"
+  },
+  {
+   "fieldname": "has_api_access",
+   "fieldtype": "Check",
+   "label": "API Access"
+  },
+  {
+   "fieldname": "has_white_label",
+   "fieldtype": "Check",
+   "label": "White Label"
+  },
+  {
+   "fieldname": "sb_support",
+   "fieldtype": "Section Break",
+   "label": "Support"
+  },
+  {
+   "fieldname": "support_level",
+   "fieldtype": "Select",
+   "label": "Support Level",
+   "options": "Email\nPriority\nDedicated Account Manager",
+   "default": "Email"
+  },
+  {
+   "fieldname": "sb_erp",
+   "fieldtype": "Section Break",
+   "label": "ERPNext",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "erp_item_code",
+   "fieldtype": "Data",
+   "label": "ERP Item Code"
+  },
+  {
+   "fieldname": "sb_stripe",
+   "fieldtype": "Section Break",
+   "label": "Stripe",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "stripe_product_id",
+   "fieldtype": "Data",
+   "label": "Stripe Product ID",
+   "read_only": 1,
+   "length": 64
+  },
+  {
+   "fieldname": "cb_stripe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stripe_price_id",
+   "fieldtype": "Data",
+   "label": "Stripe Price ID",
+   "read_only": 1,
+   "length": 64
+  },
+  {
+   "fieldname": "sb_desc",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description"
+  },
+  {
+   "fieldname": "sb_ron",
+   "fieldtype": "Section Break",
+   "label": "Contabilità RON (lei)"
+  },
+  {
+   "fieldname": "exchange_rate_ron",
+   "fieldtype": "Float",
+   "label": "Cambio EUR→RON",
+   "precision": "4",
+   "read_only": 1,
+   "description": "Cambio ECB del giorno"
+  },
+  {
+   "fieldname": "ron_ccy",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "default": "RON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "monthly_price_ron",
+   "fieldtype": "Currency",
+   "label": "Monthly Price (lei)",
+   "options": "ron_ccy",
+   "read_only": 1
+  }
  ],
  "permissions": [
-  {"role":"Investigation Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1,"print":1,"email":1,"share":1},
-  {"role":"Billing Manager","read":1,"write":1,"create":1,"report":1,"print":1},
-  {"role":"Investigator","read":1},
-  {"role":"Lawyer","read":1},
-  {"role":"Accountant","read":1}
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Billing Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Investigator",
+   "read": 1
+  },
+  {
+   "role": "Lawyer",
+   "read": 1
+  },
+  {
+   "role": "Accountant",
+   "read": 1
+  }
  ]
 }
