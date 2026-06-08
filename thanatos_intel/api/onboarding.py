@@ -124,20 +124,35 @@ def confirm_payment_method(payment_method_id: str) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def submit_kyc() -> dict:
-    """Finalize KYC submission: set status Pending Review."""
+    """Finalize KYC submission: set status Pending Review, create KYC Check."""
     c = _current_client()
     if c.client_type != "Individual":
         return {"ok": False, "error": "KYC valido solo per Cliente privato."}
 
-    # Check that at least 2 attached files exist (ID + selfie minimum)
     files = frappe.get_all("File",
-        filters={"attached_to_doctype": "Investigation Client",
-                 "attached_to_name": c.name},
-        fields=["name", "file_name"], limit=10)
+        filters={"attached_to_doctype": "Investigation Client", "attached_to_name": c.name},
+        fields=["name", "file_url", "file_name"], limit=20)
     if len(files) < 2:
         return {"ok": False, "error": "Carica almeno documento d'identità e selfie."}
 
-    c.db_set("kyc_status", "Pending Review", commit=False)
+    parts = (c.client_name or "").split()
+    kyc = frappe.get_doc({
+        "doctype": "KYC Check",
+        "client": c.name,
+        "first_name": parts[0] if parts else c.client_name,
+        "last_name": " ".join(parts[1:]) if len(parts) > 1 else "",
+        "status": "In Review",
+    })
+    kyc.flags.ignore_permissions = True
+    kyc.insert(ignore_permissions=True)
+
+    for f in files:
+        frappe.db.set_value("File", f.name, {
+            "attached_to_doctype": "KYC Check",
+            "attached_to_name": kyc.name,
+        }, update_modified=False)
+
+    c.db_set("kyc_status", "In Review", commit=False)
     c.db_set("onboarding_status", "Under Review", commit=False)
     c.db_set("onboarding_completed_at", frappe.utils.now_datetime(), commit=False)
     frappe.db.commit()
@@ -146,8 +161,8 @@ def submit_kyc() -> dict:
         frappe.get_doc({
             "doctype": "Diplomatic Audit Log",
             "event_type": "onboarding.kyc_submitted",
-            "new_value": "Pending Review",
-            "reason": frappe.as_json({"client": c.name, "files": len(files)})[:500],
+            "new_value": "In Review",
+            "reason": frappe.as_json({"client": c.name, "kyc_check": kyc.name, "files": len(files)})[:500],
         }).insert(ignore_permissions=True)
         frappe.db.commit()
     except Exception:
@@ -158,19 +173,35 @@ def submit_kyc() -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def submit_kyb() -> dict:
-    """Finalize KYB submission: set status Pending Review."""
+    """Finalize KYB submission: set status Pending Review, create KYB Check."""
     c = _current_client()
     if c.client_type == "Individual":
         return {"ok": False, "error": "KYB valido solo per Azienda/Studio."}
 
     files = frappe.get_all("File",
-        filters={"attached_to_doctype": "Investigation Client",
-                 "attached_to_name": c.name},
-        fields=["name", "file_name"], limit=10)
+        filters={"attached_to_doctype": "Investigation Client", "attached_to_name": c.name},
+        fields=["name", "file_url", "file_name"], limit=20)
     if len(files) < 1:
         return {"ok": False, "error": "Carica almeno la visura camerale."}
 
-    c.db_set("kyb_status", "Pending Review", commit=False)
+    kyb = frappe.get_doc({
+        "doctype": "KYB Check",
+        "client": c.name,
+        "company_name": c.client_name,
+        "company_country": c.country,
+        "registered_address": c.address,
+        "status": "In Review",
+    })
+    kyb.flags.ignore_permissions = True
+    kyb.insert(ignore_permissions=True)
+
+    for f in files:
+        frappe.db.set_value("File", f.name, {
+            "attached_to_doctype": "KYB Check",
+            "attached_to_name": kyb.name,
+        }, update_modified=False)
+
+    c.db_set("kyb_status", "In Review", commit=False)
     c.db_set("onboarding_status", "Under Review", commit=False)
     c.db_set("onboarding_completed_at", frappe.utils.now_datetime(), commit=False)
     frappe.db.commit()
@@ -179,8 +210,8 @@ def submit_kyb() -> dict:
         frappe.get_doc({
             "doctype": "Diplomatic Audit Log",
             "event_type": "onboarding.kyb_submitted",
-            "new_value": "Pending Review",
-            "reason": frappe.as_json({"client": c.name, "files": len(files)})[:500],
+            "new_value": "In Review",
+            "reason": frappe.as_json({"client": c.name, "kyb_check": kyb.name, "files": len(files)})[:500],
         }).insert(ignore_permissions=True)
         frappe.db.commit()
     except Exception:
