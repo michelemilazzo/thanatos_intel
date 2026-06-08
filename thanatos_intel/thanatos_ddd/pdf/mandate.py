@@ -40,6 +40,16 @@ def generate(mandate_name: str) -> str:
     else:
         entity = get_ddd_billing_entity()
     mandatario = (entity.legal_name or entity.entity_name) if entity else "Thanatos Intel — OneKey Co."
+    # Cornice legale per-entità: ARES = legge italiana/autorizzazioni IT, Thanatos = legge rumena/autorizzazioni RO
+    gov_law = (entity.governing_law if entity and entity.get("governing_law")
+               else (m.get("governing_law") or "Legge italiana"))
+    foro = entity.jurisdiction if entity and entity.get("jurisdiction") else "Foro di Roma"
+    disclaimer = entity.legal_disclaimer if entity and entity.get("legal_disclaimer") else DISCLAIMER
+    authz = ""
+    if entity and (entity.get("license_authority") or entity.get("license_number")):
+        authz = (entity.license_authority or "")
+        if entity.get("license_number"):
+            authz += f" — n. {entity.license_number}"
     steps = frappe.get_all("Mandate Service Step", filters={"mandate": mandate_name},
                            fields=["step_no", "title", "description", "fee", "vat_pct",
                                    "due_date", "status", "payment_status"],
@@ -71,6 +81,8 @@ def generate(mandate_name: str) -> str:
             + (f" — IBAN: {entity.iban}" if entity.iban else "")
             + (f" — BIC: {entity.bic_swift}" if entity.bic_swift else ""),
             s["BodyText"]))
+    if authz:
+        story.append(Paragraph(f"<b>Autorizzazioni:</b> {authz}", s["BodyText"]))
     story += [Spacer(1, 0.4*cm),
               Paragraph("<b>1. Oggetto</b>", s["H2g"]),
               Paragraph(m.subject_matter or "Due diligence, OSINT e preparazione dossier istituzionale.", s["BodyText"]),
@@ -85,7 +97,7 @@ def generate(mandate_name: str) -> str:
                         "• Preparazione dossier compliance / istituzionale", s["BodyText"]),
               Spacer(1, 0.3*cm),
               Paragraph("<b>4. Clausola di NON-Garanzia</b>", s["H2g"]),
-              Paragraph(DISCLAIMER, s["Disc"]),
+              Paragraph(disclaimer, s["Disc"]),
               Spacer(1, 0.4*cm),
               Paragraph("<b>5. Compenso e Step di Pagamento</b>", s["H2g"])]
 
@@ -111,12 +123,12 @@ def generate(mandate_name: str) -> str:
                         "avviene secondo Reg. UE 2016/679 (GDPR).", s["BodyText"]),
               Spacer(1, 0.3*cm),
               Paragraph("<b>7. Legge Applicabile e Foro</b>", s["H2g"]),
-              Paragraph(f"{m.governing_law or 'Legge Italiana'} — Foro competente: Roma.", s["BodyText"]),
+              Paragraph(f"{gov_law} — Foro competente: {foro}.", s["BodyText"]),
               Spacer(1, 1*cm),
               Paragraph("Mandante __________________________ &nbsp;&nbsp;&nbsp; "
                         "Mandatario __________________________", s["BodyText"]),
               Spacer(1, 0.6*cm),
-              Paragraph(DISCLAIMER, s["Disc"])]
+              Paragraph(disclaimer, s["Disc"])]
     doc.build(story)
     buf.seek(0)
 
