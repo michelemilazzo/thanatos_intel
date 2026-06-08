@@ -36,6 +36,17 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
 .rcard h4{font-weight:400;font-size:15px;color:#F2F3F6;margin:0 0 8px;line-height:1.35;}
 .rcard p{color:var(--muted);font-size:12px;line-height:1.5;margin:0;}
 .back{display:inline-block;margin-bottom:24px;color:var(--gold);text-decoration:none;font-size:11px;letter-spacing:3px;text-transform:uppercase;}
+.art-hero-ph{height:240px;margin:24px 0;border:1px solid var(--line);border-radius:8px;
+  background:linear-gradient(135deg,#0E1426 0%,#141C33 60%,#1B2440 100%);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.art-hero-ph::after{content:"THANATOS";font-family:'Cinzel Decorative',Georgia,serif;font-size:54px;color:rgba(200,169,110,.10);letter-spacing:6px;}
+.art-hero-ph .phc{position:absolute;bottom:14px;left:18px;color:var(--gold);font-size:11px;letter-spacing:3px;text-transform:uppercase;}
+.tx-pitch{margin:34px 0 8px;padding:22px 24px;background:linear-gradient(180deg,rgba(200,169,110,.10),rgba(200,169,110,.04));
+  border:1px solid rgba(200,169,110,.35);border-radius:10px;}
+.tx-pitch .lbl{color:var(--gold);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;}
+.tx-pitch h4{color:#F2F3F6;font-weight:400;font-size:18px;margin:0 0 8px;}
+.tx-pitch p{color:#C8CBD4;font-size:14px;line-height:1.6;margin:0 0 14px;}
+.tx-pitch a{display:inline-block;padding:9px 18px;background:var(--gold);color:#0A0E1A;text-decoration:none;
+  border-radius:6px;font-size:11px;letter-spacing:2px;text-transform:uppercase;}
 </style>
 {% endblock %}
 
@@ -54,9 +65,22 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
   </div>
   {% if doc.featured_image %}<div class="art-hero"><img src="{{ doc.featured_image }}" alt="{{ doc.image_caption or doc.title }}"/>
     {% if doc.image_caption %}<small style="color:#5B6276;font-size:11px">{{ doc.image_caption }}</small>{% endif %}
-  </div>{% endif %}
+  </div>{% else %}<div class="art-hero-ph"><span class="phc">{{ doc.category or 'Intelligence' }}</span></div>{% endif %}
   {% if doc.excerpt %}<p class="art-excerpt">{{ doc.excerpt }}</p>{% endif %}
   <div class="art-content">{{ doc.content or '' | safe }}</div>
+  {% set ns = namespace(pitch="Thanatos può supportarti con intelligence investigativa, due diligence e analisi del rischio applicate a questo caso.") %}
+  {% set _cat = (doc.category or '')|lower %}
+  {% if 'cyber' in _cat %}{% set ns.pitch = "Thanatos può proteggerti: threat monitoring, valutazione dell'esposizione dati e crypto-scam intelligence per la tua organizzazione." %}
+  {% elif 'frod' in _cat or 'truff' in _cat or 'antifrod' in _cat %}{% set ns.pitch = "Thanatos può aiutarti: analisi antifrode, verifica wallet e controparti, recupero e supporto a denunce." %}
+  {% elif 'due' in _cat or 'diligence' in _cat %}{% set ns.pitch = "Thanatos può svolgere due diligence su controparti, soci e fornitori prima di ogni accordo." %}
+  {% elif 'osint' in _cat %}{% set ns.pitch = "Thanatos può condurre indagini OSINT su persone, aziende, domini e dati esposti." %}
+  {% endif %}
+  <div class="tx-pitch">
+    <div class="lbl">Come può aiutarti Thanatos</div>
+    <h4>Su un caso come questo</h4>
+    <p>{{ ns.pitch }}</p>
+    <a href="/portal/billing">Richiedi un'analisi →</a>
+  </div>
   {% if doc.source_url %}<div class="art-source">Fonte originale: <a href="{{ doc.source_url }}" rel="noopener nofollow" target="_blank">{{ doc.source_name_label or doc.source_url }}</a></div>{% endif %}
 </article>
 
