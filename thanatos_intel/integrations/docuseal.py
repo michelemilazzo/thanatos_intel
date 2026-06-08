@@ -86,11 +86,6 @@ def submit_mandate_for_signing(mandate_name: str) -> dict:
             "role": submitter_role,
             "email": email,
             "name": name,
-            "fields": [
-                {"name": "mandate_number", "default_value": mandate.name},
-                {"name": "fee_total", "default_value": str(mandate.fee_total or "")},
-                {"name": "governing_law", "default_value": mandate.governing_law or ""},
-            ],
         }],
         "metadata": {
             "mandate": mandate.name,
