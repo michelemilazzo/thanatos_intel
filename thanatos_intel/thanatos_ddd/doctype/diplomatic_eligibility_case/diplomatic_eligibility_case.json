@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "applicant",
+  "applicant_name",
   "country",
   "request_type",
   "col_break_h",
@@ -32,6 +33,18 @@
    "label": "Applicant",
    "options": "Applicant Profile",
    "reqd": 1
+  },
+  {
+   "fieldname": "applicant_name",
+   "fieldtype": "Data",
+   "label": "Nome richiedente",
+   "fetch_from": "applicant.full_legal_name",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "bold": 0,
+   "no_copy": 0,
+   "print_hide": 0
   },
   {
    "fieldname": "country",
@@ -184,6 +197,7 @@
    "print": 1
   }
  ],
+ "search_fields": "applicant_name",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

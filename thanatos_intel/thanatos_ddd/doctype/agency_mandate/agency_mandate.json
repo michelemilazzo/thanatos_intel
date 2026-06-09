@@ -11,6 +11,7 @@
   "ddd_case",
   "investigation_case",
   "applicant",
+  "applicant_name",
   "subject_matter",
   "territorial_scope",
   "fee_total",
@@ -66,6 +67,16 @@
    "label": "Richiedente",
    "options": "Applicant Profile",
    "in_list_view": 1
+  },
+  {
+   "fieldname": "applicant_name",
+   "fieldtype": "Data",
+   "label": "Nome richiedente",
+   "fetch_from": "applicant.full_legal_name",
+   "read_only": 1,
+   "in_list_view": 1,
+   "no_copy": 0,
+   "print_hide": 0
   },
   {
    "fieldname": "subject_matter",
