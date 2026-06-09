@@ -18,7 +18,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Verifica documenti del richiedente prima di procedere.",
             "desk_url": lambda c: f"/app/kyc-check?client={c.get('client','')}" if c.get('client_type') == 'Individual' else f"/app/kyb-check?client={c.get('client','')}",
-            "check": _check_kyb_kyc,
+            "check": lambda c: _check_kyb_kyc(c),
         },
         {
             "key": "mandate",
@@ -26,7 +26,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Genera il PDF del mandato e invialo al cliente per la firma.",
             "desk_url": lambda c: f"/app/agency-mandate?ddd_case={c['name']}",
-            "check": _check_mandate_created,
+            "check": lambda c: _check_mandate_created(c),
         },
         {
             "key": "mandate_signed",
@@ -34,7 +34,7 @@ PIPELINES = {
             "actor": "client",
             "description": "Il cliente firma il mandato tramite DocuSeal.",
             "portal_url": "/portal",
-            "check": _check_mandate_signed,
+            "check": lambda c: _check_mandate_signed(c),
         },
         {
             "key": "proforma",
@@ -42,7 +42,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Emetti la proforma con l'importo del servizio.",
             "desk_url": lambda c: f"/app/diplomatic-proforma?ddd_case={c['name']}",
-            "check": _check_proforma,
+            "check": lambda c: _check_proforma(c),
         },
         {
             "key": "payment",
@@ -50,7 +50,7 @@ PIPELINES = {
             "actor": "client",
             "description": "Il cliente salda la proforma.",
             "portal_url": "/portal/billing",
-            "check": _check_payment,
+            "check": lambda c: _check_payment(c),
         },
         {
             "key": "passport_analysis",
@@ -58,7 +58,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Avvia l'analisi del documento di viaggio.",
             "desk_url": lambda c: f"/app/passport-analysis?ddd_case={c['name']}",
-            "check": _check_passport_analysis,
+            "check": lambda c: _check_passport_analysis(c),
         },
         {
             "key": "sanctions",
@@ -66,7 +66,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Esegui lo screening sanzioni sul soggetto.",
             "desk_url": lambda c: f"/app/sanctions-screening?ddd_case={c['name']}",
-            "check": _check_sanctions,
+            "check": lambda c: _check_sanctions(c),
         },
         {
             "key": "report",
@@ -74,7 +74,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Genera il report di eligibilità e caricalo.",
             "desk_url": lambda c: f"/app/investigation-report?investigation_case={c['name']}",
-            "check": _check_report,
+            "check": lambda c: _check_report(c),
         },
         {
             "key": "completed",
@@ -82,7 +82,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Chiudi il caso e archivia i documenti.",
             "desk_url": lambda c: f"/app/diplomatic-eligibility-case/{c['name']}",
-            "check": _check_completed,
+            "check": lambda c: _check_completed(c),
         },
     ],
     "Investigation": [
@@ -92,7 +92,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Genera e invia il mandato d'incarico.",
             "desk_url": lambda c: f"/app/agency-mandate?investigation_case={c['name']}",
-            "check": _check_mandate_created,
+            "check": lambda c: _check_mandate_created(c),
         },
         {
             "key": "mandate_signed",
@@ -100,7 +100,7 @@ PIPELINES = {
             "actor": "client",
             "description": "Il cliente firma il mandato.",
             "portal_url": "/portal",
-            "check": _check_mandate_signed,
+            "check": lambda c: _check_mandate_signed(c),
         },
         {
             "key": "proforma",
@@ -108,7 +108,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Emetti il preventivo.",
             "desk_url": lambda c: f"/app/quotation",
-            "check": _check_invoice_or_quotation,
+            "check": lambda c: _check_invoice_or_quotation(c),
         },
         {
             "key": "payment",
@@ -116,7 +116,7 @@ PIPELINES = {
             "actor": "client",
             "description": "Il cliente effettua il pagamento.",
             "portal_url": "/portal/billing",
-            "check": _check_payment,
+            "check": lambda c: _check_payment(c),
         },
         {
             "key": "evidence",
@@ -124,7 +124,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Carica le evidenze raccolte (SHA-256).",
             "desk_url": lambda c: f"/app/investigation-evidence?investigation_case={c['name']}",
-            "check": _check_evidence,
+            "check": lambda c: _check_evidence(c),
         },
         {
             "key": "report",
@@ -132,7 +132,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Genera e consegna il report investigativo.",
             "desk_url": lambda c: f"/app/investigation-report?investigation_case={c['name']}",
-            "check": _check_report,
+            "check": lambda c: _check_report(c),
         },
         {
             "key": "completed",
@@ -140,7 +140,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Chiudi il caso.",
             "desk_url": lambda c: f"/app/investigation-case/{c['name']}",
-            "check": _check_completed,
+            "check": lambda c: _check_completed(c),
         },
     ],
     "OSINT": [
@@ -150,7 +150,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Genera il mandato.",
             "desk_url": lambda c: f"/app/agency-mandate",
-            "check": _check_mandate_created,
+            "check": lambda c: _check_mandate_created(c),
         },
         {
             "key": "osint_job",
@@ -158,7 +158,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Avvia la ricerca OSINT.",
             "desk_url": lambda c: f"/app/osint-job?investigation_case={c['name']}",
-            "check": _check_osint,
+            "check": lambda c: _check_osint(c),
         },
         {
             "key": "report",
@@ -166,14 +166,14 @@ PIPELINES = {
             "actor": "operator",
             "description": "Genera il report OSINT.",
             "desk_url": lambda c: f"/app/investigation-report?investigation_case={c['name']}",
-            "check": _check_report,
+            "check": lambda c: _check_report(c),
         },
         {
             "key": "completed",
             "label": "Chiuso",
             "actor": "operator",
             "description": "Chiudi.",
-            "check": _check_completed,
+            "check": lambda c: _check_completed(c),
         },
     ],
     "Antifrode": [
@@ -183,7 +183,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Genera il mandato.",
             "desk_url": lambda c: f"/app/agency-mandate",
-            "check": _check_mandate_created,
+            "check": lambda c: _check_mandate_created(c),
         },
         {
             "key": "fraud_analysis",
@@ -191,7 +191,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Avvia l'analisi delle transazioni/soggetti.",
             "desk_url": lambda c: f"/app/fraud-alert?investigation_case={c['name']}",
-            "check": _check_fraud_alert,
+            "check": lambda c: _check_fraud_alert(c),
         },
         {
             "key": "blacklist",
@@ -199,7 +199,7 @@ PIPELINES = {
             "actor": "operator",
             "description": "Controlla il soggetto in blacklist.",
             "desk_url": lambda c: f"/app/blacklist-entry",
-            "check": _check_blacklist,
+            "check": lambda c: _check_blacklist(c),
         },
         {
             "key": "report",
@@ -207,14 +207,14 @@ PIPELINES = {
             "actor": "operator",
             "description": "Genera il report.",
             "desk_url": lambda c: f"/app/investigation-report?investigation_case={c['name']}",
-            "check": _check_report,
+            "check": lambda c: _check_report(c),
         },
         {
             "key": "completed",
             "label": "Chiuso",
             "actor": "operator",
             "description": "Chiudi.",
-            "check": _check_completed,
+            "check": lambda c: _check_completed(c),
         },
     ],
 }
