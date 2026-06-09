@@ -11,6 +11,27 @@ frappe.ui.form.on('Investigation Case', {
             frm.page.set_indicator(frm.doc.status, colors[frm.doc.status] || 'grey');
         }
 
+        if (!frm.is_new() && frm.doc.drive_folder) {
+            frm.add_custom_button(__('Apri Drive'), () => {
+                window.open('/drive?entity=' + frm.doc.drive_folder, '_blank');
+            }, __('File'));
+        }
+
+        if (!frm.is_new() && !frm.doc.drive_folder) {
+            frm.add_custom_button(__('Crea cartella Drive'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.integrations.intel_inbox.ensure_case_folder_api',
+                    args: { case_name: frm.doc.name },
+                    callback(r) {
+                        if (r.message && r.message.ok) {
+                            frappe.show_alert({ message: 'Cartella Drive creata', indicator: 'green' });
+                            frm.reload_doc();
+                        }
+                    }
+                });
+            }, __('File'));
+        }
+
         if (!frm.is_new()) {
             frm.add_custom_button(__('Calcola Risk Score'), () => {
                 frappe.call({

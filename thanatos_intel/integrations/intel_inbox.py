@@ -182,7 +182,8 @@ def _ensure_drive_folder(case_name: str) -> str:
                 }).insert(ignore_permissions=True)
             except Exception:
                 pass
-    return base
+    case_folder = frappe.db.get_value("Drive File", {"title": case_name, "is_group": 1}, "name")
+    return case_folder or base
 
 
 def _ensure_file_folder(case_name: str) -> str:
@@ -212,9 +213,22 @@ def _ensure_file_folder(case_name: str) -> str:
 def ensure_case_folder_hook(doc, method=None):
     """Wrapper called by Frappe doc_events on Investigation Case after_insert."""
     try:
-        ensure_case_folder(doc.name)
+        folder_id = ensure_case_folder(doc.name)
+        if folder_id:
+            frappe.db.set_value("Investigation Case", doc.name, "drive_folder", folder_id, update_modified=False)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "ensure_case_folder_hook")
+
+
+@frappe.whitelist()
+def ensure_case_folder_api(case_name: str) -> dict:
+    """API per creare/aggiornare cartella Drive da desk form."""
+    frappe.has_permission("Investigation Case", "write", case_name, throw=True)
+    folder_id = ensure_case_folder(case_name)
+    if folder_id:
+        frappe.db.set_value("Investigation Case", case_name, "drive_folder", folder_id, update_modified=False)
+        frappe.db.commit()
+    return {"ok": True, "folder_id": folder_id}
 
 
 def _audit(event: str, ref: str, payload: dict) -> None:

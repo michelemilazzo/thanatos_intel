@@ -33,6 +33,8 @@
   {"fieldname":"case_entities","fieldtype":"Table","label":"Entities","options":"Case Entity"},
   {"fieldname":"sb_activities","fieldtype":"Section Break","label":"Activities Log"},
   {"fieldname":"case_activities","fieldtype":"Table","label":"Activities","options":"Case Activity"},
+  {"fieldname":"sb_integrations","fieldtype":"Section Break","label":"Integrazioni","collapsible":1},
+  {"fieldname":"drive_folder","fieldtype":"Data","label":"Drive Folder ID","read_only":1,"hidden":0,"in_list_view":0,"in_standard_filter":0,"no_copy":1,"print_hide":1},
   {"fieldname":"sb_outcome","fieldtype":"Section Break","label":"Outcome","collapsible":1},
   {"fieldname":"final_verdict","fieldtype":"Select","label":"Final Verdict","options":"Pending\nFraud Confirmed\nClean\nInconclusive","default":"Pending"},
   {"fieldname":"cb_outcome","fieldtype":"Column Break"},
