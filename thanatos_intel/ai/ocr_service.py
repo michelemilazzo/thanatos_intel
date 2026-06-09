@@ -6,16 +6,106 @@ Supporta:
   - Documenti supportati: passport, id_card, driving_license, company_doc,
                           financial_doc, contract, generic
 
-Lingue default: eng+ita+ron (Tesseract language packs installati sul server).
+Lingue default: eng+ita+ron.
+Auto-install: se una lingua non è disponibile localmente viene installata
+automaticamente via apt (tesseract-ocr-{lang}).
 """
 
 import os
 import re
+import subprocess
 import frappe
 
 SUPPORTED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".webp"}
 TESSERACT_LANGS = "eng+ita+ron"
 OCR_DPI = 300
+
+# Tesseract lang code → apt package name (dove diverso dal pattern tesseract-ocr-{lang})
+_APT_OVERRIDES = {
+    "chi_sim": "tesseract-ocr-chi-sim",
+    "chi_tra": "tesseract-ocr-chi-tra",
+    "chi_sim_vert": "tesseract-ocr-chi-sim",
+    "chi_tra_vert": "tesseract-ocr-chi-tra",
+}
+
+# Lingua ISO 639-1/2 → codice Tesseract
+_ISO_TO_TESS = {
+    "en": "eng", "it": "ita", "ro": "ron", "fr": "fra", "de": "deu",
+    "es": "spa", "pt": "por", "ru": "rus", "ar": "ara", "zh": "chi_sim",
+    "ja": "jpn", "ko": "kor", "nl": "nld", "pl": "pol", "uk": "ukr",
+    "tr": "tur", "sv": "swe", "no": "nor", "da": "dan", "fi": "fin",
+    "cs": "ces", "sk": "slk", "hu": "hun", "hr": "hrv", "sr": "srp",
+    "bg": "bul", "el": "ell", "he": "heb", "hi": "hin", "th": "tha",
+    "vi": "vie", "id": "ind", "ms": "msa", "fa": "fas",
+    # già in formato tess
+    "eng": "eng", "ita": "ita", "ron": "ron", "fra": "fra", "deu": "deu",
+    "spa": "spa", "por": "por", "rus": "rus", "ara": "ara",
+    "jpn": "jpn", "kor": "kor", "nld": "nld", "pol": "pol",
+}
+
+
+def _ensure_lang(lang_code: str) -> bool:
+    """Verifica che il language pack Tesseract sia installato, altrimenti lo installa.
+    Ritorna True se disponibile dopo l'operazione.
+    """
+    try:
+        import pytesseract
+        available = pytesseract.get_languages()
+        if lang_code in available:
+            return True
+        # Non disponibile — installa
+        pkg = _APT_OVERRIDES.get(lang_code, f"tesseract-ocr-{lang_code}")
+        frappe.log_error(f"Tesseract lang '{lang_code}' mancante — installo {pkg}", "OCRService")
+        result = subprocess.run(
+            ["apt-get", "install", "-y", "--no-install-recommends", pkg],
+            capture_output=True, text=True, timeout=120
+        )
+        if result.returncode == 0:
+            frappe.log_error(f"Installato {pkg} con successo", "OCRService")
+            return True
+        frappe.log_error(f"apt install {pkg} fallito: {result.stderr[:300]}", "OCRService")
+        return False
+    except Exception as e:
+        frappe.log_error(f"_ensure_lang error: {e}", "OCRService")
+        return False
+
+
+def _build_lang_string(langs) -> str:
+    """Costruisce la stringa lingua per Tesseract (es. 'eng+ita+fra').
+    Accetta stringa 'eng+ita' o lista ['eng','ita'] o codici ISO.
+    Garantisce eng come base. Auto-installa lingue mancanti.
+    """
+    if not langs:
+        return TESSERACT_LANGS
+
+    if isinstance(langs, str):
+        parts = [l.strip() for l in langs.replace(",", "+").split("+") if l.strip()]
+    else:
+        parts = [str(l).strip() for l in langs if l]
+
+    # Normalizza ISO → Tesseract
+    tess_parts = []
+    for p in parts:
+        tess = _ISO_TO_TESS.get(p.lower(), p)
+        tess_parts.append(tess)
+
+    # Aggiungi eng come base se non presente
+    if "eng" not in tess_parts:
+        tess_parts.insert(0, "eng")
+
+    # Rimuovi duplicati mantenendo ordine
+    seen = set()
+    unique = [x for x in tess_parts if not (x in seen or seen.add(x))]
+
+    # Verifica/installa ogni lingua
+    valid = []
+    for lang in unique:
+        if _ensure_lang(lang):
+            valid.append(lang)
+        else:
+            frappe.log_error(f"Lingua '{lang}' non disponibile, saltata", "OCRService")
+
+    return "+".join(valid) if valid else TESSERACT_LANGS
 
 
 # ---------------------------------------------------------------------------
@@ -193,18 +283,22 @@ class OCRService:
     Uso:
         svc = OCRService()
         result = svc.extract("passport", source="/path/to/passport.jpg")
-        # oppure
+        result = svc.extract("passport", source="/path/to/doc.jpg", lang="fra")
+        result = svc.extract("contract", source="/path/to/doc.pdf", lang=["deu","eng"])
         result = svc.extract_from_frappe_url("id_card", "/private/files/carta.pdf")
     """
 
-    def __init__(self, lang: str = TESSERACT_LANGS):
-        self.lang = lang
+    def __init__(self, lang=None):
+        self.lang = _build_lang_string(lang) if lang else TESSERACT_LANGS
 
-    def extract(self, document_type: str, source=None) -> dict:
+    def extract(self, document_type: str, source=None, lang=None) -> dict:
         """
         document_type: 'passport'|'id_card'|'driving_license'|'company_doc'|
                        'financial_doc'|'contract'|'generic'
         source: absolute file path, or None (returns empty result)
+        lang: stringa 'fra' / 'fra+eng', lista ['fra','eng'], o codice ISO 'fr'.
+              Se None usa il lang dell'istanza. La lingua viene auto-installata
+              se non disponibile localmente.
         """
         if not source:
             return self._empty(document_type, "no_source")
@@ -212,7 +306,8 @@ class OCRService:
         if not os.path.exists(source):
             return self._empty(document_type, "file_not_found")
 
-        text, provider = _extract_text_from_file(source, self.lang)
+        active_lang = _build_lang_string(lang) if lang else self.lang
+        text, provider = _extract_text_from_file(source, active_lang)
 
         if provider == "error" or not text:
             return self._empty(document_type, provider or "no_text")
@@ -223,7 +318,7 @@ class OCRService:
         required = _REQUIRED_FIELDS.get(document_type, [])
         missing = [f for f in required if not fields.get(f)]
 
-        confidence = _avg_confidence(source, self.lang) if provider == "tesseract_image" else (
+        confidence = _avg_confidence(source, active_lang) if provider == "tesseract_image" else (
             0.85 if provider == "native_pdf" else 0.70
         )
 
@@ -234,10 +329,10 @@ class OCRService:
             "confidence": confidence,
             "missing_fields": missing,
             "provider": provider,
-            "lang": self.lang,
+            "lang": active_lang,
         }
 
-    def extract_from_frappe_url(self, document_type: str, file_url: str) -> dict:
+    def extract_from_frappe_url(self, document_type: str, file_url: str, lang=None) -> dict:
         """Risolve un file URL Frappe (/private/files/... o /files/...) e chiama extract()."""
         if "/private/files/" in file_url:
             path = frappe.get_site_path("private", "files",
@@ -245,11 +340,12 @@ class OCRService:
         else:
             path = frappe.get_site_path("public", "files",
                                         file_url.lstrip("/files/"))
-        return self.extract(document_type, source=path)
+        return self.extract(document_type, source=path, lang=lang)
 
-    def extract_text_only(self, file_path: str) -> str:
+    def extract_text_only(self, file_path: str, lang=None) -> str:
         """Restituisce solo il testo grezzo senza parsing strutturato."""
-        text, _ = _extract_text_from_file(file_path, self.lang)
+        active_lang = _build_lang_string(lang) if lang else self.lang
+        text, _ = _extract_text_from_file(file_path, active_lang)
         return text
 
     @staticmethod
@@ -269,7 +365,12 @@ class OCRService:
 # ---------------------------------------------------------------------------
 
 @frappe.whitelist()
-def ocr_file(file_url: str, document_type: str = "generic") -> dict:
-    """POST-able da desk/portal: estrae testo e campi da un file Frappe."""
+def ocr_file(file_url: str, document_type: str = "generic", lang: str = None) -> dict:
+    """POST-able da desk/portal: estrae testo e campi da un file Frappe.
+
+    lang: codice lingua o lista separata da '+' (es. 'fra', 'deu+eng', 'zh').
+          Se la lingua non è installata viene installata automaticamente.
+          Supporta codici ISO 639-1 (it, fr, de, ru...) e Tesseract (ita, fra, deu...).
+    """
     svc = OCRService()
-    return svc.extract_from_frappe_url(document_type, file_url)
+    return svc.extract_from_frappe_url(document_type, file_url, lang=lang)
