@@ -187,6 +187,56 @@ table{min-width:520px}
   </div>
   {% endif %}
 
+  {% if tickets %}
+  <div class="section" id="tickets" style="margin-top:40px">
+    <div class="section-title">Ticket di Supporto <small style="float:right;font-size:11px;"><a href="/support" style="color:var(--gold)">Apri tutti →</a></small></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for t in tickets %}
+      <a href="/support/tickets/{{ t.name }}" style="background:var(--panel);border:1px solid var(--border);
+         border-radius:4px;padding:12px 16px;text-decoration:none;color:inherit;display:flex;
+         justify-content:space-between;align-items:center">
+        <div>
+          <span style="font-size:12px;color:#fff;">{{ t.subject }}</span>
+          <span style="font-size:10px;color:var(--grey);margin-left:10px">{{ frappe.utils.pretty_date(t.creation) }}</span>
+        </div>
+        <span style="font-size:10px;padding:2px 8px;border:1px solid var(--border);
+              border-radius:2px;text-transform:uppercase;letter-spacing:1px;
+              color:{{ 'var(--gold)' if t.status == 'Open' else 'var(--grey)' }}">{{ t.status }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="margin-top:20px">
+    <button onclick="openNewTicket()" style="background:transparent;border:1px solid var(--border);
+      color:var(--grey);padding:8px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+      cursor:pointer;border-radius:3px;transition:all .15s"
+      onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--grey)'">
+      + Apri Ticket di Supporto
+    </button>
+  </div>
+
+  <script>
+  function openNewTicket() {
+    const subject = prompt('Oggetto del ticket:');
+    if (!subject) return;
+    const desc = prompt('Descrivi il problema:');
+    if (!desc) return;
+    fetch('/api/method/thanatos_intel.integrations.helpdesk_bridge.create_ticket_for_case', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Frappe-CSRF-Token': frappe.csrf_token},
+      body: JSON.stringify({case_name: '{{ case.name if case else "" }}', subject, description: desc})
+    }).then(r => r.json()).then(d => {
+      if (d.message && d.message.ok) {
+        alert('Ticket creato! Verrai reindirizzato.');
+        window.location.href = d.message.url;
+      }
+    });
+  }
+  </script>
+
   <div class="footer-note">
     Accesso tracciato · Catena di custodia art. 234-bis c.p.p. · SHA-256
   </div>
