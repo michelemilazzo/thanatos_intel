@@ -143,24 +143,36 @@ def _find_existing_template(mandate: str, base: str, key: str) -> int | None:
 
 
 def _upload_template(mandate: str, base: str, key: str) -> int:
-    """Crea template DocuSeal dall'URL PDF firmato. Ritorna template_id."""
-    pdf_url = _signed_pdf_url(mandate)
+    """Crea template DocuSeal dal PDF del mandate. Ritorna template_id."""
+    import os
+
+    m = frappe.get_doc("Agency Mandate", mandate)
+    pdf_rel = m.mandate_pdf  # es. /private/files/MND-xxx.pdf
+    if not pdf_rel:
+        frappe.throw("mandate_pdf mancante")
+
+    site_path = frappe.get_site_path()
+    pdf_abs = os.path.join(site_path, pdf_rel.lstrip("/"))
+    if not os.path.exists(pdf_abs):
+        frappe.throw(f"PDF non trovato: {pdf_abs}")
+
+    with open(pdf_abs, "rb") as fh:
+        pdf_bytes = fh.read()
+
     s = _login_session(base)
 
-    # Fresh CSRF dopo login
+    # Fresh CSRF dalla pagina templates
     rp = s.get(f"{base}/templates", timeout=15)
     csrf_m = re.search(r'csrf-token["\s]+content="([^"]+)"', rp.text)
     csrf = csrf_m.group(1) if csrf_m else s.headers.get("X-CSRF-Token", "")
     if csrf:
         s.headers["X-CSRF-Token"] = csrf
 
+    # DocuSeal expects files[] (array field name)
     resp = s.post(
         f"{base}/templates_upload",
-        data={
-            "url": pdf_url,
-            "filename": f"Mandate-{mandate}.pdf",
-            "authenticity_token": csrf,
-        },
+        files=[("files[]", (f"Mandate-{mandate}.pdf", pdf_bytes, "application/pdf"))],
+        data={"authenticity_token": csrf},
         allow_redirects=False,
         timeout=60,
     )
