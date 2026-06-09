@@ -21,7 +21,7 @@ import xml.etree.ElementTree as ET
 from frappe.utils import now_datetime, today
 
 OFAC_URL = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ENHANCED.XML"
-EU_URL = "https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content"
+EU_URL = "https://data.opensanctions.org/datasets/latest/eu_fsf/targets.simple.csv"
 UN_URL = "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
 ICIJ_API = "https://offshoreleaks.icij.org/api/search"
 GLEIF_API = "https://api.gleif.org/api/v1/lei-records"
@@ -87,37 +87,62 @@ def upsert_entry(external_id: str, entry_type: str, entry_value: str,
 
 def ingest_ofac(max_entries: int = 0) -> dict:
     """
-    Scarica OFAC SDN XML e inserisce in blacklist.
-    Fonte: US Department of the Treasury
-    URL: https://ofac.treasury.gov/system/files/downloads/sdn.xml
+    Scarica OFAC SDN Enhanced XML e inserisce in blacklist.
+    Fonte: US Department of the Treasury — Office of Foreign Assets Control
+    URL: https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ENHANCED.XML
     """
-    r = requests.get(OFAC_URL, timeout=120)
+    r = requests.get(OFAC_URL, timeout=300, allow_redirects=True)
     r.raise_for_status()
     root = ET.fromstring(r.content)
-    ns = {"o": "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/XML"}
-    # Supporta sia namespace che no-namespace
-    entries = root.findall(".//sdnEntry") or root.findall(".//{*}sdnEntry")
+    NS = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/ENHANCED_XML"
+    entities_el = root.find(f"{{{NS}}}entities")
+    if entities_el is None:
+        return {"source": "OFAC SDN", "inserted": 0, "error": "entities element not found"}
     inserted = 0
-    updated = 0
     dataset = f"OFAC SDN {today()}"
-    for entry in entries:
-        uid = (entry.findtext("uid") or entry.findtext("{*}uid") or "").strip()
-        if not uid:
+    for entity in entities_el:
+        gi = entity.find(f"{{{NS}}}generalInfo")
+        if gi is None:
             continue
-        last = (entry.findtext("lastName") or entry.findtext("{*}lastName") or "").strip()
-        first = (entry.findtext("firstName") or entry.findtext("{*}firstName") or "").strip()
-        sdn_type = (entry.findtext("sdnType") or entry.findtext("{*}sdnType") or "Entity").strip()
-        programs = [p.text for p in (entry.findall(".//program") or entry.findall(".//{*}program")) if p.text]
-        full_name = f"{first} {last}".strip() if first else last
+        uid = (gi.findtext(f"{{{NS}}}identityId") or "").strip()
+        entity_type_code = (gi.findtext(f"{{{NS}}}entityType") or "Entity").strip()
+        entry_type = "Person" if entity_type_code == "Individual" else "Company"
+        # Cerca il nome primario in Latin script
+        full_name = ""
+        names_el = entity.find(f"{{{NS}}}names")
+        if names_el is not None:
+            for name_el in names_el:
+                is_primary = name_el.findtext(f"{{{NS}}}isPrimary") or ""
+                trans_el = name_el.find(f"{{{NS}}}translations")
+                if trans_el is None:
+                    continue
+                for trans in trans_el:
+                    script = trans.findtext(f"{{{NS}}}script") or ""
+                    if script.lower() != "latin" and is_primary != "true":
+                        continue
+                    full = (trans.findtext(f"{{{NS}}}formattedFullName") or
+                            trans.findtext(f"{{{NS}}}formattedLastName") or "").strip()
+                    if full:
+                        full_name = full
+                        break
+                if full_name:
+                    break
         if not full_name:
             continue
-        entry_type = "Person" if sdn_type in ("Individual",) else "Company"
-        reason = f"OFAC SDN - Programmi: {', '.join(programs)}" if programs else "OFAC SDN"
-        external_id = f"OFAC:{uid}"
-        source_url = f"https://sanctionssearch.ofac.treas.gov/?id={uid}"
-        name = upsert_entry(external_id, entry_type, full_name, "Critical",
-                            "OFAC SDN", reason, dataset, source_url)
-        if name:
+        # Programmi sanzionatori
+        progs = []
+        progs_el = entity.find(f"{{{NS}}}sanctionsPrograms")
+        if progs_el is not None:
+            for p in progs_el:
+                prog_text = p.findtext(f"{{{NS}}}program") or ""
+                if prog_text:
+                    progs.append(prog_text)
+        reason = f"OFAC SDN - Programmi: {', '.join(progs)}" if progs else "OFAC SDN"
+        external_id = f"OFAC:{uid}" if uid else ""
+        source_url = f"https://sanctionssearch.ofac.treas.gov/?id={uid}" if uid else ""
+        doc_name = upsert_entry(external_id, entry_type, full_name, "Critical",
+                                "OFAC SDN", reason, dataset, source_url)
+        if doc_name:
             inserted += 1
         if max_entries and inserted >= max_entries:
             break
@@ -131,41 +156,30 @@ def ingest_ofac(max_entries: int = 0) -> dict:
 
 def ingest_eu_sanctions(max_entries: int = 0) -> dict:
     """
-    Scarica EU Financial Sanctions XML (lista consolidata UE).
-    Fonte: European Commission - Financial Sanctions Files
-    URL: https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content
+    Scarica EU Financial Sanctions via OpenSanctions CSV (mirror ufficiale gratuito).
+    Fonte: OpenSanctions mirror of European Commission FSF
+    URL: https://data.opensanctions.org/datasets/latest/eu_fsf/targets.simple.csv
     """
-    r = requests.get(EU_URL, timeout=120)
+    import csv, io
+    r = requests.get(EU_URL, timeout=120, stream=True)
     r.raise_for_status()
-    root = ET.fromstring(r.content)
-    subjects = root.findall(".//subject") or root.findall(".//{*}subject")
     inserted = 0
     dataset = f"EU Financial Sanctions {today()}"
-    for subj in subjects:
-        logical_id = (subj.findtext("logicalId") or subj.findtext("{*}logicalId") or "").strip()
-        subj_type_el = subj.find(".//classificationCode") or subj.find(".//{*}classificationCode")
-        subj_type_code = (subj_type_el.text if subj_type_el is not None else "E").strip()
-        entry_type = "Person" if subj_type_code == "P" else "Company"
-        # Nome: prima nameAlias con wholeName, altrimenti firstName+lastName
-        whole = ""
-        for na in (subj.findall(".//nameAlias") or subj.findall(".//{*}nameAlias")):
-            wn = na.findtext("wholeName") or na.findtext("{*}wholeName") or ""
-            if wn.strip():
-                whole = wn.strip()
-                break
-        if not whole:
-            fn = subj.findtext(".//firstName") or subj.findtext(".//{*}firstName") or ""
-            ln = subj.findtext(".//lastName") or subj.findtext(".//{*}lastName") or ""
-            whole = f"{fn} {ln}".strip()
-        if not whole:
+    reader = csv.DictReader(io.StringIO(r.text))
+    for row in reader:
+        entity_id = row.get("id", "").strip()
+        schema = row.get("schema", "").strip()
+        name_val = row.get("name", "").strip()
+        if not name_val:
             continue
-        reg_url = subj.findtext(".//publicationUrl") or subj.findtext(".//{*}publicationUrl") or ""
-        regulation = subj.findtext(".//regulationNumberTitle") or subj.findtext(".//{*}regulationNumberTitle") or ""
-        reason = f"EU Financial Sanctions - {regulation}" if regulation else "EU Financial Sanctions"
-        external_id = f"EU:{logical_id}" if logical_id else ""
-        name = upsert_entry(external_id, entry_type, whole, "Critical",
-                            "EU Sanctions", reason, dataset, reg_url)
-        if name:
+        entry_type = "Person" if schema == "Person" else "Company"
+        sanctions = row.get("sanctions", "")
+        reason = f"EU Financial Sanctions (FSF) - {sanctions[:200]}" if sanctions else "EU Financial Sanctions"
+        external_id = f"EU:{entity_id}" if entity_id else ""
+        source_url = f"https://www.opensanctions.org/entities/{entity_id}/" if entity_id else ""
+        doc_name = upsert_entry(external_id, entry_type, name_val, "Critical",
+                                "EU Sanctions", reason, dataset, source_url)
+        if doc_name:
             inserted += 1
         if max_entries and inserted >= max_entries:
             break
