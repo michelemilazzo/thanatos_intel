@@ -58,7 +58,8 @@ def register_client(full_name, email, password, phone=None,
             "roles": [{"role": "Investigation Client"}],
         })
         user.insert(ignore_permissions=True)
-        user.update_password(password)
+        from frappe.utils.password import update_password
+        update_password(email, password)
 
         client_data = {
             "doctype": "Investigation Client",
