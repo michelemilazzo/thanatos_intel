@@ -1,0 +1,88 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--navy:#0D1B3E;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;--border:#1F2842;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1200px;margin:0 auto;padding:40px 24px 60px}
+.hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  padding-bottom:22px;border-bottom:1px solid var(--border);margin-bottom:36px;flex-wrap:wrap}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:32px;color:#fff;margin:0 0 6px;letter-spacing:.5px}
+.hero p{margin:0;color:var(--grey);font-size:13px}
+.back-link{font-size:12px;color:var(--grey);text-decoration:none;letter-spacing:1px}
+.back-link:hover{color:var(--gold)}
+.proc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px}
+.proc-card{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:24px}
+.proc-card .type-badge{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--gold);margin-bottom:10px}
+.proc-card h2{font-family:Georgia,serif;font-weight:400;font-size:18px;color:#fff;
+  margin:0 0 8px;letter-spacing:.3px}
+.proc-card .intro{font-size:12px;color:var(--grey);line-height:1.55;margin-bottom:18px;
+  padding-bottom:16px;border-bottom:1px solid var(--border)}
+.step-list{list-style:none;margin:0;padding:0}
+.step-list li{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(31,40,66,.6)}
+.step-list li:last-child{border-bottom:0}
+.step-num{min-width:22px;height:22px;border-radius:50%;background:var(--gold-soft);
+  color:var(--gold);font-size:10px;font-weight:700;display:flex;align-items:center;
+  justify-content:center;margin-top:1px;flex-shrink:0}
+.step-body .step-label{font-size:13px;color:#fff;letter-spacing:.3px}
+.step-body .step-actor{font-size:10px;letter-spacing:1px;text-transform:uppercase;margin:2px 0 3px}
+.step-body .step-actor.op{color:var(--gold)}
+.step-body .step-actor.cl{color:#d97060}
+.step-body .step-desc{font-size:11px;color:var(--grey);line-height:1.45}
+.proc-footer{margin-top:18px;padding-top:14px;border-top:1px solid var(--border)}
+.new-btn{display:inline-block;font-size:11px;padding:7px 16px;border-radius:2px;
+  text-decoration:none;background:var(--gold-soft);color:var(--gold);
+  border:1px solid rgba(200,169,110,.3);letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.new-btn:hover{background:rgba(200,169,110,.25)}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('guide') }}
+<div class="shell">
+
+  <div class="hero-row">
+    <div class="hero">
+      <h1>Guida Procedurale</h1>
+      <p>Procedure step-by-step per ogni tipo di servizio · riferimento rapido per operatori e clienti.</p>
+    </div>
+    <a class="back-link" href="/portal">← Portale</a>
+  </div>
+
+  <div class="proc-grid">
+    {% for p in procedures %}
+    <div class="proc-card">
+      <div class="type-badge">{{ p.key }}</div>
+      <h2>{{ p.label }}</h2>
+      <div class="intro">{{ p.description }}</div>
+      <ol class="step-list">
+        {% for s in p.steps %}
+        <li>
+          <div class="step-num">{{ loop.index }}</div>
+          <div class="step-body">
+            <div class="step-label">{{ s.label }}</div>
+            <div class="step-actor {% if s.actor == 'Operatore' %}op{% else %}cl{% endif %}">{{ s.actor }}</div>
+            <div class="step-desc">{{ s.description }}</div>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+      {% if is_operator %}
+      <div class="proc-footer">
+        <a class="new-btn" href="{{ p.new_url }}">+ Apri caso {{ p.key }}</a>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

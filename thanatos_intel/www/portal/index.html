@@ -61,6 +61,25 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
   letter-spacing:1px;text-transform:uppercase;margin-right:8px}
 .two-col{display:grid;grid-template-columns:1.5fr 1fr;gap:24px;margin-top:8px}
 @media(max-width:980px){.two-col{grid-template-columns:1fr}}
+/* Azioni richieste */
+.actions-section{margin-bottom:36px}
+.action-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.action-card{border-radius:4px;padding:18px 20px;border:1px solid}
+.action-card.client{background:rgba(180,60,40,.08);border-color:rgba(200,80,60,.35)}
+.action-card.operator{background:rgba(200,169,110,.06);border-color:var(--gold-soft)}
+.action-card .ac-step{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+.action-card.client .ac-step{color:#d97060}
+.action-card.operator .ac-step{color:var(--gold)}
+.action-card .ac-title{font-size:14px;color:#fff;margin-bottom:4px;font-family:Georgia,serif;letter-spacing:.3px}
+.action-card .ac-desc{font-size:11px;color:var(--grey);line-height:1.5;margin-bottom:12px}
+.action-card .ac-btn{display:inline-block;font-size:11px;padding:6px 14px;border-radius:2px;
+  text-decoration:none;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.action-card.client .ac-btn{background:rgba(200,80,60,.2);color:#e88070;border:1px solid rgba(200,80,60,.4)}
+.action-card.client .ac-btn:hover{background:rgba(200,80,60,.35)}
+.action-card.operator .ac-btn{background:var(--gold-soft);color:var(--gold);border:1px solid rgba(200,169,110,.3)}
+.action-card.operator .ac-btn:hover{background:rgba(200,169,110,.25)}
+.action-ok{padding:16px 20px;background:rgba(60,180,80,.07);border:1px solid rgba(60,180,80,.2);
+  border-radius:4px;color:#5ab870;font-size:13px;letter-spacing:.5px}
 </style>
 {% endblock %}
 
@@ -78,6 +97,48 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
       <span>{{ user }}</span>
     </div>
   </div>
+
+  {% set has_client_actions = pending_client_actions and pending_client_actions|length > 0 %}
+  {% set has_operator_actions = pending_operator_actions and pending_operator_actions|length > 0 %}
+  {% if is_client and has_client_actions %}
+  <div class="actions-section">
+    <h2 class="section-title">Azioni richieste <small>{{ pending_client_actions|length }} in attesa</small></h2>
+    <div class="action-grid">
+      {% for a in pending_client_actions %}
+      <div class="action-card client">
+        <div class="ac-step">{{ a.step_label }}</div>
+        <div class="ac-title">{{ a.case_title }}</div>
+        <div class="ac-desc">{{ a.step_description }}</div>
+        <a class="ac-btn" href="{{ a.portal_url }}">Procedi →</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% elif is_client %}
+  <div class="actions-section">
+    <div class="action-ok">✓ Tutto in ordine — nessun'azione richiesta da parte tua al momento.</div>
+  </div>
+  {% endif %}
+
+  {% if not is_client and has_operator_actions %}
+  <div class="actions-section">
+    <h2 class="section-title">Azioni operative <small>{{ pending_operator_actions|length }} in attesa</small></h2>
+    <div class="action-grid">
+      {% for a in pending_operator_actions %}
+      <div class="action-card operator">
+        <div class="ac-step">{{ a.step_label }}</div>
+        <div class="ac-title">{{ a.case_title }}</div>
+        <div class="ac-desc">{{ a.step_description }}</div>
+        <a class="ac-btn" href="{{ a.desk_url }}">Apri →</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% elif not is_client %}
+  <div class="actions-section">
+    <div class="action-ok">✓ Tutto in ordine — nessun'azione richiesta al momento.</div>
+  </div>
+  {% endif %}
 
   {% if is_client %}
   <div class="stats">

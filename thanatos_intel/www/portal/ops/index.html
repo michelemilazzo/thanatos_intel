@@ -1,0 +1,103 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--navy:#0D1B3E;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;--border:#1F2842;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1400px;margin:0 auto;padding:40px 24px 60px}
+.hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  padding-bottom:22px;border-bottom:1px solid var(--border);margin-bottom:32px;flex-wrap:wrap}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:32px;color:#fff;margin:0 0 6px;letter-spacing:.5px}
+.hero p{margin:0;color:var(--grey);font-size:13px}
+.kpi-row{display:flex;gap:14px;margin-bottom:32px;flex-wrap:wrap}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:4px;
+  padding:16px 24px;min-width:160px}
+.kpi .v{font-family:Georgia,serif;font-size:30px;color:var(--gold);line-height:1}
+.kpi .l{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;margin-top:5px}
+.section-title{font-family:Georgia,serif;font-size:15px;color:#fff;letter-spacing:2px;
+  text-transform:uppercase;margin:0 0 12px;padding-bottom:8px;
+  border-bottom:1px solid var(--gold-soft);display:flex;align-items:center;gap:10px}
+.section-title .cnt{font-family:inherit;font-size:11px;color:var(--grey);
+  background:var(--panel-2);border:1px solid var(--border);
+  padding:2px 8px;border-radius:2px;letter-spacing:1px}
+.group{margin-bottom:36px}
+.case-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.op-card{background:var(--panel);border:1px solid var(--border);border-radius:4px;
+  padding:14px 16px;text-decoration:none;color:inherit;display:block;
+  transition:border-color .15s,transform .15s}
+.op-card:hover{border-color:var(--gold);transform:translateY(-1px)}
+.op-card .nr{font-family:Georgia,serif;color:var(--gold);font-size:12px;letter-spacing:2px;margin-bottom:4px}
+.op-card .ti{font-size:13px;color:#fff;line-height:1.35;margin-bottom:8px}
+.op-card .meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.tag{font-size:10px;padding:2px 7px;border-radius:2px;letter-spacing:1px;
+  text-transform:uppercase;border:1px solid var(--border);background:var(--panel-2);color:var(--grey)}
+.tag.client-act{color:#d97060;border-color:rgba(200,80,60,.3);background:rgba(180,60,40,.08)}
+.tag.op-act{color:var(--gold);border-color:var(--gold-soft)}
+.op-card .desc{font-size:11px;color:var(--grey);line-height:1.4}
+.empty-group{padding:14px 16px;color:var(--grey);font-size:12px;
+  border:1px dashed var(--border);border-radius:4px}
+.back-link{font-size:12px;color:var(--grey);text-decoration:none;letter-spacing:1px}
+.back-link:hover{color:var(--gold)}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('ops') }}
+<div class="shell">
+
+  <div class="hero-row">
+    <div class="hero">
+      <h1>Centro Operativo</h1>
+      <p>Board casi aperti · raggrupati per step corrente · solo operatori</p>
+    </div>
+    <a class="back-link" href="/portal">← Portale</a>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi"><div class="v">{{ total_open }}</div><div class="l">Casi aperti</div></div>
+    <div class="kpi"><div class="v">{{ total_pending }}</div><div class="l">Azioni operative</div></div>
+    <div class="kpi"><div class="v">{{ groups|length }}</div><div class="l">Step attivi</div></div>
+  </div>
+
+  {% if groups %}
+    {% for g in groups %}
+    <div class="group">
+      <div class="section-title">
+        {{ g.label }}
+        <span class="cnt">{{ g.cases|length }}</span>
+      </div>
+      <div class="case-list">
+        {% for c in g.cases %}
+        <a class="op-card" href="{{ c.desk_url }}">
+          <div class="nr">{{ c.case_number or c.name }}</div>
+          <div class="ti">{{ c.case_title or "(senza titolo)" }}</div>
+          <div class="meta">
+            {% if c.case_type %}<span class="tag">{{ c.case_type }}</span>{% endif %}
+            {% if c.priority %}<span class="tag">{{ c.priority }}</span>{% endif %}
+            {% if c.current_step_actor == 'client' %}
+              <span class="tag client-act">Cliente</span>
+            {% elif c.current_step_actor == 'operator' %}
+              <span class="tag op-act">Operatore</span>
+            {% endif %}
+          </div>
+          {% if c.step_description %}
+          <div class="desc">{{ c.step_description }}</div>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty-group">Nessun caso aperto al momento.</div>
+  {% endif %}
+
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

@@ -80,6 +80,50 @@ def get_context(context):
         context.invoice_unpaid = 0
         context.documents_total = 0
 
+    # Pending actions dalla pipeline
+    from thanatos_intel.pipeline.pipeline import get_pipeline
+    pending_client_actions = []
+    pending_operator_actions = []
+    for c in cases:
+        if (c.get("case_status") or "").lower() in ("completed", "closed", "archived"):
+            continue
+        try:
+            pipeline_key = frappe.db.get_value("Case Type", c.get("case_type"), "pipeline_key") or ""
+            case_dict = dict(c)
+            case_dict["pipeline_key"] = pipeline_key
+            if not case_dict.get("case_status"):
+                case_dict["case_status"] = ""
+            if c.get("case_type") and not case_dict.get("client_type"):
+                client_val = frappe.db.get_value("Investigation Case", c["name"], "client")
+                if client_val:
+                    case_dict["client_type"] = frappe.db.get_value(
+                        "Investigation Client", client_val, "client_type") or ""
+            steps = get_pipeline(case_dict)
+            for step in steps:
+                if step["status"] != "current":
+                    continue
+                if step["actor"] == "client":
+                    pending_client_actions.append({
+                        "case_name": c["name"],
+                        "case_title": c.get("case_title") or c["name"],
+                        "step_label": step["label"],
+                        "step_description": step["description"],
+                        "portal_url": step.get("portal_url") or f"/portal/case/{c['name']}",
+                    })
+                elif step["actor"] == "operator":
+                    pending_operator_actions.append({
+                        "case_name": c["name"],
+                        "case_title": c.get("case_title") or c["name"],
+                        "step_label": step["label"],
+                        "step_description": step["description"],
+                        "desk_url": step.get("desk_url") or f"/app/investigation-case/{c['name']}",
+                    })
+        except Exception:
+            pass
+
+    context.pending_client_actions = pending_client_actions
+    context.pending_operator_actions = pending_operator_actions
+
     context.title = "Portal — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context
