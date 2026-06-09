@@ -142,7 +142,7 @@ def fetch_source(name: str) -> dict:
 				"country_focus": src.country_focus or "",
 				"source_type": "RSS Ingestion",
 				"source": src.name,
-				"source_url": url,
+				"source_url": url[:500] if url else url,
 				"source_name_label": src.source_name,
 				"external_published_at": ext_pub,
 				"external_id": fp,

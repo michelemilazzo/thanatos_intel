@@ -37,7 +37,7 @@
   {"fieldname": "source_type", "fieldtype": "Select", "label": "Source Type",
    "options": "Internal\nRSS Ingestion\nAI Generated\nExternal Curated", "default": "Internal"},
   {"fieldname": "source", "fieldtype": "Link", "label": "News Source", "options": "News Source"},
-  {"fieldname": "source_url", "fieldtype": "Data", "label": "Original URL"},
+  {"fieldname": "source_url", "fieldtype": "Data", "label": "Original URL", "length": 500},
   {"fieldname": "source_name_label", "fieldtype": "Data", "label": "Source Display Name"},
   {"fieldname": "external_published_at", "fieldtype": "Datetime", "label": "Original Pub Date"},
   {"fieldname": "external_id", "fieldtype": "Data", "label": "External ID (dedup)",
