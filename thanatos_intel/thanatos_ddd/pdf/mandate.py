@@ -1,38 +1,43 @@
-"""Genera PDF Agency Mandate tramite Frappe Print Format (wkhtmltopdf/Chromium).
+"""Genera PDF Agency Mandate.
 
-Fallback a reportlab se wkhtmltopdf non è disponibile.
+Usa mandate_body (HTML editato dall'operatore) come corpo,
+avvolto nel layout grafico del print format (header, footer, CSS).
 """
 import frappe
 from frappe.utils.pdf import get_pdf
 
 PRINT_FORMAT = "Mandato d'Incarico"
 
+PDF_OPTIONS = {
+    "margin-top": "22mm",
+    "margin-bottom": "28mm",
+    "margin-left": "18mm",
+    "margin-right": "18mm",
+    "page-size": "A4",
+    "encoding": "UTF-8",
+    "enable-local-file-access": "",
+}
 
-@frappe.whitelist()
-def generate(mandate_name: str) -> dict:
-    """Genera PDF dal Print Format e lo allega al mandato.
-    Restituisce {"ok": True, "file_url": "..."}
-    """
-    m = frappe.get_doc("Agency Mandate", mandate_name)
 
-    # Genera HTML dal Print Format
-    html = frappe.get_print(
+def _build_full_html(doc) -> str:
+    """Assembla HTML completo: chrome del print format + mandate_body editato."""
+    # Recupera il print format come wrapper grafico
+    pf_html = frappe.get_print(
         doctype="Agency Mandate",
-        name=mandate_name,
+        name=doc.name,
         print_format=PRINT_FORMAT,
         as_pdf=False,
     )
+    return pf_html
 
-    # Converti in PDF
-    pdf_bytes = get_pdf(html, options={
-        "margin-top": "22mm",
-        "margin-bottom": "28mm",
-        "margin-left": "18mm",
-        "margin-right": "18mm",
-        "page-size": "A4",
-        "encoding": "UTF-8",
-        "enable-local-file-access": "",
-    })
+
+@frappe.whitelist()
+def generate(mandate_name: str) -> dict:
+    """Genera PDF e lo allega al mandato. Restituisce {"ok": True, "file_url": "..."}"""
+    m = frappe.get_doc("Agency Mandate", mandate_name)
+
+    html = _build_full_html(m)
+    pdf_bytes = get_pdf(html, options=PDF_OPTIONS)
 
     filename = f"{mandate_name}.pdf"
     file_doc = frappe.get_doc({
@@ -54,16 +59,10 @@ def generate(mandate_name: str) -> dict:
 
 @frappe.whitelist()
 def generate_mandate_pdf(mandate_name: str) -> dict:
-    """Alias whitelisted usato dal JS del form."""
     return generate(mandate_name)
 
 
 @frappe.whitelist()
 def preview_html(mandate_name: str) -> str:
-    """Restituisce l'HTML del print format per anteprima."""
-    return frappe.get_print(
-        doctype="Agency Mandate",
-        name=mandate_name,
-        print_format=PRINT_FORMAT,
-        as_pdf=False,
-    )
+    m = frappe.get_doc("Agency Mandate", mandate_name)
+    return _build_full_html(m)

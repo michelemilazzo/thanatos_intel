@@ -1,0 +1,121 @@
+{%- set be = {} -%}
+{%- if doc.billing_entity -%}
+  {%- set be = frappe.get_doc("Billing Entity", doc.billing_entity) -%}
+{%- endif -%}
+{%- set emittente = be.legal_name if be and be.legal_name else "THANATOS INVESTIGAZIONI S.R.L." -%}
+{%- set emittente_vat = be.vat_number if be and be.vat_number else "" -%}
+{%- set emittente_addr = be.address if be and be.address else "" -%}
+{%- set emittente_iban = be.iban if be and be.iban else "" -%}
+{%- set gov_law = be.governing_law if be and be.governing_law else "Legge italiana" -%}
+{%- set foro = be.jurisdiction if be and be.jurisdiction else "il Tribunale competente" -%}
+{%- set license_line = "" -%}
+{%- if be and be.license_authority -%}
+  {%- set license_line = "Autorizzata da " ~ be.license_authority ~ ((" n. " ~ be.license_number) if be.license_number else "") -%}
+{%- endif -%}
+{%- set applicant = {} -%}
+{%- if doc.applicant -%}
+  {%- set applicant = frappe.get_doc("Applicant Profile", doc.applicant) -%}
+{%- endif -%}
+
+<!-- PARTI -->
+<div class="parties-box">
+  <div class="party-block">
+    <h3>Mandatario</h3>
+    <p class="party-name">{{ emittente }}</p>
+    <p class="small">{{ emittente_addr }}</p>
+    {% if emittente_vat %}<p class="small">P.IVA/C.F.: {{ emittente_vat }}</p>{% endif %}
+    {% if license_line %}<p class="small">{{ license_line }}</p>{% endif %}
+    {% if emittente_iban %}<p class="small mt-20">IBAN: <strong>{{ emittente_iban }}</strong></p>{% endif %}
+  </div>
+  <div class="party-block">
+    <h3>Mandante (Cliente)</h3>
+    {% if applicant %}
+    <p class="party-name">{{ applicant.full_legal_name }}</p>
+    <p class="small">{{ applicant.nationality or "" }}
+      {% if applicant.dob %} · nato/a il {{ frappe.utils.formatdate(applicant.dob, "dd/MM/yyyy") }}{% endif %}
+    </p>
+    {% if applicant.phone %}<p class="small">Tel: {{ applicant.phone }}</p>{% endif %}
+    {% else %}
+    <p>—</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ART. 1 OGGETTO -->
+<div class="clause">
+  <span class="clause-num">Art. 1 — Oggetto dell'incarico</span>
+  <p>{{ doc.subject_matter or "Il Mandante conferisce al Mandatario l'incarico di svolgere attività investigativa, di due diligence e di verifica documentale nell'ambito della pratica collegata." }}</p>
+  {% if doc.ddd_case %}
+  <p class="small mt-20">Pratica DDD di riferimento: <strong>{{ doc.ddd_case }}</strong></p>
+  {% elif doc.investigation_case %}
+  <p class="small mt-20">Caso investigativo di riferimento: <strong>{{ doc.investigation_case }}</strong></p>
+  {% endif %}
+</div>
+
+<!-- ART. 2 AMBITO TERRITORIALE -->
+{% if doc.territorial_scope %}
+<div class="clause">
+  <span class="clause-num">Art. 2 — Ambito territoriale</span>
+  <p>{{ doc.territorial_scope }}</p>
+</div>
+{% endif %}
+
+<!-- ART. 3 AUTORIZZAZIONI -->
+<div class="clause">
+  <span class="clause-num">Art. 3 — Autorizzazioni rilasciate dal Mandante</span>
+  <p>Il Mandante autorizza espressamente il Mandatario a:</p>
+  <ul style="margin: 6px 0; padding-left: 20px;">
+    {% if doc.osint_authorization %}<li>Attività di OSINT (ricerca in fonti aperte, web, social, database pubblici)</li>{% endif %}
+    {% if doc.doc_verification_authorization %}<li>Verifica e analisi di documenti di identità e di viaggio</li>{% endif %}
+    {% if doc.third_party_contact_authorization %}<li>Contatto con terze parti nell'ambito delle verifiche</li>{% endif %}
+  </ul>
+</div>
+
+<!-- ART. 4 COMPENSO -->
+<div class="clause">
+  <span class="clause-num">Art. 4 — Compenso</span>
+  <p>Il compenso pattuito per l'esecuzione del presente incarico è il seguente:</p>
+  <table class="fee-table">
+    <thead><tr><th>Descrizione</th><th>Importo</th><th>Valuta</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>{{ doc.subject_matter or "Servizio investigativo" }}</td>
+        <td>{{ "%.2f"|format(doc.fee_total or 0) }}</td>
+        <td>{{ doc.currency or "EUR" }}</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td>Totale</td>
+        <td><strong>{{ "%.2f"|format(doc.fee_total or 0) }} {{ doc.currency or "EUR" }}</strong></td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+  {% if emittente_iban %}
+  <p class="small">Pagamento tramite bonifico: IBAN <strong>{{ emittente_iban }}</strong>
+    {% if be and be.bic_swift %} · BIC/SWIFT <strong>{{ be.bic_swift }}</strong>{% endif %}
+  </p>
+  {% endif %}
+</div>
+
+<!-- ART. 5 LIMITAZIONE DI RESPONSABILITÀ -->
+<div class="clause">
+  <span class="clause-num">Art. 5 — Limitazione di responsabilità</span>
+  <p>{{ doc.no_guarantee_clause or "Thanatos performs investigative, due diligence, compliance and eligibility assessment services only. Thanatos does not issue, sell, broker or guarantee diplomatic, consular, governmental or identity documents." }}</p>
+</div>
+
+<!-- ART. 6 RISERVATEZZA -->
+<div class="clause">
+  <span class="clause-num">Art. 6 — Riservatezza e protezione dei dati</span>
+  <p>Le parti si impegnano a mantenere la massima riservatezza su tutte le informazioni scambiate nell'esecuzione del presente incarico. Il trattamento dei dati personali avviene nel rispetto del GDPR (Reg. UE 2016/679).</p>
+</div>
+
+<!-- ART. 7 LEGGE APPLICABILE -->
+<div class="clause">
+  <span class="clause-num">Art. 7 — Legge applicabile e foro competente</span>
+  <p>Il presente contratto è regolato da <strong>{{ gov_law }}</strong>. Per qualsiasi controversia è competente <strong>{{ foro }}</strong>.</p>
+  {% if be and be.legal_disclaimer %}
+  <p class="small mt-20">{{ be.legal_disclaimer }}</p>
+  {% endif %}
+</div>

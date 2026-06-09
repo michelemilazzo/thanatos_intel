@@ -17,6 +17,7 @@
   "currency",
   "status",
   "section_clauses",
+  "mandate_body",
   "no_guarantee_clause",
   "osint_authorization",
   "doc_verification_authorization",
@@ -104,6 +105,12 @@
    "fieldname": "section_clauses",
    "fieldtype": "Section Break",
    "label": "Clausole"
+  },
+  {
+   "fieldname": "mandate_body",
+   "fieldtype": "Text Editor",
+   "label": "Corpo del mandato (editabile)",
+   "description": "Testo delle clausole generato automaticamente dal template. Modificabile prima di emettere il PDF."
   },
   {
    "fieldname": "no_guarantee_clause",

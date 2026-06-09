@@ -58,6 +58,29 @@ frappe.ui.form.on('Agency Mandate', {
             }, __('Firma'));
         }
 
+        // Rigenera corpo dal template
+        if (!frm.is_new() && frm.doc.status === 'Draft') {
+            frm.add_custom_button(__('Rigenera bozza'), () => {
+                frappe.confirm(
+                    'Sovrascrivere il corpo del mandato con il template originale? Le modifiche manuali andranno perse.',
+                    () => {
+                        frappe.call({
+                            method: 'thanatos_intel.thanatos_ddd.doctype.agency_mandate.agency_mandate.regenerate_body',
+                            args: { mandate_name: frm.doc.name },
+                            freeze: true,
+                            freeze_message: 'Rigenerazione in corso…',
+                            callback(r) {
+                                if (r.message && r.message.ok) {
+                                    frappe.show_alert({ message: 'Bozza rigenerata dal template', indicator: 'blue' });
+                                    frm.reload_doc();
+                                }
+                            }
+                        });
+                    }
+                );
+            }, __('Firma'));
+        }
+
         // Badge stato
         const colors = {
             'Draft': 'grey', 'Pending Signature': 'yellow',

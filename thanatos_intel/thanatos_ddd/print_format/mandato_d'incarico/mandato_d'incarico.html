@@ -115,6 +115,10 @@
 
 <hr class="gold"/>
 
+<!-- CORPO EDITABILE (mandate_body) — fallback al template inline se vuoto -->
+{% if doc.mandate_body %}
+{{ doc.mandate_body }}
+{% else %}
 <!-- PARTI -->
 <div class="parties-box">
   <div class="party-block">
@@ -215,6 +219,8 @@
   <p class="small mt-20">{{ be.legal_disclaimer }}</p>
   {% endif %}
 </div>
+
+{% endif %}{# fine else mandate_body #}
 
 <!-- FIRMA -->
 <div class="signature-section">
