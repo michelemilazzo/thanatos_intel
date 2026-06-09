@@ -80,6 +80,14 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 .action-card.operator .ac-btn:hover{background:rgba(200,169,110,.25)}
 .action-ok{padding:16px 20px;background:rgba(60,180,80,.07);border:1px solid rgba(60,180,80,.2);
   border-radius:4px;color:#5ab870;font-size:13px;letter-spacing:.5px}
+.qa-icon{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:18px 12px;text-align:center;text-decoration:none;color:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  transition:border-color .15s,transform .15s;}
+.qa-icon:hover{border-color:var(--gold);transform:translateY(-2px);}
+.qa-icon.qa-active{border-color:var(--gold);}
+.qa-ic{font-size:28px;line-height:1;}
+.qa-label{font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;font-weight:500;}
 </style>
 {% endblock %}
 
@@ -155,6 +163,70 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     <div class="stat"><div class="v">{{ evidence_total }}</div><div class="l">Evidenze</div><div class="d">SHA-256 custody</div></div>
   </div>
   {% endif %}
+
+  <!-- ACCESSO RAPIDO -->
+  <div style="margin:0 0 36px">
+    <div class="section-title">Accesso Rapido</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
+
+      <!-- Sempre visibili -->
+      <a href="/portal" class="qa-icon {% if request.path == '/portal' %}qa-active{% endif %}">
+        <div class="qa-ic">🏠</div>
+        <div class="qa-label">Dashboard</div>
+      </a>
+      <a href="/portal/guide" class="qa-icon">
+        <div class="qa-ic">📋</div>
+        <div class="qa-label">Guida</div>
+      </a>
+      <a href="/support" class="qa-icon">
+        <div class="qa-ic">🎫</div>
+        <div class="qa-label">Supporto</div>
+      </a>
+      <a href="/docs" class="qa-icon">
+        <div class="qa-ic">📖</div>
+        <div class="qa-label">Procedure</div>
+      </a>
+
+      {% if is_client %}
+      <a href="/portal#cases" class="qa-icon">
+        <div class="qa-ic">📁</div>
+        <div class="qa-label">I miei casi</div>
+      </a>
+      <a href="/portal#docs" class="qa-icon">
+        <div class="qa-ic">📄</div>
+        <div class="qa-label">Documenti</div>
+      </a>
+      <a href="/portal#billing" class="qa-icon">
+        <div class="qa-ic">💳</div>
+        <div class="qa-label">Fatture</div>
+      </a>
+      {% endif %}
+
+      {% if is_investigator %}
+      <a href="/portal/ops" class="qa-icon">
+        <div class="qa-ic">🎯</div>
+        <div class="qa-label">Centro Ops</div>
+      </a>
+      <a href="/drive" class="qa-icon">
+        <div class="qa-ic">🗂️</div>
+        <div class="qa-label">Drive</div>
+      </a>
+      <a href="/crm" class="qa-icon">
+        <div class="qa-ic">👥</div>
+        <div class="qa-label">CRM</div>
+      </a>
+      <a href="/insights" class="qa-icon">
+        <div class="qa-ic">📊</div>
+        <div class="qa-label">Analytics</div>
+      </a>
+      <a href="/app" class="qa-icon">
+        <div class="qa-ic">⚙️</div>
+        <div class="qa-label">Desk</div>
+      </a>
+      {% endif %}
+
+    </div>
+  </div>
 
   {% if is_client %}
   <div class="quick-actions">
