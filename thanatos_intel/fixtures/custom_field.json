@@ -568,5 +568,29 @@
   "width": null,
   "columns": 0,
   "doctype": "Custom Field"
+ },
+ {
+  "name": "Quotation-investigation_case",
+  "dt": "Quotation",
+  "fieldname": "investigation_case",
+  "fieldtype": "Link",
+  "label": "Investigation Case",
+  "options": "Investigation Case",
+  "insert_after": "order_type",
+  "in_standard_filter": 1,
+  "search_index": 1,
+  "doctype": "Custom Field"
+ },
+ {
+  "name": "Sales Invoice-investigation_case",
+  "dt": "Sales Invoice",
+  "fieldname": "investigation_case",
+  "fieldtype": "Link",
+  "label": "Investigation Case",
+  "options": "Investigation Case",
+  "insert_after": "company",
+  "in_standard_filter": 1,
+  "search_index": 1,
+  "doctype": "Custom Field"
  }
 ]

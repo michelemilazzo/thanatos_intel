@@ -44,6 +44,11 @@ def get_context(context):
     client_rec = frappe.db.get_value("Investigation Client",
         {"platform_user": user}, ["name", "client_type"], as_dict=1) if not is_investigator else None
     case_dict = case.as_dict()
+    case_dict["case_status"] = case_dict.get("status", "")
+    # Risolvi pipeline_key dal Case Type
+    if case_dict.get("case_type"):
+        pk = frappe.db.get_value("Case Type", case_dict["case_type"], "pipeline_key")
+        case_dict["pipeline_key"] = pk or ""
     if client_rec:
         case_dict["client_type"] = client_rec.client_type
     all_steps = get_pipeline(case_dict)

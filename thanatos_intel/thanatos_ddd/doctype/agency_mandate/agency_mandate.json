@@ -9,6 +9,7 @@
  "field_order": [
   "billing_entity",
   "ddd_case",
+  "investigation_case",
   "applicant",
   "subject_matter",
   "territorial_scope",
@@ -45,7 +46,15 @@
    "fieldtype": "Link",
    "label": "Pratica DDD",
    "options": "Diplomatic Eligibility Case",
-   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "investigation_case",
+   "fieldtype": "Link",
+   "label": "Investigation Case",
+   "options": "Investigation Case",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "search_index": 1

@@ -57,7 +57,8 @@ fixtures=[
    'Sales Invoice-custom_grand_total_ron',
    'Quotation-custom_sb_ron', 'Quotation-custom_eur_ron_rate',
    'Quotation-custom_ron_ccy', 'Quotation-custom_net_total_ron',
-   'Quotation-custom_grand_total_ron']]]},
+   'Quotation-custom_grand_total_ron',
+   'Quotation-investigation_case', 'Sales Invoice-investigation_case']]]},
 ]
 
 doc_events={

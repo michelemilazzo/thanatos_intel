@@ -91,7 +91,7 @@ PIPELINES = {
             "label": "Mandato d'incarico",
             "actor": "operator",
             "description": "Genera e invia il mandato d'incarico.",
-            "desk_url": lambda c: f"/app/agency-mandate?investigation_case={c['name']}",
+            "desk_url": lambda c: f"/app/agency-mandate/new-agency-mandate-1?investigation_case={c['name']}",
             "check": lambda c: _check_mandate_created(c),
         },
         {
@@ -107,7 +107,7 @@ PIPELINES = {
             "label": "Preventivo",
             "actor": "operator",
             "description": "Emetti il preventivo.",
-            "desk_url": lambda c: f"/app/quotation",
+            "desk_url": lambda c: f"/app/quotation?investigation_case={c['name']}",
             "check": lambda c: _check_invoice_or_quotation(c),
         },
         {
@@ -149,7 +149,7 @@ PIPELINES = {
             "label": "Mandato d'incarico",
             "actor": "operator",
             "description": "Genera il mandato.",
-            "desk_url": lambda c: f"/app/agency-mandate",
+            "desk_url": lambda c: f"/app/agency-mandate/new-agency-mandate-1?investigation_case={c['name']}",
             "check": lambda c: _check_mandate_created(c),
         },
         {
@@ -182,7 +182,7 @@ PIPELINES = {
             "label": "Mandato d'incarico",
             "actor": "operator",
             "description": "Genera il mandato.",
-            "desk_url": lambda c: f"/app/agency-mandate",
+            "desk_url": lambda c: f"/app/agency-mandate/new-agency-mandate-1?investigation_case={c['name']}",
             "check": lambda c: _check_mandate_created(c),
         },
         {
@@ -246,14 +246,19 @@ def _check_kyb_kyc(case):
 
 def _check_mandate_created(case):
     name = case.get("name")
-    return bool(frappe.db.exists("Agency Mandate",
-                                  [["ddd_case", "=", name], ["status", "!=", ""]]))
+    return bool(
+        frappe.db.exists("Agency Mandate", [["ddd_case", "=", name], ["status", "!=", ""]]) or
+        frappe.db.exists("Agency Mandate", [["investigation_case", "=", name], ["status", "!=", ""]])
+    )
 
 
 def _check_mandate_signed(case):
     name = case.get("name")
-    return bool(frappe.db.exists("Agency Mandate",
-                                  [["ddd_case", "=", name], ["status", "in", ("Signed", "Active", "Completed")]]))
+    signed = ("Signed", "Active", "Completed")
+    return bool(
+        frappe.db.exists("Agency Mandate", [["ddd_case", "=", name], ["status", "in", signed]]) or
+        frappe.db.exists("Agency Mandate", [["investigation_case", "=", name], ["status", "in", signed]])
+    )
 
 
 def _check_proforma(case):
@@ -307,7 +312,8 @@ def _check_blacklist(case):
 
 
 def _check_completed(case):
-    return case.get("case_status") in ("Completed", "Closed", "Archived")
+    s = case.get("case_status") or case.get("status") or ""
+    return s in ("Completed", "Closed", "Archived")
 
 
 # ---------------------------------------------------------------------------

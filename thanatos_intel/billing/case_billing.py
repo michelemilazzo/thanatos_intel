@@ -24,7 +24,17 @@ CASE_BILLING_FIELDS = {
     ],
     "Investigation Case": [
         {"fieldname": "project", "label": "Project (fatturazione)", "fieldtype": "Link", "options": "Project",
-         "insert_after": "service_type", "description": "Project ERPNext usato per fatturare il caso."},
+         "insert_after": "services", "description": "Project ERPNext usato per fatturare il caso."},
+    ],
+    "Quotation": [
+        {"fieldname": "investigation_case", "label": "Investigation Case", "fieldtype": "Link",
+         "options": "Investigation Case", "insert_after": "order_type",
+         "in_standard_filter": 1, "search_index": 1},
+    ],
+    "Sales Invoice": [
+        {"fieldname": "investigation_case", "label": "Investigation Case", "fieldtype": "Link",
+         "options": "Investigation Case", "insert_after": "company",
+         "in_standard_filter": 1, "search_index": 1},
     ],
 }
 
