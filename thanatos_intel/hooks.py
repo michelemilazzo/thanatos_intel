@@ -59,10 +59,14 @@ fixtures=[
    'Quotation-custom_sb_ron', 'Quotation-custom_eur_ron_rate',
    'Quotation-custom_ron_ccy', 'Quotation-custom_net_total_ron',
    'Quotation-custom_grand_total_ron',
-   'Quotation-investigation_case', 'Sales Invoice-investigation_case']]]},
+   'Quotation-investigation_case', 'Sales Invoice-investigation_case',
+   'HD Ticket-investigation_case']]]},
 ]
 
 doc_events={
+ 'HD Ticket': {
+   'after_insert': 'thanatos_intel.integrations.helpdesk_bridge.on_ticket_created',
+ },
  'Customer': {
    'validate': 'thanatos_intel.billing.case_billing.warn_duplicate_customer',
  },

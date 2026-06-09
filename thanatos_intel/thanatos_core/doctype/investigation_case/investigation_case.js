@@ -32,6 +32,38 @@ frappe.ui.form.on('Investigation Case', {
             }, __('File'));
         }
 
+        // Helpdesk tickets
+        if (!frm.is_new()) {
+            frm.add_custom_button(__('Apri Ticket'), () => {
+                const d = new frappe.ui.Dialog({
+                    title: 'Nuovo Ticket di Supporto',
+                    fields: [
+                        {fieldname: 'subject', fieldtype: 'Data', label: 'Oggetto', reqd: 1},
+                        {fieldname: 'description', fieldtype: 'Text Editor', label: 'Descrizione', reqd: 1}
+                    ],
+                    primary_action_label: 'Crea Ticket',
+                    primary_action(values) {
+                        frappe.call({
+                            method: 'thanatos_intel.integrations.helpdesk_bridge.create_ticket_for_case',
+                            args: {case_name: frm.doc.name, subject: values.subject, description: values.description},
+                            callback(r) {
+                                if (r.message && r.message.ok) {
+                                    frappe.show_alert({message: 'Ticket creato', indicator: 'green'});
+                                    d.hide();
+                                    window.open(r.message.url, '_blank');
+                                }
+                            }
+                        });
+                    }
+                });
+                d.show();
+            }, __('Helpdesk'));
+
+            frm.add_custom_button(__('Vedi Ticket'), () => {
+                window.open(`/support?investigation_case=${frm.doc.name}`, '_blank');
+            }, __('Helpdesk'));
+        }
+
         if (!frm.is_new()) {
             frm.add_custom_button(__('Calcola Risk Score'), () => {
                 frappe.call({

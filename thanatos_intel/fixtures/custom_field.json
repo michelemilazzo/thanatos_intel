@@ -605,5 +605,19 @@
   "print_hide": 1,
   "description": "Profilo e-fattura applicato automaticamente alle Sales Invoice di questa società",
   "doctype": "Custom Field"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "HD Ticket-investigation_case",
+  "dt": "HD Ticket",
+  "fieldname": "investigation_case",
+  "fieldtype": "Link",
+  "label": "Investigation Case",
+  "options": "Investigation Case",
+  "insert_after": "subject",
+  "in_list_view": 1,
+  "in_standard_filter": 1,
+  "no_copy": 0,
+  "print_hide": 0
  }
 ]

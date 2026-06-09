@@ -55,6 +55,18 @@ def get_context(context):
     # Il cliente vede TUTTI gli step ma solo quelli actor=client hanno azione
     pipeline = all_steps
 
+    # Tickets Helpdesk collegati al caso
+    try:
+        context.tickets = frappe.get_all(
+            "HD Ticket",
+            filters={"investigation_case": case.name},
+            fields=["name", "subject", "status", "creation"],
+            order_by="creation desc",
+            limit=10,
+        )
+    except Exception:
+        context.tickets = []
+
     context.case = case
     context.evidences = evidences
     context.reports = reports
