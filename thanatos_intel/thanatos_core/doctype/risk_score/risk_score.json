@@ -1,11 +1,24 @@
 {
-"doctype":"DocType",
-"name":"Risk Score",
-"module":"Thanatos Core",
-"track_changes":1,
-"fields":[
-{"fieldname":"score","fieldtype":"Int","label":"Score"},
-{"fieldname":"classification","fieldtype":"Select","label":"Classification","options":"Low\nMedium\nHigh\nCritical"},
-{"fieldname":"reason","fieldtype":"Small Text","label":"Reason"}
-]
+  "doctype": "DocType",
+  "name": "Risk Score",
+  "module": "Thanatos Core",
+  "track_changes": 1,
+  "autoname": "RISK-.YYYY.-.#####",
+  "title_field": "investigation_case",
+  "fields": [
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "entity_ref", "fieldtype": "Data", "label": "Entity / Subject", "in_list_view": 1, "description": "Nome soggetto / entità valutata"},
+    {"fieldname": "evaluated_at", "fieldtype": "Datetime", "label": "Evaluated At", "read_only": 1},
+    {"fieldname": "cb_top", "fieldtype": "Column Break"},
+    {"fieldname": "score", "fieldtype": "Int", "label": "Score (0-100)", "read_only": 1, "in_list_view": 1},
+    {"fieldname": "classification", "fieldtype": "Select", "label": "Classification", "options": "Low\nMedium\nHigh\nCritical", "read_only": 1, "in_list_view": 1},
+    {"fieldname": "reason", "fieldtype": "Small Text", "label": "Reason / Notes"},
+    {"fieldname": "sb_rules", "fieldtype": "Section Break", "label": "Matched Rules"},
+    {"fieldname": "matched_rules", "fieldtype": "Table", "label": "Matched Rules", "options": "Risk Rule Match"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
 }

@@ -1,0 +1,46 @@
+{
+  "doctype": "DocType",
+  "name": "Risk Rule Match",
+  "module": "Thanatos Core",
+  "istable": 1,
+  "fields": [
+    {
+      "fieldname": "rule",
+      "fieldtype": "Link",
+      "label": "Regola",
+      "options": "Risk Rule",
+      "in_list_view": 1,
+      "columns": 4
+    },
+    {
+      "fieldname": "category",
+      "fieldtype": "Data",
+      "label": "Categoria",
+      "in_list_view": 1,
+      "read_only": 1,
+      "columns": 2
+    },
+    {
+      "fieldname": "score_delta",
+      "fieldtype": "Int",
+      "label": "Δ Score",
+      "in_list_view": 1,
+      "read_only": 1,
+      "columns": 1
+    },
+    {
+      "fieldname": "severity",
+      "fieldtype": "Data",
+      "label": "Severity",
+      "in_list_view": 1,
+      "read_only": 1,
+      "columns": 2
+    },
+    {
+      "fieldname": "match_message",
+      "fieldtype": "Small Text",
+      "label": "Dettaglio",
+      "read_only": 1
+    }
+  ]
+}

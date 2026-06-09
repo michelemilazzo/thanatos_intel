@@ -1,0 +1,9 @@
+[
+  {"doctype": "Case Type", "type_name": "Fraud", "pipeline_key": "Antifrode", "description": "Indagini antifrode su persone fisiche o giuridiche", "is_active": 1},
+  {"doctype": "Case Type", "type_name": "Corporate", "pipeline_key": "Corporate", "description": "Due diligence e intelligence su aziende", "is_active": 1},
+  {"doctype": "Case Type", "type_name": "Cyber", "pipeline_key": "OSINT", "description": "Indagini OSINT e cyber intelligence", "is_active": 1},
+  {"doctype": "Case Type", "type_name": "Seizure", "pipeline_key": "Investigation", "description": "Indagini patrimoniali e sequestro beni", "is_active": 1},
+  {"doctype": "Case Type", "type_name": "Family", "pipeline_key": "Investigation", "description": "Indagini familiari (separazioni, affidamenti)", "is_active": 1},
+  {"doctype": "Case Type", "type_name": "Asset Recovery", "pipeline_key": "Investigation", "description": "Recupero crediti e asset tracing", "is_active": 1},
+  {"doctype": "Case Type", "type_name": "Due Diligence", "pipeline_key": "DDD", "description": "Due diligence diplomatica (DDD)", "is_active": 1}
+]

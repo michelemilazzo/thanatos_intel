@@ -42,6 +42,7 @@ fixtures=[
  {'doctype': 'Print Format', 'filters': [['name', 'in', ["Mandato d'Incarico", "Proforma DDD"]]]},
  {'doctype': 'Investigation Subscription Plan', 'filters': []},
  {'doctype': 'Service Catalog', 'filters': []},
+ {'doctype': 'Case Type', 'filters': []},
  {'doctype': 'News Category', 'filters': []},
  {'doctype': 'News Source', 'filters': []},
  {'doctype': 'Country Framework', 'filters': []},

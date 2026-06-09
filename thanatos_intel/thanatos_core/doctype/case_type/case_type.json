@@ -1,0 +1,43 @@
+{
+  "doctype": "DocType",
+  "name": "Case Type",
+  "module": "Thanatos Core",
+  "naming_rule": "By fieldname",
+  "autoname": "field:type_name",
+  "title_field": "type_name",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "type_name",
+      "fieldtype": "Data",
+      "label": "Type Name",
+      "reqd": 1,
+      "in_list_view": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "pipeline_key",
+      "fieldtype": "Select",
+      "label": "Pipeline Engine",
+      "options": "DDD\nInvestigation\nOSINT\nAntifrode\nCorporate\nGeneric",
+      "in_list_view": 1,
+      "description": "Determina la pipeline di step automatici per questo tipo di caso"
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Small Text",
+      "label": "Descrizione"
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Attivo",
+      "default": "1"
+    }
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1}
+  ]
+}

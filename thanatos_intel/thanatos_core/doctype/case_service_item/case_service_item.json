@@ -1,0 +1,17 @@
+{
+  "doctype": "DocType",
+  "name": "Case Service Item",
+  "module": "Thanatos Core",
+  "istable": 1,
+  "fields": [
+    {
+      "fieldname": "service_catalog",
+      "fieldtype": "Link",
+      "label": "Servizio",
+      "options": "Service Catalog",
+      "reqd": 1,
+      "in_list_view": 1,
+      "columns": 6
+    }
+  ]
+}
