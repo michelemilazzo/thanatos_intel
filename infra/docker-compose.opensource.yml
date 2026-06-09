@@ -36,6 +36,16 @@ services:
       HOST: "0.0.0.0"
       FORCE_SSL: "false"
       WORKERS: "1"
+      SMTP_ADDRESS: "mailmx.onekeyco.com"
+      SMTP_PORT: "587"
+      SMTP_USERNAME: "no-replies@thanatos.agency"
+      SMTP_ENABLE_STARTTLS_AUTO: "true"
+      SMTP_DOMAIN: "thanatos.agency"
+      DEFAULT_FROM_EMAIL: "no-replies@thanatos.agency"
+      DEFAULT_FROM_NAME: "Thanatos Intel"
+    env_file:
+      - path: .env.secrets
+        required: false
     ports:
       - "172.17.0.1:3001:3000"
       - "127.0.0.1:3001:3000"
