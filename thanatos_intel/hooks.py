@@ -33,6 +33,8 @@ role_home_page={
  'System Manager': '/app',
 }
 
+get_website_user_home_page='thanatos_intel.utils.portal.get_home_page'
+
 after_install='thanatos_intel.install.after_install'
 after_migrate='thanatos_intel.install.after_migrate'
 fixtures=[
