@@ -327,10 +327,10 @@ def get_pipeline(case_doc_or_dict) -> list[dict]:
       key, label, actor, description, status (done|current|pending|blocked),
       desk_url, portal_url
     """
-    if hasattr(case_doc_or_dict, "as_dict"):
+    if callable(getattr(case_doc_or_dict, 'as_dict', None)):
         case = case_doc_or_dict.as_dict()
     else:
-        case = case_doc_or_dict
+        case = dict(case_doc_or_dict)
 
     case_type = (case.get("case_type") or "Investigation").strip()
     # Se case_type è un Link a Case Type, leggi il pipeline_key
