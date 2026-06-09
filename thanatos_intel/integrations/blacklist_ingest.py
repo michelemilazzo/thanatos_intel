@@ -41,7 +41,7 @@ def upsert_entry(external_id: str, entry_type: str, entry_value: str,
     """
     if not entry_value:
         return ""
-    entry_value = entry_value.strip()
+    entry_value = entry_value.strip()[:140]
     if entry_type in ("Email", "Domain", "IP", "Wallet", "IBAN"):
         entry_value = entry_value.lower()
     if not entry_value:
