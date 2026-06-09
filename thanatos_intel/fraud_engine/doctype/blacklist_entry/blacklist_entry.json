@@ -66,10 +66,29 @@
    "fieldname": "source",
    "fieldtype": "Select",
    "label": "Source",
-   "options": "Internal\nHIBP\nAbuseIPDB\nManual\nCourt\nPolice\nPartner\nCommunity",
+   "options": "Internal\nManual\nCourt\nPolice\nPartner\nCommunity\nHIBP\nAbuseIPDB\nOFAC SDN\nEU Sanctions\nUN Consolidated\nOpenSanctions\nICIJ Offshore Leaks\nGLEIF\nGDELT",
    "default": "Internal",
    "reqd": 1,
    "in_standard_filter": 1
+  },
+  {
+   "fieldname": "source_dataset",
+   "fieldtype": "Data",
+   "label": "Dataset / List Name",
+   "description": "e.g. OFAC SDN, EU Financial Sanctions 2024-06-01"
+  },
+  {
+   "fieldname": "source_url",
+   "fieldtype": "Data",
+   "label": "Source URL",
+   "description": "Link diretto al record originale"
+  },
+  {
+   "fieldname": "external_id",
+   "fieldtype": "Data",
+   "label": "External ID",
+   "description": "ID univoco nella fonte originale (OFAC:7547, UN:123, ...)",
+   "unique": 1
   },
   {
    "fieldname": "case_ref",

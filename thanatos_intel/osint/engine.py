@@ -114,6 +114,17 @@ def lookup_email(email: str) -> dict:
 
     _cache_set("hibp", email, result)
     _persist_lookup("Email", email, result)
+    # Auto-promuovi a blacklist se trovato
+    if result.get("found"):
+        try:
+            from thanatos_intel.integrations.blacklist_ingest import upsert_entry
+            breaches = result.get("breaches") or []
+            reason = f"HIBP: trovato in {len(breaches)} breach(es) - {', '.join(b.get('name','') for b in breaches[:5])}"
+            upsert_entry(f"HIBP:{email}", "Email", email, "High", "HIBP", reason,
+                         "HaveIBeenPwned", f"https://haveibeenpwned.com/account/{email}")
+            frappe.db.commit()
+        except Exception:
+            pass
     return result
 
 
@@ -160,6 +171,18 @@ def lookup_ip(ip: str) -> dict:
 
     _cache_set("abuseipdb", ip, result)
     _persist_lookup("IP", ip, result)
+    # Auto-promuovi a blacklist se score >= 25
+    score = result.get("score") or 0
+    if score and score >= 25:
+        try:
+            from thanatos_intel.integrations.blacklist_ingest import upsert_entry
+            risk = "Critical" if score >= 75 else "High"
+            reason = f"AbuseIPDB score {score}% - ISP: {result.get('isp','')} - {result.get('total_reports',0)} reports"
+            upsert_entry(f"ABUSEIP:{ip}", "IP", ip, risk, "AbuseIPDB", reason,
+                         "AbuseIPDB", f"https://www.abuseipdb.com/check/{ip}")
+            frappe.db.commit()
+        except Exception:
+            pass
     return result
 
 
@@ -641,3 +664,176 @@ def _persist_lookup(target_type: str, target: str, result: dict):
         frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "OSINT persist failed")
+
+
+# ─── LOOKUP PERSONA / AZIENDA (fonti gratuite multiple) ──────────────────────
+
+@frappe.whitelist()
+def lookup_person(name: str, dob: str = "", nationality: str = "") -> dict:
+    """
+    Lookup completo su una persona fisica da fonti gratuite:
+    - OpenSanctions cache (offline, locale)
+    - ICIJ Offshore Leaks (API pubblica)
+    - GDELT adverse media (ultimi 90gg)
+    - Blacklist interna Thanatos
+
+    Fonte dati: OpenSanctions (opensanctions.org), ICIJ (icij.org), GDELT (gdeltproject.org)
+    """
+    name = (name or "").strip()
+    if not name:
+        return {"error": "name_required"}
+
+    from thanatos_intel.integrations.blacklist_ingest import (
+        search_icij, search_gdelt_adverse_media
+    )
+    result = {"name": name, "sources": {}}
+
+    # 1. OpenSanctions cache locale
+    try:
+        from thanatos_intel.thanatos_ddd.opensanctions_sync import lookup as os_lookup
+        os_res = os_lookup(name, dob, nationality)
+        result["sources"]["opensanctions"] = {
+            "matches": os_res.get("matches", [])[:5],
+            "total": os_res.get("total", 0),
+            "source_name": "OpenSanctions",
+            "source_url": "https://www.opensanctions.org",
+        }
+    except Exception as e:
+        result["sources"]["opensanctions"] = {"error": str(e)}
+
+    # 2. ICIJ Offshore Leaks
+    try:
+        icij = search_icij(name)
+        result["sources"]["icij"] = icij
+    except Exception as e:
+        result["sources"]["icij"] = {"error": str(e)}
+
+    # 3. GDELT adverse media
+    try:
+        gdelt = search_gdelt_adverse_media(name)
+        result["sources"]["gdelt"] = gdelt
+    except Exception as e:
+        result["sources"]["gdelt"] = {"error": str(e)}
+
+    # 4. Blacklist interna
+    bl = frappe.get_all("Blacklist Entry",
+                        filters={"entry_value": name, "entry_type": "Person", "is_active": 1},
+                        fields=["name", "risk_level", "source", "source_url", "reason", "source_dataset"])
+    result["sources"]["internal_blacklist"] = {
+        "matches": bl,
+        "source_name": "Thanatos Blacklist",
+        "source_url": "/app/blacklist-entry",
+    }
+
+    result["risk_summary"] = _person_risk_summary(result["sources"])
+    _persist_lookup("Person", name, result)
+    return result
+
+
+@frappe.whitelist()
+def lookup_company_full(name: str, country: str = "") -> dict:
+    """
+    Lookup completo su un'azienda da fonti gratuite:
+    - OpenCorporates (registri societari globali)
+    - GLEIF LEI Registry (identificativi legali)
+    - ICIJ Offshore Leaks (strutture offshore)
+    - GDELT adverse media
+    - Blacklist interna Thanatos
+
+    Fonte dati: OpenCorporates (opencorporates.com), GLEIF (gleif.org),
+                ICIJ (icij.org), GDELT (gdeltproject.org)
+    """
+    name = (name or "").strip()
+    if not name:
+        return {"error": "name_required"}
+
+    from thanatos_intel.integrations.blacklist_ingest import (
+        search_icij, search_gdelt_adverse_media, search_gleif
+    )
+    result = {"name": name, "country": country, "sources": {}}
+
+    # 1. OpenCorporates
+    try:
+        oc_result = lookup_company(name, country)
+        result["sources"]["opencorporates"] = oc_result
+    except Exception as e:
+        result["sources"]["opencorporates"] = {"error": str(e)}
+
+    # 2. GLEIF
+    try:
+        gleif = search_gleif(name)
+        result["sources"]["gleif"] = gleif
+    except Exception as e:
+        result["sources"]["gleif"] = {"error": str(e)}
+
+    # 3. ICIJ Offshore Leaks
+    try:
+        icij = search_icij(name)
+        result["sources"]["icij"] = icij
+    except Exception as e:
+        result["sources"]["icij"] = {"error": str(e)}
+
+    # 4. GDELT adverse media
+    try:
+        gdelt = search_gdelt_adverse_media(name)
+        result["sources"]["gdelt"] = gdelt
+    except Exception as e:
+        result["sources"]["gdelt"] = {"error": str(e)}
+
+    # 5. Blacklist interna
+    bl = frappe.get_all("Blacklist Entry",
+                        filters={"entry_value": name, "entry_type": "Company", "is_active": 1},
+                        fields=["name", "risk_level", "source", "source_url", "reason", "source_dataset"])
+    result["sources"]["internal_blacklist"] = {
+        "matches": bl,
+        "source_name": "Thanatos Blacklist",
+        "source_url": "/app/blacklist-entry",
+    }
+
+    result["risk_summary"] = _company_risk_summary(result["sources"])
+    _persist_lookup("Company", name, result)
+    return result
+
+
+def _person_risk_summary(sources: dict) -> dict:
+    flags = []
+    risk = "Clear"
+    os_hits = (sources.get("opensanctions") or {}).get("total", 0)
+    if os_hits:
+        flags.append(f"OpenSanctions: {os_hits} corrispondenza/e")
+        risk = "Critical"
+    icij_hits = len((sources.get("icij") or {}).get("results", []))
+    if icij_hits:
+        flags.append(f"ICIJ Offshore Leaks: {icij_hits} risultato/i")
+        risk = max(risk, "High") if risk != "Critical" else risk
+    gdelt_count = len((sources.get("gdelt") or {}).get("articles", []))
+    if gdelt_count:
+        flags.append(f"GDELT: {gdelt_count} articolo/i avverso/i")
+        risk = max(risk, "Medium") if risk not in ("Critical", "High") else risk
+    bl_hits = len((sources.get("internal_blacklist") or {}).get("matches", []))
+    if bl_hits:
+        flags.append(f"Blacklist interna: {bl_hits} voce/i")
+        risk = "Critical"
+    return {"risk": risk, "flags": flags}
+
+
+def _company_risk_summary(sources: dict) -> dict:
+    flags = []
+    risk = "Clear"
+    icij_hits = len((sources.get("icij") or {}).get("results", []))
+    if icij_hits:
+        flags.append(f"ICIJ Offshore Leaks: {icij_hits} risultato/i")
+        risk = "High"
+    gdelt_count = len((sources.get("gdelt") or {}).get("articles", []))
+    if gdelt_count:
+        flags.append(f"GDELT: {gdelt_count} articolo/i avverso/i")
+        risk = max(risk, "Medium") if risk not in ("Critical", "High") else risk
+    bl_hits = len((sources.get("internal_blacklist") or {}).get("matches", []))
+    if bl_hits:
+        flags.append(f"Blacklist interna: {bl_hits} voce/i")
+        risk = "Critical"
+    gleif = sources.get("gleif") or {}
+    for r in (gleif.get("results") or []):
+        if r.get("status") not in ("ACTIVE", ""):
+            flags.append(f"GLEIF status: {r.get('status')} - LEI {r.get('lei','')}")
+    return {"risk": risk, "flags": flags}
