@@ -23,10 +23,15 @@ from frappe.utils import now_datetime, today
 OFAC_URL = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ENHANCED.XML"
 EU_URL = "https://data.opensanctions.org/datasets/latest/eu_fsf/targets.simple.csv"
 UN_URL = "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
-ICIJ_API = "https://offshoreleaks.icij.org/api/search"
 GLEIF_API = "https://api.gleif.org/api/v1/lei-records"
 GDELT_API = "https://api.gdeltproject.org/api/v2/doc/doc"
 ABUSEIPDB_API = "https://api.abuseipdb.com/api/v2/check"
+# OpenSanctions datasets CSV (gratuiti)
+OS_EU_URL = "https://data.opensanctions.org/datasets/latest/eu_fsf/targets.simple.csv"
+OS_OFAC_URL = "https://data.opensanctions.org/datasets/latest/us_ofac_sdn/targets.simple.csv"
+OS_UN_URL = "https://data.opensanctions.org/datasets/latest/un_sc_sanctions/targets.simple.csv"
+OS_INTERPOL_URL = "https://data.opensanctions.org/datasets/latest/interpol_red_notices/targets.simple.csv"
+OS_WORLD_URL = "https://data.opensanctions.org/datasets/latest/sanctions/targets.simple.csv"
 
 
 # ─── CORE UPSERT ─────────────────────────────────────────────────────────────
@@ -286,62 +291,76 @@ def push_opensanctions_hits(min_score: int = 0, limit: int = 5000) -> dict:
 
 # ─── FONTI REATTIVE (per soggetto specifico) ─────────────────────────────────
 
+def ingest_opensanctions_csv(url: str, source_label: str, dataset_name: str,
+                             max_entries: int = 0) -> dict:
+    """
+    Parser generico per CSV OpenSanctions (formato targets.simple.csv).
+    Usato per Interpol, OFAC via OS, UN via OS, ecc.
+    """
+    import csv, io
+    r = requests.get(url, timeout=180, stream=True)
+    if r.status_code != 200:
+        return {"source": source_label, "inserted": 0, "error": f"HTTP {r.status_code}"}
+    inserted = 0
+    dataset = f"{dataset_name} {today()}"
+    reader = csv.DictReader(io.StringIO(r.text))
+    for row in reader:
+        entity_id = row.get("id", "").strip()
+        schema = row.get("schema", "").strip()
+        name_val = row.get("name", "").strip()
+        if not name_val:
+            continue
+        entry_type = "Person" if schema == "Person" else "Company"
+        topics = row.get("sanctions", "") or row.get("topics", "")
+        reason = f"{dataset_name} - {topics[:200]}" if topics else dataset_name
+        external_id = f"{source_label.replace(' ','_').upper()}:{entity_id}" if entity_id else ""
+        source_url = f"https://www.opensanctions.org/entities/{entity_id}/" if entity_id else ""
+        doc_name = upsert_entry(external_id, entry_type, name_val, "Critical",
+                                source_label, reason, dataset, source_url)
+        if doc_name:
+            inserted += 1
+        if max_entries and inserted >= max_entries:
+            break
+        if inserted % 1000 == 0:
+            frappe.db.commit()
+    frappe.db.commit()
+    return {"source": source_label, "inserted": inserted, "dataset": dataset}
+
+
+@frappe.whitelist()
+def ingest_interpol() -> dict:
+    """
+    Interpol Red Notices via OpenSanctions mirror.
+    Fonte: Interpol / OpenSanctions
+    URL: https://data.opensanctions.org/datasets/latest/interpol_red_notices/targets.simple.csv
+    """
+    return ingest_opensanctions_csv(OS_INTERPOL_URL, "OpenSanctions", "Interpol Red Notices")
+
+
 @frappe.whitelist()
 def search_icij(query: str) -> dict:
     """
     Cerca un soggetto nel database ICIJ Offshore Leaks.
     Fonte: International Consortium of Investigative Journalists
-    URL: https://offshoreleaks.icij.org
-    Ritorna max 10 risultati con link diretto al record.
+    Nota: l'API pubblica ICIJ non è più disponibile.
+    Fallback: cerca in blacklist interna voci con source ICIJ.
     """
     if not query:
         return {"results": [], "source": "ICIJ Offshore Leaks"}
-    try:
-        r = requests.get(ICIJ_API, params={"q": query, "c": "", "j": "", "e": "", "cat": "2"},
-                         timeout=15, headers={"Accept": "application/json"})
-        r.raise_for_status()
-        data = r.json()
-    except Exception as e:
-        frappe.log_error(f"ICIJ search error: {e}", "BlacklistIngest")
-        return {"results": [], "source": "ICIJ Offshore Leaks", "error": str(e)}
-
-    results = []
-    for item in (data.get("data") or [])[:10]:
-        node_id = item.get("node_id") or item.get("id", "")
-        results.append({
-            "name": item.get("name", ""),
-            "jurisdiction": item.get("jurisdiction", ""),
-            "linked_to": item.get("linked_to", ""),
-            "data_from": item.get("data_from", ""),
-            "node_id": node_id,
-            "url": f"https://offshoreleaks.icij.org/nodes/{node_id}" if node_id else "",
-            "source": "ICIJ Offshore Leaks",
-        })
+    # Cerca in blacklist interna (voci già caricate da ICIJ)
+    rows = frappe.db.sql("""
+        SELECT entry_value, risk_level, source_url, source_dataset, reason
+        FROM `tabBlacklist Entry`
+        WHERE source = 'ICIJ Offshore Leaks' AND is_active = 1
+          AND entry_value LIKE %(q)s
+        LIMIT 10
+    """, {"q": f"%{query}%"}, as_dict=True)
+    results = [{"name": r.entry_value, "risk": r.risk_level,
+                "url": r.source_url or "https://offshoreleaks.icij.org",
+                "data_from": r.source_dataset, "source": "ICIJ Offshore Leaks"} for r in rows]
     return {"results": results, "source": "ICIJ Offshore Leaks",
-            "total": data.get("total", len(results))}
-
-
-@frappe.whitelist()
-def enrich_to_blacklist_icij(query: str) -> dict:
-    """Cerca su ICIJ e promuove i match a Blacklist Entry."""
-    res = search_icij(query)
-    added = []
-    for item in res.get("results", []):
-        name_val = item.get("name", "")
-        if not name_val:
-            continue
-        external_id = f"ICIJ:{item['node_id']}" if item.get("node_id") else ""
-        reason = f"ICIJ Offshore Leaks - {item.get('data_from','')} - {item.get('jurisdiction','')}"
-        doc_name = upsert_entry(
-            external_id, "Company", name_val, "High",
-            "ICIJ Offshore Leaks", reason,
-            item.get("data_from", "ICIJ"),
-            item.get("url", "")
-        )
-        if doc_name:
-            added.append(doc_name)
-    frappe.db.commit()
-    return {"added": added, "source": "ICIJ Offshore Leaks"}
+            "total": len(results),
+            "note": "API ICIJ non pubblica - ricerca su cache locale"}
 
 
 @frappe.whitelist()
@@ -386,37 +405,45 @@ def search_gdelt_adverse_media(subject: str, days: int = 90) -> dict:
     """
     Cerca notizie avverse su un soggetto via GDELT Project.
     Fonte: The GDELT Project  https://gdeltproject.org
-    Cerca articoli contenenti fraud, scam, arrested, sanctioned, money laundering, etc.
+    Cerca articoli: fraud, scam, arrested, sanctioned, money laundering, corruption.
+    Rate limit: max 1 req/sec — usare con moderazione.
     """
     if not subject:
         return {"articles": [], "source": "GDELT"}
-    adverse_terms = "fraud OR scam OR arrested OR sanctioned OR \"money laundering\" OR corruption OR bribery OR convicted"
+    adverse_terms = "fraud OR scam OR arrested OR sanctioned OR corruption OR bribery OR convicted"
     query = f'"{subject}" ({adverse_terms})'
-    try:
-        r = requests.get(GDELT_API, params={
-            "query": query,
-            "mode": "artlist",
-            "maxrecords": "10",
-            "format": "json",
-            "timespan": f"{days}d",
-        }, timeout=20)
-        r.raise_for_status()
-        data = r.json()
-    except Exception as e:
-        frappe.log_error(f"GDELT error: {e}", "BlacklistIngest")
-        return {"articles": [], "source": "GDELT", "error": str(e)}
-    articles = []
-    for art in (data.get("articles") or [])[:10]:
-        articles.append({
-            "title": art.get("title", ""),
-            "url": art.get("url", ""),
-            "domain": art.get("domain", ""),
-            "seendate": art.get("seendate", ""),
-            "language": art.get("language", ""),
-            "source": "GDELT",
-        })
-    return {"articles": articles, "source": "GDELT",
-            "total": len(data.get("articles") or [])}
+    import time
+    for attempt in range(2):
+        try:
+            r = requests.get(GDELT_API, params={
+                "query": query,
+                "mode": "artlist",
+                "maxrecords": "10",
+                "format": "json",
+                "timespan": f"{days}d",
+            }, timeout=20)
+            if r.status_code == 429:
+                time.sleep(2)
+                continue
+            r.raise_for_status()
+            data = r.json()
+            articles = []
+            for art in (data.get("articles") or [])[:10]:
+                articles.append({
+                    "title": art.get("title", ""),
+                    "url": art.get("url", ""),
+                    "domain": art.get("domain", ""),
+                    "seendate": art.get("seendate", ""),
+                    "language": art.get("language", ""),
+                    "source": "GDELT",
+                    "source_url": "https://gdeltproject.org",
+                })
+            return {"articles": articles, "source": "GDELT",
+                    "total": len(data.get("articles") or [])}
+        except Exception as e:
+            frappe.log_error(f"GDELT error: {e}", "BlacklistIngest")
+            return {"articles": [], "source": "GDELT", "error": str(e)}
+    return {"articles": [], "source": "GDELT", "error": "rate_limited"}
 
 
 @frappe.whitelist()
@@ -499,12 +526,16 @@ def full_subject_screen(subject_name: str, subject_type: str = "Person",
 
 def daily_sanctions_sync():
     """
-    Job giornaliero: aggiorna OFAC + EU + UN.
+    Job giornaliero: aggiorna OFAC + EU + UN + Interpol.
     Schedulato in hooks.scheduler_events.daily.
     """
     results = {}
-    for fn, label in [(ingest_ofac, "OFAC"), (ingest_eu_sanctions, "EU"),
-                      (ingest_un_consolidated, "UN")]:
+    for fn, label in [
+        (ingest_ofac, "OFAC"),
+        (ingest_eu_sanctions, "EU"),
+        (ingest_un_consolidated, "UN"),
+        (ingest_interpol, "Interpol"),
+    ]:
         try:
             results[label] = fn()
         except Exception as e:
@@ -515,5 +546,6 @@ def daily_sanctions_sync():
         results["OpenSanctions"] = push_opensanctions_hits()
     except Exception as e:
         frappe.log_error(f"OS push error: {e}", "BlacklistIngest")
-    frappe.logger().info(f"[BlacklistIngest] daily_sanctions_sync: {results}")
-    return results
+    total = frappe.db.count("Blacklist Entry", {"is_active": 1})
+    frappe.logger().info(f"[BlacklistIngest] daily sync done: {results} | totale={total}")
+    return {**results, "total_blacklist": total}
