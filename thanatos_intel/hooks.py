@@ -114,10 +114,15 @@ doc_events={
    'on_update': 'thanatos_intel.billing.credits.on_party_payout_update',
  },
  'Sales Invoice': {
-   'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron_erp',
+   'before_insert': 'thanatos_intel.billing.einvoice_defaults.on_sales_invoice_before_insert',
+   'validate': ['thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron_erp',
+                'thanatos_intel.billing.einvoice_defaults.on_sales_invoice_validate'],
  },
  'Quotation': {
    'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron_erp',
+ },
+ 'Company': {
+   'after_insert': 'thanatos_intel.billing.einvoice_defaults.on_company_after_insert',
  },
 }
 scheduler_events={
