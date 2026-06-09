@@ -81,6 +81,42 @@ frappe.ui.form.on('Agency Mandate', {
             }, __('Firma'));
         }
 
+
+        // ── Email → bozza webmail ──
+        if (!frm.is_new()) {
+            frm.add_custom_button(__('✉ Proposta DDD'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.mail_templates.draft_ddd_offer',
+                    args: { mandate_name: frm.doc.name },
+                    freeze: true, freeze_message: 'Creazione bozza...',
+                    callback(r) {
+                        if (r.message && r.message.draft_id) {
+                            frappe.show_alert({ message: 'Bozza creata nel webmail', indicator: 'green' });
+                            window.open('/mail', '_blank');
+                        } else {
+                            frappe.msgprint('Errore: controlla configurazione email (User Settings).');
+                        }
+                    }
+                });
+            }, __('Email'));
+
+            if (frm.doc.docuseal_signing_url) {
+                frm.add_custom_button(__('✉ Link Firma'), () => {
+                    frappe.call({
+                        method: 'thanatos_intel.mail_templates.draft_mandate_signing',
+                        args: { mandate_name: frm.doc.name },
+                        freeze: true, freeze_message: 'Creazione bozza...',
+                        callback(r) {
+                            if (r.message && r.message.draft_id) {
+                                frappe.show_alert({ message: 'Bozza creata nel webmail', indicator: 'green' });
+                                window.open('/mail', '_blank');
+                            }
+                        }
+                    });
+                }, __('Email'));
+            }
+        }
+
         // Badge stato
         const colors = {
             'Draft': 'grey', 'Pending Signature': 'yellow',
