@@ -1,4 +1,5 @@
 app_name='thanatos_intel'
+before_request=["thanatos_intel.patches.drive_access_patch.apply"]
 app_title='Thanatos Intel'
 app_version='0.1.0'
 app_description='Intelligence Investigation Platform MVP'
