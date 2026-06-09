@@ -1,5 +1,6 @@
 app_name='thanatos_intel'
 before_request=["thanatos_intel.patches.drive_access_patch.apply"]
+auth_hooks=["thanatos_intel.thanatos_ddd.auth_patch.allow_thanatos_guest_paths"]
 app_title='Thanatos Intel'
 app_version='0.1.0'
 app_description='Intelligence Investigation Platform MVP'
