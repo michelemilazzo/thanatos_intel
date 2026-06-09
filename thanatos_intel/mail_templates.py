@@ -21,6 +21,7 @@ def _get_from_email(user: str) -> str:
 def _create_draft(from_email: str, to: list, subject: str, html_body: str, cc: list | None = None) -> dict:
     from mail.api.mail import create_mail
     result = create_mail(
+        attachments=[],
         from_email=from_email,
         to=to,
         cc=cc or [],
