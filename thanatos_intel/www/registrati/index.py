@@ -60,6 +60,8 @@ def register_client(full_name, email, password, phone=None,
         user.insert(ignore_permissions=True)
         from frappe.utils.password import update_password
         update_password(email, password)
+        # il hook Drive può promuovere a System User: reimposta Website User
+        frappe.db.set_value("User", email, "user_type", "Website User", update_modified=False)
 
         client_data = {
             "doctype": "Investigation Client",
