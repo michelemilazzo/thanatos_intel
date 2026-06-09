@@ -1,6 +1,6 @@
 {# Shared chrome (header + footer) for Thanatos Intel public/portal pages.
    Include with: {% include "thanatos_intel/templates/site_chrome.html" %}
-   Provides:  thanatos_header()  and  thanatos_footer()  macros. #}
+   Provides:  thanatos_header(),  thanatos_footer(),  portal_nav()  macros. #}
 
 {% macro thanatos_header(active='') -%}
 <style>
@@ -71,6 +71,80 @@
         </div>
       </div>
       {% endif %}
+    </div>
+  </div>
+</nav>
+{%- endmacro %}
+
+{% macro portal_nav(active='') -%}
+{%- set _user = frappe.session.user -%}
+{%- set _roles = frappe.get_roles(_user) | list -%}
+{%- set _is_op = 'Investigator' in _roles or 'Investigation Manager' in _roles or 'System Manager' in _roles -%}
+{%- set _is_client = not _is_op -%}
+<style>
+.px-nav{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.96);backdrop-filter:blur(8px);
+  border-bottom:1px solid #1F2742;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;}
+.px-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:0;padding:0 20px;}
+.px-brand{display:flex;align-items:center;gap:10px;text-decoration:none;padding:12px 16px 12px 0;
+  border-right:1px solid #1F2742;margin-right:16px;}
+.px-brand img{height:30px;}
+.px-brand span{font-family:Georgia,serif;font-size:13px;letter-spacing:4px;color:#E6E8EE;}
+.px-brand small{display:block;font-size:8px;letter-spacing:3px;color:#C8A96E;}
+.px-links{display:flex;align-items:center;gap:2px;flex:1;}
+.px-links a{color:#A4A9BC;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  padding:14px 12px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;}
+.px-links a:hover{color:#C8A96E;}
+.px-links a.act{color:#C8A96E;border-bottom-color:#C8A96E;}
+.px-links .sep{width:1px;height:20px;background:#1F2742;margin:0 4px;}
+.px-right{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:16px;}
+.px-right a{color:#A4A9BC;text-decoration:none;font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;padding:6px 10px;border:1px solid #1F2742;border-radius:3px;
+  transition:all .15s;}
+.px-right a:hover{border-color:#C8A96E;color:#C8A96E;}
+.px-right .logout{color:#5B6276;}
+.px-right .logout:hover{color:#E8E9F0;border-color:#333;}
+@media(max-width:900px){
+  .px-brand span{display:none;}
+  .px-links a{font-size:10px;padding:14px 8px;letter-spacing:1px;}
+}
+@media(max-width:600px){
+  .px-links a{font-size:9px;padding:12px 6px;letter-spacing:.5px;}
+  .px-brand{margin-right:8px;padding-right:8px;}
+}
+</style>
+<style>
+/* Nascondi chrome Frappe standard */
+.navbar.navbar-expand-lg,.website-top-bar,.web-footer,footer.web-footer,
+.navbar.navbar-light,body > nav.navbar,.footer-powered{display:none!important;}
+.page_content,.web-page-content{padding:0!important;max-width:100%!important;}
+</style>
+<nav class="px-nav">
+  <div class="px-inner">
+    <a class="px-brand" href="/portal">
+      <img src="/assets/thanatos_intel/images/thanatos-icon-192.png" alt=""/>
+      <span>THANATOS<small>PORTAL</small></span>
+    </a>
+    <div class="px-links">
+      <a href="/portal" class="{{ 'act' if active=='home' else '' }}">Dashboard</a>
+      <a href="/portal#cases" class="{{ 'act' if active=='cases' else '' }}">Casi</a>
+      {% if _is_client %}
+      <a href="/portal#docs" class="{{ 'act' if active=='docs' else '' }}">Documenti</a>
+      <a href="/portal#billing" class="{{ 'act' if active=='billing' else '' }}">Fatture</a>
+      <a href="/support" class="{{ 'act' if active=='support' else '' }}">Supporto</a>
+      {% endif %}
+      {% if _is_op %}
+      <div class="sep"></div>
+      <a href="/portal/ops" class="{{ 'act' if active=='ops' else '' }}">Centro Operativo</a>
+      <a href="/drive" class="{{ 'act' if active=='drive' else '' }}">Drive</a>
+      <a href="/crm" class="{{ 'act' if active=='crm' else '' }}">CRM</a>
+      <a href="/support" class="{{ 'act' if active=='support' else '' }}">Helpdesk</a>
+      <a href="/app" class="{{ 'act' if active=='desk' else '' }}">Desk</a>
+      {% endif %}
+      <div class="sep"></div>
+      <a href="/portal/guide" class="{{ 'act' if active=='guide' else '' }}">Guida</a>
+    </div>
+    <div class="px-right">
+      <a href="/api/method/logout" class="logout">Esci</a>
     </div>
   </div>
 </nav>

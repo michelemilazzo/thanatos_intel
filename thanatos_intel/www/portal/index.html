@@ -1,5 +1,5 @@
 {% extends "thanatos_intel/templates/standalone.html" %}
-{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, portal_nav %}
 
 {% block title %}{{ title }}{% endblock %}
 
@@ -84,7 +84,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 {% endblock %}
 
 {% block content %}
-{{ thanatos_header('portal') }}
+{{ portal_nav('home') }}
 <div class="shell">
 
   <div class="hero-row">
