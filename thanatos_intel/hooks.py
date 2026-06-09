@@ -89,7 +89,8 @@ doc_events={
  },
  'Investigation Report': {
    'before_save': 'thanatos_intel.integrations.intel_inbox.before_save_report',
-   'on_update':   'thanatos_intel.integrations.intel_inbox.on_update_report',
+   'on_update': ['thanatos_intel.integrations.intel_inbox.on_update_report',
+                 'thanatos_intel.integrations.waba_notifications.on_investigation_report_update'],
  },
  'Investigation Case': {
    'after_insert': 'thanatos_intel.integrations.intel_inbox.ensure_case_folder_hook',
