@@ -253,9 +253,9 @@ def push_opensanctions_hits(min_score: int = 0, limit: int = 5000) -> dict:
         SELECT id, name, schema_type, caption, topics, birth_date,
                nationality, source_url
         FROM `tabOpenSanctions Cache`
-        WHERE topics LIKE '%sanction%' OR topics LIKE '%crime%' OR topics LIKE '%wanted%'
-        LIMIT %s
-    """, (limit,), as_dict=True)
+        WHERE topics LIKE %(p1)s OR topics LIKE %(p2)s OR topics LIKE %(p3)s
+        LIMIT %(lim)s
+    """, {"p1": "%sanction%", "p2": "%crime%", "p3": "%wanted%", "lim": limit}, as_dict=True)
     inserted = 0
     dataset = f"OpenSanctions {today()}"
     for row in rows:
