@@ -25,6 +25,14 @@ website_context={
  'brand_html': '<img src="/assets/thanatos_intel/images/thanatos-logo-mark.png" alt="Thanatos Intel" style="height:32px"/>',
 }
 
+role_home_page={
+ 'Investigation Client': '/portal',
+ 'Affiliate': '/portal',
+ 'Investigator': '/portal',
+ 'Investigation Manager': '/app',
+ 'System Manager': '/app',
+}
+
 after_install='thanatos_intel.install.after_install'
 after_migrate='thanatos_intel.install.after_migrate'
 fixtures=[
