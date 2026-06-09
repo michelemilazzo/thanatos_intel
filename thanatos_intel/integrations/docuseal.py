@@ -3,15 +3,24 @@
 DocuSeal è già deploy su docuseal.thanatos.agency (site_config: docuseal_*).
 Pipeline:
   1. generate_mandate_pdf() → PDF allegato al mandato
-  2. submit_for_signing(mandate) → crea submission su DocuSeal → restituisce signing URL
+  2. submit_for_signing(mandate) → crea template con il PDF specifico del mandato
+     → crea submission → restituisce signing URL al firmatario via email
   3. Webhook POST /api/method/thanatos_intel.integrations.docuseal.webhook
      → aggiorna mandato: status=Signed, signed_on, docuseal_signed_pdf
   4. signed PDF salvato come file privato Frappe + Drive entity se Drive configurato
+
+Flusso creazione template:
+  - Clone del template base (docuseal_base_template_id, default 1)
+    che ha i campi firma/data nelle posizioni corrette
+  - Replace documento con il PDF del mandato via docker exec rails runner
+  - Template monouso: archiviato dopo la firma
 """
 import base64
 import hashlib
 import hmac
 import json
+import os
+import subprocess
 import time
 
 import frappe
@@ -24,16 +33,123 @@ def _conf():
     return {
         "base_url": c.get("docuseal_base_url", "").rstrip("/"),
         "api_key": c.get("docuseal_api_key", ""),
-        "template_id": c.get("docuseal_template_id"),
+        # Template base con campi firma/data nelle posizioni standard — viene clonato
+        # per ogni mandato e il documento viene sostituito col PDF specifico.
+        "base_template_id": int(c.get("docuseal_base_template_id", 1)),
+        # Container Docker DocuSeal (per rails runner via docker exec)
+        "container": c.get("docuseal_container", "thanatos-docuseal"),
         "webhook_secret": c.get("docuseal_webhook_secret", ""),
-        # hmac_secret auto-generato da DocuSeal (formato: whsec_<base64>)
-        # firma: "{ts}.{HMAC_SHA256(hmac_secret, '{ts}.{body}')}"
         "hmac_secret": c.get("docuseal_hmac_secret", ""),
     }
 
 
 def _headers():
     return {"X-Auth-Token": _conf()["api_key"], "Content-Type": "application/json"}
+
+
+# ---------------------------------------------------------------------------
+# Template dinamico: clone base + replace PDF via Docker rails runner
+# ---------------------------------------------------------------------------
+
+_RAILS_SCRIPT = """
+require 'tempfile'
+
+pdf_path    = ARGV[0]
+tmpl_name   = ARGV[1]
+base_tmpl_id = ARGV[2].to_i
+
+pdf_data = File.read(pdf_path, mode: 'rb')
+user     = User.first
+base     = Template.find(base_tmpl_id)
+
+# Clone (non salvato)
+template = Templates::Clone.call(base, author: user, name: tmpl_name)
+template.save!
+
+# Crea file upload in-memory
+tempfile = Tempfile.new([tmpl_name, '.pdf'])
+tempfile.binmode
+tempfile.write(pdf_data)
+tempfile.rewind
+
+upload = ActionDispatch::Http::UploadedFile.new(
+  filename: tmpl_name + '.pdf',
+  type:     'application/pdf',
+  tempfile: tempfile
+)
+
+Templates::ReplaceAttachments.call(template, files: [upload])
+template.save!
+
+tempfile.close
+tempfile.unlink
+
+puts template.id.to_s
+"""
+
+
+def _create_template_from_pdf(mandate_name: str, pdf_path: str) -> int:
+    """Crea un template DocuSeal dal PDF del mandato.
+    Clona il template base, sostituisce il documento, restituisce il nuovo template_id.
+    Usa docker exec + rails runner per aggirare il limite API.
+    """
+    conf = _conf()
+    container = conf["container"]
+    base_tmpl_id = conf["base_template_id"]
+
+    # Copia il PDF nel container
+    container_pdf = f"/tmp/mandate_{mandate_name.replace(' ', '_')}.pdf"
+    cp_result = subprocess.run(
+        ["docker", "cp", pdf_path, f"{container}:{container_pdf}"],
+        capture_output=True, text=True, timeout=30
+    )
+    if cp_result.returncode != 0:
+        frappe.throw(f"docker cp fallito: {cp_result.stderr[:300]}")
+
+    # Scrive lo script Ruby in un file temporaneo nel container
+    script_path = f"/tmp/create_tmpl_{mandate_name.replace(' ', '_')}.rb"
+    write_result = subprocess.run(
+        ["docker", "exec", container, "sh", "-c",
+         f"cat > {script_path}"],
+        input=_RAILS_SCRIPT, capture_output=True, text=True, timeout=10
+    )
+    if write_result.returncode != 0:
+        frappe.throw(f"Scrittura script Ruby fallita: {write_result.stderr[:200]}")
+
+    # Esegui lo script
+    run_result = subprocess.run(
+        ["docker", "exec", container, "sh", "-c",
+         f"cd /app && bundle exec rails runner {script_path} "
+         f"'{container_pdf}' '{mandate_name}' '{base_tmpl_id}'"],
+        capture_output=True, text=True, timeout=120
+    )
+
+    # Cleanup container temp files
+    subprocess.run(
+        ["docker", "exec", container, "sh", "-c",
+         f"rm -f {container_pdf} {script_path}"],
+        capture_output=True, timeout=10
+    )
+
+    if run_result.returncode != 0:
+        frappe.log_error(f"rails runner stderr: {run_result.stderr[:500]}", "DocuSeal")
+        frappe.throw(f"Creazione template DocuSeal fallita: {run_result.stderr[-300:]}")
+
+    lines = [l.strip() for l in run_result.stdout.strip().split('\n') if l.strip()]
+    try:
+        return int(lines[-1])
+    except (ValueError, IndexError):
+        frappe.log_error(f"Output rails runner: {run_result.stdout[:300]}", "DocuSeal")
+        frappe.throw("Impossibile leggere template_id da output rails runner")
+
+
+def _resolve_pdf_path(file_url: str) -> str:
+    """Risolve file_url Frappe in path assoluto sul filesystem."""
+    if "/private/files/" in file_url:
+        return frappe.get_site_path("private", "files",
+                                    file_url.split("/private/files/")[-1])
+    return frappe.get_site_path("public", "files",
+                                file_url.lstrip("/"))
 
 
 # ---------------------------------------------------------------------------
@@ -54,38 +170,39 @@ def submit_mandate_for_signing(mandate_name: str) -> dict:
     if not conf["base_url"] or not conf["api_key"]:
         frappe.throw("DocuSeal non configurato (mancano docuseal_base_url/docuseal_api_key in site_config).")
 
-    # Recupera dati richiedente per pre-compilare il form
-    email = ""
-    name = ""
+    # Risolvi email e nome del firmatario
+    email = name = ""
     if mandate.applicant:
         ap = frappe.db.get_value("Applicant Profile", mandate.applicant,
                                   ["full_legal_name", "email"], as_dict=1) or {}
         email = ap.get("email", "")
         name = ap.get("full_legal_name", mandate.applicant)
-
-    if not email:
-        # fallback: client del caso DDD
-        client_name = frappe.db.get_value("Diplomatic Eligibility Case",
-                                           mandate.ddd_case, "client") if mandate.ddd_case else None
+    if not email and mandate.ddd_case:
+        client_name = frappe.db.get_value("Diplomatic Eligibility Case", mandate.ddd_case, "client")
         if client_name:
             email = frappe.db.get_value("Investigation Client", client_name, "email") or ""
             name = frappe.db.get_value("Investigation Client", client_name, "client_name") or name
-
     if not email:
         frappe.throw("Nessuna email trovata per il richiedente. Impossibile inviare a DocuSeal.")
 
-    # Costruisci payload submission
-    # Legge i ruoli dal template per usare il nome esatto
-    tmpl_resp = requests.get(f"{conf['base_url']}/api/templates/{conf['template_id']}",
+    # ── Crea template DocuSeal con il PDF specifico del mandato ──
+    pdf_path = _resolve_pdf_path(mandate.mandate_pdf)
+    if not os.path.exists(pdf_path):
+        frappe.throw(f"PDF mandato non trovato sul filesystem: {pdf_path}")
+
+    template_id = _create_template_from_pdf(mandate_name, pdf_path)
+
+    # Leggi ruolo submitter dal template appena creato
+    tmpl_resp = requests.get(f"{conf['base_url']}/api/templates/{template_id}",
                              headers=_headers(), timeout=10)
-    submitter_role = "First Party"
+    submitter_role = "Prima parte"
     if tmpl_resp.status_code == 200:
         roles = [s.get("name", "") for s in tmpl_resp.json().get("submitters", [])]
         if roles:
             submitter_role = roles[0]
 
+    # ── Crea submission ──
     payload = {
-        "template_id": conf["template_id"],
         "send_email": True,
         "submitters": [{
             "role": submitter_role,
@@ -98,13 +215,15 @@ def submit_mandate_for_signing(mandate_name: str) -> dict:
         },
     }
 
-    resp = requests.post(f"{conf['base_url']}/api/submissions",
+    resp = requests.post(f"{conf['base_url']}/api/templates/{template_id}/submissions",
                          headers=_headers(), json=payload, timeout=15)
     if resp.status_code not in (200, 201):
-        frappe.throw(f"DocuSeal error {resp.status_code}: {resp.text[:300]}")
+        # Archivia il template orfano in caso di errore
+        requests.delete(f"{conf['base_url']}/api/templates/{template_id}",
+                        headers=_headers(), timeout=5)
+        frappe.throw(f"DocuSeal submission error {resp.status_code}: {resp.text[:300]}")
 
     data = resp.json()
-    # DocuSeal POST /api/submissions returns a list of submitter objects
     submitters = data if isinstance(data, list) else data.get("submitters", [])
     first = submitters[0] if submitters else {}
     submission_id = first.get("submission_id") or first.get("id")
@@ -113,10 +232,13 @@ def submit_mandate_for_signing(mandate_name: str) -> dict:
 
     mandate.db_set("docuseal_submission_id", submission_id, update_modified=False)
     mandate.db_set("docuseal_signing_url", signing_url, update_modified=False)
+    # Memorizza template_id monouso per archiviarlo dopo la firma
+    mandate.db_set("docuseal_template_id", template_id, update_modified=False)
     mandate.db_set("status", "Pending Signature", update_modified=False)
     frappe.db.commit()
 
-    return {"ok": True, "submission_id": submission_id, "signing_url": signing_url}
+    return {"ok": True, "submission_id": submission_id, "signing_url": signing_url,
+            "template_id": template_id}
 
 
 # ---------------------------------------------------------------------------
@@ -239,6 +361,16 @@ def _on_submission_completed(mandate_name: str, submission: dict):
         "docuseal_signed_pdf": local_file_url or signed_pdf_url,
     }, update_modified=True)
     frappe.db.commit()
+
+    # Archivia il template monouso (mantiene storico ma non appare nei template attivi)
+    tmpl_id = frappe.db.get_value("Agency Mandate", mandate_name, "docuseal_template_id")
+    if tmpl_id:
+        try:
+            conf = _conf()
+            requests.delete(f"{conf['base_url']}/api/templates/{tmpl_id}",
+                            headers=_headers(), timeout=5)
+        except Exception:
+            pass
 
     _push_signed_to_drive(mandate_name, local_file_url)
 
