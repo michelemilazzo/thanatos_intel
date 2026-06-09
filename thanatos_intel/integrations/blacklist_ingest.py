@@ -70,22 +70,27 @@ def upsert_entry(external_id: str, entry_type: str, entry_value: str,
         }, update_modified=False)
         return existing
 
-    doc = frappe.get_doc({
-        "doctype": "Blacklist Entry",
-        "entry_type": entry_type,
-        "entry_value": entry_value,
-        "risk_level": risk_level,
-        "is_active": 1,
-        "verified": 1,
-        "source": source,
-        "source_dataset": source_dataset,
-        "source_url": source_url,
-        "external_id": external_id or "",
-        "added_by": "Administrator",
-        "reason": reason[:1000] if reason else "",
-    })
-    doc.insert(ignore_permissions=True, ignore_mandatory=True)
-    return doc.name
+    try:
+        doc = frappe.get_doc({
+            "doctype": "Blacklist Entry",
+            "entry_type": entry_type,
+            "entry_value": entry_value,
+            "risk_level": risk_level,
+            "is_active": 1,
+            "verified": 1,
+            "source": source,
+            "source_dataset": source_dataset,
+            "source_url": source_url,
+            "external_id": external_id or "",
+            "added_by": "Administrator",
+            "reason": reason[:1000] if reason else "",
+        })
+        doc.insert(ignore_permissions=True, ignore_mandatory=True, ignore_if_duplicate=True)
+        return doc.name
+    except (frappe.UniqueValidationError, Exception) as e:
+        if "Duplicate entry" in str(e) or "UniqueValidation" in type(e).__name__:
+            return existing or ""
+        raise
 
 
 # ─── OFAC SDN ────────────────────────────────────────────────────────────────
