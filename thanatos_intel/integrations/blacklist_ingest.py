@@ -20,7 +20,7 @@ import requests
 import xml.etree.ElementTree as ET
 from frappe.utils import now_datetime, today
 
-OFAC_URL = "https://ofac.treasury.gov/system/files/downloads/sdn.xml"
+OFAC_URL = "https://sanctionslistservice.ofac.treas.gov/api/PublicationPreview/exports/SDN_ENHANCED.XML"
 EU_URL = "https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content"
 UN_URL = "https://scsanctions.un.org/resources/xml/en/consolidated.xml"
 ICIJ_API = "https://offshoreleaks.icij.org/api/search"
