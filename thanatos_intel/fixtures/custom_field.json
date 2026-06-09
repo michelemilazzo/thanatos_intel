@@ -603,6 +603,7 @@
   "insert_after": "country",
   "in_list_view": 0,
   "print_hide": 1,
-  "description": "Profilo e-fattura applicato automaticamente alle Sales Invoice di questa società"
+  "description": "Profilo e-fattura applicato automaticamente alle Sales Invoice di questa società",
+  "doctype": "Custom Field"
  }
 ]
