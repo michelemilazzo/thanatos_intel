@@ -223,6 +223,8 @@ PIPELINES = {
 PIPELINES["Due Diligence"] = PIPELINES["DDD"]
 PIPELINES["Cyber"] = PIPELINES["OSINT"]
 PIPELINES["Fraud"] = PIPELINES["Antifrode"]
+PIPELINES["Corporate"] = PIPELINES["Investigation"]
+PIPELINES["Generic"] = PIPELINES["Investigation"]
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +327,9 @@ def get_pipeline(case_doc_or_dict) -> list[dict]:
         case = case_doc_or_dict
 
     case_type = (case.get("case_type") or "Investigation").strip()
-    steps = PIPELINES.get(case_type) or PIPELINES.get("Investigation")
+    # Se case_type è un Link a Case Type, leggi il pipeline_key
+    pipeline_key = case.get("pipeline_key") or case_type
+    steps = PIPELINES.get(pipeline_key) or PIPELINES.get(case_type) or PIPELINES.get("Investigation")
 
     result = []
     found_current = False
@@ -359,10 +363,15 @@ def get_pipeline(case_doc_or_dict) -> list[dict]:
 def get_case_pipeline(case_name: str) -> list:
     case = frappe.db.get_value(
         "Investigation Case", case_name,
-        ["name", "case_type", "case_status", "client"], as_dict=1,
+        ["name", "case_type", "status", "client"], as_dict=1,
     )
     if not case:
         return []
+    case["case_status"] = case.get("status", "")
+    # Risolvi pipeline_key dal doctype Case Type
+    if case.get("case_type"):
+        pk = frappe.db.get_value("Case Type", case["case_type"], "pipeline_key")
+        case["pipeline_key"] = pk or ""
     # aggiungi client_type
     if case.get("client"):
         ct = frappe.db.get_value("Investigation Client", case["client"], "client_type")
@@ -380,6 +389,7 @@ def get_ddd_pipeline(ddd_case_name: str) -> list:
         return []
     case["case_type"] = "DDD"
     case["case_status"] = case.get("status", "")
+    case["pipeline_key"] = "DDD"
     if case.get("client"):
         ct = frappe.db.get_value("Investigation Client", case["client"], "client_type")
         case["client_type"] = ct
