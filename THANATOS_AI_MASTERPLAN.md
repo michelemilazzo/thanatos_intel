@@ -1,8 +1,8 @@
 # THANATOS AI — Masterplan
 
-> **Intelligenza applicativa per investigazioni.** Cresce dentro `thanatos_intel`: apprende dai casi, dagli input degli analisti e dalle fonti OSINT, e produce autonomamente ciò che serve a un'indagine (arricchimenti, collegamenti, timeline, report di due diligence).
+> **THANATOS AI è un'etichetta, non un'AI separata.** Il cervello è uno solo: [MMOS AI](https://github.com/michelemilazzo/mmos-ai/blob/main/MMOS_AI_MASTERPLAN.md) (gateway 10.10.0.10:8800, memoria unica MariaDB con namespacing per sito). Sul sito thanatos quel cervello si presenta come **THANATOS AI** — persona con prompt e competenze investigative.
 >
-> Progetto parallelo: [MMOS AI](https://github.com/michelemilazzo/mmos-ai/blob/main/MMOS_AI_MASTERPLAN.md) (intelligenza SaaS di piattaforma). THANATOS AI riusa il gateway mmos-ai (10.10.0.10:8800) come trasporto, ma ha memoria, dominio e pipeline propri.
+> Questo masterplan copre il **braccio investigativo**: i DocType, le pipeline e i tool di dominio dentro `thanatos_intel` che THANATOS AI usa per apprendere dai casi, dagli input degli analisti e dalle fonti OSINT, e produrre ciò che serve a un'indagine (arricchimenti, collegamenti, timeline, report di due diligence). Niente infrastruttura AI duplicata qui: memoria, RAG e motore azioni vivono nel core MMOS AI.
 
 **Regola di tracking:** ogni task completato si spunta `[x]` con data a fianco. Niente task chiuso senza commit relativo.
 
