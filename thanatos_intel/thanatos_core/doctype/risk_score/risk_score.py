@@ -51,15 +51,21 @@ def _build_entity(case_doc) -> dict:
     for r in rows:
         ent = frappe.db.get_value(
             "Investigation Entity", r.entity,
-            ["entity_name", "blacklist_ref"], as_dict=1,
+            ["entity_name", "blacklist_ref", "status", "risk_level"], as_dict=1,
         ) or {}
         entities.append({
             "entity_type": r.entity_type,
             "entity_name": ent.get("entity_name"),
-            "blacklisted": bool(ent.get("blacklist_ref")),
+            "blacklisted": bool(ent.get("blacklist_ref")) or ent.get("status") == "Blacklisted",
+            "status": ent.get("status"),
+            "risk_level": ent.get("risk_level"),
         })
     e["entities"] = entities
     e["has_blacklisted_entity"] = any(x["blacklisted"] for x in entities)
+    e["has_critical_entity"] = any(x.get("risk_level") == "Critico" for x in entities)
+    e["has_high_entity"] = any(x.get("risk_level") in ("Alto", "Critico") for x in entities)
+    e["has_watchlist_entity"] = any(x.get("status") == "Watchlist" for x in entities)
+    e["wallet_count"] = sum(1 for x in entities if x.get("entity_type") == "Wallet")
     e["has_sanctions_hit"] = bool(frappe.db.exists(
         "Sanctions Screening", {"ddd_case": case_doc.name, "matches_found": [">", 0]}
     ))
