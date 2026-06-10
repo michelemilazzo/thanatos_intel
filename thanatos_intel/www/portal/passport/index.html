@@ -1,62 +1,236 @@
-{% extends "templates/web.html" %}
-{% block page_content %}
-<div style="max-width:1100px;margin:30px auto;font-family:system-ui,sans-serif;color:#1a1f3a">
-  <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">Passport Analyzer</h1>
-  <p style="color:#555">Carica una scansione (PDF o immagine). Il sistema legge la MRZ ICAO 9303, valida i check-digit,
-  distingue passaporti <b>Diplomatici / Servizio / Ufficiali</b> e calcola un risk score.</p>
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, portal_nav, thanatos_footer %}
 
-  <form id="pa-form" style="background:#0A0E1A;color:#eee;padding:18px;border-radius:12px;margin:18px 0">
-    <label>Investigation Case (opz.) <input name="case" placeholder="CASE-2026-0006" style="width:280px;padding:6px"></label>
-    &nbsp;
-    <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.tiff" required style="color:#eee">
-    <button type="submit" style="background:#c8a96e;color:#0A0E1A;border:0;padding:8px 18px;border-radius:6px;font-weight:600">Analizza</button>
-  </form>
+{% block title %}Passport Analyzer — Thanatos Intel{% endblock %}
 
-  <div id="pa-result"></div>
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold2:#E0C58A;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel2:#161D33;--border:#1F2842;
+  --red:#d05a5a;--ok:#7BC480;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1100px;margin:0 auto;padding:40px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px}
+.crumb a{color:var(--gold);text-decoration:none}
+.hero-row{padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.hero-row h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 6px}
+.hero-row p{margin:0;color:var(--grey);font-size:13px}
 
-  <h2 style="margin-top:30px">Analisi recenti</h2>
-  <table style="width:100%;border-collapse:collapse;font-size:14px">
-    <thead style="background:#f3f1ec"><tr>
-      <th style="padding:6px;text-align:left">Nome</th><th>N°</th><th>Tipo</th><th>Stato</th>
-      <th>Scadenza</th><th>Risk</th><th>Verdetto</th>
-    </tr></thead>
+/* Upload form */
+.upload-card{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--gold);
+  padding:24px 28px;margin-bottom:32px;border-radius:4px}
+.upload-card h2{font-family:Georgia,serif;font-weight:400;font-size:18px;color:#fff;margin:0 0 6px}
+.upload-card .sub{color:var(--grey);font-size:12px;margin:0 0 20px}
+.form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.field{flex:1;min-width:200px}
+.field label{display:block;font-size:10px;color:var(--grey);letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:5px}
+.field input[type=text]{width:100%;background:var(--dark);color:#E8E9F0;
+  border:1px solid var(--border);padding:10px 14px;border-radius:3px;
+  font-size:13px;font-family:inherit}
+.field input:focus{outline:none;border-color:var(--gold)}
+.drop-zone{flex:2;min-width:220px;border:2px dashed rgba(200,169,110,.3);
+  border-radius:3px;padding:20px;text-align:center;cursor:pointer;
+  background:var(--panel2);transition:border-color .15s}
+.drop-zone:hover,.drop-zone.over{border-color:var(--gold)}
+.drop-zone.has-file{border-color:var(--ok);border-style:solid}
+.drop-zone input{display:none}
+.drop-zone .dz-txt{font-size:12px;color:var(--grey)}
+.drop-zone.has-file .dz-txt{color:var(--ok)}
+.btn-analyze{padding:11px 24px;background:var(--gold);color:var(--dark);border:0;
+  border-radius:3px;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn-analyze:hover{background:var(--gold2)}
+.btn-analyze:disabled{opacity:.35;cursor:default}
+
+/* Result */
+.result-box{background:var(--panel2);border:1px solid var(--border);border-radius:4px;
+  padding:18px;margin-top:16px;display:none}
+.result-box .rh{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.result-kv .k{font-size:10px;color:var(--grey);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.result-kv .v{font-size:14px;color:#E8E9F0}
+.verdict-ok{color:var(--ok);font-weight:600}
+.verdict-warn{color:#E0B860;font-weight:600}
+.verdict-err{color:var(--red);font-weight:600}
+.risk-num{font-family:Georgia,serif;font-size:24px;line-height:1}
+
+/* Recent table */
+.section-title{font-family:Georgia,serif;font-size:15px;color:#fff;letter-spacing:2px;
+  text-transform:uppercase;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--gold-soft)}
+.data-table-wrap{overflow-x:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{padding:8px 12px;text-align:left;color:var(--grey);font-size:10px;
+  letter-spacing:1.5px;text-transform:uppercase;font-weight:normal;
+  border-bottom:1px solid var(--border);background:var(--panel2)}
+.data-table td{padding:9px 12px;border-bottom:1px solid rgba(31,40,66,.5);vertical-align:middle}
+.data-table tr:hover td{background:rgba(200,169,110,.03)}
+.data-table a{color:var(--gold);text-decoration:none}
+.dipl-badge{font-size:10px;padding:2px 7px;background:rgba(200,169,110,.12);
+  color:var(--gold);border:1px solid rgba(200,169,110,.3);border-radius:2px;letter-spacing:1px}
+.empty{padding:40px 20px;text-align:center;color:var(--grey);
+  border:1px dashed var(--border);border-radius:4px}
+.empty strong{display:block;font-family:Georgia,serif;color:#fff;margin-bottom:8px;letter-spacing:2px}
+@media(max-width:640px){.shell{padding:20px 14px 60px}.form-row{flex-direction:column}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ portal_nav('passport') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> › Passport Analyzer</div>
+
+  <div class="hero-row">
+    <h1>Passport Analyzer</h1>
+    <p>Lettura MRZ ICAO 9303 · Validazione check-digit · Classificazione diplomatico/servizio/ufficiale · Risk score</p>
+  </div>
+
+  <!-- Upload form -->
+  <div class="upload-card">
+    <h2>Analizza documento</h2>
+    <p class="sub">Carica una scansione del passaporto (PDF, JPG, PNG, TIFF). L'analisi è istantanea.</p>
+    <div class="form-row">
+      <div class="field">
+        <label>Investigation Case (opzionale)</label>
+        <input type="text" id="pa-case" placeholder="es. CASE-2026-0006">
+      </div>
+      <label class="drop-zone" id="drop-zone">
+        <input type="file" id="pa-file" accept=".pdf,.jpg,.jpeg,.png,.tiff">
+        <div class="dz-txt" id="dz-txt">Trascina qui il file o clicca per selezionarlo</div>
+      </label>
+      <button class="btn-analyze" id="pa-submit" disabled>Analizza →</button>
+    </div>
+    <div class="result-box" id="pa-result">
+      <div class="rh">Risultato analisi</div>
+      <div class="result-grid" id="pa-grid"></div>
+    </div>
+  </div>
+
+  <!-- Recent analyses -->
+  <div class="section-title">Analisi recenti</div>
+  {% if recent %}
+  <div class="data-table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Riferimento</th>
+        <th>N° passaporto</th>
+        <th>Tipo</th>
+        <th>Paese emissione</th>
+        <th>Scadenza</th>
+        <th>Risk score</th>
+        <th>Verdetto</th>
+      </tr>
+    </thead>
     <tbody>
     {% for r in recent %}
-      <tr style="border-bottom:1px solid #eee">
-        <td style="padding:6px"><a href="/app/passport-analysis/{{r.name}}">{{r.name}}</a></td>
-        <td>{{r.passport_number or '-'}}</td>
-        <td>{{r.passport_type or '-'}}{% if r.is_diplomatic %} 🛡{% endif %}</td>
-        <td>{{r.issuing_country or '-'}}</td>
-        <td>{{r.expiry or '-'}}</td>
-        <td style="font-weight:600;color:{% if r.risk_score>=50 %}#b00{% elif r.risk_score>=20 %}#c80{% else %}#080{% endif %}">{{r.risk_score or 0}}</td>
-        <td>{{r.verdict or '-'}}</td>
-      </tr>
+    <tr>
+      <td><a href="/app/passport-analysis/{{ r.name }}">{{ r.name }}</a></td>
+      <td style="color:#D0D2DC;font-family:monospace">{{ r.passport_number or '—' }}</td>
+      <td>
+        {{ r.passport_type or '—' }}
+        {% if r.is_diplomatic %}<span class="dipl-badge">Diplomatico</span>{% endif %}
+      </td>
+      <td style="color:var(--grey)">{{ r.issuing_country or '—' }}</td>
+      <td style="color:var(--grey);font-size:12px">{{ r.expiry or '—' }}</td>
+      <td>
+        <span style="font-family:Georgia,serif;font-size:18px;color:{% if (r.risk_score or 0) >= 50 %}var(--red){% elif (r.risk_score or 0) >= 20 %}#E0B860{% else %}var(--ok){% endif %}">
+          {{ r.risk_score or 0 }}
+        </span>
+      </td>
+      <td>
+        <span class="{% if r.verdict == 'Valid' %}verdict-ok{% elif r.verdict in ('Suspicious','Expired','Forged') %}verdict-err{% else %}verdict-warn{% endif %}">
+          {{ r.verdict or '—' }}
+        </span>
+      </td>
+    </tr>
     {% endfor %}
     </tbody>
   </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <strong>Nessuna analisi ancora</strong>
+    Carica un documento qui sopra per iniziare.
+  </div>
+  {% endif %}
+
 </div>
+{{ thanatos_footer() }}
 
 <script>
-document.getElementById("pa-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const f = e.target;
-  const file = f.file.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async () => {
-    const formData = new FormData();
-    formData.append("files", file);
-    if (f.case.value) formData.append("case_title", f.case.value);
-    const r = await fetch("/api/method/thanatos_intel.www.upload_test.handle_upload", {
-      method: "POST", body: formData,
-      headers: {"X-Frappe-CSRF-Token": frappe.csrf_token},
+const dz = document.getElementById("drop-zone");
+const fi = document.getElementById("pa-file");
+const dzTxt = document.getElementById("dz-txt");
+let selectedFile = null;
+
+fi.addEventListener("change", ()=>{ selectedFile=fi.files[0]; updateDrop(); });
+
+dz.addEventListener("dragover", e=>{ e.preventDefault(); dz.classList.add("over"); });
+dz.addEventListener("dragleave", ()=> dz.classList.remove("over"));
+dz.addEventListener("drop", e=>{
+  e.preventDefault(); dz.classList.remove("over");
+  selectedFile = e.dataTransfer.files[0];
+  updateDrop();
+});
+
+function updateDrop(){
+  if (selectedFile) {
+    dz.classList.add("has-file");
+    dzTxt.textContent = selectedFile.name + " (" + (selectedFile.size/1024).toFixed(0) + " KB)";
+    document.getElementById("pa-submit").disabled = false;
+  }
+}
+
+document.getElementById("pa-submit").addEventListener("click", async () => {
+  if (!selectedFile) return;
+  const btn = document.getElementById("pa-submit");
+  btn.disabled = true; btn.textContent = "Analisi in corso…";
+
+  const fd = new FormData();
+  fd.append("files", selectedFile);
+  const caseVal = document.getElementById("pa-case").value.trim();
+  if (caseVal) fd.append("case_title", caseVal);
+
+  const resultBox = document.getElementById("pa-result");
+  const grid = document.getElementById("pa-grid");
+  resultBox.style.display = "none";
+
+  try {
+    const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.api.passport.analyze", {
+      method: "POST", body: fd,
+      headers: {"X-Frappe-CSRF-Token": frappe.csrf_token}
     });
     const j = await r.json();
-    document.getElementById("pa-result").innerHTML =
-      "<pre style='background:#f7f4ee;padding:14px;border-radius:8px;overflow:auto'>"
-      + JSON.stringify(j.message || j, null, 2) + "</pre>";
-  };
-  reader.readAsArrayBuffer(file);
+    const m = j.message || j;
+
+    // Build result cards
+    const fields = [
+      ["Nome", m.surname + " " + m.given_names],
+      ["Passaporto N°", m.passport_number],
+      ["Tipo", m.passport_type + (m.is_diplomatic ? " 🛡" : "")],
+      ["Paese emissione", m.issuing_country],
+      ["Nazionalità", m.nationality],
+      ["Scadenza", m.expiry],
+      ["Risk score", m.risk_score],
+      ["Verdetto", m.verdict],
+    ];
+    grid.innerHTML = fields.map(([k,v]) => `
+      <div class="result-kv">
+        <div class="k">${k}</div>
+        <div class="v ${k==='Verdetto'?'verdict-'+(m.verdict==='Valid'?'ok':m.risk_score>=50?'err':'warn'):k==='Risk score'?'risk-num':''}">${v||'—'}</div>
+      </div>`).join('');
+    resultBox.style.display = "block";
+
+    // Reload page after 3s to show in recent list
+    setTimeout(()=>location.reload(), 3000);
+  } catch(e) {
+    grid.innerHTML = `<div style="color:var(--red);font-size:13px">Errore: ${e.message}</div>`;
+    resultBox.style.display = "block";
+  }
+  btn.disabled = false; btn.textContent = "Analizza →";
 });
 </script>
 {% endblock %}
