@@ -163,27 +163,27 @@ def ensure_case_folder(case_name: str) -> str:
 
 
 def _ensure_drive_folder(case_name: str) -> str:
-    root = "Investigation Cases"
-    base = f"{root}/{case_name}"
-    # Use Drive File mechanism (creation idempotent on title path)
-    for sub in [root, base,
-                f"{base}/Evidence", f"{base}/Reports",
-                f"{base}/Email", f"{base}/Documents"]:
-        if not frappe.db.exists("Drive File", {"title": sub.split("/")[-1],
-                                               "is_group": 1,
-                                               "parent_drive_file":
-                                                 sub.rsplit("/", 1)[0] if "/" in sub else ""}):
-            try:
-                frappe.get_doc({
-                    "doctype": "Drive File",
-                    "title": sub.split("/")[-1],
-                    "is_group": 1,
-                    "parent_drive_file": sub.rsplit("/", 1)[0] if "/" in sub else "",
-                }).insert(ignore_permissions=True)
-            except Exception:
-                pass
-    case_folder = frappe.db.get_value("Drive File", {"title": case_name, "is_group": 1}, "name")
-    return case_folder or base
+    from drive.utils import get_home_folder
+    from drive.api.files import create_folder
+
+    team = frappe.conf.get("thanatos_drive_team") or frappe.db.get_value(
+        "Drive Team", {"title": "Thanatos Cases"}, "name")
+    if not team:
+        return ""
+
+    def ensure(title, parent):
+        existing = frappe.db.get_value("Drive File", {
+            "title": title, "is_group": 1, "team": team,
+            "parent_entity": parent, "is_active": 1}, "name")
+        return existing or create_folder(team, title, parent).name
+
+    home = get_home_folder(team)
+    cases_root = ensure("Investigation Cases", home["name"])
+    case_folder = ensure(case_name, cases_root)
+    for sub in ["01 Documenti Cliente", "02 Evidenze", "03 OSINT",
+                "04 Blockchain", "05 Report", "06 Email"]:
+        ensure(sub, case_folder)
+    return case_folder
 
 
 def _ensure_file_folder(case_name: str) -> str:
