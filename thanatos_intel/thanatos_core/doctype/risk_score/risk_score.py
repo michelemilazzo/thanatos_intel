@@ -31,14 +31,14 @@ def _build_entity(case_doc) -> dict:
     if case_doc.client:
         client = frappe.db.get_value(
             "Investigation Client", case_doc.client,
-            ["client_type", "kyc_status", "kyb_status", "risk_level", "country"],
+            ["client_type", "kyc_status", "kyb_status", "country"],
             as_dict=1,
         ) or {}
         e.update({
             "client_type": client.get("client_type"),
             "kyc_status": client.get("kyc_status"),
             "kyb_status": client.get("kyb_status"),
-            "client_risk_level": client.get("risk_level"),
+            "client_risk_level": None,
             "client_country": client.get("country"),
         })
     # Entità coinvolte
