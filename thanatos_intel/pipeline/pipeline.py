@@ -274,8 +274,8 @@ def _check_invoice_or_quotation(case):
 
 def _check_payment(case):
     name = case.get("name")
-    pf = frappe.db.get_value("Diplomatic Proforma", {"ddd_case": name}, "payment_status")
-    if pf in ("Paid", "Partially Paid"):
+    pf = frappe.db.get_value("Diplomatic Proforma", {"ddd_case": name}, "status")
+    if pf == "Paid":
         return True
     inv = frappe.db.get_all("Sales Invoice",
                              filters={"investigation_case": name, "outstanding_amount": ["<=", 0]},
