@@ -1,37 +1,140 @@
-{% extends "templates/web.html" %}
-{% block page_content %}
-<div style="max-width:900px;margin:30px auto;font-family:system-ui,sans-serif;color:#1a1f3a">
-  <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">Video Identification</h1>
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, portal_nav, thanatos_footer %}
 
-  <div style="background:#fff3e0;border-left:4px solid #c8a96e;padding:12px;font-size:13px">
-    La sessione registra <b>selfie + documento + 8s di video</b> direttamente nel browser
-    (nessun servizio terzo). I file sono privati e collegati al case.
+{% block title %}Video Identification — Thanatos DDD{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold2:#E0C58A;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel2:#161D33;--border:#1F2842;--ok:#7BC480;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:960px;margin:0 auto;padding:40px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px}
+.crumb a{color:var(--gold);text-decoration:none}
+h1{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#fff;margin:0 0 8px}
+.hero-sub{color:var(--grey);font-size:13px;margin:0 0 24px}
+.notice{background:rgba(200,169,110,.06);border:1px solid rgba(200,169,110,.25);
+  border-left:3px solid var(--gold);padding:12px 16px;margin-bottom:28px;
+  font-size:12px;color:var(--grey);line-height:1.6}
+.notice strong{color:#D4C890}
+.case-ref{font-size:12px;color:var(--grey);margin-bottom:20px}
+.case-ref code{color:var(--gold);font-family:monospace;font-size:13px}
+
+/* Main grid */
+.vid-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:720px){.vid-grid{grid-template-columns:1fr}}
+
+/* Camera panel */
+.cam-panel{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px}
+.panel-title{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+#cam{display:block;width:100%;border-radius:3px;background:#000;aspect-ratio:4/3;object-fit:cover}
+.cam-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.btn-cam{padding:10px 16px;border-radius:3px;font-size:11px;letter-spacing:1.5px;
+  text-transform:uppercase;font-weight:600;cursor:pointer;border:0;font-family:inherit;
+  display:flex;align-items:center;gap:8px}
+.btn-cam.gold{background:var(--gold);color:var(--dark)}
+.btn-cam.gold:hover{background:var(--gold2)}
+.btn-cam.rec{background:rgba(208,90,90,.15);color:#e79a9a;border:1px solid rgba(208,90,90,.3)}
+.btn-cam.rec:hover{background:rgba(208,90,90,.25)}
+.btn-cam:disabled{opacity:.35;cursor:default}
+
+/* Preview panel */
+.preview-panel{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px}
+.preview-item{margin-bottom:14px}
+.preview-lbl{font-size:10px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.preview-lbl .check{color:var(--ok);font-size:14px;display:none}
+.preview-lbl .check.done{display:inline}
+.preview-img{width:100%;border-radius:3px;border:1px solid var(--border);display:none;max-height:160px;object-fit:cover}
+.preview-vid{width:100%;border-radius:3px;border:1px solid var(--border);display:none}
+.preview-placeholder{height:80px;background:var(--panel2);border:1px dashed var(--border);
+  border-radius:3px;display:flex;align-items:center;justify-content:center;
+  color:var(--grey);font-size:12px}
+
+/* Send button */
+.send-row{margin-top:20px}
+.btn-send{width:100%;padding:14px;background:var(--gold);color:var(--dark);border:0;
+  border-radius:3px;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  font-weight:700;cursor:pointer;font-family:inherit}
+.btn-send:hover{background:var(--gold2)}
+.btn-send:disabled{opacity:.35;cursor:default}
+
+/* Result */
+#result{display:none;background:var(--panel2);border:1px solid var(--border);border-radius:4px;
+  padding:14px;margin-top:16px;font-size:12px;font-family:monospace;
+  color:var(--ok);white-space:pre;max-height:280px;overflow:auto}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ portal_nav('ddd') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal/ddd">← DDD</a> › Video Identification</div>
+
+  <h1>Video Identification</h1>
+  <p class="hero-sub">Verifica identità — selfie, documento, video 8 secondi · sessione locale</p>
+
+  <div class="notice">
+    <strong>Privacy.</strong> La sessione registra selfie + documento + 8s video direttamente nel browser.
+    Nessun servizio terzo. I file vengono trasmessi cifrati e associati al case.
   </div>
 
-  <p>Case: <code id="case">{{ case }}</code></p>
+  <div class="case-ref">Case: <code id="case-display">{{ case }}</code></div>
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
-    <div style="background:#0A0E1A;color:#eee;padding:14px;border-radius:10px">
-      <h3 style="color:#c8a96e">Camera</h3>
-      <video id="cam" autoplay playsinline muted style="width:100%;border-radius:6px;background:#000"></video>
-      <button id="btn-selfie" style="margin-top:10px;background:#c8a96e;border:0;padding:8px 16px;border-radius:5px;color:#0A0E1A;font-weight:600">📸 Selfie</button>
-      <button id="btn-doc" style="margin-top:10px;background:#c8a96e;border:0;padding:8px 16px;border-radius:5px;color:#0A0E1A;font-weight:600">🪪 Documento</button>
-      <button id="btn-rec" style="margin-top:10px;background:#7a1c1c;border:0;padding:8px 16px;border-radius:5px;color:#fff;font-weight:600">⏺ Rec 8s</button>
+  <div class="vid-grid">
+    <!-- Camera -->
+    <div class="cam-panel">
+      <div class="panel-title">Camera</div>
+      <video id="cam" autoplay playsinline muted></video>
+      <div class="cam-actions">
+        <button class="btn-cam gold" id="btn-selfie">📸 Cattura Selfie</button>
+        <button class="btn-cam gold" id="btn-doc">🪪 Cattura Documento</button>
+        <button class="btn-cam rec" id="btn-rec">⏺ Registra 8 secondi</button>
+      </div>
     </div>
-    <div style="background:#f3f1ec;padding:14px;border-radius:10px">
-      <h3>Preview</h3>
-      <div>Selfie: <img id="p-selfie" style="max-width:100%;display:none;border:1px solid #ccc"></div>
-      <div>Doc: <img id="p-doc" style="max-width:100%;display:none;border:1px solid #ccc"></div>
-      <div>Video: <video id="p-vid" controls style="max-width:100%;display:none"></video></div>
-      <button id="btn-send" disabled style="margin-top:14px;background:#0A0E1A;color:#c8a96e;border:0;padding:10px 22px;border-radius:5px;font-weight:600">Invia per verifica</button>
+
+    <!-- Preview -->
+    <div class="preview-panel">
+      <div class="panel-title">Preview</div>
+
+      <div class="preview-item">
+        <div class="preview-lbl">
+          Selfie <span class="check" id="chk-selfie">✓</span>
+        </div>
+        <div class="preview-placeholder" id="ph-selfie">In attesa…</div>
+        <img id="p-selfie" class="preview-img" alt="Selfie">
+      </div>
+
+      <div class="preview-item">
+        <div class="preview-lbl">
+          Documento <span class="check" id="chk-doc">✓</span>
+        </div>
+        <div class="preview-placeholder" id="ph-doc">In attesa…</div>
+        <img id="p-doc" class="preview-img" alt="Documento">
+      </div>
+
+      <div class="preview-item">
+        <div class="preview-lbl">
+          Video 8s <span class="check" id="chk-vid">✓</span>
+        </div>
+        <div class="preview-placeholder" id="ph-vid">In attesa…</div>
+        <video id="p-vid" class="preview-vid" controls></video>
+      </div>
+
+      <div class="send-row">
+        <button id="btn-send" class="btn-send" disabled>Invia per verifica →</button>
+      </div>
     </div>
   </div>
 
-  <pre id="result" style="background:#0A0E1A;color:#c8a96e;padding:14px;margin-top:14px;border-radius:8px;display:none"></pre>
+  <pre id="result"></pre>
 </div>
+{{ thanatos_footer() }}
 
 <script>
-const caseId = document.getElementById("case").innerText.trim();
+const caseId = document.getElementById("case-display").innerText.trim();
 let mediaRecorder, recChunks=[];
 let selfieBlob=null, docBlob=null, videoBlob=null;
 let stream=null;
@@ -42,30 +145,39 @@ async function startCam(){
 }
 startCam();
 
-function snap(targetId, blobSetter){
+function snap(imgId, phId, chkId, blobSetter){
   const v=document.getElementById("cam");
   const c=document.createElement("canvas");
   c.width=v.videoWidth; c.height=v.videoHeight;
   c.getContext("2d").drawImage(v,0,0);
   c.toBlob(b=>{
     blobSetter(b);
-    const img=document.getElementById(targetId);
-    img.src=URL.createObjectURL(b); img.style.display="block";
+    const img=document.getElementById(imgId);
+    img.src=URL.createObjectURL(b);
+    img.style.display="block";
+    document.getElementById(phId).style.display="none";
+    document.getElementById(chkId).classList.add("done");
     checkReady();
   }, "image/jpeg", 0.92);
 }
 
-document.getElementById("btn-selfie").onclick=()=>snap("p-selfie", b=>selfieBlob=b);
-document.getElementById("btn-doc").onclick=()=>snap("p-doc", b=>docBlob=b);
+document.getElementById("btn-selfie").onclick=()=>snap("p-selfie","ph-selfie","chk-selfie", b=>selfieBlob=b);
+document.getElementById("btn-doc").onclick=()=>snap("p-doc","ph-doc","chk-doc", b=>docBlob=b);
 
 document.getElementById("btn-rec").onclick=async()=>{
+  const btn=document.getElementById("btn-rec");
+  btn.disabled=true; btn.textContent="⏺ Registrazione…";
   recChunks=[];
   mediaRecorder = new MediaRecorder(stream, {mimeType:"video/webm;codecs=vp8,opus"});
   mediaRecorder.ondataavailable=e=>e.data.size>0 && recChunks.push(e.data);
   mediaRecorder.onstop=()=>{
     videoBlob = new Blob(recChunks, {type:"video/webm"});
     const p=document.getElementById("p-vid");
-    p.src=URL.createObjectURL(videoBlob); p.style.display="block";
+    p.src=URL.createObjectURL(videoBlob);
+    p.style.display="block";
+    document.getElementById("ph-vid").style.display="none";
+    document.getElementById("chk-vid").classList.add("done");
+    btn.disabled=false; btn.textContent="⏺ Ri-registra";
     checkReady();
   };
   mediaRecorder.start();
@@ -77,24 +189,48 @@ function checkReady(){
 }
 
 document.getElementById("btn-send").onclick=async()=>{
-  const r1=await fetch("/api/method/thanatos_intel.thanatos_ddd.api.video.open_session", {
-    method:"POST", body:new URLSearchParams({ddd_case:caseId}),
-    headers:{"X-Frappe-CSRF-Token": frappe.csrf_token,
-             "Content-Type":"application/x-www-form-urlencoded"}
-  });
-  const j1=(await r1.json()).message;
-  const fd=new FormData();
-  fd.append("session", j1.session);
-  fd.append("selfie", selfieBlob, "selfie.jpg");
-  fd.append("document", docBlob, "doc.jpg");
-  fd.append("video", videoBlob, "rec.webm");
-  const r2=await fetch("/api/method/thanatos_intel.thanatos_ddd.api.video.finalize_session", {
-    method:"POST", body:fd,
-    headers:{"X-Frappe-CSRF-Token": frappe.csrf_token}
-  });
-  const j2=(await r2.json()).message;
-  const out=document.getElementById("result");
-  out.style.display="block"; out.innerText=JSON.stringify(j2,null,2);
+  const btn=document.getElementById("btn-send");
+  btn.disabled=true; btn.textContent="Invio in corso…";
+  const result=document.getElementById("result");
+  result.style.display="none";
+
+  try {
+    // 1. Open session
+    const r1=await fetch("/api/method/thanatos_intel.thanatos_ddd.api.video.open_session",
+      {method:"POST", body:new URLSearchParams({ddd_case:caseId}),
+       headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,"Content-Type":"application/x-www-form-urlencoded"}});
+    const sess=(await r1.json()).message;
+    if (!sess.session_id) throw new Error("Session error: "+JSON.stringify(sess));
+    const sid=sess.session_id;
+
+    // 2. Upload files
+    async function upload(blob, filename, ftype){
+      const fd=new FormData();
+      fd.append("session_id",sid); fd.append("file_type",ftype);
+      fd.append("file",blob,filename);
+      const r=await fetch("/api/method/thanatos_intel.thanatos_ddd.api.video.upload_file",
+        {method:"POST", headers:{"X-Frappe-CSRF-Token":frappe.csrf_token}, body:fd});
+      return (await r.json()).message;
+    }
+    await upload(selfieBlob, "selfie.jpg", "selfie");
+    await upload(docBlob, "document.jpg", "document");
+    await upload(videoBlob, "video.webm", "video");
+
+    // 3. Finalize
+    const r3=await fetch("/api/method/thanatos_intel.thanatos_ddd.api.video.finalize",
+      {method:"POST", body:new URLSearchParams({session_id:sid}),
+       headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,"Content-Type":"application/x-www-form-urlencoded"}});
+    const final=(await r3.json()).message;
+    result.style.display="block";
+    result.innerText=JSON.stringify(final, null, 2);
+    if (final.ok) btn.textContent="✓ Inviato";
+    else { btn.disabled=false; btn.textContent="Invia per verifica →"; }
+  } catch(e) {
+    result.style.display="block";
+    result.style.color="var(--red)";
+    result.innerText="Errore: "+e.message;
+    btn.disabled=false; btn.textContent="Invia per verifica →";
+  }
 };
 </script>
 {% endblock %}

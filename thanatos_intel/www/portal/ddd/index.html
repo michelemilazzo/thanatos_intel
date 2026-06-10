@@ -1,29 +1,178 @@
-{% extends "templates/web.html" %}
-{% block page_content %}
-<div style="max-width:1200px;margin:30px auto;font-family:system-ui,sans-serif;color:#1a1f3a">
-  <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">Diplomatic Due Diligence</h1>
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, portal_nav, thanatos_footer %}
 
-  <div style="background:#fff3e0;border-left:4px solid #c8a96e;padding:12px 16px;margin:14px 0;font-size:13px">
-    <b>Compliance Notice.</b> {{ disclaimer }}
+{% block title %}Diplomatic Due Diligence — Thanatos Intel{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold2:#E0C58A;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel2:#161D33;--border:#1F2842;--red:#d05a5a;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1200px;margin:0 auto;padding:40px 24px 80px}
+.hero-row{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:32px;flex-wrap:wrap}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:32px;color:#fff;margin:0 0 6px}
+.hero p{margin:0;color:var(--grey);font-size:13px}
+
+/* Disclaimer */
+.disclaimer{background:rgba(200,169,110,.06);border:1px solid rgba(200,169,110,.25);
+  border-left:3px solid var(--gold);padding:12px 16px;margin-bottom:28px;
+  font-size:12px;color:var(--grey);line-height:1.6}
+.disclaimer strong{color:#D4C890}
+
+/* Section */
+.section-title{font-family:Georgia,serif;font-size:16px;color:#fff;letter-spacing:2px;
+  text-transform:uppercase;margin:0 0 18px;padding-bottom:8px;
+  border-bottom:1px solid var(--gold-soft)}
+
+/* Tabella casi */
+.case-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.case-table{width:100%;border-collapse:collapse;font-size:13px}
+.case-table th{padding:8px 12px;text-align:left;color:var(--grey);font-size:10px;
+  letter-spacing:1.5px;text-transform:uppercase;font-weight:normal;
+  border-bottom:1px solid var(--border);background:var(--panel2)}
+.case-table td{padding:10px 12px;border-bottom:1px solid rgba(31,40,66,.5);vertical-align:middle}
+.case-table tr:hover td{background:rgba(200,169,110,.04)}
+.case-table a{color:var(--gold);text-decoration:none;font-family:Georgia,serif;letter-spacing:1px}
+.case-table a:hover{color:var(--gold2)}
+.risk-badge{display:inline-block;padding:2px 8px;font-size:10px;letter-spacing:1px;
+  text-transform:uppercase;border:1px solid;border-radius:2px}
+.risk-Low,.risk-low{color:#7BC480;border-color:rgba(123,196,128,.4);background:rgba(123,196,128,.08)}
+.risk-Medium,.risk-medium{color:#E0B860;border-color:rgba(224,184,96,.4);background:rgba(224,184,96,.08)}
+.risk-High,.risk-high{color:#E08B60;border-color:rgba(224,139,96,.4);background:rgba(224,139,96,.08)}
+.risk-Critical,.risk-critical{color:var(--red);border-color:rgba(208,90,90,.4);background:rgba(208,90,90,.08)}
+.state-badge{font-size:10px;padding:2px 7px;border-radius:2px;letter-spacing:1px;
+  text-transform:uppercase;background:var(--panel2);border:1px solid var(--border);color:var(--grey)}
+.empty{padding:40px 20px;text-align:center;color:var(--grey);
+  border:1px dashed var(--border);border-radius:4px;margin-top:8px}
+.empty strong{display:block;font-family:Georgia,serif;font-size:16px;color:#fff;
+  letter-spacing:2px;margin-bottom:8px}
+
+/* Form nuovo caso */
+.new-case-wrap{background:var(--panel);border:1px solid var(--border);
+  border-radius:4px;padding:28px;margin-top:40px}
+.new-case-wrap h2{font-family:Georgia,serif;font-weight:400;font-size:20px;
+  color:#fff;margin:0 0 6px;letter-spacing:.5px}
+.new-case-wrap .sub{color:var(--grey);font-size:13px;margin:0 0 24px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.field{margin-bottom:0}
+label.lbl{display:block;color:var(--grey);font-size:10px;letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:5px}
+input,select,textarea{width:100%;background:var(--dark);color:#E8E9F0;
+  border:1px solid var(--border);padding:10px 14px;border-radius:4px;
+  font-size:14px;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+textarea{min-height:80px;resize:vertical}
+.btn-submit{margin-top:20px;background:var(--gold);color:var(--dark);border:0;
+  padding:12px 28px;border-radius:4px;font-size:12px;letter-spacing:2px;
+  text-transform:uppercase;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-submit:hover{background:var(--gold2)}
+.btn-submit:disabled{opacity:.4;cursor:default}
+.form-msg{margin-top:12px;padding:10px 14px;border-radius:4px;font-size:13px;display:none}
+.form-msg.ok{display:block;background:rgba(106,166,106,.12);border:1px solid rgba(106,166,106,.35);color:#8fd08f}
+.form-msg.err{display:block;background:rgba(208,90,90,.12);border:1px solid rgba(208,90,90,.35);color:#e79a9a}
+@media(max-width:760px){
+  .shell{padding:20px 14px 60px}
+  .hero h1{font-size:24px}
+  .new-case-wrap{padding:18px 14px}
+  .case-table{font-size:12px;min-width:640px}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ portal_nav('ddd') }}
+<div class="shell">
+
+  <div class="hero-row">
+    <div class="hero">
+      <h1>Diplomatic Due Diligence</h1>
+      <p>Eligibility assessment · Compliance screening · Dossier diplomatici</p>
+    </div>
   </div>
 
-  <h2 style="margin-top:30px">Apri un nuovo case</h2>
-  <form id="ddd-new" style="background:#0A0E1A;color:#eee;padding:18px;border-radius:12px">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <label>Full Legal Name<br><input name="full_legal_name" required style="width:100%;padding:6px"></label>
-      <label>Date of Birth<br><input name="dob" type="date" required style="width:100%;padding:6px"></label>
-      <label>Primary Nationality (Country)<br>
-        <select name="nationality" required style="width:100%;padding:6px">
-          {% for c in countries %}<option value="{{c.name}}">{{c.name}}</option>{% endfor %}
+  <div class="disclaimer">
+    <strong>Compliance Notice.</strong> {{ disclaimer }}
+  </div>
+
+  <div class="section-title">I miei case</div>
+
+  {% if my_cases %}
+  <div class="case-table-wrap">
+  <table class="case-table">
+    <thead>
+      <tr>
+        <th>Case</th>
+        <th>Applicant</th>
+        <th>Paese</th>
+        <th>Tipo richiesta</th>
+        <th>Stato</th>
+        <th>Risk score</th>
+        <th>Decisione</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c in my_cases %}
+    <tr>
+      <td><a href="/portal/ddd/case?name={{ c.name }}">{{ c.name }}</a></td>
+      <td style="color:#D0D2DC">{{ c.applicant or '—' }}</td>
+      <td style="color:#D0D2DC">{{ c.country }}</td>
+      <td style="color:var(--grey);font-size:12px">{{ c.request_type }}</td>
+      <td><span class="state-badge">{{ c.workflow_state }}</span></td>
+      <td>
+        {% if c.risk_band %}
+        <span class="risk-badge risk-{{ c.risk_band }}">{{ c.risk_score or 0 }} · {{ c.risk_band }}</span>
+        {% else %}
+        <span style="color:var(--grey);font-size:11px">—</span>
+        {% endif %}
+      </td>
+      <td style="color:{% if c.final_decision == 'Approved' %}#7BC480{% elif c.final_decision == 'Rejected' %}var(--red){% else %}var(--grey){% endif %};font-size:12px">
+        {{ c.final_decision or '—' }}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    <strong>Nessun case aperto</strong>
+    Usa il modulo qui sotto per aprire il primo assessment.
+  </div>
+  {% endif %}
+
+  <!-- Form nuovo caso -->
+  <div class="new-case-wrap">
+    <h2>Apri un nuovo case</h2>
+    <p class="sub">Tutti i campi contrassegnati con * sono obbligatori.</p>
+
+    <div class="grid2">
+      <div class="field">
+        <label class="lbl">Full Legal Name *</label>
+        <input id="f-name" placeholder="Nome e cognome completo">
+      </div>
+      <div class="field">
+        <label class="lbl">Data di nascita *</label>
+        <input id="f-dob" type="date">
+      </div>
+      <div class="field">
+        <label class="lbl">Nazionalità primaria *</label>
+        <select id="f-nat">
+          {% for c in countries %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
         </select>
-      </label>
-      <label>Target Country (assessment)<br>
-        <select name="country" required style="width:100%;padding:6px">
-          {% for c in countries %}<option value="{{c.name}}">{{c.name}}</option>{% endfor %}
+      </div>
+      <div class="field">
+        <label class="lbl">Paese di assessment *</label>
+        <select id="f-country">
+          {% for c in countries %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}
         </select>
-      </label>
-      <label>Request Type<br>
-        <select name="request_type" required style="width:100%;padding:6px">
+      </div>
+      <div class="field">
+        <label class="lbl">Tipo richiesta *</label>
+        <select id="f-type">
           <option>Diplomatic Assessment</option>
           <option>Consular Assessment</option>
           <option>Honorary Consul Assessment</option>
@@ -32,52 +181,53 @@
           <option>Representative Office Assessment</option>
           <option>Institutional Dossier</option>
         </select>
-      </label>
-      <label>Email<br><input name="email" type="email" style="width:100%;padding:6px"></label>
-      <label style="grid-column:1/-1">Institutional Purpose<br>
-        <textarea name="institutional_purpose" rows="3" style="width:100%;padding:6px"></textarea>
-      </label>
+      </div>
+      <div class="field">
+        <label class="lbl">Email di riferimento</label>
+        <input id="f-email" type="email" placeholder="opzionale">
+      </div>
+      <div class="field" style="grid-column:1/-1">
+        <label class="lbl">Scopo istituzionale</label>
+        <textarea id="f-purpose" placeholder="Descrivere brevemente lo scopo dell'assessment…"></textarea>
+      </div>
     </div>
-    <button style="margin-top:14px;background:#c8a96e;color:#0A0E1A;border:0;padding:10px 22px;border-radius:6px;font-weight:600">Apri Case</button>
-  </form>
 
-  <div id="ddd-result" style="margin-top:14px"></div>
+    <button class="btn-submit" id="f-submit">Apri Case →</button>
+    <div class="form-msg" id="f-msg"></div>
+  </div>
 
-  <h2 style="margin-top:30px">I miei case</h2>
-  <table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead style="background:#f3f1ec"><tr>
-      <th style="padding:6px;text-align:left">Case</th><th>Applicant</th><th>Country</th>
-      <th>Tipo</th><th>State</th><th>Risk</th><th>Decision</th>
-    </tr></thead>
-    <tbody>
-    {% for c in my_cases %}
-      <tr style="border-bottom:1px solid #eee">
-        <td style="padding:6px"><a href="/app/diplomatic-dd-case/{{c.name}}">{{c.name}}</a></td>
-        <td>{{c.applicant}}</td><td>{{c.country}}</td>
-        <td>{{c.request_type}}</td><td>{{c.workflow_state}}</td>
-        <td style="font-weight:600">{{c.risk_score or 0}} {{c.risk_band or ''}}</td>
-        <td>{{c.final_decision or '-'}}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
 </div>
+{{ thanatos_footer() }}
 
 <script>
-document.getElementById("ddd-new").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const fd = new FormData(e.target);
-  const obj = Object.fromEntries(fd.entries());
-  const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.api.intake.create_case", {
-    method: "POST", body: new URLSearchParams(obj),
-    headers: {"X-Frappe-CSRF-Token": frappe.csrf_token,
-              "Content-Type": "application/x-www-form-urlencoded"}
-  });
-  const j = await r.json();
-  document.getElementById("ddd-result").innerHTML =
-    "<pre style='background:#f7f4ee;padding:14px;border-radius:8px'>"
-    + JSON.stringify(j.message || j, null, 2) + "</pre>";
-  setTimeout(() => location.reload(), 1500);
+const CSRF = "{{ csrf_token }}";
+document.getElementById("f-submit").addEventListener("click", async () => {
+  const g = id => document.getElementById(id).value.trim();
+  const msg = document.getElementById("f-msg");
+  const btn = document.getElementById("f-submit");
+  if (!g("f-name") || !g("f-dob") || !g("f-nat") || !g("f-country") || !g("f-type")) {
+    msg.className = "form-msg err"; msg.textContent = "Compilare tutti i campi obbligatori."; return;
+  }
+  btn.disabled = true; msg.className = "form-msg";
+  try {
+    const params = new URLSearchParams({
+      full_legal_name: g("f-name"), dob: g("f-dob"),
+      nationality: g("f-nat"), country: g("f-country"),
+      request_type: g("f-type"), email: g("f-email"),
+      institutional_purpose: g("f-purpose")
+    });
+    const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.api.intake.create_case", {
+      method: "POST",
+      headers: {"X-Frappe-CSRF-Token": CSRF, "Content-Type": "application/x-www-form-urlencoded"},
+      body: params.toString()
+    });
+    const j = await r.json(); const m = j.message || j;
+    if (m && m.name) {
+      msg.className = "form-msg ok"; msg.textContent = "Case " + m.name + " creato. Reindirizzamento…";
+      setTimeout(() => { location.href = "/portal/ddd/case?name=" + m.name; }, 1200);
+    } else throw new Error((m && m.exc) || JSON.stringify(m));
+  } catch(e) { msg.className = "form-msg err"; msg.textContent = "Errore: " + e.message; }
+  btn.disabled = false;
 });
 </script>
 {% endblock %}

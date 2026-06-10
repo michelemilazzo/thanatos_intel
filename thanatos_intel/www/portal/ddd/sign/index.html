@@ -1,73 +1,180 @@
-{% extends "templates/web.html" %}
-{% block page_content %}
-<div style="max-width:900px;margin:30px auto;font-family:system-ui,sans-serif;color:#1a1f3a">
-  <p><a href="/portal/ddd/case?name={{ mandate.ddd_case }}" style="color:#c8a96e">← Torna al case</a></p>
-  <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">Firma Mandato — {{ mandate.name }}</h1>
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, portal_nav, thanatos_footer %}
 
-  <p><b>Mandatario:</b> Thanatos Intel — OneKey Co.<br>
-     <b>Firmatario:</b> {{ signer }}<br>
-     <b>Importo:</b> € {{ "%.2f"|format(mandate.fee_total or 0) }} {{ mandate.currency or 'EUR' }}<br>
-     <b>PDF preliminare:</b> <a href="{{ mandate.mandate_pdf }}" target="_blank">apri</a></p>
+{% block title %}Firma Mandato {{ mandate.name }} — Thanatos DDD{% endblock %}
 
-  <h3 style="margin-top:22px">Scegli il metodo di firma</h3>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold2:#E0C58A;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel2:#161D33;--border:#1F2842;--red:#d05a5a;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:900px;margin:0 auto;padding:40px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px}
+.crumb a{color:var(--gold);text-decoration:none}
+h1{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#fff;margin:0 0 20px;
+  padding-bottom:16px;border-bottom:1px solid var(--border)}
+.mandate-info{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--gold);
+  padding:16px 20px;margin-bottom:28px;font-size:13px;line-height:2}
+.mandate-info a{color:var(--gold);text-decoration:none}
+.mandate-info .lbl{color:var(--grey);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;display:inline-block;min-width:110px}
+
+/* Metodi firma */
+.section-label{font-size:10px;color:var(--grey);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.methods-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
+@media(max-width:600px){.methods-grid{grid-template-columns:1fr}}
+.method-card{background:var(--panel);border:1px solid var(--border);padding:14px 16px;
+  border-radius:4px;cursor:pointer;display:flex;align-items:flex-start;gap:10px}
+.method-card input[type=radio]{accent-color:var(--gold);margin-top:2px;flex-shrink:0}
+.method-card.disabled{opacity:.5;cursor:default}
+.method-card .name{font-size:13px;color:#fff;margin-bottom:2px}
+.method-card .meta{font-size:11px;color:var(--grey)}
+.method-card .disabled-note{color:var(--red);font-size:10px}
+
+/* Canvas */
+.canvas-wrap{background:var(--panel);border:1px solid var(--border);padding:18px;border-radius:4px;margin-bottom:16px}
+.canvas-label{font-size:10px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+#sigpad{display:block;width:100%;height:200px;border:2px dashed rgba(200,169,110,.4);
+  border-radius:4px;background:#fff;touch-action:none;cursor:crosshair}
+.btn-clear{margin-top:8px;background:transparent;color:var(--red);border:1px solid rgba(208,90,90,.3);
+  padding:6px 14px;border-radius:3px;font-size:11px;letter-spacing:1px;cursor:pointer;font-family:inherit}
+
+/* OTP */
+.otp-wrap{background:var(--panel);border:1px solid var(--border);padding:16px;border-radius:4px;margin-bottom:16px}
+.btn-otp{background:transparent;color:var(--gold);border:1px solid rgba(200,169,110,.4);
+  padding:9px 16px;border-radius:3px;font-size:11px;letter-spacing:1px;cursor:pointer;font-family:inherit}
+#otp-code{width:120px;background:var(--dark);color:#E8E9F0;border:1px solid var(--border);
+  padding:8px 12px;border-radius:3px;font-size:18px;letter-spacing:6px;text-align:center;
+  font-family:monospace;margin-left:12px}
+#otp-info{margin-top:6px;font-size:12px;color:var(--grey)}
+
+/* PAdES */
+.pades-wrap{background:var(--panel);border:1px solid var(--border);padding:16px;border-radius:4px;margin-bottom:16px}
+.pades-wrap p{font-size:13px;color:#B8BCCC;line-height:1.6;margin:0 0 12px}
+.pades-wrap input{width:300px;background:var(--dark);color:#E8E9F0;border:1px solid var(--border);
+  padding:8px 12px;border-radius:3px;font-size:13px;font-family:inherit}
+
+/* External */
+.ext-wrap{background:var(--panel);border:1px solid var(--border);padding:16px;border-radius:4px;
+  margin-bottom:16px;font-size:13px;color:#B8BCCC;line-height:1.6}
+
+/* Accept + submit */
+.accept-row{display:flex;align-items:center;gap:10px;margin:18px 0;font-size:13px}
+.accept-row input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px;cursor:pointer}
+.submit-row{display:flex;gap:10px;flex-wrap:wrap}
+.btn-sign{padding:12px 24px;background:var(--gold);color:var(--dark);border:0;
+  border-radius:3px;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  font-weight:700;cursor:pointer;font-family:inherit}
+.btn-sign:hover{background:var(--gold2)}
+.btn-sign:disabled{opacity:.35;cursor:default}
+.btn-qr{padding:12px 20px;background:transparent;color:var(--gold);
+  border:1px solid rgba(200,169,110,.4);border-radius:3px;font-size:12px;letter-spacing:2px;
+  text-transform:uppercase;cursor:pointer;font-family:inherit}
+.btn-qr:disabled{opacity:.35;cursor:default}
+
+/* QR box */
+.qr-box{display:none;text-align:center;padding:28px;
+  background:var(--panel);border:1px solid var(--gold-soft);border-radius:4px;margin-top:20px}
+.qr-box h3{color:var(--gold);font-family:Georgia,serif;font-weight:400;letter-spacing:2px;margin:0 0 16px}
+#qr-img{width:240px;height:240px;padding:12px;background:#fff;border-radius:4px}
+.qr-status{color:var(--gold);font-size:13px;margin-top:10px}
+.qr-url{font-size:10px;color:var(--grey);word-break:break-all;margin-top:6px}
+
+/* Result */
+#result{display:none;background:var(--panel2);border:1px solid var(--border);border-radius:4px;
+  padding:14px;margin-top:14px;font-size:12px;font-family:monospace;
+  color:#C8A96E;white-space:pre-wrap;max-height:300px;overflow:auto}
+
+@media(max-width:600px){
+  .shell{padding:20px 14px 60px}
+  h1{font-size:22px}
+  .submit-row{flex-direction:column}
+  .btn-sign,.btn-qr{width:100%;text-align:center}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ portal_nav('ddd') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal/ddd/case?name={{ mandate.ddd_case }}">← Case {{ mandate.ddd_case }}</a> › Firma mandato</div>
+
+  <h1>Firma Mandato — {{ mandate.name }}</h1>
+
+  <div class="mandate-info">
+    <div><span class="lbl">Mandatario</span> Thanatos Intel — OneKey Co.</div>
+    <div><span class="lbl">Firmatario</span> {{ signer }}</div>
+    <div><span class="lbl">Importo</span> € {{ "%.2f"|format(mandate.fee_total or 0) }} {{ mandate.currency or 'EUR' }}</div>
+    {% if mandate.mandate_pdf %}
+    <div><span class="lbl">PDF preliminare</span> <a href="{{ mandate.mandate_pdf }}" target="_blank">Apri PDF →</a></div>
+    {% endif %}
+  </div>
+
+  <div class="section-label">Scegli il metodo di firma</div>
+  <div class="methods-grid">
     {% for mth in methods %}
-      <label style="background:{% if mth.enabled %}#f3f1ec{% else %}#eee{% endif %};padding:12px;border-radius:8px;cursor:pointer;{% if not mth.enabled %}opacity:0.5{% endif %}">
-        <input type="radio" name="sigmethod" value="{{ mth.id }}" {% if loop.first %}checked{% endif %} {% if not mth.enabled %}disabled{% endif %}>
-        <b>{{ mth.label }}</b><br>
-        <small>{{ mth.scope }} · livello {{ mth.level }}{% if not mth.enabled %} <span style="color:#7a1c1c">(non configurato)</span>{% endif %}</small>
-      </label>
+    <label class="method-card {% if not mth.enabled %}disabled{% endif %}">
+      <input type="radio" name="sigmethod" value="{{ mth.id }}"
+             {% if loop.first %}checked{% endif %}
+             {% if not mth.enabled %}disabled{% endif %}>
+      <div>
+        <div class="name">{{ mth.label }}</div>
+        <div class="meta">{{ mth.scope }} · livello {{ mth.level }}</div>
+        {% if not mth.enabled %}<div class="disabled-note">non configurato</div>{% endif %}
+      </div>
+    </label>
     {% endfor %}
   </div>
 
-  <!-- SES / SES_OTP UI -->
-  <div id="ui-canvas" style="margin-top:18px">
-    <h3>Firma a mano nel riquadro</h3>
-    <canvas id="sigpad" width="800" height="220"
-            style="border:2px dashed #c8a96e;border-radius:8px;background:#fff;width:100%;height:220px;touch-action:none"></canvas>
-    <button id="clear" style="margin-top:6px;background:#7a1c1c;color:#fff;border:0;padding:6px 14px;border-radius:5px">Cancella</button>
+  <!-- Canvas firma -->
+  <div id="ui-canvas" class="canvas-wrap">
+    <div class="canvas-label">Firma a mano nel riquadro</div>
+    <canvas id="sigpad" width="800" height="200"></canvas>
+    <button id="clear" class="btn-clear">Cancella</button>
   </div>
 
-  <!-- SES_OTP extra -->
-  <div id="ui-otp" style="margin-top:18px;display:none">
-    <button id="btn-send-otp" style="background:#0A0E1A;color:#c8a96e;border:0;padding:8px 14px;border-radius:5px;font-weight:600">📲 Invia OTP SMS</button>
-    &nbsp;Codice ricevuto: <input id="otp-code" maxlength="6" pattern="\\d{6}" style="width:100px;padding:6px;font-size:16px;letter-spacing:4px">
-    <div id="otp-info" style="margin-top:6px;color:#7a1c1c;font-size:12px"></div>
+  <!-- OTP -->
+  <div id="ui-otp" class="otp-wrap" style="display:none">
+    <button id="btn-send-otp" class="btn-otp">📲 Invia OTP SMS</button>
+    <input id="otp-code" maxlength="6" pattern="\d{6}" placeholder="000000">
+    <div id="otp-info"></div>
   </div>
 
-  <!-- AES_PADES UI -->
-  <div id="ui-pades" style="margin-top:18px;display:none">
-    <p>Verrà applicata una <b>firma crittografica PAdES-B-B</b> con certificato X.509 a 2048 bit
-    (ISO 32000 / ETSI EN 319 142). Il PDF risultante è verificabile da qualsiasi
-    PDF reader (Acrobat, Foxit, Preview) in tutto il mondo.</p>
-    <label>Motivo: <input id="pades-reason" value="Mandato professionale" style="width:300px;padding:6px"></label>
+  <!-- PAdES -->
+  <div id="ui-pades" class="pades-wrap" style="display:none">
+    <p>Verrà applicata una <strong>firma crittografica PAdES-B-B</strong> con certificato X.509 a 2048 bit
+    (ISO 32000 / ETSI EN 319 142). Il PDF risultante è verificabile globalmente.</p>
+    <label style="font-size:10px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase">
+      Motivo<br><input id="pades-reason" value="Mandato professionale" style="margin-top:5px">
+    </label>
   </div>
 
-  <!-- External providers -->
-  <div id="ui-ext" style="margin-top:18px;display:none">
-    <p>L'envelope sarà inviato al provider selezionato; il firmatario riceverà
-    email e procedura web nativa del provider.</p>
+  <!-- External -->
+  <div id="ui-ext" class="ext-wrap" style="display:none">
+    L'envelope sarà inviato al provider selezionato. Il firmatario riceverà un'email con la procedura nativa del provider.
   </div>
 
-  <div style="margin-top:16px">
-    <label><input type="checkbox" id="accept">
-      Confermo di aver letto il mandato e dato il mio consenso alla firma elettronica</label>
+  <div class="accept-row">
+    <input type="checkbox" id="accept">
+    <label for="accept">Confermo di aver letto il mandato e consento alla firma elettronica</label>
   </div>
 
-  <div style="margin-top:14px">
-    <button id="submit" disabled style="background:#c8a96e;color:#0A0E1A;border:0;padding:10px 24px;border-radius:5px;font-weight:600">Firma Mandato</button>
-    <button id="qr-btn" disabled style="margin-left:10px;background:#0A0E1A;color:#c8a96e;border:0;padding:10px 24px;border-radius:5px;font-weight:600">📱 Firma da mobile (QR)</button>
+  <div class="submit-row">
+    <button id="submit" class="btn-sign" disabled>✍️ Firma Mandato</button>
+    <button id="qr-btn" class="btn-qr" disabled>📱 Firma da mobile (QR)</button>
   </div>
 
-  <div id="qr-box" style="display:none;text-align:center;margin-top:20px;background:#f3f1ec;padding:20px;border-radius:10px">
-    <h3>Scansiona col telefono</h3>
-    <img id="qr-img" style="width:260px;height:260px;background:white;padding:14px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.15)">
-    <p style="font-size:13px;color:#555">In attesa della firma… <span id="qr-status" style="color:#c8a96e;font-weight:600">pending</span></p>
-    <p style="font-size:11px;color:#888;word-break:break-all">URL: <span id="qr-url"></span></p>
+  <div id="qr-box" class="qr-box">
+    <h3>Scansiona con il telefono</h3>
+    <img id="qr-img" alt="QR code">
+    <div class="qr-status">In attesa della firma… <span id="qr-status">pending</span></div>
+    <div class="qr-url">URL: <span id="qr-url"></span></div>
   </div>
 
-  <pre id="result" style="background:#0A0E1A;color:#c8a96e;padding:14px;margin-top:14px;border-radius:8px;display:none;white-space:pre-wrap"></pre>
+  <pre id="result"></pre>
 </div>
+{{ thanatos_footer() }}
 
 <script>
 const MANDATE = "{{ mandate.name }}";
@@ -94,7 +201,7 @@ function showUI(){
   document.getElementById("ui-canvas").style.display = ["SES","SES_OTP"].includes(m) ? "block":"none";
   document.getElementById("ui-otp").style.display    = m === "SES_OTP" ? "block":"none";
   document.getElementById("ui-pades").style.display  = m === "AES_PADES" ? "block":"none";
-  document.getElementById("ui-ext").style.display    = ["DOCUSIGN","ADOBE_SIGN","HELLOSIGN"].includes(m) ? "block":"none";
+  document.getElementById("ui-ext").style.display    = ["DOCUSIGN","ADOBE_SIGN","HELLOSIGN","DOCUSEAL","DOCUMENSO","OPENSIGN","LIBRESIGN"].includes(m) ? "block":"none";
   check();
 }
 document.querySelectorAll('input[name=sigmethod]').forEach(r=>r.onchange=showUI);
@@ -107,7 +214,6 @@ function check(){
   if (m==="SES" || m==="SES_OTP") ok = ok && hasDrawn;
   if (m==="SES_OTP") ok = ok && document.getElementById("otp-code").value.length === 6;
   document.getElementById("submit").disabled = !ok;
-  // QR button: enabled solo per metodi che hanno sign_url (provider esterni)
   const QR_OK = ["DOCUSEAL","DOCUMENSO","OPENSIGN","LIBRESIGN","DOCUSIGN","ADOBE_SIGN","HELLOSIGN"];
   document.getElementById("qr-btn").disabled = !(accepted && QR_OK.includes(m));
 }
@@ -116,12 +222,10 @@ document.getElementById("otp-code").addEventListener("input", check);
 document.getElementById("btn-send-otp").onclick = async ()=>{
   const r=await fetch("/api/method/thanatos_intel.thanatos_ddd.signature_methods.send_otp",
     {method:"POST", body:new URLSearchParams({mandate:MANDATE}),
-     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,
-              "Content-Type":"application/x-www-form-urlencoded"}});
+     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,"Content-Type":"application/x-www-form-urlencoded"}});
   const j=(await r.json()).message;
   document.getElementById("otp-info").innerText =
-    j.otp_sent ? `Codice inviato a ${j.phone_masked}` :
-    `Errore: ${j.error || "?"}${j.hint ? " — "+j.hint:""}`;
+    j.otp_sent ? `Codice inviato a ${j.phone_masked}` : `Errore: ${j.error || "?"}${j.hint ? " — "+j.hint:""}`;
 };
 
 document.getElementById("submit").onclick = async ()=>{
@@ -132,8 +236,7 @@ document.getElementById("submit").onclick = async ()=>{
   if (method === "AES_PADES") payload.reason = document.getElementById("pades-reason").value;
   const r=await fetch("/api/method/thanatos_intel.thanatos_ddd.signature_methods.dispatch",
     {method:"POST", body:new URLSearchParams(payload),
-     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,
-              "Content-Type":"application/x-www-form-urlencoded"}});
+     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,"Content-Type":"application/x-www-form-urlencoded"}});
   const j=await r.json();
   const out=document.getElementById("result");
   out.style.display="block";
@@ -144,8 +247,7 @@ document.getElementById("qr-btn").onclick = async ()=>{
   const method = document.querySelector('input[name=sigmethod]:checked').value;
   const r = await fetch("/api/method/thanatos_intel.thanatos_ddd.qr_handoff.create_qr_signing",
     {method:"POST", body:new URLSearchParams({mandate:MANDATE, method}),
-     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,
-              "Content-Type":"application/x-www-form-urlencoded"}});
+     headers:{"X-Frappe-CSRF-Token":frappe.csrf_token,"Content-Type":"application/x-www-form-urlencoded"}});
   const j=(await r.json()).message;
   if (j.error){
     document.getElementById("result").style.display="block";
@@ -168,7 +270,7 @@ async function pollStatus(){
     if (j.status === "Signed"){
       clearInterval(pollTimer);
       document.getElementById("qr-status").innerText = "✓ FIRMATO";
-      document.getElementById("qr-status").style.color="#080";
+      document.getElementById("qr-status").style.color="var(--ok)";
       setTimeout(()=>location.href="/portal/ddd/case?name={{ mandate.ddd_case }}", 2500);
     }
   }, 4000);

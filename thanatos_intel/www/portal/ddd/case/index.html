@@ -1,89 +1,330 @@
-{% extends "templates/web.html" %}
-{% block page_content %}
-<div style="max-width:1100px;margin:30px auto;font-family:system-ui,sans-serif;color:#1a1f3a">
-  <p><a href="/portal/ddd" style="color:#c8a96e">← Tutti i case</a></p>
-  <h1 style="border-bottom:2px solid #c8a96e;padding-bottom:8px">{{ case.name }}</h1>
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, portal_nav, thanatos_footer %}
 
-  <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-top:14px">
+{% block title %}Case {{ case.name }} — Thanatos DDD{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold2:#E0C58A;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel2:#161D33;--border:#1F2842;
+  --red:#d05a5a;--ok:#7BC480;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1240px;margin:0 auto;padding:40px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:20px}
+.crumb a{color:var(--gold);text-decoration:none}
+.hero-row{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;
+  padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:28px;flex-wrap:wrap}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#fff;margin:0 0 8px;letter-spacing:.5px}
+.meta-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.state-badge{font-size:10px;padding:3px 9px;border-radius:2px;letter-spacing:1px;
+  text-transform:uppercase;background:var(--panel2);border:1px solid var(--border);color:var(--grey)}
+.risk-badge{display:inline-block;padding:3px 9px;font-size:10px;letter-spacing:1px;
+  text-transform:uppercase;border:1px solid;border-radius:2px;font-weight:600}
+.risk-Low{color:#7BC480;border-color:rgba(123,196,128,.4);background:rgba(123,196,128,.08)}
+.risk-Medium{color:#E0B860;border-color:rgba(224,184,96,.4);background:rgba(224,184,96,.08)}
+.risk-High{color:#E08B60;border-color:rgba(224,139,96,.4);background:rgba(224,139,96,.08)}
+.risk-Critical{color:var(--red);border-color:rgba(208,90,90,.4);background:rgba(208,90,90,.08)}
+
+/* Country info panel */
+.country-panel{background:var(--panel2);border:1px solid var(--border);
+  border-left:3px solid var(--gold);padding:14px 18px;font-size:13px}
+.country-panel .cn{color:var(--gold);font-family:Georgia,serif;font-size:15px;margin:0 0 4px}
+.country-panel .cd{color:var(--grey);font-size:12px}
+
+/* Sections */
+.section{margin-bottom:36px}
+.section-title{font-family:Georgia,serif;font-size:15px;color:#fff;letter-spacing:2px;
+  text-transform:uppercase;margin:0 0 14px;padding-bottom:8px;
+  border-bottom:1px solid var(--gold-soft);display:flex;align-items:center;justify-content:space-between}
+.section-title .count{font-size:10px;color:var(--grey);font-family:inherit;
+  background:var(--panel2);border:1px solid var(--border);padding:2px 8px;letter-spacing:1px}
+
+/* Data table */
+.data-table-wrap{overflow-x:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{padding:8px 12px;text-align:left;color:var(--grey);font-size:10px;
+  letter-spacing:1.5px;text-transform:uppercase;font-weight:normal;
+  border-bottom:1px solid var(--border);background:var(--panel2)}
+.data-table td{padding:9px 12px;border-bottom:1px solid rgba(31,40,66,.5);vertical-align:middle}
+.data-table tr:hover td{background:rgba(200,169,110,.03)}
+.data-table a{color:var(--gold);text-decoration:none}
+.data-table a:hover{color:var(--gold2)}
+
+/* Outcome badges */
+.outcome{font-size:10px;padding:2px 7px;border:1px solid;border-radius:2px;letter-spacing:1px;text-transform:uppercase}
+.outcome-OK,.outcome-Clear,.outcome-Approved{color:var(--ok);border-color:rgba(123,196,128,.3);background:rgba(123,196,128,.08)}
+.outcome-HIT,.outcome-Match,.outcome-Rejected{color:var(--red);border-color:rgba(208,90,90,.3);background:rgba(208,90,90,.08)}
+.outcome-Inconclusive,.outcome-Pending{color:#E0B860;border-color:rgba(224,184,96,.3);background:rgba(224,184,96,.08)}
+
+/* Quick actions */
+.action-bar{display:flex;gap:10px;flex-wrap:wrap;padding:16px;
+  background:var(--panel);border:1px solid var(--border);border-radius:4px}
+.btn-act{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;
+  border-radius:3px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+  font-weight:600;cursor:pointer;border:0;font-family:inherit}
+.btn-act.primary{background:var(--gold);color:var(--dark)}
+.btn-act.primary:hover{background:var(--gold2)}
+.btn-act.ghost{background:transparent;color:var(--gold);border:1px solid rgba(200,169,110,.4)}
+.btn-act.ghost:hover{background:var(--gold-soft)}
+.btn-act.red{background:transparent;color:var(--red);border:1px solid rgba(208,90,90,.3)}
+.btn-act:disabled{opacity:.35;cursor:default}
+.act-result{margin-top:10px;padding:10px 14px;border-radius:3px;font-size:12px;
+  font-family:monospace;background:var(--panel2);border:1px solid var(--border);
+  display:none;white-space:pre-wrap;color:var(--ok)}
+
+/* Empty */
+.empty{padding:16px;color:var(--grey);font-size:12px;
+  border:1px dashed var(--border);border-radius:3px;text-align:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:760px){.two-col{grid-template-columns:1fr}.shell{padding:20px 14px 60px}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ portal_nav('ddd') }}
+<div class="shell">
+
+  <div class="crumb"><a href="/portal/ddd">← DDD</a> › {{ case.name }}</div>
+
+  <div class="hero-row">
     <div>
-      <h3>{{ applicant.full_legal_name if applicant else '-' }}</h3>
-      <p>{{ case.request_type }} → <b>{{ case.country }}</b><br>
-         Stato: <b>{{ case.workflow_state }}</b><br>
-         Risk: <b style="color:{% if (case.risk_score or 0)>=50 %}#b00{% elif (case.risk_score or 0)>=20 %}#c80{% else %}#080{% endif %}">{{ case.risk_score or 0 }}</b>
-         {{ case.risk_band or '' }}<br>
-         Decisione finale: {{ case.final_decision or '—' }}</p>
-      <p style="font-size:12px;color:#7a1c1c">{{ case.disclaimer }}</p>
+      <h1>{{ applicant.full_legal_name if applicant else case.name }}</h1>
+      <div class="meta-row">
+        <span class="state-badge">{{ case.workflow_state }}</span>
+        {% if case.risk_band %}
+        <span class="risk-badge risk-{{ case.risk_band }}">
+          Risk {{ case.risk_score or 0 }} · {{ case.risk_band }}
+        </span>
+        {% endif %}
+        {% if case.final_decision %}
+        <span style="font-size:12px;color:{% if case.final_decision=='Approved' %}var(--ok){% elif case.final_decision=='Rejected' %}var(--red){% else %}var(--grey){% endif %}">
+          {{ case.final_decision }}
+        </span>
+        {% endif %}
+        <span style="color:var(--grey);font-size:12px">{{ case.request_type }} → {{ case.country }}</span>
+      </div>
     </div>
-    <div style="background:#f3f1ec;padding:12px;border-radius:8px">
-      <b>{{ country.country if country else '' }}</b><br>
-      <small>{{ country.diplomatic_authority if country else '' }}</small><br>
-      <small>Lingue: {{ country.official_languages if country else '' }}</small>
+    {% if country %}
+    <div class="country-panel">
+      <div class="cn">{{ country.name }}</div>
+      {% if country.diplomatic_authority %}<div class="cd">{{ country.diplomatic_authority }}</div>{% endif %}
     </div>
+    {% endif %}
   </div>
 
-  <h2 style="margin-top:30px">Documenti richiesti</h2>
-  <table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead style="background:#f3f1ec"><tr><th style="padding:6px;text-align:left">Tipo</th><th>Stato</th><th>File</th><th>Passport Analysis</th></tr></thead>
-    <tbody>
-    {% for d in documents %}
-      <tr style="border-bottom:1px solid #eee">
-        <td style="padding:6px">{{ d.document_type }}</td>
-        <td>{{ d.status }}</td>
-        <td>{% if d.attached_file %}<a href="{{d.attached_file}}">scarica</a>{% else %}<span style="color:#999">non caricato</span>{% endif %}</td>
-        <td>{% if d.passport_analysis %}<a href="/app/passport-analysis/{{d.passport_analysis}}">{{d.passport_analysis}}</a>{% else %}—{% endif %}</td>
+  <!-- Azioni rapide -->
+  <div class="section">
+    <div class="section-title">Azioni rapide</div>
+    <div class="action-bar">
+      <button class="btn-act primary" onclick="runAction('thanatos_intel.thanatos_ddd.screening.screen_applicant', {ddd_case: '{{ case.name }}'})">
+        Esegui Screening
+      </button>
+      <a class="btn-act ghost" href="/portal/ddd/video?case={{ case.name }}">
+        📹 Video Identification
+      </a>
+      {% for m in mandates %}
+      {% if not m.signed_on %}
+      <a class="btn-act ghost" href="/portal/ddd/sign?mandate={{ m.name }}">
+        ✍️ Firma {{ m.name }}
+      </a>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <div class="act-result" id="act-result"></div>
+  </div>
+
+  <!-- Documenti -->
+  <div class="section">
+    <div class="section-title">
+      Documenti richiesti
+      <span class="count">{{ documents|length }}</span>
+    </div>
+    {% if documents %}
+    <div class="data-table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Tipo documento</th><th>Stato</th><th>File</th><th>Passport analysis</th></tr></thead>
+      <tbody>
+      {% for d in documents %}
+      <tr>
+        <td>{{ d.document_type }}</td>
+        <td><span class="outcome outcome-{{ d.status|replace(' ','') }}">{{ d.status }}</span></td>
+        <td>{% if d.attached_file %}<a href="{{ d.attached_file }}" target="_blank">Scarica</a>{% else %}<span style="color:var(--grey)">non caricato</span>{% endif %}</td>
+        <td>{% if d.passport_analysis %}<a href="/app/passport-analysis/{{ d.passport_analysis }}">{{ d.passport_analysis }}</a>{% else %}<span style="color:var(--grey)">—</span>{% endif %}</td>
       </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-
-  <h2 style="margin-top:30px">Compliance / Screening</h2>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-    <div>
-      <h4>Compliance Checks</h4>
-      <ul>{% for c in compliance %}<li>{{c.check_type}}: <b>{{c.outcome}}</b> {% if c.notes %}<small>({{c.notes}})</small>{% endif %}</li>{% else %}<li>nessun check</li>{% endfor %}</ul>
+      {% endfor %}
+      </tbody>
+    </table>
     </div>
-    <div>
-      <h4>Sanctions / PEP</h4>
-      <ul>{% for s in screenings %}<li>{{s.screening_type}} via {{s.source}}: <b>{{s.outcome}}</b> ({{s.matches_found}} matches)</li>{% else %}<li>nessuno</li>{% endfor %}</ul>
+    {% else %}<div class="empty">Nessun documento richiesto</div>{% endif %}
+  </div>
+
+  <!-- Compliance + Screening -->
+  <div class="two-col">
+    <div class="section">
+      <div class="section-title">
+        Compliance checks
+        <span class="count">{{ compliance|length }}</span>
+      </div>
+      {% if compliance %}
+      <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Tipo</th><th>Esito</th><th>Note</th></tr></thead>
+        <tbody>
+        {% for c in compliance %}
+        <tr>
+          <td>{{ c.check_type }}</td>
+          <td><span class="outcome outcome-{{ c.outcome|replace(' ','') }}">{{ c.outcome }}</span></td>
+          <td style="color:var(--grey);font-size:12px">{{ c.notes or '—' }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}<div class="empty">Nessun check</div>{% endif %}
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        Sanctions / PEP
+        <span class="count">{{ screenings|length }}</span>
+      </div>
+      {% if screenings %}
+      <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Tipo</th><th>Source</th><th>Matches</th><th>Esito</th></tr></thead>
+        <tbody>
+        {% for s in screenings %}
+        <tr>
+          <td>{{ s.screening_type }}</td>
+          <td style="color:var(--grey)">{{ s.source }}</td>
+          <td style="color:{% if s.matches_found %}var(--red){% else %}var(--grey){% endif %}">{{ s.matches_found }}</td>
+          <td><span class="outcome outcome-{{ s.outcome|replace(' ','') }}">{{ s.outcome }}</span></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}<div class="empty">Nessuno screening eseguito</div>{% endif %}
     </div>
   </div>
 
-  <h2 style="margin-top:30px">Legal Opinions</h2>
-  <ul>{% for o in opinions %}<li>{{o.name}} → <b>{{o.conclusion}}</b> ({{o.legal_officer}} {{o.issued_on}})</li>{% else %}<li>nessuna</li>{% endfor %}</ul>
+  <!-- Legal opinions + Mandates -->
+  <div class="two-col">
+    <div class="section">
+      <div class="section-title">Legal opinions <span class="count">{{ opinions|length }}</span></div>
+      {% if opinions %}
+      <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Riferimento</th><th>Conclusione</th><th>Officiale</th><th>Data</th></tr></thead>
+        <tbody>
+        {% for o in opinions %}
+        <tr>
+          <td style="color:var(--gold)">{{ o.name }}</td>
+          <td><span class="outcome outcome-{{ o.conclusion|replace(' ','') }}">{{ o.conclusion }}</span></td>
+          <td style="color:var(--grey)">{{ o.legal_officer }}</td>
+          <td style="color:var(--grey);font-size:12px">{{ o.issued_on }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}<div class="empty">Nessuna legal opinion</div>{% endif %}
+    </div>
 
-  <h2 style="margin-top:30px">Mandates</h2>
-  <ul>{% for m in mandates %}<li>{{m.name}} — €{{m.fee_total}} — <b>{{m.status}}</b>{% if m.mandate_pdf %} <a href="{{m.mandate_pdf}}">PDF</a>{% endif %}</li>{% else %}<li>nessuno</li>{% endfor %}</ul>
-
-  <h2 style="margin-top:30px">Final Dossier</h2>
-  <ul>{% for d in dossiers %}<li>{{d.name}} v{{d.version}} → <b>{{d.decision or '-'}}</b>{% if d.dossier_pdf %} <a href="{{d.dossier_pdf}}">Scarica PDF</a>{% endif %}</li>{% else %}<li>nessuno</li>{% endfor %}</ul>
-
-  <h2 style="margin-top:30px">Azioni rapide</h2>
-  <div style="background:#0A0E1A;color:#eee;padding:14px;border-radius:8px">
-    <button onclick="action('thanatos_intel.thanatos_ddd.screening.screen_applicant', {ddd_case: '{{case.name}}'})" style="background:#c8a96e;color:#0A0E1A;border:0;padding:8px 14px;border-radius:5px;margin:3px;font-weight:600">Esegui Sanctions+PEP Screening</button>
-    <a href="/portal/ddd/video?case={{case.name}}" style="background:#c8a96e;color:#0A0E1A;padding:8px 14px;border-radius:5px;margin:3px;font-weight:600;text-decoration:none;display:inline-block">📹 Video Identification</a>
+    <div class="section">
+      <div class="section-title">Mandati <span class="count">{{ mandates|length }}</span></div>
+      {% if mandates %}
+      <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Mandato</th><th>Importo</th><th>Stato</th><th>PDF</th></tr></thead>
+        <tbody>
+        {% for m in mandates %}
+        <tr>
+          <td style="color:var(--gold)">{{ m.name }}</td>
+          <td>€ {{ "%.2f"|format(m.fee_total or 0) }}</td>
+          <td><span class="state-badge">{{ m.status }}</span></td>
+          <td>{% if m.mandate_pdf %}<a href="{{ m.mandate_pdf }}" target="_blank">Scarica</a>{% else %}<span style="color:var(--grey)">—</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}<div class="empty">Nessun mandato</div>{% endif %}
+    </div>
   </div>
 
-  <h2 style="margin-top:30px">Audit Trail</h2>
-  <table style="width:100%;border-collapse:collapse;font-size:12px">
-    <thead style="background:#f3f1ec"><tr><th style="padding:6px;text-align:left">Quando</th><th>User</th><th>Event</th><th>Old</th><th>New</th><th>Reason</th></tr></thead>
-    <tbody>
-    {% for a in audit %}<tr style="border-bottom:1px solid #eee">
-      <td style="padding:6px">{{a.ts}}</td><td>{{a.user}}</td><td>{{a.event_type}}</td>
-      <td>{{a.old_value or '-'}}</td><td>{{a.new_value or '-'}}</td><td>{{a.reason or '-'}}</td>
-    </tr>{% endfor %}
-    </tbody>
-  </table>
+  <!-- Dossier finale -->
+  <div class="section">
+    <div class="section-title">Final Dossier <span class="count">{{ dossiers|length }}</span></div>
+    {% if dossiers %}
+    <div class="data-table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Dossier</th><th>Versione</th><th>Decisione</th><th>Generato</th><th>PDF</th></tr></thead>
+      <tbody>
+      {% for d in dossiers %}
+      <tr>
+        <td style="color:var(--gold)">{{ d.name }}</td>
+        <td>v{{ d.version }}</td>
+        <td><span class="outcome outcome-{{ (d.decision or '')|replace(' ','') }}">{{ d.decision or '—' }}</span></td>
+        <td style="color:var(--grey);font-size:12px">{{ d.generated_on }}</td>
+        <td>{% if d.dossier_pdf %}<a href="{{ d.dossier_pdf }}" target="_blank">Scarica PDF</a>{% else %}<span style="color:var(--grey)">—</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}<div class="empty">Nessun dossier generato</div>{% endif %}
+  </div>
+
+  <!-- Audit Trail -->
+  <div class="section">
+    <div class="section-title">Audit Trail <span class="count">{{ audit|length }}</span></div>
+    {% if audit %}
+    <div class="data-table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Quando</th><th>Utente</th><th>Evento</th><th>Valore precedente</th><th>Nuovo valore</th><th>Motivo</th></tr></thead>
+      <tbody>
+      {% for a in audit %}
+      <tr>
+        <td style="color:var(--grey);font-size:12px;white-space:nowrap">{{ a.ts }}</td>
+        <td style="color:var(--grey)">{{ a.user }}</td>
+        <td>{{ a.event_type }}</td>
+        <td style="color:var(--grey);font-size:12px">{{ a.old_value or '—' }}</td>
+        <td style="font-size:12px">{{ a.new_value or '—' }}</td>
+        <td style="color:var(--grey);font-size:12px">{{ a.reason or '—' }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}<div class="empty">Nessun evento registrato</div>{% endif %}
+  </div>
+
 </div>
+{{ thanatos_footer() }}
 
 <script>
-async function action(method, args){
-  const r=await fetch("/api/method/"+method, {method:"POST",
-    body: new URLSearchParams(args),
-    headers:{"X-Frappe-CSRF-Token": frappe.csrf_token,
-             "Content-Type":"application/x-www-form-urlencoded"}});
-  const j=await r.json();
-  alert(JSON.stringify(j.message || j, null, 2));
-  location.reload();
+const CSRF = "{{ csrf_token }}";
+async function runAction(method, args) {
+  const resultEl = document.getElementById("act-result");
+  resultEl.style.display = "block";
+  resultEl.style.color = "var(--grey)";
+  resultEl.textContent = "Esecuzione in corso…";
+  try {
+    const r = await fetch("/api/method/" + method, {
+      method: "POST",
+      headers: {"X-Frappe-CSRF-Token": CSRF, "Content-Type": "application/x-www-form-urlencoded"},
+      body: new URLSearchParams(args).toString()
+    });
+    const j = await r.json();
+    resultEl.style.color = "var(--ok)";
+    resultEl.textContent = JSON.stringify(j.message || j, null, 2);
+  } catch(e) {
+    resultEl.style.color = "var(--red)";
+    resultEl.textContent = "Errore: " + e.message;
+  }
 }
 </script>
 {% endblock %}
