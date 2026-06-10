@@ -144,3 +144,37 @@ def ensure_billing_project(case):
     doc.db_set("project", project.name)
     frappe.db.commit()
     return project.name
+
+
+# Servizi di default per tipologia case (popolati su after_insert se vuoti)
+CASE_TYPE_DEFAULT_SERVICES = {
+    "Fraud": ["SVC-AF-001", "SVC-AF-002", "SVC-VR-001", "SVC-VR-002"],
+    "Due Diligence": ["SVC-CO-001", "SVC-VR-006", "SVC-VR-007"],
+    "Asset Recovery": ["SVC-IC-002", "SVC-FI-005", "SVC-SE-004"],
+    "Cyber": ["SVC-CY-005", "SVC-VR-008", "SVC-VR-003"],
+    "Corporate": ["SVC-CO-002", "SVC-CO-006", "SVC-CO-010"],
+    "Family": ["SVC-VR-007", "SVC-IC-001"],
+    "Seizure": ["SVC-SE-001", "SVC-SE-004"],
+}
+
+
+def populate_default_services(doc):
+    if doc.get("services"):
+        return
+    for svc in CASE_TYPE_DEFAULT_SERVICES.get(doc.case_type, []):
+        if frappe.db.exists("Service Catalog", svc):
+            doc.append("services", {"service_catalog": svc})
+    if doc.services:
+        doc.save(ignore_permissions=True)
+
+
+def on_case_created(doc, method=None):
+    """doc_event after_insert Investigation Case: Project di fatturazione + servizi default."""
+    try:
+        populate_default_services(doc)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "case_billing.populate_default_services")
+    try:
+        ensure_billing_project(doc.name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "case_billing.ensure_billing_project")

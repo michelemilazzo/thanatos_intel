@@ -95,7 +95,8 @@ doc_events={
                  'thanatos_intel.integrations.waba_notifications.on_investigation_report_update'],
  },
  'Investigation Case': {
-   'after_insert': 'thanatos_intel.integrations.intel_inbox.ensure_case_folder_hook',
+   'after_insert': ['thanatos_intel.integrations.intel_inbox.ensure_case_folder_hook',
+                    'thanatos_intel.billing.case_billing.on_case_created'],
  },
  'Agency Mandate': {
    'validate': 'thanatos_intel.billing.billing_entity.stamp_ddd_billing_entity',
