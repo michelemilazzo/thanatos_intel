@@ -19,6 +19,7 @@ app_include_js=['/assets/thanatos_intel/js/bootstrap_jq.js',
                 '/assets/thanatos_intel/js/desk_chrome.js',
                 '/assets/thanatos_intel/js/fx_widget.js',
                 '/assets/thanatos_intel/js/pipeline_widget.js']
+web_include_css=['/assets/thanatos_intel/css/thanatos_web.css']
 web_include_js=['/assets/thanatos_intel/js/fx_widget.js']
 brand_html='<img src="/assets/thanatos_intel/images/thanatos-logo-mark.png" alt="Thanatos Intel" style="height:32px"/>'
 website_context={

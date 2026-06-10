@@ -1,0 +1,250 @@
+/* ===================================================================
+   thanatos_web.css — Design system condiviso per tutte le pagine
+   Caricato via hooks: web_include_css
+   =================================================================== */
+
+/* ─── Token globali ─────────────────────────────────────────────── */
+:root {
+  --navy:  #0A0E1A;
+  --navy2: #13192C;
+  --panel: #111729;
+  --gold:  #C8A96E;
+  --gold2: #E0C58A;
+  --line:  #1F2742;
+
+  /* Testo — scala a 4 livelli con contrasto WCAG AA garantito */
+  --tx-hi:    #F2F3F7;   /* titoli, link hover           */
+  --tx-body:  #D8DBE6;   /* corpo testo articoli         */
+  --tx-mid:   #A4A9BC;   /* secondario, nav, descrizioni */
+  --tx-low:   #8A909E;   /* metadata, date, fonte        */
+  /* #5B6276 eliminato — contrasto 3.4:1 insufficiente su --navy */
+
+  /* Tipografia */
+  --font-body:  -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-brand: 'Cinzel Decorative', 'Cinzel', Georgia, serif;
+
+  /* Scale testo — minimo 11.5px visibile */
+  --text-2xs: 11.5px;   /* label, badge, meta           */
+  --text-xs:  12.5px;   /* caption, feature list        */
+  --text-sm:  13.5px;   /* nav, bottoni, note           */
+  --text-md:  15px;     /* corpo secondario             */
+  --text-lg:  17px;     /* intro, excerpt               */
+  --text-xl:  20px;     /* h3 card                      */
+  --text-2xl: 28px;     /* h2 sezione                   */
+  --text-3xl: 38px;     /* h1 articolo                  */
+  --text-4xl: 48px;     /* h1 hero                      */
+
+  /* Spaziatura verticale */
+  --section-gap: 80px;
+  --block-gap:   48px;
+  --card-gap:    20px;
+
+  /* Letter-spacing — contenuto: max 4px per leggibilità */
+  --ls-tight:  0.5px;
+  --ls-normal: 1px;
+  --ls-label:  2.5px;   /* max per testo < 13px         */
+  --ls-brand:  4px;
+}
+
+/* ─── Reset leggibilità globale ─────────────────────────────────── */
+
+/* Minimo font-size applicato ai selettori che usavano 10px */
+.t-kpi .l,
+.t-news-tile .meta,
+.t-feat .meta,
+.tile .meta,
+.tile .cat,
+.art-cat,
+.t-plan .lvl,
+.t-plan li,
+.t-pillar .name,
+.tx-links a,
+.tx-cta,
+.px-links a,
+.t-btn,
+.back,
+.t-section-head .eyebrow,
+.filters button {
+  font-size: var(--text-2xs) !important;
+}
+
+/* Metadata colore — da #5B6276 (fail AA) a #8A909E */
+.art-meta,
+.t-news-tile .meta,
+.t-feat .meta,
+.tile .meta,
+.rcard p,
+.t-feat .ex,
+.t-cat .desc,
+.t-pillar .body {
+  color: var(--tx-low);
+}
+
+/* Corpo articolo — più luminoso e più leggibile */
+.art-content {
+  font-size: 16.5px !important;
+  line-height: 1.8 !important;
+  color: var(--tx-body) !important;
+}
+
+/* Max-width paragrafi nel corpo — 62ch per serif evita righe > 80 char */
+.art-content p,
+.art-content li {
+  max-width: 62ch;
+}
+
+.art-content h2,
+.art-content h3 {
+  margin-top: 36px !important;
+  margin-bottom: 14px !important;
+  letter-spacing: var(--ls-label) !important;
+}
+
+/* Excerpt articolo — più leggibile */
+.art-excerpt {
+  font-size: 17.5px !important;
+  line-height: 1.7 !important;
+  color: #BBBFC9 !important;
+}
+
+/* Feature list nei piani — più respiro */
+.t-plan ul {
+  font-size: var(--text-xs) !important;
+  line-height: 1.7 !important;
+}
+
+.t-plan li {
+  padding: 7px 0 !important;
+}
+
+/* Card descrizioni */
+.t-cat .desc,
+.t-news-tile .ex,
+.t-feat .ex,
+.tile .ex,
+.rcard p {
+  font-size: var(--text-xs) !important;
+  line-height: 1.65 !important;
+}
+
+/* Heading sezioni */
+.t-section-head h2 {
+  font-size: var(--text-2xl) !important;
+}
+
+.t-section-head p {
+  font-size: var(--text-md) !important;
+  line-height: 1.65 !important;
+}
+
+/* Pilastri */
+.t-pillar .body {
+  font-size: 13.5px !important;
+  line-height: 1.7 !important;
+}
+
+/* Eyebrow / label — letter-spacing contenuto */
+.t-section-head .eyebrow,
+.t-plan .lvl,
+.t-pillar .name,
+.art-cat,
+.tile .cat,
+.t-news-tile .cat,
+.t-feat .cat {
+  letter-spacing: var(--ls-label) !important;
+}
+
+/* ─── Articolo: pitch box Thanatos ─────────────────────────────── */
+.tx-pitch {
+  margin-top: 40px !important;
+}
+
+.tx-pitch h4 {
+  font-size: 18px !important;
+  line-height: 1.4 !important;
+  margin-bottom: 10px !important;
+}
+
+.tx-pitch p {
+  font-size: var(--text-md) !important;
+  line-height: 1.7 !important;
+  color: var(--tx-mid) !important;
+}
+
+.tx-pitch .tx-explain {
+  font-size: 14px !important;
+  line-height: 1.75 !important;
+  color: var(--tx-mid) !important;
+}
+
+.tx-caps li {
+  font-size: var(--text-xs) !important;
+  line-height: 1.5 !important;
+}
+
+.tx-card .kd {
+  font-size: var(--text-xs) !important;
+  line-height: 1.6 !important;
+}
+
+.tx-card .svc {
+  font-size: 14.5px !important;
+}
+
+/* ─── News tile h4 — più visibile ──────────────────────────────── */
+.t-news-tile h4 {
+  font-size: 15.5px !important;
+  line-height: 1.45 !important;
+  color: var(--tx-hi) !important;
+}
+
+.t-feat h3 {
+  font-size: 19px !important;
+  line-height: 1.35 !important;
+  color: var(--tx-hi) !important;
+}
+
+.rcard h4 {
+  font-size: 15px !important;
+  line-height: 1.4 !important;
+  color: var(--tx-hi) !important;
+}
+
+/* ─── Filtri news ───────────────────────────────────────────────── */
+.filters input,
+.filters select {
+  font-size: 13.5px !important;
+  font-family: var(--font-body) !important;
+}
+
+/* ─── Footer — leggibilità testi descrittivi ────────────────────── */
+.tx-foot p {
+  font-size: 12.5px !important;
+  line-height: 1.65 !important;
+}
+
+.tx-foot a {
+  font-size: 12.5px !important;
+}
+
+.tx-foot .legal {
+  font-size: 10.5px !important;
+  letter-spacing: var(--ls-label) !important;
+}
+
+/* ─── Sezione hero — spazio interno migliore su mobile ─────────── */
+@media (max-width: 640px) {
+  .art-wrap {
+    padding: 32px 18px !important;
+  }
+
+  .art-content {
+    font-size: 15.5px !important;
+  }
+
+  .art-wrap h1 {
+    font-size: 26px !important;
+    line-height: 1.3 !important;
+  }
+}
