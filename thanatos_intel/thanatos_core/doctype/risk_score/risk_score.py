@@ -51,11 +51,11 @@ def _build_entity(case_doc) -> dict:
     for r in rows:
         ent = frappe.db.get_value(
             "Investigation Entity", r.entity,
-            ["entity_name", "blacklist_ref", "status", "risk_level"], as_dict=1,
+            ["full_name", "blacklist_ref", "status", "risk_level"], as_dict=1,
         ) or {}
         entities.append({
             "entity_type": r.entity_type,
-            "entity_name": ent.get("entity_name"),
+            "entity_name": ent.get("full_name") or r.entity,
             "blacklisted": bool(ent.get("blacklist_ref")) or ent.get("status") == "Blacklisted",
             "status": ent.get("status"),
             "risk_level": ent.get("risk_level"),
