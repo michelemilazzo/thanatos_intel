@@ -2,6 +2,7 @@ import frappe
 
 
 def get_context(context):
+    context.body_class = 'news-list'
 	slug = frappe.form_dict.get("slug") or ""
 	cat = frappe.db.get_value("News Category", {"category_slug": slug},
 	                          ["name", "category_name", "color", "description", "category_slug"],

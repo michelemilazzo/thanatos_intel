@@ -4,6 +4,7 @@ no_cache = 0
 
 
 def get_context(context):
+    context.body_class = 'thanatos-home'
 	context.no_cache = 0
 	context.featured = _safe_get_all(
 		"News Article",

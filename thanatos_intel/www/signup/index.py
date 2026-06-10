@@ -8,6 +8,7 @@ no_cache = 1
 
 
 def get_context(context):
+    context.body_class = "signup-page"
     if frappe.session.user != "Guest":
         # already logged in → portal
         frappe.local.flags.redirect_location = "/portal"

@@ -15,6 +15,7 @@ ALLOWED_CATEGORIES = ["Verifiche Rapide", "Antifrode", "Cyber Intelligence"]
 
 
 def get_context(context):
+    context.body_class = 'ppu-page'
     items = frappe.get_all(
         "Service Catalog",
         filters={
