@@ -42,14 +42,27 @@ def _build_entity(case_doc) -> dict:
             "client_country": client.get("country"),
         })
     # Entità coinvolte
-    entities = frappe.get_all(
+    rows = frappe.get_all(
         "Case Entity",
-        filters={"parent": case_doc.name},
-        fields=["entity_type", "entity_name", "blacklisted", "sanctions_hit"],
+        filters={"parent": case_doc.name, "parenttype": "Investigation Case"},
+        fields=["entity", "entity_type"],
     )
+    entities = []
+    for r in rows:
+        ent = frappe.db.get_value(
+            "Investigation Entity", r.entity,
+            ["entity_name", "blacklist_ref"], as_dict=1,
+        ) or {}
+        entities.append({
+            "entity_type": r.entity_type,
+            "entity_name": ent.get("entity_name"),
+            "blacklisted": bool(ent.get("blacklist_ref")),
+        })
     e["entities"] = entities
-    e["has_blacklisted_entity"] = any(x.get("blacklisted") for x in entities)
-    e["has_sanctions_hit"] = any(x.get("sanctions_hit") for x in entities)
+    e["has_blacklisted_entity"] = any(x["blacklisted"] for x in entities)
+    e["has_sanctions_hit"] = bool(frappe.db.exists(
+        "Sanctions Screening", {"ddd_case": case_doc.name, "matches_found": [">", 0]}
+    ))
     e["entity_count"] = len(entities)
     return e
 
