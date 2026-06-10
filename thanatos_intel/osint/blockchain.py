@@ -13,8 +13,11 @@ from frappe.utils import now_datetime
 
 API = "https://mempool.space/api"
 SATS = 100_000_000
-HUB_TX_THRESHOLD = 100        # tx count oltre cui una controparte e un hub
-HUB_BTC_THRESHOLD = 5 * SATS  # o volume totale ricevuto oltre 5 BTC
+HUB_TX_THRESHOLD = 100         # tx count oltre cui una controparte e un hub
+HUB_BTC_THRESHOLD = 5 * SATS   # o volume totale ricevuto oltre 5 BTC
+EXCHANGE_TX = 5000             # oltre = exchange/VASP (omnibus), non hub della rete
+EXCHANGE_BTC = 1000 * SATS
+MAX_NEW_ENTITIES = 6           # cap entita create per tracciamento (solo uscite, top volume)
 
 
 def _get(path):
@@ -140,25 +143,31 @@ def trace_wallet(address: str, top_n: int = 15) -> dict:
                 source="mempool.space", points=60, verified=1))
         ent.save(ignore_permissions=True)
 
-    # hub di consolidamento: crea entita dedicate
-    for a, v, b in result["top_outflow"] + result["top_inflow"]:
-        if not b or a == address:
+    # solo controparti in USCITA (dove vanno i fondi), top per volume, cap
+    candidates = [(a, v, b) for a, v, b in result["top_outflow"] if b and a != address]
+    candidates.sort(key=lambda x: -x[1])
+    for a, v, b in candidates[:MAX_NEW_ENTITIES]:
+        is_exchange = b["tx_count"] >= EXCHANGE_TX or b["received"] >= EXCHANGE_BTC
+        is_hub = b["tx_count"] >= HUB_TX_THRESHOLD or b["received"] >= HUB_BTC_THRESHOLD
+        if not (is_exchange or is_hub) or frappe.db.exists("Investigation Entity", a):
             continue
-        if (b["tx_count"] >= HUB_TX_THRESHOLD or b["received"] >= HUB_BTC_THRESHOLD) \
-                and not frappe.db.exists("Investigation Entity", a):
-            doc = frappe.get_doc({
-                "doctype": "Investigation Entity", "entity_type": "Wallet",
-                "primary_identifier": a,
-                "notes": (f"Hub rilevato dal tracciamento di {address}: "
-                          f"{b['received'] / SATS:.2f} BTC ricevuti totali, "
-                          f"{b['tx_count']} tx, saldo {b['balance'] / SATS:.4f}."),
-            })
-            doc.append("risk_indicators", dict(
-                indicator_type="Consolidation hub",
-                value=f"{b['received'] / SATS:.2f} BTC, {b['tx_count']} tx",
-                source="mempool.space", points=55, verified=1))
-            doc.insert(ignore_permissions=True)
-            hubs.append(a)
+        if is_exchange:
+            kind, pts = "Exchange/VASP endpoint", 40
+            note = (f"ENDPOINT cash-out (exchange/VASP, omnibus) dal tracciamento di {address}: "
+                    f"{b['tx_count']} tx, {b['received'] / SATS:.0f} BTC cumulativi. "
+                    f"PUNTO DI RECUPERO: identificare il servizio e richiedere KYC via autorita.")
+        else:
+            kind, pts = "Consolidation hub", 55
+            note = (f"Hub intermedio dal tracciamento di {address}: "
+                    f"{b['received'] / SATS:.2f} BTC ricevuti, {b['tx_count']} tx, "
+                    f"saldo {b['balance'] / SATS:.4f}.")
+        doc = frappe.get_doc({"doctype": "Investigation Entity", "entity_type": "Wallet",
+                              "primary_identifier": a, "notes": note})
+        doc.append("risk_indicators", dict(
+            indicator_type=kind, value=f"{b['received'] / SATS:.2f} BTC, {b['tx_count']} tx",
+            source="mempool.space", points=pts, verified=1))
+        doc.insert(ignore_permissions=True)
+        hubs.append(a)
 
     # case collegati: entita hub, attivita, allegati
     cases = frappe.get_all("Case Entity", filters={
