@@ -169,7 +169,7 @@ def generate_visual_dossier(case_name):
 
     # 1 quadro + flow
     S.append(Paragraph("1. Quadro d'insieme", H1))
-    S.append(Paragraph("Schema criminale doppio: frode SBLC (advance-fee, veicolo SG Finance &amp; Trading Ltd) e crypto investment scam (piattaforma fake bitcoinbot.tech). I fondi della vittima sono transitati da un wallet di raccolta attraverso 3 hub di consolidamento fino al cash-out su exchange. Di seguito la mappa del flusso.", BODY))
+    S.append(Paragraph("Crypto investment scam su piattaforma fake (bitcoinbot.tech): la vittima deposita crypto reali e vede un saldo fittizio. I fondi sono transitati da un wallet di raccolta attraverso 3 hub di consolidamento fino al cash-out su exchange. Di seguito la mappa del flusso.", BODY))
     S.append(Spacer(1, 6)); S.append(C(flow()))
     S.append(Paragraph("Fig. 1 — Flusso dei fondi: vittima → piattaforma → wallet di raccolta → hub → exchange.", CAP))
     S.append(PageBreak())
@@ -218,16 +218,15 @@ def generate_visual_dossier(case_name):
     S.append(PageBreak())
 
     # 5 soggetti + KYB
-    S.append(Paragraph("5. Soggetti e struttura societaria (KYB)", H1))
-    S.append(tbl([["Soggetto", "Ruolo", "Elementi"],
-                  ["Gianluca Sampieri", "Titolare effettivo", "PSC 75-100%; serial shell (4 società sciolte); residente Spagna"],
-                  ["Marco Valerini", "Director operativo", "Director da 09/2024 (pre-SBLC); Lecce; gestisce SG Group Finance"],
-                  ["Silvia Darbesio", "Vittima crypto", "Saldo fittizio 69.739 BTC su bitcoinbot.tech"],
-                  ["Maurizio Valetto", "Vittima SBLC", "Quota dichiarata 1/3 = EUR 294M"],
-                  ["Olivier Vigneron (presunto)", "Impersonazione DB", "Email db.com da verificare; programma FED inesistente"]],
-                 [130, 110, 220]))
+    S.append(Paragraph("5. Struttura della frode crypto", H1))
+    S.append(tbl([["Elemento", "Tipo", "Dettaglio"],
+                  ["bitcoinbot.tech", "Piattaforma fake", "Saldo fittizio 69.739 BTC mostrato alla vittima; nessun fondo reale custodito"],
+                  ["Rete (~15 domini)", "Infrastruttura", "Hostinger, stesso IP 185.224.138.165: bot fake, finte banche, finti regolatori, recovery scam"],
+                  ["Silvia Darbesio", "Vittima", "Depositi reali poi tracciati on-chain fino agli exchange"],
+                  ["Operatori", "Non identificati", "Registranti oscurati da privacy; proprieta da accertare via autorita"]],
+                 [115, 100, 245]))
     S.append(Spacer(1, 6))
-    S.append(Paragraph("Il veicolo <b>SG Finance &amp; Trading Ltd</b> (UK 15223522) è un guscio senza bilanci, sede mass-registration, controllato al 75-100% da Gianluca Sampieri. Lo stesso duo (Sampieri + Valerini) replica lo schema su più società UK (SG Group Finance Ltd, Kingstone 246H) — pattern coerente con la serialità on-chain.", BODY))
+    S.append(Paragraph("La piattaforma <b>bitcoinbot.tech</b> non custodisce alcun fondo reale: il saldo mostrato alla vittima e fittizio (numeri nel database). I depositi reali sono confluiti nei wallet dei truffatori e da li agli exchange. L'identita degli operatori non e ricavabile dai dati pubblici.", BODY))
     S.append(PageBreak())
 
     # 6 recupero
@@ -235,7 +234,7 @@ def generate_visual_dossier(case_name):
     steps = [("1. Denuncia", "Querela a Polizia Postale + GdF con dossier, report on-chain ed evidenze forensi (SHA-256)."),
              ("2. Preservation request", "Urgente agli exchange (Kraken/Bitstamp/Binance/MEXC): congelare gli account di destinazione."),
              ("3. EIO / MLAT", "Disclosure KYC dei titolari del cash-out via cooperazione giudiziaria internazionale."),
-             ("4. Attribuzione", "Collegare i titolari KYC a Sampieri/Valerini o ai prestanome (incrocio KYB + domini)."),
+             ("4. Attribuzione", "Collegare i titolari KYC agli operatori o ai prestanome (dati registrar/host via autorita)."),
              ("5. Sequestro/restituzione", "Ordine di sequestro presso gli exchange e azione civile di restituzione."),
              ("6. Aggregazione vittime", "La rete è multi-vittima: coordinare più denunce eleva la priorità.")]
     S.append(tbl([["Step", "Azione"]] + [[a, b] for a, b in steps], [150, 310]))
