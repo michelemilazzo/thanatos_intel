@@ -68,13 +68,17 @@ def compute_distribution(rd) -> dict:
     rd.commissions_total = round(commiss_total, 2)
 
     pool = round(float(rd.net_amount) - infra_total - commiss_total, 2)
-    if pool < 0:
-        pool = 0.0
     rd.profit_pool = pool
 
     t_pct, m_pct = _split_pcts()
-    t_amt = round(pool * t_pct / 100.0, 2)
-    m_amt = round(pool - t_amt, 2)
+    if pool >= 0:
+        t_amt = round(pool * t_pct / 100.0, 2)
+        m_amt = round(pool - t_amt, 2)
+    else:
+        # Costi non coperti dal fatturato: il deficit lo assorbe THANATOS (quota negativa);
+        # MMOS non paga la differenza.
+        t_amt = pool
+        m_amt = 0.0
     rd.thanatos_share = t_amt
     rd.mmos_share = m_amt
 
