@@ -9,7 +9,7 @@ def _has(doctype):
 
 
 def get_context(context):
-    context.body_class = 'news-list'
+	context.body_class = 'news-list'
 	page = max(1, int(frappe.form_dict.get("page") or 1))
 	per = 12
 	q = (frappe.form_dict.get("q") or "").strip()
