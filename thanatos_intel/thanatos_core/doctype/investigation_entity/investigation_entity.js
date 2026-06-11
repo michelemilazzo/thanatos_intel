@@ -16,6 +16,17 @@ frappe.ui.form.on('Investigation Entity', {
 					}
 				});
 			}, __('Intelligence'));
+			frm.add_custom_button(__('Tracciamento profondo fondi'), () => {
+				frappe.call({
+					method: 'thanatos_intel.osint.blockchain_deep.trace_funds',
+					args: { address: frm.doc.primary_identifier },
+					callback(r) {
+						if (r.message && r.message.started) {
+							frappe.show_alert({ message: __('Tracciamento profondo avviato in background (alcuni minuti). Riceverai una notifica.'), indicator: 'blue' }, 8);
+						}
+					}
+				});
+			}, __('Intelligence'));
 		}
 		if (frm.doc.entity_type === 'Company') {
 			frm.add_custom_button(__('Genera Company Profile (KYB)'), () => {
