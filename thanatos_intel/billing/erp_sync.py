@@ -209,10 +209,11 @@ def emit_monthly_proforma_on_erp(for_month: str | None = None) -> dict:
 		return {"already_exists": existing["data"][0]["name"],
 		        "month": month_label}
 
+	_markup = float(frappe.conf.get("infra_markup") or 3.0)
 	items = []
 	total = 0.0
 	for c in costs:
-		amt = flt(c.monthly_cost)
+		amt = round(flt(c.monthly_cost) * _markup, 2)
 		if amt <= 0:
 			continue
 		item_code = c.erp_item_code or f"INFRA-{c.cost_code}"
@@ -231,6 +232,26 @@ def emit_monthly_proforma_on_erp(for_month: str | None = None) -> dict:
 			"description": f"{c.provider} · {c.cost_code} · {month_label}",
 		})
 		total += amt
+
+	# Deduzione quota infra gia trattenuta per-transazione (cap 20% netto) nelle RD del mese
+	try:
+		from frappe.utils import getdate, get_first_day, get_last_day
+		_first = get_first_day(getdate(month_label + "-01"))
+		_last = get_last_day(_first)
+		collected = float(frappe.db.sql(
+			"SELECT COALESCE(SUM(infra_cost_share),0) FROM `tabRevenue Distribution` "
+			"WHERE DATE(creation) BETWEEN %s AND %s", (_first, _last))[0][0] or 0)
+	except Exception:
+		collected = 0.0
+	if items and collected > 0:
+		acc_item = "INFRA-ACCONTO"
+		if _erp_get("/api/resource/Item/%s" % acc_item).get("error"):
+			_erp_post("/api/resource/Item", {"item_code": acc_item,
+				"item_name": "Acconto quota infra (cap 20%)", "item_group": "Services",
+				"stock_uom": "Nos", "is_stock_item": 0, "is_service_item": 1})
+		items.append({"item_code": acc_item, "qty": 1, "rate": -round(collected, 2),
+			"description": "Quota infra gia trattenuta (cap 20%) - %s" % month_label})
+		total = round(total - collected, 2)
 
 	if not items:
 		return {"skipped": "all_zero"}
