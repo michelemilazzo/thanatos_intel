@@ -1,0 +1,205 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_footer %}
+
+{% block title %}Identificazione — Thanatos{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold2:#E0C58A;--grey:#7A8294;--bg:#0A0E1A;
+  --panel:#111729;--panel2:#161D33;--border:#1F2842;--ok:#7BC480;--red:#D05A5A;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:960px;margin:0 auto;padding:40px 24px 80px}
+h1{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#fff;margin:0 0 8px}
+.hero-sub{color:var(--grey);font-size:13px;margin:0 0 24px}
+.notice{background:rgba(200,169,110,.06);border:1px solid rgba(200,169,110,.25);
+  border-left:3px solid var(--gold);padding:12px 16px;margin-bottom:28px;
+  font-size:12px;color:var(--grey);line-height:1.6}
+.notice strong{color:#D4C890}
+.who{font-size:12px;color:var(--grey);margin-bottom:20px}
+.who code{color:var(--gold);font-family:monospace;font-size:13px}
+.vid-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:720px){.vid-grid{grid-template-columns:1fr}}
+.cam-panel,.preview-panel{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px}
+.panel-title{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+#cam{display:block;width:100%;border-radius:3px;background:#000;aspect-ratio:4/3;object-fit:cover}
+.cam-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.btn-cam{padding:10px 16px;border-radius:3px;font-size:11px;letter-spacing:1.5px;
+  text-transform:uppercase;font-weight:600;cursor:pointer;border:0;font-family:inherit;
+  display:flex;align-items:center;gap:8px}
+.btn-cam.gold{background:var(--gold);color:var(--dark)}
+.btn-cam.gold:hover{background:var(--gold2)}
+.btn-cam.rec{background:rgba(208,90,90,.15);color:#e79a9a;border:1px solid rgba(208,90,90,.3)}
+.btn-cam:disabled{opacity:.35;cursor:default}
+.preview-item{margin-bottom:14px}
+.preview-lbl{font-size:10px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.preview-lbl .check{color:var(--ok);font-size:14px;display:none}
+.preview-lbl .check.done{display:inline}
+.preview-img{width:100%;border-radius:3px;border:1px solid var(--border);display:none;max-height:140px;object-fit:cover}
+.preview-vid{width:100%;border-radius:3px;border:1px solid var(--border);display:none}
+.preview-placeholder{height:64px;background:var(--panel2);border:1px dashed var(--border);
+  border-radius:3px;display:flex;align-items:center;justify-content:center;color:var(--grey);font-size:12px}
+.btn-send{width:100%;padding:14px;background:var(--gold);color:var(--dark);border:0;margin-top:16px;
+  border-radius:3px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-send:hover{background:var(--gold2)}
+.btn-send:disabled{opacity:.35;cursor:default}
+#result{display:none;border-radius:4px;padding:18px;margin-top:20px;font-size:14px;line-height:1.6}
+#result.ok{background:rgba(123,196,128,.08);border:1px solid rgba(123,196,128,.35);color:var(--ok)}
+#result.warn{background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.35);color:var(--gold2)}
+#result.err{background:rgba(208,90,90,.08);border:1px solid rgba(208,90,90,.35);color:#e79a9a}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="shell">
+  <h1>Identificazione</h1>
+  <p class="hero-sub">Verifica identità — selfie, documento e breve video dal tuo browser</p>
+
+  <div class="notice">
+    <strong>Privacy.</strong> Le immagini vengono acquisite direttamente dal tuo browser e trasmesse
+    cifrate a Thanatos. Nessun servizio terzo. Il link è monouso e scade dopo 48 ore.
+  </div>
+
+  <div class="who" id="who" style="display:none">Intestatario: <code id="who-name"></code> · Documento: <code id="who-doc"></code></div>
+
+  <div class="vid-grid" id="grid">
+    <div class="cam-panel">
+      <div class="panel-title">Camera</div>
+      <video id="cam" autoplay playsinline muted></video>
+      <div class="cam-actions">
+        <button class="btn-cam gold" id="btn-selfie">📸 Cattura selfie</button>
+        <button class="btn-cam gold" id="btn-doc">🪪 Cattura documento (fronte)</button>
+        <button class="btn-cam gold" id="btn-doc-back">🪪 Cattura documento (retro, opzionale)</button>
+        <button class="btn-cam rec" id="btn-rec">⏺ Registra video 8 secondi</button>
+      </div>
+    </div>
+
+    <div class="preview-panel">
+      <div class="panel-title">Riepilogo</div>
+      <div class="preview-item">
+        <div class="preview-lbl">Selfie <span class="check" id="chk-selfie">✓</span></div>
+        <div class="preview-placeholder" id="ph-selfie">In attesa…</div>
+        <img id="p-selfie" class="preview-img" alt="Selfie">
+      </div>
+      <div class="preview-item">
+        <div class="preview-lbl">Documento fronte <span class="check" id="chk-doc">✓</span></div>
+        <div class="preview-placeholder" id="ph-doc">In attesa…</div>
+        <img id="p-doc" class="preview-img" alt="Documento fronte">
+      </div>
+      <div class="preview-item">
+        <div class="preview-lbl">Documento retro <span class="check" id="chk-doc-back">✓</span></div>
+        <div class="preview-placeholder" id="ph-doc-back">Opzionale</div>
+        <img id="p-doc-back" class="preview-img" alt="Documento retro">
+      </div>
+      <div class="preview-item">
+        <div class="preview-lbl">Video 8s <span class="check" id="chk-vid">✓</span></div>
+        <div class="preview-placeholder" id="ph-vid">In attesa…</div>
+        <video id="p-vid" class="preview-vid" controls></video>
+      </div>
+      <button id="btn-send" class="btn-send" disabled>Invia per verifica →</button>
+    </div>
+  </div>
+
+  <div id="result"></div>
+</div>
+{{ thanatos_footer() }}
+
+<script>
+const TOKEN = {{ token | tojson }};
+let mediaRecorder, recChunks=[];
+let selfieBlob=null, docBlob=null, docBackBlob=null, videoBlob=null, stream=null;
+
+async function init(){
+  if (!TOKEN){ showResult("err","Link non valido: token mancante."); document.getElementById("grid").style.display="none"; return; }
+  try {
+    const r = await fetch("/api/method/thanatos_intel.api.kyc_ident.info?token="+encodeURIComponent(TOKEN));
+    const j = await r.json();
+    if (!r.ok) throw new Error((j._server_messages && JSON.parse(JSON.parse(j._server_messages)[0]).message) || "Link non valido o scaduto.");
+    document.getElementById("who-name").innerText = j.message.name_display || "—";
+    document.getElementById("who-doc").innerText = j.message.document_type || "—";
+    document.getElementById("who").style.display="block";
+  } catch(e){
+    showResult("err", e.message); document.getElementById("grid").style.display="none"; return;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"user", width:1280}, audio:false});
+    document.getElementById("cam").srcObject = stream;
+  } catch(e){ showResult("err","Impossibile accedere alla camera: "+e.message); }
+}
+init();
+
+function showResult(cls, html){
+  const r=document.getElementById("result");
+  r.className=cls; r.style.display="block"; r.innerHTML=html;
+}
+
+function snap(imgId, phId, chkId, setter){
+  const v=document.getElementById("cam");
+  const c=document.createElement("canvas");
+  c.width=v.videoWidth; c.height=v.videoHeight;
+  c.getContext("2d").drawImage(v,0,0);
+  c.toBlob(b=>{
+    setter(b);
+    const img=document.getElementById(imgId);
+    img.src=URL.createObjectURL(b); img.style.display="block";
+    document.getElementById(phId).style.display="none";
+    document.getElementById(chkId).classList.add("done");
+    checkReady();
+  }, "image/jpeg", 0.92);
+}
+
+document.getElementById("btn-selfie").onclick=()=>snap("p-selfie","ph-selfie","chk-selfie", b=>selfieBlob=b);
+document.getElementById("btn-doc").onclick=()=>snap("p-doc","ph-doc","chk-doc", b=>docBlob=b);
+document.getElementById("btn-doc-back").onclick=()=>snap("p-doc-back","ph-doc-back","chk-doc-back", b=>docBackBlob=b);
+
+document.getElementById("btn-rec").onclick=async()=>{
+  const btn=document.getElementById("btn-rec");
+  btn.disabled=true; btn.textContent="⏺ Registrazione…";
+  recChunks=[];
+  mediaRecorder = new MediaRecorder(stream, {mimeType:"video/webm;codecs=vp8"});
+  mediaRecorder.ondataavailable=e=>e.data.size>0 && recChunks.push(e.data);
+  mediaRecorder.onstop=()=>{
+    videoBlob = new Blob(recChunks, {type:"video/webm"});
+    const p=document.getElementById("p-vid");
+    p.src=URL.createObjectURL(videoBlob); p.style.display="block";
+    document.getElementById("ph-vid").style.display="none";
+    document.getElementById("chk-vid").classList.add("done");
+    btn.disabled=false; btn.textContent="⏺ Ri-registra";
+    checkReady();
+  };
+  mediaRecorder.start();
+  setTimeout(()=>mediaRecorder.stop(), 8000);
+};
+
+function checkReady(){
+  document.getElementById("btn-send").disabled = !(selfieBlob && docBlob && videoBlob);
+}
+
+document.getElementById("btn-send").onclick=async()=>{
+  const btn=document.getElementById("btn-send");
+  btn.disabled=true; btn.textContent="Invio in corso…";
+  try {
+    const fd=new FormData();
+    fd.append("token", TOKEN);
+    fd.append("selfie", selfieBlob, "selfie.jpg");
+    fd.append("doc_front", docBlob, "doc_front.jpg");
+    if (docBackBlob) fd.append("doc_back", docBackBlob, "doc_back.jpg");
+    fd.append("video", videoBlob, "video.webm");
+    const r=await fetch("/api/method/thanatos_intel.api.kyc_ident.submit", {method:"POST", body:fd});
+    const j=await r.json();
+    if (!r.ok) throw new Error((j._server_messages && JSON.parse(JSON.parse(j._server_messages)[0]).message) || "Errore di invio.");
+    const m=j.message;
+    if (m.outcome==="PASS") showResult("ok","<strong>✓ Identificazione completata.</strong><br>Verifica del volto e prova di vita superate. La pratica passa in revisione all'operatore.");
+    else if (m.outcome==="REVIEW") showResult("warn","<strong>Identificazione ricevuta.</strong><br>Alcuni controlli automatici richiedono una verifica manuale da parte dell'operatore.");
+    else showResult("err","<strong>Verifica automatica non superata.</strong><br>Un operatore esaminerà manualmente le immagini inviate.");
+    btn.textContent="✓ Inviato";
+    if (stream) stream.getTracks().forEach(t=>t.stop());
+  } catch(e){
+    showResult("err","Errore: "+e.message);
+    btn.disabled=false; btn.textContent="Invia per verifica →";
+  }
+};
+</script>
+{% endblock %}
