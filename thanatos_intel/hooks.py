@@ -100,6 +100,7 @@ doc_events={
  'Investigation Case': {
    'after_insert': ['thanatos_intel.integrations.intel_inbox.ensure_case_folder_hook',
                     'thanatos_intel.billing.case_billing.on_case_created'],
+   'validate': 'thanatos_intel.connect_onboarding.sync_assignment_connect_accounts',
  },
  'Agency Mandate': {
    'validate': 'thanatos_intel.billing.billing_entity.stamp_ddd_billing_entity',

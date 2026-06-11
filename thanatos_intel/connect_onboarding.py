@@ -50,3 +50,14 @@ def connect_account_for(assignee_type, assignee_email):
 	"""id del connected account di un collaboratore (per popolare case_assignments)."""
 	return frappe.db.get_value("Affiliate Application",
 		{"email": assignee_email}, "stripe_connect_account_id")
+
+
+def sync_assignment_connect_accounts(doc, method=None):
+	"""Hook Investigation Case validate: popola stripe_connect_account_id su ogni
+	case_assignment dal connected account del collaboratore (Affiliate Application)."""
+	for a in (doc.get("case_assignments") or []):
+		if not a.get("stripe_connect_account_id") and a.get("assignee_email"):
+			acct = frappe.db.get_value("Affiliate Application",
+				{"email": a.assignee_email}, "stripe_connect_account_id")
+			if acct:
+				a.stripe_connect_account_id = acct
