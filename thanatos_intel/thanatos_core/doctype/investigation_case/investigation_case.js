@@ -27,6 +27,18 @@ frappe.ui.form.on('Investigation Case', {
                     }
                 });
             }, __('File'));
+
+            frm.add_custom_button(__('Aggiungi alla Blacklist'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.fraud_engine.blacklist_sync.sync_blacklist_from_case',
+                    args: { case_name: frm.doc.name },
+                    freeze: true, freeze_message: __('Aggiornamento blacklist…'),
+                    callback(r) {
+                        const m = r.message || {};
+                        frappe.show_alert({ message: __('Blacklist: {0} nuove voci (totale {1})', [m.created, m.total_blacklist]), indicator: 'green' }, 6);
+                    }
+                });
+            }, __('Intelligence'));
         }
 
         if (!frm.is_new() && !frm.doc.drive_folder) {
