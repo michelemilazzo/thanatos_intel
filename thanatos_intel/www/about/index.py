@@ -4,7 +4,7 @@ no_cache = 0
 
 
 def get_context(context):
-    context.body_class = 'thanatos-about'
+	context.body_class = 'thanatos-about'
 	context.no_cache = 0
 	context.services = [
 		("Antifrode", "Prevenzione e accertamento di frodi: analisi di pattern, blacklist, wallet crypto, scam. Supporto a denunce e recuperi."),
