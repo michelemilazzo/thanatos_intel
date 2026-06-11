@@ -1,0 +1,4 @@
+{
+ "doctype": "DocType", "name": "Collaborator Allowed Category", "module": "Thanatos Billing", "istable": 1,
+ "fields": [{"fieldname": "service_category", "fieldtype": "Data", "label": "Service Category", "in_list_view": 1, "reqd": 1}]
+}
