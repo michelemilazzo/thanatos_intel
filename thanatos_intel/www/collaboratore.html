@@ -26,6 +26,21 @@
         <div id="l_msg" class="cp-msg"></div>
       </div>
     </div>
+    <div class="cp-stats">
+      <div class="cp-stat"><span>{{ my_clients_count }}</span>clienti attribuiti</div>
+      <div class="cp-stat"><span>{{ "%.0f"|format(attributed_total) }} &euro;</span>fatturato attribuito</div>
+      <div class="cp-stat hl"><span>{{ "%.0f"|format(est_commission) }} &euro;</span>commissione stimata</div>
+    </div>
+    {% if my_clients %}
+    <div class="cp-clients">
+      <h2>I miei clienti</h2>
+      <table class="cp-tbl"><thead><tr><th>Cliente</th><th>Piano</th><th>Stato</th><th>Speso</th></tr></thead><tbody>
+      {% for c in my_clients %}
+        <tr><td>{{ c.client_name }}</td><td>{{ c.subscription_plan or "&mdash;" }}</td><td>{{ c.subscription_status or "&mdash;" }}</td><td>{{ "%.0f"|format(c.total_spent or 0) }} &euro;</td></tr>
+      {% endfor %}
+      </tbody></table>
+    </div>
+    {% endif %}
   {% else %}
     <p class="cp-who">Non risulti registrato come collaboratore. <a href="/diventa-collaboratore">Candidati qui</a>.</p>
   {% endif %}
@@ -86,5 +101,13 @@
 .cp-card{border:1px solid #e5e7eb;border-radius:9px;padding:11px 13px;background:#fff;display:flex;flex-direction:column;gap:6px}
 .cp-group.feat .cp-card{border-color:#cfe0ff}
 .cp-name{font-weight:500;font-size:14px;line-height:1.3}.cp-price{font-weight:700;color:#1f6feb}
+.cp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.cp-stat{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;text-align:center;color:#555;font-size:13px}
+.cp-stat span{display:block;font-size:22px;font-weight:700;color:#111;margin-bottom:2px}
+.cp-stat.hl{border-color:#1f6feb;background:#f5f9ff}.cp-stat.hl span{color:#1f6feb}
+.cp-clients{margin:12px 0}.cp-clients h2{font-size:18px;margin:0 0 10px}
+.cp-tbl{width:100%;border-collapse:collapse;font-size:14px}
+.cp-tbl th,.cp-tbl td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee}
+.cp-tbl th{color:#888;font-weight:600;font-size:12px}
 </style>
 {% endblock %}
