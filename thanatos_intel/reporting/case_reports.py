@@ -110,10 +110,11 @@ def _render_pdf(title, client_name, case_name, sections, language="it"):
     story = [Paragraph(title, st_title),
              Paragraph("Cliente: %s &nbsp;·&nbsp; %s &nbsp;·&nbsp; %s"
                        % (client_name, case_name, format_datetime(now_datetime(), "dd/MM/yyyy")), st_sub)]
+    from xml.sax.saxutils import escape as _xesc
     for stitle, body in sections:
-        story.append(Paragraph(stitle, st_h1))
+        story.append(Paragraph(_xesc(stitle), st_h1))
         for para in _strip(body).split("\n\n"):
-            para = para.strip().replace("\n", "<br/>")
+            para = _xesc(para.strip()).replace("\n", "<br/>")
             if para:
                 story.append(Paragraph(para, st_body)); story.append(Spacer(1, 4))
     story.append(Spacer(1, 14))
