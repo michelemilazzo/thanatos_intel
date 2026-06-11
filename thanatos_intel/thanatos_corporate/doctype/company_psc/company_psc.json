@@ -1,0 +1,14 @@
+{
+  "doctype": "DocType",
+  "name": "Company PSC",
+  "module": "Thanatos Corporate",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "name_psc", "fieldtype": "Data", "label": "Name", "in_list_view": 1, "reqd": 1, "columns": 3},
+    {"fieldname": "kind", "fieldtype": "Data", "label": "Kind", "in_list_view": 1, "columns": 2},
+    {"fieldname": "nationality", "fieldtype": "Data", "label": "Nationality", "columns": 1},
+    {"fieldname": "natures_of_control", "fieldtype": "Small Text", "label": "Control", "in_list_view": 1, "columns": 3},
+    {"fieldname": "notified_on", "fieldtype": "Date", "label": "Notified", "columns": 1},
+    {"fieldname": "ceased_on", "fieldtype": "Date", "label": "Ceased"}
+  ]
+}

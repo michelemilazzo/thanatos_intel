@@ -4,10 +4,16 @@
   "module": "Thanatos Corporate",
   "istable": 1,
   "fields": [
-    {"fieldname": "full_name", "fieldtype": "Data", "label": "Name", "in_list_view": 1, "reqd": 1, "columns": 4},
+    {"fieldname": "full_name", "fieldtype": "Data", "label": "Name", "in_list_view": 1, "reqd": 1, "columns": 3},
     {"fieldname": "role", "fieldtype": "Data", "label": "Role", "in_list_view": 1, "columns": 2},
-    {"fieldname": "appointed_on", "fieldtype": "Date", "label": "Appointed", "in_list_view": 1, "columns": 2},
-    {"fieldname": "resigned_on", "fieldtype": "Date", "label": "Resigned", "in_list_view": 1, "columns": 2},
-    {"fieldname": "entity", "fieldtype": "Link", "label": "Entity", "options": "Entity", "columns": 2}
+    {"fieldname": "appointed_on", "fieldtype": "Date", "label": "Appointed", "in_list_view": 1, "columns": 1},
+    {"fieldname": "resigned_on", "fieldtype": "Date", "label": "Resigned", "columns": 1},
+    {"fieldname": "is_psc", "fieldtype": "Check", "label": "PSC", "in_list_view": 1, "columns": 1},
+    {"fieldname": "dob", "fieldtype": "Data", "label": "DOB (MM/YYYY)", "columns": 1},
+    {"fieldname": "nationality", "fieldtype": "Data", "label": "Nationality", "in_list_view": 1, "columns": 1},
+    {"fieldname": "country_of_residence", "fieldtype": "Data", "label": "Residence"},
+    {"fieldname": "occupation", "fieldtype": "Data", "label": "Occupation"},
+    {"fieldname": "officer_address", "fieldtype": "Small Text", "label": "Address"},
+    {"fieldname": "entity", "fieldtype": "Link", "label": "Entity", "options": "Entity", "columns": 1}
   ]
 }

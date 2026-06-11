@@ -1,0 +1,12 @@
+{
+  "doctype": "DocType",
+  "name": "Company Filing",
+  "module": "Thanatos Corporate",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "filing_date", "fieldtype": "Date", "label": "Date", "in_list_view": 1, "columns": 2},
+    {"fieldname": "category", "fieldtype": "Data", "label": "Category", "in_list_view": 1, "columns": 2},
+    {"fieldname": "filing_type", "fieldtype": "Data", "label": "Type", "in_list_view": 1, "columns": 2},
+    {"fieldname": "description", "fieldtype": "Small Text", "label": "Description", "in_list_view": 1, "columns": 5}
+  ]
+}
