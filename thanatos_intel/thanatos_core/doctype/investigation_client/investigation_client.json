@@ -201,6 +201,41 @@
    "fieldname": "onboarding_completed_at",
    "fieldtype": "Datetime",
    "label": "Onboarding Completed"
+  },
+  {
+   "fieldname": "sb_attribution",
+   "fieldtype": "Section Break",
+   "label": "Attribuzione & Commerciale"
+  },
+  {
+   "fieldname": "attribution_source",
+   "fieldtype": "Select",
+   "label": "Attribution Source",
+   "options": "Direct Website\nReferral Link\nPartner Portal",
+   "default": "Direct Website",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sales_partner",
+   "fieldtype": "Link",
+   "label": "Sales Partner / Commerciale",
+   "options": "Sales Partner",
+   "description": "Commerciale interno (se Direct) o collaboratore (se Referral/Partner)"
+  },
+  {
+   "fieldname": "cb_attribution",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "referral_code",
+   "fieldtype": "Data",
+   "label": "Referral Code",
+   "description": "Codice del link referral usato, se presente"
+  },
+  {
+   "fieldname": "acquired_at",
+   "fieldtype": "Datetime",
+   "label": "Acquisito il"
   }
  ],
  "permissions": [
