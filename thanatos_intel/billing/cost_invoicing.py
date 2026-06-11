@@ -83,6 +83,30 @@ def emit_monthly_cost_invoice(for_month: str = None) -> dict:
     if not items:
         return {"skipped": "no_items"}
 
+    # Deduzione: la quota infra gia trattenuta per-transazione (cap 20% del netto)
+    # nelle Revenue Distribution del mese va sottratta -> la fattura copre solo lo shortfall.
+    collected = float(frappe.db.sql(
+        "SELECT COALESCE(SUM(infra_cost_share),0) FROM `tabRevenue Distribution` "
+        "WHERE DATE(creation) BETWEEN %s AND %s",
+        (get_first_day(month_start), get_last_day(month_start)))[0][0] or 0)
+    if collected > 0:
+        credit_item = "INFRA-ACCONTO"
+        if not frappe.db.exists("Item", credit_item):
+            try:
+                frappe.get_doc({
+                    "doctype": "Item", "item_code": credit_item,
+                    "item_name": "Acconto quota infra (cap 20%)",
+                    "item_group": "Services" if frappe.db.exists("Item Group", "Services") else "All Item Groups",
+                    "stock_uom": "Nos", "is_stock_item": 0, "is_service_item": 1,
+                }).insert(ignore_permissions=True)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "infra acconto item create")
+        items.append({
+            "item_code": credit_item, "qty": 1, "rate": -round(collected, 2),
+            "description": "Quota infra gia trattenuta nelle transazioni del mese (max 20% netto)",
+        })
+        total = round(total - collected, 2)
+
     try:
         si = frappe.get_doc({
             "doctype": "Sales Invoice",
