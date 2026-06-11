@@ -40,10 +40,14 @@ def _try_ollama(prompt: str, system: str, model: str | None = None) -> str | Non
 			timeout=60,
 		)
 		if r.ok:
-			return (r.json() or {}).get("response")
+			j = r.json() or {}
+			usage = {"provider": "OpenCode", "model": "ollama:" + model,
+			         "tokens_in": j.get("prompt_eval_count", 0),
+			         "tokens_out": j.get("eval_count", 0)}
+			return (j.get("response"), usage)
 	except Exception:
-		return None
-	return None
+		return (None, None)
+	return (None, None)
 
 
 def _try_claude_cli(prompt: str, system: str) -> str | None:
@@ -52,13 +56,21 @@ def _try_claude_cli(prompt: str, system: str) -> str | None:
 		return None
 	try:
 		full = f"<system>{system}</system>\n\n{prompt}"
-		r = subprocess.run([cli, "--no-stream", "--print"], input=full,
+		r = subprocess.run([cli, "--print", "--output-format", "json"], input=full,
 		                   capture_output=True, text=True, timeout=90)
 		if r.returncode == 0 and r.stdout.strip():
-			return r.stdout.strip()
+			try:
+				j = json.loads(r.stdout)
+				u = j.get("usage") or {}
+				usage = {"provider": "Anthropic", "model": j.get("model") or "claude",
+				         "tokens_in": u.get("input_tokens", 0),
+				         "tokens_out": u.get("output_tokens", 0)}
+				return (j.get("result") or "", usage)
+			except Exception:
+				return (r.stdout.strip(), None)
 	except Exception:
-		return None
-	return None
+		return (None, None)
+	return (None, None)
 
 
 def _extract_json(text: str) -> dict | None:
@@ -90,8 +102,22 @@ def rewrite_news(title: str, body: str, language: str = "it") -> dict | None:
 	system = SYSTEM_PROMPT.format(lang=language)
 	prompt = _user_prompt(title, body)
 	for provider in (_try_ollama, _try_claude_cli):
-		raw = provider(prompt, system)
+		raw, usage = provider(prompt, system)
 		js = _extract_json(raw) if raw else None
 		if js and (js.get("excerpt") or js.get("body_html")):
+			_meter(usage, "news_rewrite")
 			return js
 	return None
+
+
+def _meter(usage, reference=None, client=None):
+	"""Conta i token di una chiamata AI (consumo bench Thanatos)."""
+	if not usage:
+		return
+	try:
+		from thanatos_intel.billing.ai_meter import record_usage
+		record_usage(client, usage.get("model"), usage.get("tokens_in", 0),
+		             usage.get("tokens_out", 0), provider=usage.get("provider"),
+		             reference=reference)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "ai_meter news")
