@@ -1,0 +1,27 @@
+{
+ "doctype": "DocType",
+ "name": "Commission Rule",
+ "module": "Thanatos Billing",
+ "track_changes": 1,
+ "autoname": "field:rule_name",
+ "title_field": "rule_name",
+ "fields": [
+  {"fieldname": "rule_name", "fieldtype": "Data", "label": "Rule Name", "reqd": 1, "unique": 1},
+  {"fieldname": "active", "fieldtype": "Check", "label": "Active", "default": "1"},
+  {"fieldname": "priority", "fieldtype": "Int", "label": "Priority", "default": "0", "description": "Higher wins when multiple rules match"},
+  {"fieldname": "cb1", "fieldtype": "Column Break"},
+  {"fieldname": "applies_to", "fieldtype": "Select", "label": "Applies To", "options": "Any\nPlan\nService", "default": "Any", "reqd": 1},
+  {"fieldname": "subscription_plan", "fieldtype": "Link", "label": "Subscription Plan", "options": "Investigation Subscription Plan", "depends_on": "eval:doc.applies_to=='Plan'"},
+  {"fieldname": "service", "fieldtype": "Link", "label": "Service", "options": "Service Catalog", "depends_on": "eval:doc.applies_to=='Service'"},
+  {"fieldname": "partner_level", "fieldtype": "Data", "label": "Partner Level", "description": "Optional: limita la regola a un livello collaboratore (es. Bronze/Silver/Gold)"},
+  {"fieldname": "sec_comm", "fieldtype": "Section Break", "label": "Commissione"},
+  {"fieldname": "commission_type", "fieldtype": "Select", "label": "Commission Type", "options": "One-shot\nRecurring", "default": "One-shot", "reqd": 1},
+  {"fieldname": "commission_rate", "fieldtype": "Percent", "label": "Commission Rate (%)", "reqd": 1},
+  {"fieldname": "cb2", "fieldtype": "Column Break"},
+  {"fieldname": "max_recurring_months", "fieldtype": "Int", "label": "Max Recurring Months", "default": "0", "description": "0 = illimitato (solo per Recurring)", "depends_on": "eval:doc.commission_type=='Recurring'"}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Accounts Manager", "read": 1, "write": 1, "create": 1}
+ ]
+}
