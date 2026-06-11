@@ -67,6 +67,19 @@ frappe.ui.form.on('Investigation Case', {
                     }
                 });
             }, __('Intelligence'));
+
+            frm.add_custom_button(__('Controlla wallet ora'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.osint.wallet_monitor.snapshot_case_now',
+                    args: { case_name: frm.doc.name },
+                    freeze: true, freeze_message: __('Verifica saldi e attribuzioni in corso…'),
+                    callback(r) {
+                        const m = r.message || {};
+                        frappe.show_alert({ message: __('Monitoraggio: {0} wallet, {1} variazioni rilevate', [m.wallets, m.changes]), indicator: m.changes ? 'red' : 'green' }, 7);
+                        frm.reload_doc();
+                    }
+                });
+            }, __('Intelligence'));
         }
 
         if (!frm.is_new() && !frm.doc.drive_folder) {
