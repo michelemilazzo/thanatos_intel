@@ -1,32 +1,146 @@
 {
-  "doctype": "DocType",
-  "name": "Infrastructure Cost",
-  "module": "Billing",
-  "autoname": "field:cost_code",
-  "title_field": "provider",
-  "track_changes": 1,
-  "fields": [
-    {"fieldname": "cost_code", "fieldtype": "Data", "label": "Cost Code", "reqd": 1, "unique": 1, "in_list_view": 1, "description": "Es. HETZNER-PROD, CLAUDE-API, OPENROUTER"},
-    {"fieldname": "provider", "fieldtype": "Select", "label": "Provider", "options": "Hetzner\nAnthropic Claude\nOpenAI Codex\nOpenRouter\nOpenCode\nGoogle Cloud\nAWS\nCloudflare\nStripe Fees\nDomini & SSL\nAltro", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
-    {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"},
-    {"fieldname": "cb_1", "fieldtype": "Column Break"},
-    {"fieldname": "billing_mode", "fieldtype": "Select", "label": "Billing Mode", "options": "Monthly Fixed\nUsage-Based\nOne-Off", "default": "Monthly Fixed", "in_list_view": 1},
-    {"fieldname": "monthly_cost", "fieldtype": "Currency", "label": "Monthly Cost", "options": "currency", "in_list_view": 1, "description": "Per Monthly Fixed. Per Usage-Based metti il costo medio storico."},
-    {"fieldname": "currency", "fieldtype": "Link", "label": "Currency", "options": "Currency", "default": "EUR", "in_list_view": 1},
-    {"fieldname": "is_active", "fieldtype": "Check", "label": "Is Active", "default": 1, "in_standard_filter": 1},
-    {"fieldname": "sb_alloc", "fieldtype": "Section Break", "label": "Allocation Rule"},
-    {"fieldname": "allocation_mode", "fieldtype": "Select", "label": "Allocation Mode", "options": "Per Active Case\nPer Active Subscription\nPer Revenue Share\nPer Usage Event\nFixed Share", "default": "Per Active Case", "description": "Come distribuire il costo sui revenue events"},
-    {"fieldname": "fixed_share_pct", "fieldtype": "Percent", "label": "Fixed Share %", "description": "Solo se Fixed Share: % sottratta da ogni Revenue Distribution"},
-    {"fieldname": "cb_2", "fieldtype": "Column Break"},
-    {"fieldname": "auto_invoice_to_thanatos", "fieldtype": "Check", "label": "Auto-Invoice from OneKeyCo → Thanatos", "default": 1, "description": "Genera mensilmente fattura ERPNext da MMOS/OneKeyCo verso Thanatos per recupero costi"},
-    {"fieldname": "erp_item_code", "fieldtype": "Data", "label": "ERP Item Code"},
-    {"fieldname": "sb_meta", "fieldtype": "Section Break", "label": "Metadata"},
-    {"fieldname": "provider_account_ref", "fieldtype": "Data", "label": "Provider Account Ref", "description": "Es. Hetzner project ID, Anthropic workspace ID"},
-    {"fieldname": "started_at", "fieldtype": "Date", "label": "Started At"},
-    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"}
-  ],
-  "permissions": [
-    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
-    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
-  ]
+ "doctype": "DocType",
+ "name": "Infrastructure Cost",
+ "module": "Billing",
+ "autoname": "field:cost_code",
+ "title_field": "provider",
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "cost_code",
+   "fieldtype": "Data",
+   "label": "Cost Code",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "Es. HETZNER-PROD, CLAUDE-API, OPENROUTER"
+  },
+  {
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "label": "Provider",
+   "options": "Hetzner\nAnthropic Claude\nOpenAI Codex\nOpenRouter\nOpenCode\nGoogle Cloud\nAWS\nCloudflare\nStripe Fees\nDomini & SSL\nAltro",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "cb_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "billing_mode",
+   "fieldtype": "Select",
+   "label": "Billing Mode",
+   "options": "Monthly Fixed\nUsage-Based\nOne-Off",
+   "default": "Monthly Fixed",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "monthly_cost",
+   "fieldtype": "Currency",
+   "label": "Monthly Cost",
+   "options": "currency",
+   "in_list_view": 1,
+   "description": "Per Monthly Fixed. Per Usage-Based metti il costo medio storico."
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "default": "EUR",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "is_foreign",
+   "fieldtype": "Check",
+   "label": "Estero / Reverse Charge",
+   "default": "0",
+   "description": "Servizio estero: fuori campo IVA IT / reverse charge"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active",
+   "default": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sb_alloc",
+   "fieldtype": "Section Break",
+   "label": "Allocation Rule"
+  },
+  {
+   "fieldname": "allocation_mode",
+   "fieldtype": "Select",
+   "label": "Allocation Mode",
+   "options": "Per Active Case\nPer Active Subscription\nPer Revenue Share\nPer Usage Event\nFixed Share",
+   "default": "Per Active Case",
+   "description": "Come distribuire il costo sui revenue events"
+  },
+  {
+   "fieldname": "fixed_share_pct",
+   "fieldtype": "Percent",
+   "label": "Fixed Share %",
+   "description": "Solo se Fixed Share: % sottratta da ogni Revenue Distribution"
+  },
+  {
+   "fieldname": "cb_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "auto_invoice_to_thanatos",
+   "fieldtype": "Check",
+   "label": "Auto-Invoice from OneKeyCo → Thanatos",
+   "default": 1,
+   "description": "Genera mensilmente fattura ERPNext da MMOS/OneKeyCo verso Thanatos per recupero costi"
+  },
+  {
+   "fieldname": "erp_item_code",
+   "fieldtype": "Data",
+   "label": "ERP Item Code"
+  },
+  {
+   "fieldname": "sb_meta",
+   "fieldtype": "Section Break",
+   "label": "Metadata"
+  },
+  {
+   "fieldname": "provider_account_ref",
+   "fieldtype": "Data",
+   "label": "Provider Account Ref",
+   "description": "Es. Hetzner project ID, Anthropic workspace ID"
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Date",
+   "label": "Started At"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
+ ]
 }

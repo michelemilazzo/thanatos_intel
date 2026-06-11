@@ -113,6 +113,14 @@ def compute_distribution(rd) -> dict:
     }
 
 
+def _infra_markup() -> float:
+    """Markup applicato ai costi infra addebitati a Thanatos (default x3, config infra_markup)."""
+    try:
+        return float(frappe.conf.get("infra_markup") or 3.0)
+    except Exception:
+        return 3.0
+
+
 def _allocate_infrastructure_costs(rd) -> list:
     """Calcola la quota di costi infrastrutturali da sottrarre a questo revenue."""
     active = frappe.get_all("Infrastructure Cost",
@@ -130,7 +138,7 @@ def _allocate_infrastructure_costs(rd) -> list:
     days = _days_in_current_month()
     lines = []
     for c in active:
-        monthly = float(c.monthly_cost or 0)
+        monthly = float(c.monthly_cost or 0) * _infra_markup()
         if monthly <= 0:
             continue
         if c.allocation_mode == "Fixed Share":

@@ -7,6 +7,13 @@ from frappe.utils import now_datetime, get_first_day, get_last_day, add_months
 
 
 @frappe.whitelist()
+def _infra_markup() -> float:
+    try:
+        return float(frappe.conf.get("infra_markup") or 3.0)
+    except Exception:
+        return 3.0
+
+
 def emit_monthly_cost_invoice(for_month: str = None) -> dict:
     """Genera una Sales Invoice ERPNext con linee = tutti gli Infrastructure Cost auto_invoice."""
     today = now_datetime()
@@ -75,10 +82,10 @@ def emit_monthly_cost_invoice(for_month: str = None) -> dict:
         items.append({
             "item_code": item_code,
             "qty": 1,
-            "rate": float(c.monthly_cost),
+            "rate": round(float(c.monthly_cost) * _infra_markup(), 2),
             "description": f"{c.provider} · {c.cost_code} · {month_label}",
         })
-        total += float(c.monthly_cost)
+        total += round(float(c.monthly_cost) * _infra_markup(), 2)
 
     if not items:
         return {"skipped": "no_items"}
