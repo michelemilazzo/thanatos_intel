@@ -55,11 +55,23 @@ def compute_distribution(rd) -> dict:
             "amount": float(rd.vat_amount), "payout_status": "Not Applicable",
         })
 
-    infra_total = 0.0
+    allocated_infra = 0.0
     for line in _allocate_infrastructure_costs(rd):
-        infra_total += line["amount"]
-        rd.append("split_lines", line)
-    rd.infra_cost_share = round(infra_total, 2)
+        allocated_infra += line["amount"]
+    allocated_infra = round(allocated_infra, 2)
+    # Tetto: la quota infra trattenuta per-transazione non supera il 20% del NETTO.
+    # L'eccedenza (allocated_infra - infra_contribution) e' differita e fatturata a
+    # Thanatos a fine mese (fattura aperta OneKeyCo/MMOS -> Thanatos).
+    _net = float(rd.net_amount)
+    infra_cap = round(0.20 * _net, 2) if _net > 0 else 0.0
+    infra_contribution = min(allocated_infra, infra_cap)
+    rd.infra_cost_share = infra_contribution
+    rd.append("split_lines", {
+        "line_type": "Infrastructure Cost",
+        "label": "Infra (max 20%% netto - allocato %s)" % allocated_infra,
+        "beneficiary_type": "MMOS", "beneficiary": "Infrastruttura",
+        "amount": infra_contribution, "payout_status": "Not Applicable",
+    })
 
     commiss_total = 0.0
     for line in _allocate_third_party_commissions(rd):
@@ -67,7 +79,7 @@ def compute_distribution(rd) -> dict:
         rd.append("split_lines", line)
     rd.commissions_total = round(commiss_total, 2)
 
-    pool = round(float(rd.net_amount) - infra_total - commiss_total, 2)
+    pool = round(float(rd.net_amount) - infra_contribution - commiss_total, 2)
     rd.profit_pool = pool
 
     t_pct, m_pct = _split_pcts()
@@ -96,7 +108,7 @@ def compute_distribution(rd) -> dict:
     rd.status = "Computed"
     rd.computed_at = now_datetime()
     return {
-        "net": rd.net_amount, "infra": infra_total, "commissions": commiss_total,
+        "net": rd.net_amount, "infra": infra_contribution, "commissions": commiss_total,
         "pool": pool, "thanatos": t_amt, "mmos": m_amt,
     }
 
