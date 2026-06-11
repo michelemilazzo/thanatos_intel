@@ -236,6 +236,32 @@
    "fieldname": "acquired_at",
    "fieldtype": "Datetime",
    "label": "Acquisito il"
+  },
+  {
+   "fieldname": "sb_ai",
+   "fieldtype": "Section Break",
+   "label": "Budget AI"
+  },
+  {
+   "fieldname": "ai_monthly_budget",
+   "fieldtype": "Currency",
+   "label": "Canone AI fisso mensile",
+   "description": "Fisso che include una soglia di consumo"
+  },
+  {
+   "fieldname": "ai_included_amount",
+   "fieldtype": "Currency",
+   "label": "Consumo AI incluso nel fisso"
+  },
+  {
+   "fieldname": "cb_ai",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ai_markup",
+   "fieldtype": "Float",
+   "label": "Markup AI (override)",
+   "description": "Se vuoto usa infra_markup globale"
   }
  ],
  "permissions": [

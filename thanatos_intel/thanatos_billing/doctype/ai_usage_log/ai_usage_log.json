@@ -1,0 +1,26 @@
+{
+ "doctype": "DocType", "name": "AI Usage Log", "module": "Thanatos Billing", "track_changes": 1,
+ "autoname": "hash",
+ "fields": [
+  {"fieldname": "client", "fieldtype": "Link", "label": "Client", "options": "Investigation Client", "in_standard_filter": 1},
+  {"fieldname": "usage_date", "fieldtype": "Date", "label": "Date", "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "provider", "fieldtype": "Select", "label": "Provider", "options": "Anthropic\nOpenAI\nOpenRouter\nOpenCode\nOther", "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "model", "fieldtype": "Data", "label": "Model", "in_list_view": 1},
+  {"fieldname": "cb1", "fieldtype": "Column Break"},
+  {"fieldname": "tokens_in", "fieldtype": "Int", "label": "Tokens In"},
+  {"fieldname": "tokens_out", "fieldtype": "Int", "label": "Tokens Out"},
+  {"fieldname": "reference", "fieldtype": "Data", "label": "Reference / Session"},
+  {"fieldname": "sec_cost", "fieldtype": "Section Break", "label": "Costi"},
+  {"fieldname": "real_cost", "fieldtype": "Currency", "label": "Costo reale MMOS", "in_list_view": 1, "description": "Quello che MMOS paga al provider"},
+  {"fieldname": "client_cost", "fieldtype": "Currency", "label": "Costo cliente", "in_list_view": 1, "description": "real_cost x markup (infra_markup)"},
+  {"fieldname": "cb2", "fieldtype": "Column Break"},
+  {"fieldname": "currency", "fieldtype": "Data", "label": "Currency", "default": "EUR"},
+  {"fieldname": "sec_bill", "fieldtype": "Section Break", "label": "Fatturazione"},
+  {"fieldname": "billed", "fieldtype": "Check", "label": "In proforma/fattura", "default": "0", "in_standard_filter": 1},
+  {"fieldname": "proforma", "fieldtype": "Data", "label": "Proforma / Quotation ref"}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Accounts Manager", "read": 1, "write": 1, "create": 1}
+ ]
+}
