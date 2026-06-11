@@ -54,6 +54,19 @@ frappe.ui.form.on('Investigation Case', {
                     }
                 });
             }, __('Intelligence'));
+
+            frm.add_custom_button(__('Arricchisci con Arkham'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.osint.arkham.enrich_case_with_arkham',
+                    args: { case_name: frm.doc.name },
+                    freeze: true, freeze_message: __('Attribution wallet via Arkham Intelligence…'),
+                    callback(r) {
+                        const m = r.message || {};
+                        frappe.show_alert({ message: __('Arkham: {0}/{1} attribuiti — {2} exchange/VASP, {3} illeciti', [m.attributed, m.checked, m.cashout, m.illicit]), indicator: m.illicit ? 'red' : 'green' }, 8);
+                        frm.reload_doc();
+                    }
+                });
+            }, __('Intelligence'));
         }
 
         if (!frm.is_new() && !frm.doc.drive_folder) {

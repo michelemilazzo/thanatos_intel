@@ -168,6 +168,11 @@ def trace_wallet(address: str, top_n: int = 15) -> dict:
             source="mempool.space", points=pts, verified=1))
         doc.insert(ignore_permissions=True)
         hubs.append(a)
+        try:
+            from thanatos_intel.osint import arkham
+            arkham.enrich_entity(a, chain="bitcoin")
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "arkham hub label")
 
     # case collegati: entita hub, attivita, allegati
     cases = frappe.get_all("Case Entity", filters={
