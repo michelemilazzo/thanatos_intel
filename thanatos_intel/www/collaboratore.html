@@ -8,10 +8,24 @@
     {% if referral_link %}
     <div class="cp-ref">
       <label>Il tuo link referral — ogni cliente che arriva da qui ti viene attribuito</label>
-      <input readonly value="{{ referral_link }}" onclick="this.select();document.execCommand('copy')">
+      <input id="cp-reflink" readonly value="{{ referral_link }}" onclick="this.select();document.execCommand('copy')">
       <small>Clicca per copiare</small>
     </div>
     {% endif %}
+    <div class="cp-lead">
+      <h2>Inserisci un nuovo lead</h2>
+      <p class="cp-sub">Il cliente ti verrà attribuito automaticamente per la commissione.</p>
+      <div class="cp-form">
+        <input id="l_name" placeholder="Nome cliente / azienda *">
+        <input id="l_email" placeholder="Email">
+        <input id="l_phone" placeholder="Telefono">
+        <input id="l_country" placeholder="Paese">
+        <input id="l_service" placeholder="Servizio di interesse">
+        <textarea id="l_notes" placeholder="Note" rows="2"></textarea>
+        <button id="l_submit" class="btn btn-primary">Invia lead</button>
+        <div id="l_msg" class="cp-msg"></div>
+      </div>
+    </div>
   {% else %}
     <p class="cp-who">Non risulti registrato come collaboratore. <a href="/diventa-collaboratore">Candidati qui</a>.</p>
   {% endif %}
@@ -30,14 +44,39 @@
   </section>
   {% endfor %}
 </div>
+<script>
+(function(){
+  var b=document.getElementById('l_submit'); if(!b) return;
+  b.onclick=function(){
+    var name=document.getElementById('l_name').value.trim();
+    var msg=document.getElementById('l_msg');
+    if(!name){msg.textContent='Inserisci il nome del cliente.';msg.className='cp-msg err';return;}
+    b.disabled=true; msg.textContent='Invio…'; msg.className='cp-msg';
+    frappe.call({method:'thanatos_intel.collaborator_portal.submit_lead',
+      args:{client_name:name,email:document.getElementById('l_email').value,
+        phone:document.getElementById('l_phone').value,country:document.getElementById('l_country').value,
+        service:document.getElementById('l_service').value,notes:document.getElementById('l_notes').value},
+      callback:function(r){b.disabled=false;
+        if(r.message&&r.message.ok){msg.textContent='Lead inviato e attribuito a te ('+r.message.ref+').';msg.className='cp-msg ok';
+          ['l_name','l_email','l_phone','l_country','l_service','l_notes'].forEach(function(i){document.getElementById(i).value='';});}
+        else{msg.textContent='Errore invio.';msg.className='cp-msg err';}},
+      error:function(){b.disabled=false;msg.textContent='Errore invio.';msg.className='cp-msg err';}});
+  };
+})();
+</script>
 <style>
 .cp{max-width:1000px;margin:0 auto;padding:24px 16px 80px}
-.cp-h1{font-weight:700;margin-bottom:8px}
-.cp-who{color:#444}
+.cp-h1{font-weight:700;margin-bottom:8px}.cp-who{color:#444}
 .cp-ref{background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:10px;padding:14px 16px;margin:14px 0}
 .cp-ref label{display:block;font-size:13px;color:#8b949e;margin-bottom:6px}
 .cp-ref input{width:100%;background:#161b22;color:#58a6ff;border:1px solid #30363d;border-radius:6px;padding:9px;font:inherit;cursor:pointer}
 .cp-ref small{color:#8b949e}
+.cp-lead{border:1px solid #1f6feb33;background:#f5f9ff;border-radius:12px;padding:16px;margin:16px 0}
+.cp-lead h2{font-size:18px;margin:0 0 2px}.cp-sub{color:#555;font-size:13px;margin:0 0 12px}
+.cp-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cp-form textarea,.cp-form #l_submit,.cp-form .cp-msg{grid-column:1/-1}
+.cp-form input,.cp-form textarea{border:1px solid #cfd8e3;border-radius:7px;padding:9px;font:inherit;width:100%}
+.cp-msg{font-size:13px}.cp-msg.ok{color:#1a7f37}.cp-msg.err{color:#cf222e}
 .cp-note{color:#555;margin:18px 0 6px}
 .cp-badge{display:inline-block;background:#1f6feb;color:#fff;font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;vertical-align:middle}
 .cp-group{margin:22px 0;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px}
@@ -46,7 +85,6 @@
 .cp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .cp-card{border:1px solid #e5e7eb;border-radius:9px;padding:11px 13px;background:#fff;display:flex;flex-direction:column;gap:6px}
 .cp-group.feat .cp-card{border-color:#cfe0ff}
-.cp-name{font-weight:500;font-size:14px;line-height:1.3}
-.cp-price{font-weight:700;color:#1f6feb}
+.cp-name{font-weight:500;font-size:14px;line-height:1.3}.cp-price{font-weight:700;color:#1f6feb}
 </style>
 {% endblock %}
