@@ -28,6 +28,21 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('File'));
 
+            frm.add_custom_button(__('Genera fascicolo con custodia'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.reporting.custody.generate_custody_dossier',
+                    args: { case_name: frm.doc.name },
+                    freeze: true, freeze_message: __('Composizione fascicolo + hash SHA-256…'),
+                    callback(r) {
+                        const m = r.message || {};
+                        if (m.file_url) {
+                            frappe.show_alert({ message: __('Fascicolo pronto: {0} doc uniti, {1} pag.', [m.merged, m.pages]), indicator: 'green' }, 7);
+                            window.open(m.file_url, '_blank');
+                        }
+                    }
+                });
+            }, __('File'));
+
             frm.add_custom_button(__('Aggiungi alla Blacklist'), () => {
                 frappe.call({
                     method: 'thanatos_intel.fraud_engine.blacklist_sync.sync_blacklist_from_case',
