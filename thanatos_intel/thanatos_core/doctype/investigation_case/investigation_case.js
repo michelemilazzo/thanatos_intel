@@ -15,6 +15,18 @@ frappe.ui.form.on('Investigation Case', {
             frm.add_custom_button(__('Apri Drive'), () => {
                 window.open('/drive?entity=' + frm.doc.drive_folder, '_blank');
             }, __('File'));
+
+            frm.add_custom_button(__('Organizza in Drive'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.reporting.case_reports.organize_case_files_to_drive',
+                    args: { case_name: frm.doc.name },
+                    freeze: true, freeze_message: __('Smistamento allegati in Drive…'),
+                    callback(r) {
+                        const m = r.message || {};
+                        frappe.show_alert({ message: __('{0} allegati organizzati in Drive', [m.in_drive]), indicator: 'green' }, 6);
+                    }
+                });
+            }, __('File'));
         }
 
         if (!frm.is_new() && !frm.doc.drive_folder) {

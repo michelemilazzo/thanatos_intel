@@ -66,6 +66,9 @@ fixtures=[
 ]
 
 doc_events={
+ 'File': {
+   'after_insert': 'thanatos_intel.reporting.case_reports.on_file_after_insert',
+ },
  'HD Ticket': {
    'after_insert': 'thanatos_intel.integrations.helpdesk_bridge.on_ticket_created',
  },

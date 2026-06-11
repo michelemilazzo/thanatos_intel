@@ -130,8 +130,26 @@ def _render_pdf(title, client_name, case_name, sections, language="it"):
 # Drive
 # ---------------------------------------------------------------------------
 
-def _put_in_drive(case_name, filename, content, mime, client_name):
-    """Mette il file nella cartella Drive del case (sotto '05 Report') con tag cliente."""
+def _drive_subfolder_for(name):
+    """Sottocartella Drive in base al nome/tipo del file."""
+    n = (name or "").lower()
+    if n.endswith((".pdf", ".docx")):
+        return "05 Report"
+    if n.startswith("forensic"):
+        return "02 Evidenze"
+    if n.startswith(("bozza_", "modello_", "nota_eio")):
+        return "07 Legale"
+    if n.startswith(("trace_", "btc_trace", "upstream", "inbound", "attrib")) or "fundflow" in n:
+        return "04 Blockchain"
+    if n.startswith(("kyb_", "recon_", "virustotal", "scamadviser", "free_osint", "strumenti")):
+        return "03 OSINT"
+    if n.endswith(".zip"):
+        return None  # root del case
+    return "03 OSINT"
+
+
+def _put_in_drive(case_name, filename, content, mime, client_name, subfolder="05 Report"):
+    """Mette il file nella cartella Drive del case (sotto subfolder) con tag cliente. Idempotente."""
     case = frappe.get_doc("Investigation Case", case_name)
     case_folder = case.drive_folder
     if not case_folder or not frappe.db.exists("Drive File", case_folder):
@@ -142,14 +160,23 @@ def _put_in_drive(case_name, filename, content, mime, client_name):
     frappe.set_user("Administrator")
     try:
         from drive.utils import get_home_folder, create_drive_file
-        from drive.utils.files import FileManager
         from drive.api.files import create_folder
+        from drive.utils.files import FileManager
 
         home = get_home_folder(team)
-        rep = frappe.db.get_value("Drive File", {"title": "05 Report", "parent_entity": case_folder,
-                                                 "is_group": 1, "team": team, "is_active": 1}, "name")
-        if not rep:
-            rep = create_folder(team, "05 Report", case_folder).name
+        if subfolder:
+            rep = frappe.db.get_value("Drive File", {"title": subfolder, "parent_entity": case_folder,
+                                                     "is_group": 1, "team": team, "is_active": 1}, "name")
+            if not rep:
+                rep = create_folder(team, subfolder, case_folder).name
+        else:
+            rep = case_folder
+
+        # idempotenza: se gia presente nella cartella, non duplicare
+        existing = frappe.db.get_value("Drive File", {"title": filename, "parent_entity": rep,
+                                                      "team": team, "is_active": 1}, "name")
+        if existing:
+            return existing
 
         # scrivi su file temporaneo
         tmp = frappe.get_site_path("private", "files", "_tmp_" + filename)
@@ -159,7 +186,7 @@ def _put_in_drive(case_name, filename, content, mime, client_name):
 
         manager = FileManager()
         df = create_drive_file(team, filename, rep, mime,
-                               lambda e: manager.get_disk_path(e, home), size)
+                               lambda e: manager.get_disk_path(e, home), size)  # noqa
         dst = manager.site_folder / df.path
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(tmp, str(dst))
@@ -308,3 +335,49 @@ def send_report_to_docuseal(file_url, case_name, signer_email=None, signer_name=
     frappe.db.commit()
     return {"ok": True, "signing_url": url,
             "submission_id": first.get("submission_id") or first.get("id")}
+
+
+# ---------------------------------------------------------------------------
+# Organizzazione Drive (bottone + hook automatico)
+# ---------------------------------------------------------------------------
+
+def _push_file_to_drive(file_name_doc, case_name):
+    """Spinge un singolo File del case nella sottocartella Drive giusta. Idempotente."""
+    f = frappe.get_doc("File", file_name_doc)
+    case = frappe.get_doc("Investigation Case", case_name)
+    client = _client_name(case)
+    sub = _drive_subfolder_for(f.file_name)
+    src = frappe.get_site_path("private" if f.is_private else "public", "files",
+                               (f.file_url or "").split("/files/")[-1])
+    if not os.path.exists(src):
+        return None
+    mime = {"pdf": "application/pdf", "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "html": "text/html", "json": "application/json", "zip": "application/zip"}.get(
+        f.file_name.rsplit(".", 1)[-1].lower(), "text/plain")
+    return _put_in_drive(case_name, f.file_name, open(src, "rb").read(), mime, client, subfolder=sub)
+
+
+@frappe.whitelist()
+def organize_case_files_to_drive(case_name):
+    """Smista tutti gli allegati del case nelle sottocartelle Drive (non cancella nulla)."""
+    frappe.only_for(("System Manager", "Investigation Manager", "Investigator"))
+    files = frappe.get_all("File", filters={"attached_to_doctype": "Investigation Case",
+                                            "attached_to_name": case_name}, pluck="name")
+    pushed = 0
+    for fn in files:
+        try:
+            if _push_file_to_drive(fn, case_name):
+                pushed += 1
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "organize_case_files_to_drive")
+    return {"total": len(files), "in_drive": pushed}
+
+
+def on_file_after_insert(doc, method=None):
+    """Hook: ogni allegato di un Investigation Case va automaticamente in Drive."""
+    if doc.attached_to_doctype != "Investigation Case" or not doc.attached_to_name:
+        return
+    if (doc.file_name or "").startswith("_tmp_"):
+        return
+    frappe.enqueue("thanatos_intel.reporting.case_reports._push_file_to_drive", queue="short",
+                   file_name_doc=doc.name, case_name=doc.attached_to_name, enqueue_after_commit=True)
