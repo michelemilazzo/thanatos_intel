@@ -66,17 +66,24 @@ class CompanyProfile(Document):
             psc_items = _api(f"/company/{cn}/persons-with-significant-control").get("items", [])
         except Exception:
             psc_items = []
-        psc_names = {(p.get("name") or "").lower() for p in psc_items}
+        def _norm(n):
+            import re
+            toks = re.sub(r"[^a-z ]", " ", (n or "").lower()).split()
+            toks = [t for t in toks if t not in ("mr", "mrs", "ms", "dr", "miss")]
+            return frozenset(toks)
+        psc_keys = [_norm(p.get("name")) for p in psc_items]
 
         self.set("officers", [])
         for o in officers:
             dob = o.get("date_of_birth") or {}
+            ok = _norm(o.get("name"))
+            is_psc = any(ok and ok == pk for pk in psc_keys)
             self.append("officers", {
                 "full_name": o.get("name"),
                 "role": o.get("officer_role"),
                 "appointed_on": o.get("appointed_on"),
                 "resigned_on": o.get("resigned_on"),
-                "is_psc": 1 if (o.get("name") or "").lower() in psc_names else 0,
+                "is_psc": 1 if is_psc else 0,
                 "dob": f"{dob.get('month','')}/{dob.get('year','')}" if dob else "",
                 "nationality": o.get("nationality"),
                 "country_of_residence": o.get("country_of_residence"),
