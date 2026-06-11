@@ -162,7 +162,7 @@ def generate_visual_dossier(case_name):
     S.append(Paragraph("<font color='%s'><b>THANATOS INTEL</b></font>" % GOLD, ParagraphStyle("x", parent=ss["Title"], fontSize=26, alignment=TA_CENTER)))
     S.append(Paragraph("INVESTIGAZIONI · DUE DILIGENCE · INTELLIGENCE", ParagraphStyle("y", parent=ss["Normal"], fontSize=9, textColor=grey, alignment=TA_CENTER, spaceAfter=26)))
     S.append(Paragraph("DOSSIER INVESTIGATIVO", ParagraphStyle("z", parent=ss["Title"], fontSize=22, textColor=navy, alignment=TA_CENTER)))
-    S.append(Paragraph("<font color='%s'>Frode SBLC + Crypto Investment Scam</font>" % RED, ParagraphStyle("w", parent=ss["Normal"], fontSize=14, alignment=TA_CENTER, spaceAfter=22)))
+    S.append(Paragraph("<font color='%s'>Crypto Investment Scam</font>" % RED, ParagraphStyle("w", parent=ss["Normal"], fontSize=14, alignment=TA_CENTER, spaceAfter=22)))
     S.append(tbl([["Cliente", client], ["Ref. caso", case_name], ["Investigatore", case.assigned_investigator or "-"],
                   ["Data", nowdate()], ["Classificazione", "CONFIDENZIALE"]], [120, 250], head=False))
     S.append(Spacer(1, 14)); S.append(C(gauge(risk))); S.append(PageBreak())
