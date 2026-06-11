@@ -1,0 +1,14 @@
+{
+  "doctype": "DocType",
+  "name": "Case Document Version",
+  "module": "Thanatos Documents",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "version", "fieldtype": "Int", "label": "Versione", "in_list_view": 1, "columns": 1},
+    {"fieldname": "certified_on", "fieldtype": "Datetime", "label": "Certificato il", "in_list_view": 1, "columns": 2},
+    {"fieldname": "certified_by", "fieldtype": "Link", "label": "Da", "options": "User", "in_list_view": 1, "columns": 2},
+    {"fieldname": "sha256", "fieldtype": "Data", "label": "SHA-256", "in_list_view": 1, "columns": 4},
+    {"fieldname": "certified_pdf", "fieldtype": "Attach", "label": "PDF", "columns": 2},
+    {"fieldname": "note", "fieldtype": "Data", "label": "Note"}
+  ]
+}

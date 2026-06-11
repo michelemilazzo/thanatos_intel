@@ -1,0 +1,43 @@
+{
+  "doctype": "DocType",
+  "name": "Case Document",
+  "module": "Thanatos Documents",
+  "autoname": "format:DOC-{YYYY}-{#####}",
+  "title_field": "title",
+  "search_fields": "title,investigation_case,protocol_number",
+  "fields": [
+    {"fieldname": "title", "fieldtype": "Data", "label": "Titolo", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Case", "options": "Investigation Case", "reqd": 1, "in_standard_filter": 1},
+    {"fieldname": "client", "fieldtype": "Link", "label": "Cliente", "options": "Investigation Client", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "doc_type", "fieldtype": "Select", "label": "Tipo", "options": "Report KYB\nReport Blockchain\nReport OSINT\nPiano di Recupero\nDossier Completo\nMandato\nLettera\nNota\nAltro", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "classification", "fieldtype": "Select", "label": "Classificazione", "options": "Bozza\nUso Interno\nCliente\nAutorita\nRiservato", "default": "Bozza", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Stato", "options": "Bozza\nIn Revisione\nCertificato\nInviato\nArchiviato", "default": "Bozza", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "version", "fieldtype": "Int", "label": "Versione", "default": "1", "read_only": 1, "in_list_view": 1},
+    {"fieldname": "sb_files", "fieldtype": "Section Break", "label": "File"},
+    {"fieldname": "editable_docx", "fieldtype": "Attach", "label": "Docx editabile (bozza)"},
+    {"fieldname": "certified_pdf", "fieldtype": "Attach", "label": "PDF certificato", "read_only": 1},
+    {"fieldname": "col_2", "fieldtype": "Column Break"},
+    {"fieldname": "sha256", "fieldtype": "Data", "label": "SHA-256 (custodia)", "read_only": 1},
+    {"fieldname": "certified_on", "fieldtype": "Datetime", "label": "Certificato il", "read_only": 1},
+    {"fieldname": "certified_by", "fieldtype": "Link", "label": "Certificato da", "options": "User", "read_only": 1},
+    {"fieldname": "sb_protocol", "fieldtype": "Section Break", "label": "Protocollo"},
+    {"fieldname": "protocol_number", "fieldtype": "Data", "label": "N. Protocollo", "read_only": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "protocol_date", "fieldtype": "Date", "label": "Data protocollo", "read_only": 1},
+    {"fieldname": "direction", "fieldtype": "Select", "label": "Direzione", "options": "\nInterno\nUscita\nEntrata", "in_standard_filter": 1},
+    {"fieldname": "col_3", "fieldtype": "Column Break"},
+    {"fieldname": "sent_on", "fieldtype": "Datetime", "label": "Inviato il", "read_only": 1},
+    {"fieldname": "sent_to", "fieldtype": "Data", "label": "Inviato a"},
+    {"fieldname": "sent_channel", "fieldtype": "Select", "label": "Canale invio", "options": "\nEmail\nDocuSeal\nPEC\nConsegna a mano"},
+    {"fieldname": "sb_misc", "fieldtype": "Section Break"},
+    {"fieldname": "drive_file", "fieldtype": "Data", "label": "Drive File ID", "read_only": 1},
+    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Note"},
+    {"fieldname": "sb_versions", "fieldtype": "Section Break", "label": "Storico versioni", "collapsible": 1},
+    {"fieldname": "versions", "fieldtype": "Table", "label": "Versioni", "options": "Case Document Version"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}
