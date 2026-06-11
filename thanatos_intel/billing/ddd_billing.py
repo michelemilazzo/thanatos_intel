@@ -51,17 +51,36 @@ def _ensure_customer(name, company):
 	return name
 
 
-def _ensure_item():
-	if not frappe.db.exists("Item", ITEM):
+def _ensure_item(name=ITEM):
+	if not frappe.db.exists("Item", name):
 		it = frappe.new_doc("Item")
-		it.item_code = it.item_name = ITEM
+		it.item_code = it.item_name = name
 		it.item_group = frappe.db.get_value("Item Group", {"is_group": 0}, "name")
 		it.stock_uom = "Nos"
 		it.is_stock_item = 0
 		it.is_sales_item = 1
 		it.flags.ignore_mandatory = True
 		it.insert(ignore_permissions=True)
-	return ITEM
+	return name
+
+
+def _quotation_items(doc, intest, fee):
+	"""Righe quotation per singolo caso: dai Mandate Service Step se presenti,
+	altrimenti una riga unica. I mandati investigativi non sono DD diplomatiche."""
+	case_ref = doc.get("investigation_case") or doc.get("ddd_case") or doc.name
+	if doc.get("investigation_case"):
+		item = _ensure_item("Servizio Investigativo")
+		label = "Servizio investigativo"
+	else:
+		item = _ensure_item()
+		label = "Due Diligence diplomatica"
+	steps = frappe.get_all("Mandate Service Step", filters={"mandate": doc.name},
+		fields=["step_no", "title", "description", "fee"], order_by="step_no")
+	if steps:
+		return [{"item_code": item, "qty": 1, "rate": s.fee or 0,
+			"description": f"{s.title} — {s.description or ''} ({case_ref})"} for s in steps]
+	return [{"item_code": item, "qty": 1, "rate": fee,
+		"description": f"{label} — {intest} ({case_ref})"}]
 
 
 def on_mandate_update(doc, method=None):
@@ -85,20 +104,19 @@ def _run(doc):
 
 	# Quotation (idempotente via quotation_ref sul mandato)
 	if not doc.get("quotation_ref") or not frappe.db.exists("Quotation", doc.get("quotation_ref")):
-		item = _ensure_item()
 		q = frappe.new_doc("Quotation")
 		q.quotation_to = "Customer"
 		q.party_name = cust
 		q.company = company
 		# Numerazione dedicata dell'agenzia che fattura le DD passaporti (es. ARES-QTN-AAAA-)
-		if doc.get("billing_entity"):
+		if doc.get("ddd_case") and doc.get("billing_entity"):
 			series = "ARES-QTN-.YYYY.-"
 			opts = (frappe.get_meta("Quotation").get_field("naming_series").options or "")
 			if series in opts.split("\n"):
 				q.naming_series = series
 		q.currency = doc.get("currency") or "EUR"
-		q.append("items", {"item_code": item, "qty": 1, "rate": fee,
-			"description": f"Due Diligence diplomatica — {intest} (case {doc.get('ddd_case')})"})
+		for row in _quotation_items(doc, intest, fee):
+			q.append("items", row)
 		q.flags.ignore_mandatory = True
 		q.insert(ignore_permissions=True)
 		doc.db_set("quotation_ref", q.name, update_modified=False)
