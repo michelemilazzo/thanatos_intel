@@ -12,6 +12,12 @@
       <small>Clicca per copiare</small>
     </div>
     {% endif %}
+    <div class="cp-connect">
+      <h2>Pagamenti — Stripe Connect</h2>
+      <p class="cp-sub">Configura il tuo conto per ricevere le commissioni automaticamente.</p>
+      <div id="cp-connect-status" class="cp-msg">Verifica…</div>
+      <button id="cp-connect-btn" class="btn btn-primary" style="display:none">Configura pagamenti</button>
+    </div>
     <div class="cp-lead">
       <h2>Inserisci un nuovo lead</h2>
       <p class="cp-sub">Il cliente ti verrà attribuito automaticamente per la commissione.</p>
@@ -78,6 +84,21 @@
       error:function(){b.disabled=false;msg.textContent='Errore invio.';msg.className='cp-msg err';}});
   };
 })();
+
+(function(){
+  if(!document.getElementById('cp-connect-status')) return;
+  var st=document.getElementById('cp-connect-status'), btn=document.getElementById('cp-connect-btn');
+  frappe.call({method:'thanatos_intel.connect_onboarding.status',callback:function(r){
+    var m=r.message||{};
+    if(m.connected && m.payouts_enabled){st.textContent='✓ Pagamenti attivi — ricevi le commissioni in automatico.';st.className='cp-msg ok';}
+    else if(m.connected){st.textContent='Onboarding da completare.';st.className='cp-msg';btn.style.display='';btn.textContent='Completa configurazione';}
+    else{st.textContent='Non ancora configurato.';st.className='cp-msg';btn.style.display='';}
+  }});
+  btn.onclick=function(){btn.disabled=true;st.textContent='Apertura Stripe…';
+    frappe.call({method:'thanatos_intel.connect_onboarding.start_onboarding',callback:function(r){
+      if(r.message&&r.message.url){window.location=r.message.url;}else{st.textContent='Errore.';btn.disabled=false;}},
+      error:function(){st.textContent='Errore.';btn.disabled=false;}});};
+})();
 </script>
 <style>
 .cp{max-width:1000px;margin:0 auto;padding:24px 16px 80px}
@@ -109,5 +130,7 @@
 .cp-tbl{width:100%;border-collapse:collapse;font-size:14px}
 .cp-tbl th,.cp-tbl td{text-align:left;padding:8px 10px;border-bottom:1px solid #eee}
 .cp-tbl th{color:#888;font-weight:600;font-size:12px}
+.cp-connect{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:14px 0}
+.cp-connect h2{font-size:18px;margin:0 0 2px}
 </style>
 {% endblock %}

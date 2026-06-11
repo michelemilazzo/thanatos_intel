@@ -79,6 +79,12 @@
    "fieldname": "message",
    "fieldtype": "Small Text",
    "label": "Presentazione / esperienza"
+  },
+  {
+   "fieldname": "stripe_connect_account_id",
+   "fieldtype": "Data",
+   "label": "Stripe Connect Account",
+   "read_only": 1
   }
  ],
  "permissions": [
