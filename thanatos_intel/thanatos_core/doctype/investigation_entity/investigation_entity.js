@@ -17,5 +17,21 @@ frappe.ui.form.on('Investigation Entity', {
 				});
 			}, __('Intelligence'));
 		}
+		if (frm.doc.entity_type === 'Company') {
+			frm.add_custom_button(__('Verifica KYB'), () => {
+				frappe.call({
+					method: 'thanatos_intel.osint.companies_house.kyb_lookup',
+					args: { entity_name: frm.doc.name },
+					freeze: true,
+					freeze_message: __('KYB Companies House in corso…'),
+					callback(r) {
+						const m = r.message || {};
+						frappe.msgprint(__('KYB completato: {0} ({1}), bilanci {2}. {3} officer, {4} PSC, {5} persone e {6} societa collegate create.',
+							[m.company, m.number, m.accounts_overdue ? 'OVERDUE' : 'ok', m.officers, m.psc, m.persons_created, m.linked_companies]));
+						frm.reload_doc();
+					}
+				});
+			}, __('Intelligence'));
+		}
 	}
 });
