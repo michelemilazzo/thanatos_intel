@@ -79,7 +79,8 @@ def screen_sanctions(name: str, schema: str = "Person") -> dict:
         result = {"error": str(e)[:200], "source": "opensanctions"}
 
     _cache_set("opensanctions", f"{schema}:{name}", result)
-    _persist_lookup("Company" if schema == "Company" else "Username", name, result)
+    tt = {"Company": "Company", "CryptoWallet": "Wallet"}.get(schema, "Username")
+    _persist_lookup(tt, name, result)
     return result
 
 
