@@ -153,7 +153,8 @@ scheduler_events={
  'weekly':[],
  'weekly_long':[],
  'monthly':['thanatos_intel.billing.cost_invoicing.scheduled_monthly_cost_invoicing',
-            'thanatos_intel.billing.erp_sync.scheduled_monthly_invoice_on_erp'],
+            'thanatos_intel.billing.erp_sync.scheduled_monthly_invoice_on_erp',
+            'thanatos_intel.billing.credit_settlement.run_monthly_credit_settlement'],
  'monthly_long':[]
 }
 website_route_rules=[

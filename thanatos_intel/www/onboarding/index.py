@@ -29,8 +29,12 @@ def get_context(context):
     # Skip Pending Email if user already verified (login means verified).
     #  - Privati: primo step carta (Pending Card) -> poi KYC
     #  - Aziende: percorso KYB-first (Pending KYB) -> carta dopo il KYB
+    #  - Credito concesso: la carta non e richiesta (fatturazione a bonifico)
     if status == "Pending Email":
-        status = "Pending Card" if is_individual else "Pending KYB"
+        if is_individual:
+            status = "Pending KYC" if c.get("credit_granted") else "Pending Card"
+        else:
+            status = "Pending KYB"
         frappe.db.set_value("Investigation Client", c.name,
                             "onboarding_status", status)
         frappe.db.commit()

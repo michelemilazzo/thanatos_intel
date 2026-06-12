@@ -208,11 +208,12 @@ def submit_kyb() -> dict:
         }, update_modified=False)
 
     c.db_set("kyb_status", "In Review", commit=False)
-    if c.payment_method_added:
+    # carta gia presente, oppure cliente a credito (fatturazione a bonifico) -> completo;
+    # altrimenti percorso KYB-first: la carta viene richiesta dopo il KYB
+    if c.payment_method_added or c.credit_granted:
         c.db_set("onboarding_status", "Under Review", commit=False)
         c.db_set("onboarding_completed_at", frappe.utils.now_datetime(), commit=False)
     else:
-        # percorso KYB-first: la carta viene richiesta dopo il KYB
         c.db_set("onboarding_status", "Pending Card", commit=False)
     frappe.db.commit()
 

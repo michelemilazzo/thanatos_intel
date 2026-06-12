@@ -50,9 +50,36 @@ def grant_credit(client, amount, ref_dt=None, ref_name=None, notes=None):
     return new_bal
 
 
+def is_prepaid(client):
+    """True se il cliente paga prepagato (carta); False se ha credito concesso
+    (fatturazione mensile a bonifico)."""
+    return not bool(frappe.db.get_value("Investigation Client", client, "credit_granted"))
+
+
+def available_to_spend(client):
+    """Quanto il cliente puo spendere ora in servizi automatizzati: il saldo
+    prepagato, piu il fido se ha credito concesso."""
+    bal = get_balance(client)
+    cg = frappe.db.get_value("Investigation Client", client,
+                             ["credit_granted", "credit_limit"], as_dict=True) or {}
+    return flt(bal + flt(cg.get("credit_limit"))) if cg.get("credit_granted") else flt(bal)
+
+
 def spend_credit(client, amount, ref_dt=None, ref_name=None, notes=None):
-    if get_balance(client) < flt(amount):
-        frappe.throw("Credito insufficiente.")
+    """Addebita un servizio automatizzato.
+    - Prepagato (default): richiede saldo sufficiente (ricaricato con carta).
+    - Credito concesso: ammesso il debito fino al fido; l'importo viene
+      fatturato mensilmente a bonifico (vedi billing.credit_settlement)."""
+    amount = flt(amount)
+    bal = get_balance(client)
+    cg = frappe.db.get_value("Investigation Client", client,
+                             ["credit_granted", "credit_limit"], as_dict=True) or {}
+    if cg.get("credit_granted"):
+        limit = flt(cg.get("credit_limit"))
+        if (bal - amount) < -limit:
+            frappe.throw("Fido superato: disponibile %.2f su un fido di %.2f." % (flt(bal + limit), limit))
+    elif bal < amount:
+        frappe.throw("Credito insufficiente. Ricarica il credito (carta) per usare i servizi automatizzati.")
     new_bal = _client_move(client, "Spent", amount)
     _post("Client", client, "Spent", amount, client=client, balance_after=new_bal,
           ref_dt=ref_dt, ref_name=ref_name, notes=notes)

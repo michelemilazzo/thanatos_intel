@@ -147,6 +147,41 @@
    "description": "Bonus segnalazioni spendibile sui servizi"
   },
   {
+   "fieldname": "sb_payment",
+   "fieldtype": "Section Break",
+   "label": "Pagamento e credito"
+  },
+  {
+   "fieldname": "payment_method",
+   "fieldtype": "Select",
+   "label": "Metodo di pagamento",
+   "options": "Carta\nBonifico",
+   "default": "Carta"
+  },
+  {
+   "fieldname": "credit_granted",
+   "fieldtype": "Check",
+   "label": "Credito concesso (fido)",
+   "description": "Se attivo: niente prepagamento carta, servizi automatizzati fatturati mensilmente a bonifico."
+  },
+  {
+   "fieldname": "cb_payment",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "credit_terms",
+   "fieldtype": "Select",
+   "label": "Fatturazione credito",
+   "options": "\nAnticipata\nPosticipata",
+   "depends_on": "eval:doc.credit_granted"
+  },
+  {
+   "fieldname": "credit_limit",
+   "fieldtype": "Currency",
+   "label": "Fido (limite di credito)",
+   "depends_on": "eval:doc.credit_granted"
+  },
+  {
    "fieldname": "sb_onboarding",
    "fieldtype": "Section Break",
    "label": "Onboarding",
