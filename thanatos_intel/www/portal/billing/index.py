@@ -55,7 +55,7 @@ def get_context(context):
         context.current_sub = subs[0] if subs else None
 
     context.requested_service = None
-    svc = frappe.form_dict.get("svc")
+    svc = frappe.form_dict.get("svc") or frappe.form_dict.get("service")
     if svc:
         row = frappe.db.get_value("Service Catalog", {"service_code": svc, "is_active": 1},
                                   ["service_code", "service_name", "category", "price", "currency"],

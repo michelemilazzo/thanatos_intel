@@ -62,4 +62,5 @@ def get_context(context):
             "featured": meta.get("featured", False),
         })
     context.plans = plans
+    context.logged_in = frappe.session.user != "Guest"
     return context

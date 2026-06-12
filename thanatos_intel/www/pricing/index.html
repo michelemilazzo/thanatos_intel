@@ -74,7 +74,7 @@ body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page
     <ul>
       {% for f in p.features %}<li>{{ f }}</li>{% endfor %}
     </ul>
-    <a class="btn" href="/registrati?service={{ p.code }}">{{ p.cta }} →</a>
+    <a class="btn" href="{% if logged_in %}/portal/billing{% else %}/registrati?service={{ p.code }}{% endif %}">{{ p.cta }} →</a>
   </div>
   {% endfor %}
 </div>
