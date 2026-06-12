@@ -1,0 +1,93 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Piani e prezzi — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="Piani di abbonamento Thanatos Intel: Basic, Professional, Legal, Enterprise. Prezzi trasparenti, servizi investigativi e intelligence continuativi."/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
+  --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;}
+body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page .container-fluid,body.ppu-page main,body.ppu-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif!important;
+}
+.ppu-hero{padding:96px 24px 48px;text-align:center;background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.ppu-hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;}
+.ppu-hero h1{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:44px;color:#fff;margin:14px 0 12px;letter-spacing:1px;}
+.ppu-hero h1 em{font-style:normal;color:var(--gold);}
+.ppu-hero p{color:#B8BCCC;max-width:680px;margin:0 auto;font-size:16px;line-height:1.6;}
+
+.prc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;max-width:1280px;margin:64px auto;padding:0 24px;}
+@media(max-width:1100px){.prc-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:640px){.prc-grid{grid-template-columns:1fr;}}
+
+.prc-card{background:var(--panel);border:1px solid var(--line);padding:32px 26px;display:flex;flex-direction:column;position:relative;transition:transform .15s,border-color .15s;}
+.prc-card:hover{transform:translateY(-4px);border-color:var(--gold2);}
+.prc-card.featured{border-color:var(--gold);box-shadow:0 0 40px rgba(200,169,110,.12);}
+.prc-card .badge{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--navy);
+  font-size:10px;letter-spacing:2px;text-transform:uppercase;font-weight:700;padding:4px 14px;}
+.prc-card h2{font-family:'Cinzel Decorative',Georgia,serif;font-size:24px;color:#fff;margin:0 0 4px;letter-spacing:1px;}
+.prc-card .tag{color:var(--muted);font-size:12px;letter-spacing:1px;margin-bottom:20px;}
+.prc-card .price{font-family:Georgia,serif;color:var(--gold);font-size:42px;line-height:1;margin-bottom:4px;}
+.prc-card .price small{font-size:14px;color:var(--muted);}
+.prc-card .per{color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:24px;}
+.prc-card ul{list-style:none;margin:0 0 28px;padding:0;flex:1;}
+.prc-card li{color:#B8BCCC;font-size:13px;line-height:1.5;padding:7px 0 7px 22px;position:relative;border-bottom:1px dotted var(--line);}
+.prc-card li:before{content:"✦";color:var(--gold);position:absolute;left:0;font-size:10px;top:10px;}
+.prc-card .btn{display:block;text-align:center;padding:14px;border:1px solid var(--gold);background:transparent;
+  color:var(--gold);text-decoration:none;font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700;transition:background .15s,color .15s;}
+.prc-card .btn:hover,.prc-card.featured .btn{background:var(--gold);color:var(--navy);}
+.prc-card.featured .btn:hover{background:var(--gold2);}
+
+.prc-ppu{background:var(--navy2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:48px 24px;text-align:center;}
+.prc-ppu h3{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:18px;letter-spacing:3px;text-transform:uppercase;margin:0 0 10px;}
+.prc-ppu p{color:#B8BCCC;font-size:14px;max-width:620px;margin:0 auto 20px;}
+.prc-ppu a{display:inline-block;padding:12px 28px;border:1px solid var(--gold);color:var(--gold);text-decoration:none;
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700;transition:background .15s,color .15s;}
+.prc-ppu a:hover{background:var(--gold);color:var(--navy);}
+.prc-note{text-align:center;color:var(--muted);font-size:12px;padding:24px;max-width:720px;margin:0 auto;line-height:1.6;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('pricing') }}
+
+<section class="ppu-hero">
+  <div class="eyebrow">Piani &amp; prezzi</div>
+  <h1>Intelligence <em>continuativa</em></h1>
+  <p>Quattro piani per professionisti, studi e aziende. Tutti includono l'accesso al portale clienti
+     e l'onboarding KYC. Attivazione previa verifica.</p>
+</section>
+
+<div class="prc-grid">
+  {% for p in plans %}
+  <div class="prc-card{% if p.featured %} featured{% endif %}">
+    {% if p.featured %}<div class="badge">Più scelto</div>{% endif %}
+    <h2>{{ p.label }}</h2>
+    <div class="tag">{{ p.tagline }}</div>
+    <div class="price">{% if p.currency == 'EUR' %}€{% endif %}{{ "%.0f"|format(p.price) }}</div>
+    <div class="per">al mese</div>
+    <ul>
+      {% for f in p.features %}<li>{{ f }}</li>{% endfor %}
+    </ul>
+    <a class="btn" href="/registrati?service={{ p.code }}">{{ p.cta }} →</a>
+  </div>
+  {% endfor %}
+</div>
+
+<section class="prc-ppu">
+  <h3>Niente abbonamento?</h3>
+  <p>Tutti i servizi del catalogo sono disponibili anche on-demand, con prezzi trasparenti e SLA dichiarati.</p>
+  <a href="/servizi">Catalogo completo — 100+ servizi →</a>
+</section>
+
+<p class="prc-note">I prezzi si intendono IVA esclusa ove applicabile. L'attivazione dei piani Legal ed Enterprise
+prevede un colloquio preliminare e la verifica KYC/KYB. Convenzioni dedicate per studi legali e commercialisti.</p>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}

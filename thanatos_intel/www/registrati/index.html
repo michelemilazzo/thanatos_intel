@@ -422,6 +422,9 @@ document.getElementById('c-send').addEventListener('click', async () => {
     if (vat)                fd.append('vat_number', vat);
     const extra = getExtraInfo(typeKey);
     if (extra)              fd.append('extra_info', extra);
+    const qs = new URLSearchParams(location.search);
+    if (qs.get('ref'))      fd.append('ref', qs.get('ref'));
+    if (qs.get('service'))  fd.append('service', qs.get('service'));
 
     const r = await fetch('/api/method/thanatos_intel.www.registrati.index.register_client',
       {method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd});

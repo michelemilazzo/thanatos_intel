@@ -30,7 +30,8 @@ def get_context(context):
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def register_client(full_name, email, password, phone=None,
-                    client_type_key=None, vat_number=None, extra_info=None):
+                    client_type_key=None, vat_number=None, extra_info=None,
+                    ref=None, service=None):
     full_name = (full_name or "").strip()
     email = (email or "").strip().lower()
     if not full_name or not email or not password:
@@ -76,9 +77,21 @@ def register_client(full_name, email, password, phone=None,
         }
         if vat_number:
             client_data["vat_number"] = vat_number
+        # attribuzione referral: ?ref=<codice> dal QR preventivo o link collaboratore
+        ref = (ref or "").strip()
+        if ref:
+            client_data["attribution_source"] = "Referral Link"
+            client_data["referral_code"] = ref[:140]
+        else:
+            client_data["attribution_source"] = "Direct Website"
+        if service:
+            # nessun campo dedicato: lo aggiungiamo a extra_info per l'operatore
+            extra_info = f"Servizio richiesto: {service[:140]}" + (f" | {extra_info}" if extra_info else "")
 
         client = frappe.get_doc(client_data)
         client.insert(ignore_permissions=True)
+        if extra_info:
+            client.add_comment("Comment", text=extra_info[:500])
         frappe.db.commit()
     finally:
         frappe.set_user(prev_user)
