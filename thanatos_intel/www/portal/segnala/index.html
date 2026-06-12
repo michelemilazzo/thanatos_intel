@@ -52,6 +52,37 @@ textarea{min-height:90px;resize:vertical}
   <button class="btn" id="send">Invia segnalazione</button>
   <div class="msg" id="msg"></div>
   <div class="note">Le segnalazioni sono revisionate dal nostro team prima della pubblicazione e dell'accredito del bonus. Vietato l'abuso: segnalazioni false comportano la sospensione.</div>
+  {% if my_reports %}
+  <div style="max-width:760px;margin:30px auto 0;">
+    <h2 style="color:#C8A96E;font-weight:400;letter-spacing:2px;font-size:18px;margin-bottom:14px;">Le mie segnalazioni</h2>
+    {% if not verified %}
+    <div class="note" style="margin-bottom:12px;">Per allegare la <b>denuncia effettivamente depositata</b> serve la registrazione verificata. <a href="/onboarding" style="color:#C8A96E;">Completa la verifica (KYC/KYB) &rarr;</a></div>
+    {% endif %}
+    {% for r in my_reports %}
+    <div style="border:1px solid #1F2742;background:#13192C;padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+        <div style="min-width:0;">
+          <div style="font-size:14px;color:#E6E8EE;">{{ r.entry_type }}: <b>{{ r.entry_value }}</b></div>
+          <div style="font-size:11px;color:#7A8294;margin-top:2px;">{{ r.name }} &middot; {{ frappe.utils.format_datetime(r.creation,'dd/MM/yyyy') }}</div>
+        </div>
+        <span style="font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:3px;background:#1F2742;color:#C8A96E;">{{ r.status }}</span>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center;">
+        <button class="btn" style="padding:8px 14px;font-size:11px;" onclick="genForm('{{ r.name }}',this)">Modulo per le autorita</button>
+        {% if r.authority_form %}<a href="{{ r.authority_form }}" target="_blank" style="color:#C8A96E;font-size:12px;">scarica ultimo</a>{% endif %}
+        {% if verified %}
+          {% if r.filed_complaint %}
+          <span style="color:#1E8449;font-size:12px;">&#10003; Denuncia allegata{% if r.complaint_filed_on %} ({{ frappe.utils.formatdate(r.complaint_filed_on,'dd/MM/yyyy') }}){% endif %}</span>
+          {% else %}
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="font-size:11px;color:#A4A9BC;" onchange="attachComplaint('{{ r.name }}',this)"/>
+          <span style="font-size:11px;color:#7A8294;">allega denuncia depositata</span>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% else %}
   <div class="empty">Il tuo account non è collegato a un profilo cliente.<br>Contatta il tuo referente Thanatos per abilitare le segnalazioni.</div>
   {% endif %}
@@ -82,5 +113,28 @@ if(btn) btn.addEventListener('click',async()=>{
   }catch(e){msg.className='msg err';msg.textContent='Errore: '+e.message;}
   btn.disabled=false;
 });
+
+async function genForm(name,btn){
+  btn.disabled=true;var t=btn.textContent;btn.textContent='Generazione...';
+  try{
+    const r=await fetch('/api/method/thanatos_intel.www.portal.segnala.index.generate_authority_form',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF,'Content-Type':'application/x-www-form-urlencoded'},body:'report_name='+encodeURIComponent(name)});
+    const m=(await r.json()).message||{};
+    if(m.file_url) window.open(m.file_url,'_blank'); else alert('Errore generazione modulo');
+  }catch(e){alert('Errore: '+e.message);}
+  btn.disabled=false;btn.textContent=t;
+}
+async function attachComplaint(name,inp){
+  if(!inp.files||!inp.files[0])return;
+  try{
+    const uf=new FormData();uf.append('file',inp.files[0]);uf.append('is_private',1);uf.append('folder','Home');
+    const ur=await fetch('/api/method/upload_file',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:uf});
+    const url=((await ur.json()).message||{}).file_url;
+    if(!url)throw new Error('upload fallito');
+    const fd=new FormData();fd.append('report_name',name);fd.append('file_url',url);
+    const r=await fetch('/api/method/thanatos_intel.www.portal.segnala.index.attach_filed_complaint',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd});
+    const m=(await r.json()).message||{};
+    if(m.ok){alert('Denuncia allegata.');location.reload();}else throw new Error('errore');
+  }catch(e){alert('Errore: '+e.message);}
+}
 </script>
 {% endblock %}

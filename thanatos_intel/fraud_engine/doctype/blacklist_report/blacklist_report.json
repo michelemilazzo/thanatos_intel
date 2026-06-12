@@ -1,23 +1,129 @@
 {
- "doctype": "DocType", "name": "Blacklist Report", "module": "Fraud Engine",
- "autoname": "format:BLR-{YYYY}-{#####}", "track_changes": 1,
+ "doctype": "DocType",
+ "name": "Blacklist Report",
+ "module": "Fraud Engine",
+ "autoname": "format:BLR-{YYYY}-{#####}",
+ "track_changes": 1,
  "fields": [
-  {"fieldname": "reporter", "fieldtype": "Link", "label": "Cliente segnalante", "options": "Investigation Client", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "entry_type", "fieldtype": "Select", "label": "Tipo", "options": "Email\nDomain\nIP\nPhone\nCompany\nPerson\nWallet\nIBAN", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "entry_value", "fieldtype": "Data", "label": "Valore segnalato", "reqd": 1, "in_list_view": 1},
-  {"fieldname": "cb_1", "fieldtype": "Column Break"},
-  {"fieldname": "status", "fieldtype": "Select", "label": "Stato", "options": "In Review\nApproved\nRejected\nDuplicate", "default": "In Review", "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "blacklist_entry", "fieldtype": "Link", "label": "Voce blacklist", "options": "Blacklist Entry", "read_only": 1},
-  {"fieldname": "bonus_amount", "fieldtype": "Currency", "label": "Bonus accreditato (€)", "read_only": 1},
-  {"fieldname": "sb_detail", "fieldtype": "Section Break", "label": "Dettaglio"},
-  {"fieldname": "reason", "fieldtype": "Text", "label": "Motivo / descrizione", "reqd": 1},
-  {"fieldname": "evidence", "fieldtype": "Attach", "label": "Prova (file)"},
-  {"fieldname": "cb_2", "fieldtype": "Column Break"},
-  {"fieldname": "reviewed_by", "fieldtype": "Link", "label": "Revisionato da", "options": "User", "read_only": 1},
-  {"fieldname": "reviewed_on", "fieldtype": "Datetime", "label": "Revisionato il", "read_only": 1}
+  {
+   "fieldname": "reporter",
+   "fieldtype": "Link",
+   "label": "Cliente segnalante",
+   "options": "Investigation Client",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "entry_type",
+   "fieldtype": "Select",
+   "label": "Tipo",
+   "options": "Email\nDomain\nIP\nPhone\nCompany\nPerson\nWallet\nIBAN",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "entry_value",
+   "fieldtype": "Data",
+   "label": "Valore segnalato",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Stato",
+   "options": "In Review\nApproved\nRejected\nDuplicate",
+   "default": "In Review",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "blacklist_entry",
+   "fieldtype": "Link",
+   "label": "Voce blacklist",
+   "options": "Blacklist Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "bonus_amount",
+   "fieldtype": "Currency",
+   "label": "Bonus accreditato (€)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_detail",
+   "fieldtype": "Section Break",
+   "label": "Dettaglio"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Text",
+   "label": "Motivo / descrizione",
+   "reqd": 1
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Attach",
+   "label": "Prova (file)"
+  },
+  {
+   "fieldname": "sb_authority",
+   "fieldtype": "Section Break",
+   "label": "Autorità e denuncia"
+  },
+  {
+   "fieldname": "authority_form",
+   "fieldtype": "Attach",
+   "label": "Modulo per le autorità (generato)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "filed_complaint",
+   "fieldtype": "Attach",
+   "label": "Denuncia depositata (allegata dal cliente)"
+  },
+  {
+   "fieldname": "complaint_filed_on",
+   "fieldtype": "Date",
+   "label": "Data deposito denuncia"
+  },
+  {
+   "fieldname": "cb_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Revisionato da",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reviewed_on",
+   "fieldtype": "Datetime",
+   "label": "Revisionato il",
+   "read_only": 1
+  }
  ],
  "permissions": [
-  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
-  {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
  ]
 }
