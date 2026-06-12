@@ -1,0 +1,87 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}MMOS ID — Identità digitale con passkey{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="MMOS ID: identità digitale sicura con passkey (impronta, Windows Hello, chiave hardware). Un solo accesso, resistente al phishing, per tutti i servizi."/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
+  --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;}
+body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page .container-fluid,body.ppu-page main,body.ppu-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif!important;}
+.ppu-hero{padding:104px 24px 56px;text-align:center;background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.ppu-hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;}
+.ppu-hero h1{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:48px;color:#fff;margin:14px 0 14px;letter-spacing:1px;}
+.ppu-hero h1 em{font-style:normal;color:var(--gold);}
+.ppu-hero p{color:#B8BCCC;max-width:680px;margin:0 auto;font-size:17px;line-height:1.6;}
+.ppu-hero .key{font-size:54px;margin-bottom:8px;}
+
+.mi-feat{max-width:1100px;margin:64px auto;padding:0 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+@media(max-width:880px){.mi-feat{grid-template-columns:1fr;}}
+.mi-card{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--gold);padding:28px;}
+.mi-card .ico{font-size:30px;margin-bottom:12px;}
+.mi-card h3{color:#fff;font-family:Georgia,serif;font-size:18px;margin:0 0 8px;}
+.mi-card p{color:#B8BCCC;font-size:14px;line-height:1.6;margin:0;}
+
+.mi-how{max-width:900px;margin:0 auto 64px;padding:0 24px;}
+.mi-how h2{text-align:center;font-family:'Cinzel Decorative',Georgia,serif;color:var(--gold);font-size:26px;letter-spacing:2px;text-transform:uppercase;margin:0 0 36px;}
+.mi-step{display:flex;gap:18px;margin-bottom:24px;align-items:flex-start;}
+.mi-step .n{font-family:Georgia,serif;color:var(--navy);background:var(--gold);width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.mi-step b{display:block;color:#fff;font-size:16px;margin-bottom:4px;}
+.mi-step p{color:#B8BCCC;font-size:14px;line-height:1.55;margin:0;}
+
+.mi-cta{background:var(--navy2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:56px 24px;text-align:center;}
+.mi-cta h2{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:20px;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px;}
+.mi-cta p{color:#B8BCCC;font-size:15px;max-width:600px;margin:0 auto 24px;}
+.mi-cta a{display:inline-block;padding:14px 32px;border:1px solid var(--gold);background:var(--gold);color:var(--navy);
+  text-decoration:none;font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;margin:0 6px;transition:background .15s;}
+.mi-cta a.ghost{background:transparent;color:var(--gold);}
+.mi-cta a:hover{background:var(--gold2);}
+.mi-cta a.ghost:hover{background:var(--gold);color:var(--navy);}
+.mi-price{text-align:center;color:var(--muted);font-size:13px;padding:24px;}
+.mi-price b{color:var(--gold);font-family:Georgia,serif;font-size:16px;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('mmos-id') }}
+
+<section class="ppu-hero">
+  <div class="key">🔐</div>
+  <div class="eyebrow">Identità digitale</div>
+  <h1>MMOS <em>ID</em></h1>
+  <p>Un solo accesso sicuro per tutti i tuoi servizi. Niente più password: entri con impronta digitale,
+     Windows Hello o chiave hardware. Resistente al phishing per costruzione.</p>
+</section>
+
+<div class="mi-feat">
+  <div class="mi-card"><div class="ico">👆</div><h3>Accesso senza password</h3><p>Impronta, volto o PIN del dispositivo. La passkey resta sul tuo device o nel tuo account Google/Apple, mai su un server.</p></div>
+  <div class="mi-card"><div class="ico">🛡️</div><h3>A prova di phishing</h3><p>La passkey è legata crittograficamente al dominio reale: su un sito clone semplicemente non funziona. Zero credenziali da rubare.</p></div>
+  <div class="mi-card"><div class="ico">🔗</div><h3>Un'identità, tutti i servizi</h3><p>Una sola identità MMOS ID ti fa accedere a tutti i portali collegati, con Single Sign-On. Più dispositivi, una sola chiave.</p></div>
+</div>
+
+<div class="mi-how">
+  <h2>Come funziona</h2>
+  <div class="mi-step"><span class="n">1</span><div><b>Attivazione</b><p>Ricevi la tua identità MMOS ID. Costo una tantum di attivazione.</p></div></div>
+  <div class="mi-step"><span class="n">2</span><div><b>Registri la passkey</b><p>Al primo accesso aggiungi una passkey dal tuo dispositivo: bastano pochi secondi e l'impronta.</p></div></div>
+  <div class="mi-step"><span class="n">3</span><div><b>Entri ovunque</b><p>Da quel momento accedi a tutti i servizi collegati con la sola impronta. Aggiungi altri dispositivi quando vuoi.</p></div></div>
+  <div class="mi-step"><span class="n">4</span><div><b>Rinnovo semplice</b><p>Smarrito un dispositivo o vuoi ruotare la chiave? Il rinnovo è immediato, a costo ridotto.</p></div></div>
+</div>
+
+<section class="mi-cta">
+  <h2>Pronto a dire addio alle password?</h2>
+  <p>Attiva MMOS ID per te o per i tuoi clienti. Per professionisti e agenzie è disponibile come servizio a marchio proprio.</p>
+  <a href="/contatti">Richiedi MMOS ID →</a>
+  <a class="ghost" href="/diventa-collaboratore">Rivendilo ai tuoi clienti</a>
+</section>
+
+<p class="mi-price">Attivazione <b>una tantum</b> · rinnovo chiave a costo ridotto · standard WebAuthn / FIDO2</p>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}
