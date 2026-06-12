@@ -16,6 +16,7 @@ from frappe.model.document import Document
 from frappe.utils import now_datetime
 
 from thanatos_intel.osint import engine
+from thanatos_intel.osint import free_sources as fs
 
 PLAN = {
     "Email":    [("hibp", engine.lookup_email)],
@@ -23,10 +24,12 @@ PLAN = {
     "Domain":   [("rdap", engine.lookup_domain), ("urlscan", engine.lookup_urlscan)],
     "Url":      [("rdap", engine.lookup_domain), ("urlscan", engine.lookup_urlscan)],
     "Hash":     [("virustotal", lambda v: engine.lookup_virustotal(v, kind="hash"))],
-    "Company":  [("opencorporates", engine.lookup_company)],
+    "Company":  [("opencorporates", engine.lookup_company),
+                 ("opensanctions", lambda v: fs.screen_sanctions(v, schema="Company"))],
     "Phone":    [],
-    "Username": [],
-    "Wallet":   [],
+    "Username": [("username", fs.lookup_username)],
+    "Wallet":   [("wallet", fs.lookup_wallet),
+                 ("opensanctions", lambda v: fs.screen_sanctions(v, schema="CryptoWallet"))],
 }
 
 DEEP_EXTRA = {
@@ -34,9 +37,13 @@ DEEP_EXTRA = {
                ("shodan", engine.lookup_shodan),
                ("censys", engine.lookup_censys)],
     "Domain": [("securitytrails", engine.lookup_dns_history),
-               ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain"))],
+               ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain")),
+               ("wayback", fs.lookup_wayback),
+               ("viewdns", fs.lookup_viewdns_iphistory)],
     "Url":    [("securitytrails", engine.lookup_dns_history),
-               ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain"))],
+               ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain")),
+               ("wayback", fs.lookup_wayback)],
+    "Username": [("opensanctions", lambda v: fs.screen_sanctions(v, schema="Person"))],
 }
 
 
@@ -216,6 +223,36 @@ def _score_delta(connector: str, res: dict):
     if connector == "opencorporates":
         if (res.get("total") or 0) == 0:
             return 8, "nessun match registro"
+        return 0, ""
+    if connector == "opensanctions":
+        if res.get("found"):
+            m = res.get("matches") or []
+            topics = {t for h in m for t in (h.get("topics") or [])}
+            if "sanction" in topics or "crime" in topics:
+                return 40, f"{len(m)} match sanzioni/crimine"
+            if "role.pep" in topics or "poi" in topics:
+                return 20, f"{len(m)} match PEP/POI"
+            return 15, f"{len(m)} match liste"
+        return 0, ""
+    if connector == "wallet":
+        if res.get("error"):
+            return 0, ""
+        rx = res.get("total_received_btc") or res.get("balance_eth") or 0
+        n = res.get("tx_count") or 0
+        return 0, f"{res.get('chain', '?')}: {n} tx"
+    if connector == "username":
+        p = res.get("profiles") or []
+        if p:
+            return 0, f"{len(p)} profili: " + ", ".join(x["site"] for x in p)
+        return 0, ""
+    if connector == "wayback":
+        if res.get("archived"):
+            return 0, f"primo snapshot {res.get('first_snapshot') or '?'}"
+        return 0, ""
+    if connector == "viewdns":
+        c = res.get("count") or 0
+        if c:
+            return 0, f"{c} IP storici"
         return 0, ""
     return 0, ""
 
