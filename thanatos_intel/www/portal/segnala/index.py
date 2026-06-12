@@ -22,7 +22,7 @@ def get_context(context):
 
 
 @frappe.whitelist(methods=["POST"])
-def submit_report(entry_type, entry_value, reason):
+def submit_report(entry_type, entry_value, reason, evidence=None):
     if frappe.session.user == "Guest":
         frappe.throw(_("Authentication required"), frappe.PermissionError)
     client = frappe.db.get_value("Investigation Client", {"platform_user": frappe.session.user}, "name")
@@ -34,6 +34,7 @@ def submit_report(entry_type, entry_value, reason):
     doc = frappe.get_doc({
         "doctype": "Blacklist Report", "reporter": client, "entry_type": entry_type,
         "entry_value": entry_value, "reason": reason, "status": "In Review",
+        "evidence": (evidence or "").strip() or None,
     })
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
