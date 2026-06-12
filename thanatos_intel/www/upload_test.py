@@ -211,6 +211,15 @@ def _build_catalog_hint(case_type: str) -> str:
 	return "\n".join(rows[:30])
 
 
+def _meter_ai(tokens_in, tokens_out, model, provider, client=None):
+	"""Conta i token di una chiamata AI (consumo bench Thanatos) in AI Usage Log."""
+	try:
+		from thanatos_intel.billing.ai_meter import record_usage
+		record_usage(client, model, tokens_in or 0, tokens_out or 0, provider=provider, reference="doc_intake")
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "ai_meter upload")
+
+
 def _ai_call(prompt: str) -> tuple[str, str]:
 	"""Chiama prima Ollama, fallback Claude CLI. Ritorna (testo, modello_usato)."""
 	import requests
@@ -222,8 +231,10 @@ def _ai_call(prompt: str) -> tuple[str, str]:
 			timeout=120,
 		)
 		r.raise_for_status()
-		text = r.json().get("response", "").strip()
+		_j = r.json()
+		text = (_j.get("response") or "").strip()
 		if text:
+			_meter_ai(_j.get("prompt_eval_count", 0), _j.get("eval_count", 0), "ollama:" + OLLAMA_MODEL, "OpenCode")
 			return text, f"ollama:{OLLAMA_MODEL}"
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), "ai_call ollama")
@@ -248,6 +259,8 @@ def _ai_call(prompt: str) -> tuple[str, str]:
 			if block.get("type") == "text":
 				text += block.get("text", "")
 		if text:
+			_u = data.get("usage") or {}
+			_meter_ai(_u.get("input_tokens", 0), _u.get("output_tokens", 0), "claude-haiku-4-5", "Anthropic")
 			return text, "claude-haiku-4-5"
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), "ai_call claude")
