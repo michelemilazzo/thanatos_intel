@@ -195,3 +195,37 @@
   </div>
 </footer>
 {%- endmacro %}
+
+{# SEO head — call in {% block head_include %} of public pages:
+   {{ seo_head(title='...', description='...', path='/servizi', image='', type='website') }} #}
+{% macro seo_head(title, description, path='', image='', type='website', published='', modified='') -%}
+{%- set base = 'https://www.thanatos.agency' -%}
+{%- set canon = base ~ (path or (frappe.request.path if frappe.request else '')) -%}
+{%- set img = image or (base ~ '/assets/thanatos_intel/images/thanatos-logo-mark.png') -%}
+<link rel="canonical" href="{{ canon }}"/>
+<meta name="description" content="{{ description }}"/>
+<meta name="robots" content="index, follow, max-image-preview:large"/>
+<meta name="author" content="Thanatos Investigazioni"/>
+<meta property="og:site_name" content="Thanatos Intel"/>
+<meta property="og:locale" content="it_IT"/>
+<meta property="og:type" content="{{ type }}"/>
+<meta property="og:title" content="{{ title }}"/>
+<meta property="og:description" content="{{ description }}"/>
+<meta property="og:url" content="{{ canon }}"/>
+<meta property="og:image" content="{{ img }}"/>
+{% if published %}<meta property="article:published_time" content="{{ published }}"/>{% endif %}
+{% if modified %}<meta property="article:modified_time" content="{{ modified }}"/>{% endif %}
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="{{ title }}"/>
+<meta name="twitter:description" content="{{ description }}"/>
+<meta name="twitter:image" content="{{ img }}"/>
+<meta name="theme-color" content="#0A0E1A"/>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"Thanatos Investigazioni",
+"alternateName":"Thanatos Intel","url":"{{ base }}/","logo":"{{ base }}/assets/thanatos_intel/images/thanatos-logo-mark.png",
+"description":"Intelligence investigativa europea: antifrode, due diligence, OSINT, sequestri.",
+"areaServed":"EU","knowsLanguage":["it","en"],
+"address":{"@type":"PostalAddress","addressLocality":"Constanța","addressCountry":"RO"},
+"sameAs":["https://www.onekeyco.com"]}
+</script>
+{%- endmacro %}

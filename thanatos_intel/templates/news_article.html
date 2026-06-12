@@ -1,13 +1,25 @@
 {% extends "templates/web.html" %}
-{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
 {% block title %}{{ title }} — Thanatos Intel{% endblock %}
 
 {% block head_include %}
-<meta name="description" content="{{ doc.excerpt or doc.meta_description or doc.title }}"/>
-<meta property="og:title" content="{{ doc.title }}"/>
-<meta property="og:description" content="{{ doc.excerpt or '' }}"/>
-{% if doc.featured_image %}<meta property="og:image" content="{{ doc.featured_image }}"/>{% endif %}
-<meta property="og:type" content="article"/>
+{{ seo_head(
+   title=doc.title,
+   description=(doc.meta_description or doc.excerpt or doc.title),
+   path='/' ~ doc.route if doc.route else '',
+   image=doc.featured_image or '',
+   type='article',
+   published=doc.published_at or '',
+   modified=doc.modified or '') }}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"NewsArticle",
+"headline":{{ doc.title|tojson }},
+"description":{{ (doc.meta_description or doc.excerpt or '')|tojson }},
+{% if doc.featured_image %}"image":["{{ doc.featured_image }}"],{% endif %}
+"datePublished":"{{ doc.published_at }}","dateModified":"{{ doc.modified }}",
+"author":{"@type":"Organization","name":"Thanatos Investigazioni"},
+"publisher":{"@type":"Organization","name":"Thanatos Intel","logo":{"@type":"ImageObject","url":"https://www.thanatos.agency/assets/thanatos_intel/images/thanatos-logo-mark.png"}}}
+</script>
 <style>
 :root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
 body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New Roman',serif;}

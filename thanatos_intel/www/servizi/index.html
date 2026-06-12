@@ -1,10 +1,13 @@
 {% extends "templates/web.html" %}
-{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
 
 {% block title %}Servizi — Thanatos Intel{% endblock %}
 
 {% block head_include %}
-<meta name="description" content="Catalogo completo dei servizi investigativi Thanatos Intel: verifiche rapide, antifrode, cyber e financial intelligence, due diligence, investigazioni complete. Prezzi trasparenti."/>
+{{ seo_head(
+   title='Servizi — Thanatos Intel',
+   description='Catalogo completo dei servizi investigativi Thanatos Intel: verifiche rapide, antifrode, cyber e financial intelligence, due diligence, investigazioni complete. Prezzi trasparenti.',
+   path='/servizi') }}
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;

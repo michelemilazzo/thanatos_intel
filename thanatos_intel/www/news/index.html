@@ -1,8 +1,12 @@
 {% extends "templates/web.html" %}
-{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
 {% block title %}News — Thanatos Intel{% endblock %}
 
 {% block head_include %}
+{{ seo_head(
+   title='News — Thanatos Intel',
+   description='Newsroom Thanatos Intel: analisi e notizie quotidiane su antifrode, cyber intelligence, due diligence, OSINT e financial crime.',
+   path='/news') }}
 <style>
 :root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
 body.news-list{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}

@@ -1,8 +1,12 @@
 {% extends "templates/web.html" %}
-{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
 {% block title %}Verifica Blacklist — Thanatos{% endblock %}
 
 {% block head_include %}
+{{ seo_head(
+   title='Verifica Blacklist — Thanatos',
+   description='Verifica gratuita se un soggetto, azienda, IBAN o wallet è segnalato nella blacklist antifrode Thanatos Intel.',
+   path='/verifica-blacklist') }}
 <style>
 :root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;--red:#C0392B;--green:#1E8449;}
 body.bl-public{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}

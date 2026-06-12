@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /api
+Disallow: /portal
+Disallow: /private
+Disallow: /login
+Disallow: /update-password
+Disallow: /kyc-ident
+Disallow: /visa_case_status
+Disallow: /upload-test
+
+Sitemap: https://www.thanatos.agency/sitemap.xml

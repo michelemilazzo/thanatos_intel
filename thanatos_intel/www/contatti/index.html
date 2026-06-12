@@ -1,10 +1,13 @@
 {% extends "templates/web.html" %}
-{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
 
 {% block title %}Contatti — Thanatos Intel{% endblock %}
 
 {% block head_include %}
-<meta name="description" content="Contatta Thanatos Intel: richieste informazioni, preventivi, collaborazioni. Riservatezza garantita."/>
+{{ seo_head(
+   title='Contatti — Thanatos Intel',
+   description='Contatta Thanatos Intel: richieste informazioni, preventivi, collaborazioni. Riservatezza garantita.',
+   path='/contatti') }}
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;

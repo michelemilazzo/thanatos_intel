@@ -1,10 +1,13 @@
 {% extends "templates/web.html" %}
-{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
 
 {% block title %}Chi siamo — Thanatos Agency{% endblock %}
 
 {% block head_include %}
-<meta name="description" content="Thanatos Agency: intelligence investigativa europea. Antifrode, due diligence, OSINT, due diligence diplomatica, cyber e corporate intelligence."/>
+{{ seo_head(
+   title='Chi siamo — Thanatos Agency',
+   description='Thanatos Agency: intelligence investigativa europea. Antifrode, due diligence, OSINT, due diligence diplomatica, cyber e corporate intelligence.',
+   path='/about') }}
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
 <style>
 body.thanatos-about, body.thanatos-about .page_content, body.thanatos-about .container,
