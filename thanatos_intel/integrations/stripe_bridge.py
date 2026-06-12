@@ -219,6 +219,76 @@ def create_recurring_checkout(client_name: str, service_code: str) -> dict:
     return {"id": session.id, "url": session.url}
 
 
+def _catalog_price(service_code, client_name):
+    cat = frappe.db.get_value("Service Catalog", {"service_code": service_code, "is_active": 1},
+                              ["service_name", "price", "currency"], as_dict=True)
+    if not cat:
+        frappe.throw(_("Servizio non disponibile."))
+    ctype = frappe.db.get_value("Investigation Client", client_name, "client_type") or "Individual"
+    try:
+        from thanatos_intel.portal_system.doctype.service_catalog.service_catalog import ServiceCatalog
+        price = float(ServiceCatalog.get_price(service_code, ctype))
+    except Exception:
+        price = float(cat.price or 0)
+    return cat, price
+
+
+@frappe.whitelist()
+def create_onetime_checkout(client_name: str, service_code: str) -> dict:
+    """Acquisto self-serve di un singolo servizio del catalogo (pay-per-use).
+    Prepagato: Stripe Checkout one-time (carta). Credito concesso: a bonifico mensile."""
+    cat, price = _catalog_price(service_code, client_name)
+    if price <= 0:
+        frappe.throw(_("Servizio senza prezzo acquistabile online."))
+
+    ue = frappe.get_doc({"doctype": "Usage Event", "client": client_name, "service": service_code,
+                         "status": "Pending", "quantity": 1, "unit_price": price, "total": price,
+                         "currency": cat.currency or "EUR"})
+    ue.insert(ignore_permissions=True)
+
+    if _is_credit_client(client_name):
+        from thanatos_intel.billing.credits import spend_credit
+        spend_credit(client_name, price, "Usage Event", ue.name, "Acquisto servizio %s" % service_code)
+        ue.db_set("status", "Invoiced", commit=True)
+        return {"credit": True, "message": _("Servizio {0} attivato — fatturato a bonifico mensile.").format(cat.service_name)}
+
+    stripe = _get_stripe()
+    customer_id = get_or_create_stripe_customer(client_name)
+    cents = int(round(price * 100))
+    session = stripe.checkout.Session.create(
+        mode="payment", customer=customer_id,
+        line_items=[{"price_data": {"currency": (cat.currency or "eur").lower(), "unit_amount": cents,
+                     "product_data": {"name": "Thanatos · %s" % cat.service_name}}, "quantity": 1}],
+        success_url=_success_url(), cancel_url=_cancel_url(),
+        payment_intent_data={"metadata": {"thanatos_usage_event": ue.name, "thanatos_client": client_name}},
+        metadata={"thanatos_usage_event": ue.name, "thanatos_client": client_name, "thanatos_service": service_code},
+        billing_address_collection="required", locale="it",
+    )
+    ue.db_set("stripe_session_id", session.id, commit=True)
+    return {"id": session.id, "url": session.url}
+
+
+def _fulfil_onetime(ue_name, session):
+    """Webhook: pagamento one-time completato → Usage Event Paid + Sales Invoice."""
+    if not frappe.db.exists("Usage Event", ue_name):
+        return {"ok": True, "skipped": "no_usage_event"}
+    ue = frappe.get_doc("Usage Event", ue_name)
+    if ue.status == "Paid":
+        return {"ok": True, "already": True}
+    pi = session.get("payment_intent") if isinstance(session, dict) else getattr(session, "payment_intent", None)
+    ue.db_set("status", "Paid", commit=False)
+    ue.db_set("paid_at", now_datetime(), commit=False)
+    if pi:
+        ue.db_set("stripe_payment_intent", pi, commit=False)
+    frappe.db.commit()
+    try:
+        from thanatos_intel.billing.internal_invoicing import invoice_pay_per_use_purchase
+        invoice_pay_per_use_purchase(ue.client, ue.service, stripe_payment_intent=pi, amount=ue.total)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "onetime invoice")
+    return {"ok": True, "usage_event": ue_name, "status": "Paid"}
+
+
 @frappe.whitelist()
 def create_invoice_for_usage(usage_event_name: str) -> dict:
     """Per pay-per-use: crea un Invoice Item one-shot al cliente Stripe."""
@@ -373,6 +443,9 @@ def handle_event(event: dict) -> dict:
         return _upsert_subscription_record(obj)
 
     if etype == "checkout.session.completed":
+        ue_name = (obj.get("metadata") or {}).get("thanatos_usage_event")
+        if ue_name and obj.get("mode") == "payment":
+            return _fulfil_onetime(ue_name, obj)
         sub_id = obj.get("subscription")
         if sub_id:
             return sync_subscription(sub_id)

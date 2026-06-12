@@ -77,7 +77,14 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     Servizio richiesto dall'articolo: <strong style="color:#C8A96E">{{ requested_service.service_name }}</strong>
     <span style="color:#7A8294">· {{ requested_service.category }} · {{ requested_service.service_code }}
     {% if requested_service.price %}· {{ "%.0f"|format(requested_service.price) }} {{ requested_service.currency or 'EUR' }}{% endif %}</span><br>
-    <span style="color:#7A8294;font-size:13px">Scegli un piano qui sotto o contatta il tuo referente per attivarlo sulla tua pratica.</span>
+    <div style="margin-top:10px;">
+      {% if is_credit %}
+      <button class="btn solid" {% if not client %}disabled{% endif %} onclick="buyService('{{ requested_service.service_code|e }}')">Attiva (bonifico mensile) →</button>
+      {% else %}
+      <button class="btn solid" {% if not stripe_configured or not client %}disabled{% endif %} onclick="buyService('{{ requested_service.service_code|e }}')">Paga con carta {{ "%.0f"|format(requested_service.price or 0) }}€ →</button>
+      {% endif %}
+      <span style="color:#7A8294;font-size:12px;margin-left:8px">acquisto singolo, senza abbonamento</span>
+    </div>
   </div>
   {% endif %}
 
@@ -201,6 +208,28 @@ async function checkoutAddon(serviceCode) {
   if (!CLIENT) { alert("Cliente non collegato"); return; }
   try {
     const r = await fetch("/api/method/thanatos_intel.integrations.stripe_bridge.create_recurring_checkout", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Content-Type": "application/x-www-form-urlencoded", "X-Frappe-CSRF-Token": CSRF},
+      body: new URLSearchParams({client_name: CLIENT, service_code: serviceCode}).toString(),
+    });
+    const j = await r.json();
+    if (j.message && j.message.url) {
+      window.location = j.message.url;
+    } else if (j.message && j.message.credit) {
+      alert(j.message.message); location.reload();
+    } else {
+      alert("Errore: " + (j._error_message || j.exc || JSON.stringify(j)));
+    }
+  } catch (e) {
+    alert("Errore: " + e.message);
+  }
+}
+
+async function buyService(serviceCode) {
+  if (!CLIENT) { alert("Cliente non collegato"); return; }
+  try {
+    const r = await fetch("/api/method/thanatos_intel.integrations.stripe_bridge.create_onetime_checkout", {
       method: "POST",
       credentials: "include",
       headers: {"Content-Type": "application/x-www-form-urlencoded", "X-Frappe-CSRF-Token": CSRF},
