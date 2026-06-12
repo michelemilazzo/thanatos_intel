@@ -7,6 +7,7 @@ il collaboratore accede a /collaboratore (portale con referral e commissioni).
 import frappe
 
 no_cache = 1
+sitemap = 1
 
 ROLE_BY_CATEGORY = {
     "Investigatore": "Investigator",

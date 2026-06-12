@@ -6,6 +6,7 @@ I contenuti feature dei piani sono espositivi; il prezzo viene dal catalogo.
 import frappe
 
 no_cache = 1
+sitemap = 1
 
 PLAN_CODES = ["SVC-AB-001", "SVC-AB-002", "SVC-AB-003", "SVC-AB-004"]
 

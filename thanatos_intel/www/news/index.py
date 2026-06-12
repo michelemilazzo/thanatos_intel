@@ -1,5 +1,7 @@
 import frappe
 
+sitemap = 1
+
 
 def _has(doctype):
 	try:

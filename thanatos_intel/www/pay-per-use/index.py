@@ -10,6 +10,7 @@ Filtro per `category in ALLOWED_CATEGORIES` + is_active=1.
 import frappe
 
 no_cache = 1
+sitemap = 1
 
 ALLOWED_CATEGORIES = ["Verifiche Rapide", "Antifrode", "Cyber Intelligence"]
 

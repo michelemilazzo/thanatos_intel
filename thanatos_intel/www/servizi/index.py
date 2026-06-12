@@ -7,6 +7,7 @@ ad ancore per categoria e CTA verso /registrati (funnel preventivo).
 import frappe
 
 no_cache = 1
+sitemap = 1
 
 CAT_META = {
     "Verifiche Rapide":        {"icon": "⚡", "subtitle": "Wallet, IBAN, IP, domini, targhe: risposte in ore, non giorni."},
