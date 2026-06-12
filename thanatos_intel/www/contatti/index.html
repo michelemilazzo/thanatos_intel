@@ -1,0 +1,104 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Contatti — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="Contatta Thanatos Intel: richieste informazioni, preventivi, collaborazioni. Riservatezza garantita."/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
+  --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;}
+body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page .container-fluid,body.ppu-page main,body.ppu-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif!important;}
+.ppu-hero{padding:96px 24px 48px;text-align:center;background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.ppu-hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;}
+.ppu-hero h1{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:42px;color:#fff;margin:14px 0 12px;}
+.ppu-hero h1 em{font-style:normal;color:var(--gold);}
+.ppu-hero p{color:#B8BCCC;max-width:640px;margin:0 auto;font-size:16px;line-height:1.6;}
+
+.ct-wrap{max-width:1000px;margin:56px auto;padding:0 24px;display:grid;grid-template-columns:1fr 1.3fr;gap:40px;}
+@media(max-width:860px){.ct-wrap{grid-template-columns:1fr;}}
+.ct-info h3{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:16px;letter-spacing:3px;text-transform:uppercase;margin:0 0 18px;}
+.ct-info .row{margin-bottom:18px;}
+.ct-info .row b{display:block;color:#fff;font-size:13px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+.ct-info .row p,.ct-info .row a{color:#B8BCCC;font-size:14px;margin:0;text-decoration:none;}
+.ct-info .row a:hover{color:var(--gold);}
+
+.ct-form{background:var(--panel);border:1px solid var(--line);padding:28px;}
+.ct-form label{display:block;color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:14px 0 5px;}
+.ct-form input,.ct-form textarea{width:100%;padding:11px;background:var(--navy);border:1px solid var(--line);
+  color:var(--text);font-size:14px;border-radius:3px;}
+.ct-form input:focus,.ct-form textarea:focus{outline:none;border-color:var(--gold);}
+.ct-form button{margin-top:22px;width:100%;padding:14px;background:var(--gold);border:0;color:var(--navy);
+  font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:pointer;transition:background .15s;}
+.ct-form button:hover{background:var(--gold2);}
+.ct-form .msg{margin-top:12px;font-size:13px;}
+.ct-form .msg.ok{color:#5fbf77;} .ct-form .msg.err{color:#e06c6c;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('contatti') }}
+
+<section class="ppu-hero">
+  <div class="eyebrow">Contatti</div>
+  <h1>Parla con <em>noi</em></h1>
+  <p>Richieste informazioni, preventivi su misura, casi complessi. Ogni comunicazione è trattata
+     con la massima riservatezza.</p>
+</section>
+
+<div class="ct-wrap">
+  <div class="ct-info">
+    <h3>Recapiti</h3>
+    <div class="row"><b>Email</b><a href="mailto:info@thanatos.agency">info@thanatos.agency</a></div>
+    <div class="row"><b>Portale clienti</b><p>I clienti attivi possono aprire richieste direttamente dal <a href="/portal">portale riservato</a>.</p></div>
+    <div class="row"><b>Collaborazioni</b><p>Professionisti e agenzie: usa la pagina <a href="/diventa-collaboratore">Diventa collaboratore</a>.</p></div>
+    <div class="row"><b>Sede</b><p>Thanatos Investigazioni S.R.L. — Romania, CUI RO 46901022</p></div>
+    <div class="row"><b>Riservatezza</b><p>Le richieste sono accessibili solo al team operativo. Nessun dato condiviso con terzi.</p></div>
+  </div>
+
+  <form class="ct-form" id="ct-form" onsubmit="return submitContact(event)">
+    <label>Nome e cognome *</label>
+    <input id="c-name" required>
+    <label>Email *</label>
+    <input id="c-email" type="email" required>
+    <label>Telefono</label>
+    <input id="c-phone">
+    <label>Azienda / Studio</label>
+    <input id="c-company">
+    <label>Messaggio *</label>
+    <textarea id="c-msg" rows="6" required placeholder="Descrivi la tua esigenza. Non inserire dati sensibili di terzi in questa fase."></textarea>
+    <button type="submit">Invia richiesta</button>
+    <div class="msg" id="c-result"></div>
+  </form>
+</div>
+
+<script>
+const CSRF = "{{ csrf_token }}";
+async function submitContact(ev){
+  ev.preventDefault();
+  const msg = document.getElementById('c-result');
+  msg.className='msg'; msg.textContent='Invio…';
+  const fd = new FormData();
+  fd.append('full_name', document.getElementById('c-name').value);
+  fd.append('email', document.getElementById('c-email').value);
+  fd.append('phone', document.getElementById('c-phone').value);
+  fd.append('company', document.getElementById('c-company').value);
+  fd.append('message', document.getElementById('c-msg').value);
+  try{
+    const r = await fetch('/api/method/thanatos_intel.www.contatti.index.submit_contact',
+      {method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd});
+    const d = await r.json(); const m = d.message || d;
+    if(m && m.ok){ msg.className='msg ok'; msg.textContent='Richiesta inviata. Ti risponderemo al più presto.'; document.getElementById('ct-form').reset(); }
+    else throw new Error((m && m.message) || 'Errore');
+  }catch(e){ msg.className='msg err'; msg.textContent=(e.message||'Errore di rete').replace(/<[^>]+>/g,''); }
+  return false;
+}
+</script>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}

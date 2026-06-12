@@ -1,0 +1,116 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Diventa collaboratore — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="Collabora con Thanatos Intel: avvocati, commercialisti, investigatori, consulenti. Proponi i nostri servizi ai tuoi clienti e guadagna commissioni."/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
+  --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;}
+body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page .container-fluid,body.ppu-page main,body.ppu-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif!important;}
+.ppu-hero{padding:96px 24px 48px;text-align:center;background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.ppu-hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;}
+.ppu-hero h1{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:42px;color:#fff;margin:14px 0 12px;}
+.ppu-hero h1 em{font-style:normal;color:var(--gold);}
+.ppu-hero p{color:#B8BCCC;max-width:680px;margin:0 auto;font-size:16px;line-height:1.6;}
+
+.dc-wrap{max-width:1100px;margin:56px auto;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:40px;}
+@media(max-width:900px){.dc-wrap{grid-template-columns:1fr;}}
+.dc-why h3{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:16px;letter-spacing:3px;text-transform:uppercase;margin:0 0 18px;}
+.dc-why .item{display:flex;gap:14px;margin-bottom:22px;}
+.dc-why .item .n{font-family:Georgia,serif;color:var(--gold);font-size:22px;line-height:1;}
+.dc-why .item b{display:block;color:#fff;font-size:15px;margin-bottom:4px;}
+.dc-why .item p{color:#B8BCCC;font-size:13px;line-height:1.55;margin:0;}
+
+.dc-form{background:var(--panel);border:1px solid var(--line);padding:28px;}
+.dc-form h3{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:16px;letter-spacing:3px;text-transform:uppercase;margin:0 0 18px;}
+.dc-form label{display:block;color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:14px 0 5px;}
+.dc-form input,.dc-form select,.dc-form textarea{width:100%;padding:11px;background:var(--navy);border:1px solid var(--line);
+  color:var(--text);font-size:14px;border-radius:3px;}
+.dc-form input:focus,.dc-form select:focus,.dc-form textarea:focus{outline:none;border-color:var(--gold);}
+.dc-form button{margin-top:22px;width:100%;padding:14px;background:var(--gold);border:0;color:var(--navy);
+  font-size:12px;letter-spacing:3px;text-transform:uppercase;font-weight:700;cursor:pointer;transition:background .15s;}
+.dc-form button:hover{background:var(--gold2);}
+.dc-form .msg{margin-top:12px;font-size:13px;}
+.dc-form .msg.ok{color:#5fbf77;} .dc-form .msg.err{color:#e06c6c;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('diventa-collaboratore') }}
+
+<section class="ppu-hero">
+  <div class="eyebrow">Programma collaboratori</div>
+  <h1>Diventa <em>collaboratore</em></h1>
+  <p>Avvocati, commercialisti, investigatori, consulenti, agenzie: proponi i servizi Thanatos ai tuoi clienti,
+     monitora le pratiche dal portale dedicato e ricevi commissioni su ogni incarico attribuito.</p>
+</section>
+
+<div class="dc-wrap">
+  <div class="dc-why">
+    <h3>Come funziona</h3>
+    <div class="item"><span class="n">I</span><div><b>Candidati</b><p>Compila il form con la tua categoria professionale. Verifichiamo la candidatura entro pochi giorni lavorativi.</p></div></div>
+    <div class="item"><span class="n">II</span><div><b>Ricevi il tuo link referral</b><p>Una volta approvato, accedi al portale collaboratori: catalogo completo con i servizi della tua specializzazione in evidenza e link referral personale.</p></div></div>
+    <div class="item"><span class="n">III</span><div><b>Proponi e segnala</b><p>Condividi il link o inserisci direttamente i clienti dal portale: ogni incarico resta attribuito a te.</p></div></div>
+    <div class="item"><span class="n">IV</span><div><b>Commissioni trasparenti</b><p>Vedi clienti attribuiti, fatturato generato e commissioni maturate in tempo reale dal portale. Pagamenti tracciati.</p></div></div>
+  </div>
+
+  <form class="dc-form" id="dc-form" onsubmit="return submitApp(event)">
+    <h3>Candidatura</h3>
+    <label>Nome e cognome / Ragione sociale *</label>
+    <input id="a-name" required>
+    <label>Email *</label>
+    <input id="a-email" type="email" required>
+    <label>Categoria professionale *</label>
+    <select id="a-cat" required>
+      {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+    <label>Telefono</label>
+    <input id="a-phone">
+    <label>Zona operativa (città/regione)</label>
+    <input id="a-region">
+    <label>Albo / licenza (se applicabile)</label>
+    <input id="a-license" placeholder="es. Ordine Avvocati Milano, licenza art.134 TULPS">
+    <label>Messaggio</label>
+    <textarea id="a-msg" rows="3" placeholder="Raccontaci come vorresti collaborare"></textarea>
+    <button type="submit">Invia candidatura</button>
+    <div class="msg" id="a-result"></div>
+  </form>
+</div>
+
+<script>
+const CSRF = "{{ csrf_token }}";
+async function submitApp(ev){
+  ev.preventDefault();
+  const msg = document.getElementById('a-result');
+  msg.className = 'msg'; msg.textContent = 'Invio…';
+  const fd = new FormData();
+  fd.append('applicant_name', document.getElementById('a-name').value);
+  fd.append('email', document.getElementById('a-email').value);
+  fd.append('category', document.getElementById('a-cat').value);
+  fd.append('phone', document.getElementById('a-phone').value);
+  fd.append('region', document.getElementById('a-region').value);
+  fd.append('license_info', document.getElementById('a-license').value);
+  fd.append('message', document.getElementById('a-msg').value);
+  try{
+    const r = await fetch('/api/method/thanatos_intel.collaborator_portal.apply_public',
+      {method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd});
+    const d = await r.json(); const m = d.message || d;
+    if(m && m.ok){ msg.className='msg ok'; msg.textContent='Candidatura inviata. Ti contatteremo dopo la verifica.'; document.getElementById('dc-form').reset(); }
+    else throw new Error((m && m.message) || 'Errore');
+  }catch(e){
+    msg.className='msg err';
+    msg.textContent = (e.message||'Errore di rete').replace(/<[^>]+>/g,'');
+  }
+  return false;
+}
+</script>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}

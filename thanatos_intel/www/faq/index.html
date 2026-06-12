@@ -1,0 +1,86 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}FAQ — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<meta name="description" content="Domande frequenti su Thanatos Intel: onboarding KYC, prezzi, tempi di consegna, riservatezza, validità legale dei report."/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
+  --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;}
+body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page .container-fluid,body.ppu-page main,body.ppu-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif!important;}
+.ppu-hero{padding:96px 24px 48px;text-align:center;background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.ppu-hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;}
+.ppu-hero h1{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:42px;color:#fff;margin:14px 0 12px;}
+.ppu-hero h1 em{font-style:normal;color:var(--gold);}
+.ppu-hero p{color:#B8BCCC;max-width:640px;margin:0 auto;font-size:16px;line-height:1.6;}
+
+.faq-wrap{max-width:840px;margin:56px auto;padding:0 24px 56px;}
+.faq-group{margin-bottom:48px;}
+.faq-group h2{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:18px;letter-spacing:3px;text-transform:uppercase;margin:0 0 18px;}
+details{background:var(--panel);border:1px solid var(--line);margin-bottom:10px;}
+details[open]{border-color:var(--gold);}
+summary{padding:16px 20px;cursor:pointer;color:#fff;font-size:15px;list-style:none;position:relative;padding-right:44px;}
+summary::-webkit-details-marker{display:none;}
+summary:after{content:"+";position:absolute;right:18px;top:50%;transform:translateY(-50%);color:var(--gold);font-size:20px;}
+details[open] summary:after{content:"–";}
+details .a{padding:0 20px 18px;color:#B8BCCC;font-size:14px;line-height:1.65;}
+details .a a{color:var(--gold);text-decoration:none;}
+.faq-cta{text-align:center;padding:32px;background:var(--navy2);border:1px solid var(--line);}
+.faq-cta p{color:#B8BCCC;margin:0 0 16px;font-size:14px;}
+.faq-cta a{display:inline-block;padding:12px 28px;border:1px solid var(--gold);color:var(--gold);text-decoration:none;
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700;}
+.faq-cta a:hover{background:var(--gold);color:var(--navy);}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('faq') }}
+
+<section class="ppu-hero">
+  <div class="eyebrow">Domande frequenti</div>
+  <h1>FAQ <em>Thanatos</em></h1>
+  <p>Onboarding, prezzi, tempi, riservatezza e validità dei report. Se non trovi la risposta, <a href="/contatti" style="color:var(--gold);">contattaci</a>.</p>
+</section>
+
+<div class="faq-wrap">
+  <div class="faq-group">
+    <h2>Onboarding e KYC</h2>
+    <details><summary>Perché devo completare la verifica KYC/KYB?</summary><div class="a">Siamo un'agenzia investigativa: la legge e le nostre policy impongono di sapere chi è il cliente prima di operare. La verifica identità (KYC per privati, KYB per aziende) protegge te e noi, ed è richiesta una sola volta.</div></details>
+    <details><summary>Quanto dura l'attivazione dell'account?</summary><div class="a">La registrazione è immediata. La verifica KYC richiede in genere 24–48 ore lavorative; per i piani Legal ed Enterprise è previsto anche un colloquio preliminare.</div></details>
+    <details><summary>Posso registrarmi come azienda o studio professionale?</summary><div class="a">Sì: in fase di <a href="/registrati">registrazione</a> scegli il tuo profilo (azienda, studio legale, commercialista, banca…). Per studi legali e commercialisti sono previste convenzioni dedicate.</div></details>
+  </div>
+
+  <div class="faq-group">
+    <h2>Prezzi e pagamenti</h2>
+    <details><summary>I prezzi sul sito sono definitivi?</summary><div class="a">I prezzi del <a href="/servizi">catalogo</a> sono i listini di partenza ("da €"): per i servizi standard sono quelli effettivi, per i casi complessi ricevi un preventivo puntuale prima dell'incarico. Nessun costo nascosto.</div></details>
+    <details><summary>Come si paga?</summary><div class="a">Carta (Stripe, PCI-DSS) o bonifico per gli importi maggiori. Ogni pagamento è accompagnato da fattura.</div></details>
+    <details><summary>Posso usare i servizi senza abbonamento?</summary><div class="a">Sì, tutto il catalogo è disponibile <a href="/pay-per-use">pay-per-use</a>. I <a href="/pricing">piani</a> convengono a chi ha volumi ricorrenti.</div></details>
+  </div>
+
+  <div class="faq-group">
+    <h2>Tempi e consegna</h2>
+    <details><summary>Quanto tempo richiede un servizio?</summary><div class="a">Ogni servizio del catalogo dichiara il suo SLA in ore (es. verifiche rapide: poche ore; due diligence complete: giorni). Per le urgenze è disponibile il canale prioritario con moltiplicatore indicato a catalogo.</div></details>
+    <details><summary>Come ricevo i risultati?</summary><div class="a">Dal portale riservato, in report strutturati con hash SHA-256 e chain of custody. Niente email con allegati sensibili.</div></details>
+  </div>
+
+  <div class="faq-group">
+    <h2>Riservatezza e validità legale</h2>
+    <details><summary>Le mie richieste sono riservate?</summary><div class="a">Sì. Le richieste sono visibili solo al team operativo assegnato, i dati sono cifrati e non vengono mai condivisi con terzi. Operiamo secondo GDPR e normativa rumena (L. 190/2018).</div></details>
+    <details><summary>I report sono utilizzabili in giudizio?</summary><div class="a">I report sono redatti con metodologia forense (fonti documentate, chain of custody, hash). L'utilizzabilità dipende dall'ordinamento e dal procedimento: per i casi legali consigliamo il piano Legal con perizia asseverabile.</div></details>
+    <details><summary>Svolgete attività illegali (accessi abusivi, pedinamenti non autorizzati)?</summary><div class="a">No. Operiamo esclusivamente con fonti aperte (OSINT), banche dati lecite e attività autorizzate dal mandato. Rifiutiamo incarichi fuori dal perimetro di legge.</div></details>
+  </div>
+
+  <div class="faq-cta">
+    <p>Non hai trovato la risposta che cercavi?</p>
+    <a href="/contatti">Contattaci →</a>
+  </div>
+</div>
+
+</body>
+{{ thanatos_footer() }}
+{% endblock %}
