@@ -5,7 +5,7 @@
 {% block head_include %}
 <style>
 :root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
-body.osint-page{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+body{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
 .osint-wrap{max-width:1240px;margin:0 auto;padding:32px 24px;}
 .osint-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:24px;flex-wrap:wrap;}
 .osint-head h1{color:var(--gold);font-weight:400;letter-spacing:5px;font-size:24px;margin:0;}
@@ -56,7 +56,6 @@ body.osint-page{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
 
 {% block content %}
 {{ thanatos_header('portal') }}
-<body class="osint-page">
 <div class="osint-wrap">
   <div class="osint-head">
     <div>
