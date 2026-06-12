@@ -7,10 +7,33 @@ import re
 from datetime import datetime, timezone
 
 import frappe
-from frappe.utils import now_datetime, slug as _slug
+from frappe.utils import now_datetime
 
 
 # ---------- helpers ----------
+
+def _slugify(text: str) -> str:
+	"""Slug ASCII URL-safe: translittera accenti, rimuove punteggiatura/emoji,
+	collassa i trattini. (frappe.utils.slug fa solo lower()+spazi->trattini.)"""
+	import unicodedata
+	if not text:
+		return ""
+	text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+	text = re.sub(r"[^a-z0-9]+", "-", text.lower())
+	return text.strip("-")
+
+
+def _unique_slug(base: str, fallback: str = "") -> str:
+	"""Garantisce uno slug univoco fra le News Article (append -2, -3...)."""
+	base = base[:160] or (fallback or "news")[:16]
+	slug = base
+	i = 2
+	while frappe.db.exists("News Article", {"slug": slug}):
+		suffix = "-%d" % i
+		slug = base[:160 - len(suffix)] + suffix
+		i += 1
+	return slug
+
 
 def _fingerprint(*parts) -> str:
 	h = hashlib.sha256()
@@ -134,7 +157,7 @@ def fetch_source(name: str) -> dict:
 			doc = frappe.get_doc({
 				"doctype": "News Article",
 				"title": title,
-				"slug": _slug(title)[:160] or fp[:16],
+				"slug": _unique_slug(_slugify(title), fp),
 				"category": category,
 				"excerpt": excerpt,
 				"content": content,
