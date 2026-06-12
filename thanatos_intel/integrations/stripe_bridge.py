@@ -14,6 +14,9 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime, get_datetime
 
+# servizi ricorrenti mensili del Service Catalog acquistabili self-service (add-on)
+ADDON_SERVICE_CODES = ["SVC-AB-005", "SVC-AB-006", "SVC-AB-007"]
+
 
 def _get_stripe():
     key = frappe.conf.get("stripe_secret_key")
@@ -118,6 +121,66 @@ def create_checkout_session(client_name: str, plan_name: str, trial_days: int = 
         allow_promotion_codes=True,
         billing_address_collection="required",
         metadata={"thanatos_client": client_name, "thanatos_plan": plan_name},
+        locale="it",
+    )
+    return {"id": session.id, "url": session.url}
+
+
+def _ensure_catalog_recurring_price(service_code: str) -> str:
+    """Price ricorrente mensile per un servizio del Service Catalog.
+    Usa la lookup_key di Stripe come registro (nessuna cache locale): se il prezzo
+    e cambiato crea un nuovo Price e gli trasferisce la lookup_key."""
+    stripe = _get_stripe()
+    cat = frappe.db.get_value("Service Catalog", {"service_code": service_code, "is_active": 1},
+                              ["service_name", "price", "currency"], as_dict=True)
+    if not cat:
+        frappe.throw(_("Servizio {0} non trovato o non attivo").format(service_code))
+    amount_cents = int(round(float(cat.price or 0) * 100))
+    if amount_cents <= 0:
+        frappe.throw(_("Servizio {0} senza prezzo").format(service_code))
+
+    lookup = f"thanatos_{service_code}_m"
+    existing = stripe.Price.list(lookup_keys=[lookup], active=True, limit=1)
+    if existing.data and existing.data[0].unit_amount == amount_cents:
+        return existing.data[0].id
+
+    product = stripe.Product.create(
+        name=f"Thanatos {cat.service_name}",
+        metadata={"thanatos_service": service_code},
+    )
+    price = stripe.Price.create(
+        product=product.id,
+        unit_amount=amount_cents,
+        currency=(cat.currency or "EUR").lower(),
+        recurring={"interval": "month"},
+        lookup_key=lookup,
+        transfer_lookup_key=True,
+        metadata={"thanatos_service": service_code},
+    )
+    return price.id
+
+
+@frappe.whitelist()
+def create_recurring_checkout(client_name: str, service_code: str) -> dict:
+    """Checkout subscription per un servizio ricorrente del Service Catalog (add-on
+    mensile: monitoraggio, alert di settore, newsletter premium)."""
+    stripe = _get_stripe()
+    if service_code not in ADDON_SERVICE_CODES:
+        frappe.throw(_("Servizio non acquistabile in self-service."))
+    customer_id = get_or_create_stripe_customer(client_name)
+    price_id = _ensure_catalog_recurring_price(service_code)
+
+    session = stripe.checkout.Session.create(
+        mode="subscription",
+        customer=customer_id,
+        line_items=[{"price": price_id, "quantity": 1}],
+        success_url=_success_url(),
+        cancel_url=_cancel_url(),
+        subscription_data={"metadata": {"thanatos_client": client_name,
+                                        "thanatos_service": service_code}},
+        allow_promotion_codes=True,
+        billing_address_collection="required",
+        metadata={"thanatos_client": client_name, "thanatos_service": service_code},
         locale="it",
     )
     return {"id": session.id, "url": session.url}

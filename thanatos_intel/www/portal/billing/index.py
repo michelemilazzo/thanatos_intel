@@ -22,6 +22,14 @@ def get_context(context):
         order_by="monthly_price asc",
     )
 
+    from thanatos_intel.integrations.stripe_bridge import ADDON_SERVICE_CODES
+    context.addons = frappe.get_all(
+        "Service Catalog",
+        filters={"service_code": ["in", ADDON_SERVICE_CODES], "is_active": 1},
+        fields=["service_code", "service_name", "price", "currency", "description"],
+        order_by="price asc",
+    )
+
     context.current_sub = None
     if client_name:
         subs = frappe.get_all(

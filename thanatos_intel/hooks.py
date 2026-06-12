@@ -121,6 +121,9 @@ doc_events={
  'Investigation Subscription Plan': {
    'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
  },
+ 'Service Catalog': {
+   'on_update': 'thanatos_intel.billing.plan_sync.on_service_catalog_update',
+ },
  'Party Payout': {
    'after_insert': 'thanatos_intel.billing.credits.on_party_payout_update',
    'on_update': 'thanatos_intel.billing.credits.on_party_payout_update',

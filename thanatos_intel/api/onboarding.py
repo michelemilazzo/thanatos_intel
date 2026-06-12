@@ -89,14 +89,20 @@ def confirm_payment_method(payment_method_id: str) -> dict:
 
     c.db_set("stripe_payment_method", payment_method_id, commit=False)
     c.db_set("payment_method_added", 1, commit=False)
-    # Advance onboarding: Pending Card → Pending KYC/KYB
-    next_status = "Pending KYC" if c.client_type == "Individual" else "Pending KYB"
-    c.db_set("onboarding_status", next_status, commit=False)
-    # KYB applies to all non-Individual; KYC only to Individual
+    # Advance onboarding:
+    #  - Privati: Pending Card -> Pending KYC
+    #  - Aziende (percorso KYB-first): se il KYB e gia stato inviato la carta era
+    #    l'ultimo step -> Under Review; altrimenti (legacy carta-prima) -> Pending KYB
     if c.client_type == "Individual":
+        next_status, next_url = "Pending KYC", "/onboarding/kyc"
         c.db_set("kyc_status", "In Progress", commit=False)
+    elif (c.kyb_status or "") in ("In Review", "Approved", "Verified", "Completed"):
+        next_status, next_url = "Under Review", "/onboarding"
+        c.db_set("onboarding_completed_at", frappe.utils.now_datetime(), commit=False)
     else:
+        next_status, next_url = "Pending KYB", "/onboarding/kyb"
         c.db_set("kyb_status", "In Progress", commit=False)
+    c.db_set("onboarding_status", next_status, commit=False)
     frappe.db.commit()
 
     # Audit log
@@ -118,7 +124,7 @@ def confirm_payment_method(payment_method_id: str) -> dict:
     return {
         "ok": True,
         "next_status": next_status,
-        "next_url": "/onboarding/kyc" if c.client_type == "Individual" else "/onboarding/kyb",
+        "next_url": next_url,
     }
 
 
@@ -202,8 +208,12 @@ def submit_kyb() -> dict:
         }, update_modified=False)
 
     c.db_set("kyb_status", "In Review", commit=False)
-    c.db_set("onboarding_status", "Under Review", commit=False)
-    c.db_set("onboarding_completed_at", frappe.utils.now_datetime(), commit=False)
+    if c.payment_method_added:
+        c.db_set("onboarding_status", "Under Review", commit=False)
+        c.db_set("onboarding_completed_at", frappe.utils.now_datetime(), commit=False)
+    else:
+        # percorso KYB-first: la carta viene richiesta dopo il KYB
+        c.db_set("onboarding_status", "Pending Card", commit=False)
     frappe.db.commit()
 
     try:

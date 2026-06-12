@@ -127,6 +127,25 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     {% endfor %}
   </div>
 
+  {% if addons %}
+  <h2 style="margin-top:48px">Abbonamenti aggiuntivi</h2>
+  <p class="muted" style="margin-top:-8px">Servizi ricorrenti mensili attivabili in autonomia, in aggiunta al tuo piano.</p>
+  <div class="grid">
+    {% for a in addons %}
+    <div class="plan">
+      <div class="lvl">Add-on</div>
+      <h3>{{ a.service_name }}</h3>
+      <div class="price">€{{ "%.0f"|format(a.price) }}<small> / mese</small></div>
+      {% if a.description %}<ul><li>{{ a.description|striptags|truncate(120) }}</li></ul>{% endif %}
+      <div class="cta">
+        <button class="btn solid" {% if not stripe_configured or not client %}disabled{% endif %}
+                onclick="checkoutAddon('{{ a.service_code|e }}')">Attiva →</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <div class="footer-note">
     Pagamento sicuro via Stripe · SCA / PSD2 · GDPR compliant
   </div>
@@ -145,6 +164,26 @@ async function checkout(planName) {
       credentials: "include",
       headers: {"Content-Type": "application/x-www-form-urlencoded", "X-Frappe-CSRF-Token": CSRF},
       body: new URLSearchParams({client_name: CLIENT, plan_name: planName}).toString(),
+    });
+    const j = await r.json();
+    if (j.message && j.message.url) {
+      window.location = j.message.url;
+    } else {
+      alert("Errore: " + (j._error_message || j.exc || JSON.stringify(j)));
+    }
+  } catch (e) {
+    alert("Errore: " + e.message);
+  }
+}
+
+async function checkoutAddon(serviceCode) {
+  if (!CLIENT) { alert("Cliente non collegato"); return; }
+  try {
+    const r = await fetch("/api/method/thanatos_intel.integrations.stripe_bridge.create_recurring_checkout", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Content-Type": "application/x-www-form-urlencoded", "X-Frappe-CSRF-Token": CSRF},
+      body: new URLSearchParams({client_name: CLIENT, service_code: serviceCode}).toString(),
     });
     const j = await r.json();
     if (j.message && j.message.url) {

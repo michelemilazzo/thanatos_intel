@@ -26,11 +26,13 @@ def get_context(context):
     status = c.onboarding_status or "Pending Email"
     is_individual = (c.client_type == "Individual")
 
-    # Skip Pending Email if user already verified (login means verified)
+    # Skip Pending Email if user already verified (login means verified).
+    #  - Privati: primo step carta (Pending Card) -> poi KYC
+    #  - Aziende: percorso KYB-first (Pending KYB) -> carta dopo il KYB
     if status == "Pending Email":
-        status = "Pending Card"
+        status = "Pending Card" if is_individual else "Pending KYB"
         frappe.db.set_value("Investigation Client", c.name,
-                            "onboarding_status", "Pending Card")
+                            "onboarding_status", status)
         frappe.db.commit()
 
     # Route by status
