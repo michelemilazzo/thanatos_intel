@@ -26,7 +26,7 @@ PLAN = {
     "Hash":     [("virustotal", lambda v: engine.lookup_virustotal(v, kind="hash"))],
     "Company":  [("opencorporates", engine.lookup_company),
                  ("opensanctions", lambda v: fs.screen_sanctions(v, schema="Company"))],
-    "Phone":    [],
+    "Phone":    [("phone_meta", fs.lookup_phone)],
     "Username": [("username", fs.lookup_username)],
     "Wallet":   [("wallet", fs.lookup_wallet),
                  ("opensanctions", lambda v: fs.screen_sanctions(v, schema="CryptoWallet"))],

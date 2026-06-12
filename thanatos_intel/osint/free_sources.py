@@ -31,10 +31,22 @@ VIEWDNS_IPHISTORY_URL = "https://api.viewdns.info/iphistory/"
 # --------------------------------------------------------------------------- #
 @frappe.whitelist()
 def screen_sanctions(name: str, schema: str = "Person") -> dict:
-    """Screening sanzioni/PEP/wanted via OpenSanctions. Key opzionale."""
+    """Screening sanzioni/PEP/wanted.
+
+    Offline-first: usa la cache locale OpenSanctions (`tabOpenSanctions Cache`,
+    rinfrescata ogni 24h da opensanctions_sync.daily_refresh, ~285k entità).
+    Fallback all'API OpenSanctions solo se la cache è vuota/assente.
+    """
     name = (name or "").strip()
     if not name:
         return {"error": "invalid_name", "source": "opensanctions"}
+
+    # 1) cache locale offline (no rete, no key, dato fresco <24h)
+    offline = _screen_offline(name)
+    if offline is not None:
+        _persist_lookup({"Company": "Company", "CryptoWallet": "Wallet"}.get(schema, "Username"),
+                        name, offline)
+        return offline
 
     cached = _cache_get("opensanctions", f"{schema}:{name}")
     if cached:
@@ -82,6 +94,36 @@ def screen_sanctions(name: str, schema: str = "Person") -> dict:
     tt = {"Company": "Company", "CryptoWallet": "Wallet"}.get(schema, "Username")
     _persist_lookup(tt, name, result)
     return result
+
+
+def _screen_offline(name: str):
+    """Match contro la cache locale OpenSanctions. None se cache assente/vuota."""
+    try:
+        if not frappe.db.table_exists("OpenSanctions Cache"):
+            return None
+        if not frappe.db.sql("SELECT 1 FROM `tabOpenSanctions Cache` LIMIT 1"):
+            return None
+        from thanatos_intel.thanatos_ddd import opensanctions_sync
+        res = opensanctions_sync.lookup(name)
+        raw = res.get("matches") or []
+        hits = []
+        for h in raw[:10]:
+            topics = h.get("topics")
+            if isinstance(topics, str):
+                topics = [t.strip() for t in topics.replace("[", "").replace("]", "")
+                          .replace('"', "").split(",") if t.strip()]
+            hits.append({
+                "id": h.get("id"),
+                "caption": h.get("caption") or h.get("name"),
+                "score": h.get("score", 0),
+                "topics": topics or [],
+                "countries": [h.get("nationality")] if h.get("nationality") else [],
+                "datasets": ["opensanctions_local"],
+            })
+        return {"found": bool(hits), "matches": hits, "total": res.get("total", len(hits)),
+                "source": "opensanctions", "offline": True}
+    except Exception:
+        return None
 
 
 # --------------------------------------------------------------------------- #
@@ -299,3 +341,112 @@ def lookup_username(username: str) -> dict:
     _cache_set("username", username, result)
     _persist_lookup("Username", username, result)
     return result
+
+
+# --------------------------------------------------------------------------- #
+# Phone — metadata offline (prefisso internazionale → paese), no dipendenze
+# --------------------------------------------------------------------------- #
+# Prefissi più lunghi prima per il match greedy.
+DIAL_CODES = [
+    ("1", "US/CA"), ("7", "RU/KZ"), ("20", "EG"), ("27", "ZA"), ("30", "GR"),
+    ("31", "NL"), ("32", "BE"), ("33", "FR"), ("34", "ES"), ("36", "HU"),
+    ("39", "IT"), ("40", "RO"), ("41", "CH"), ("43", "AT"), ("44", "GB"),
+    ("45", "DK"), ("46", "SE"), ("47", "NO"), ("48", "PL"), ("49", "DE"),
+    ("51", "PE"), ("52", "MX"), ("53", "CU"), ("54", "AR"), ("55", "BR"),
+    ("56", "CL"), ("57", "CO"), ("58", "VE"), ("60", "MY"), ("61", "AU"),
+    ("62", "ID"), ("63", "PH"), ("64", "NZ"), ("65", "SG"), ("66", "TH"),
+    ("81", "JP"), ("82", "KR"), ("84", "VN"), ("86", "CN"), ("90", "TR"),
+    ("91", "IN"), ("92", "PK"), ("93", "AF"), ("94", "LK"), ("95", "MM"),
+    ("98", "IR"), ("212", "MA"), ("213", "DZ"), ("216", "TN"), ("218", "LY"),
+    ("220", "GM"), ("221", "SN"), ("234", "NG"), ("254", "KE"), ("255", "TZ"),
+    ("256", "UG"), ("260", "ZM"), ("263", "ZW"), ("351", "PT"), ("352", "LU"),
+    ("353", "IE"), ("354", "IS"), ("355", "AL"), ("356", "MT"), ("357", "CY"),
+    ("358", "FI"), ("359", "BG"), ("370", "LT"), ("371", "LV"), ("372", "EE"),
+    ("373", "MD"), ("374", "AM"), ("375", "BY"), ("376", "AD"), ("377", "MC"),
+    ("378", "SM"), ("380", "UA"), ("381", "RS"), ("382", "ME"), ("385", "HR"),
+    ("386", "SI"), ("387", "BA"), ("389", "MK"), ("420", "CZ"), ("421", "SK"),
+    ("423", "LI"), ("852", "HK"), ("853", "MO"), ("855", "KH"), ("856", "LA"),
+    ("880", "BD"), ("886", "TW"), ("962", "JO"), ("963", "SY"), ("964", "IQ"),
+    ("965", "KW"), ("966", "SA"), ("967", "YE"), ("968", "OM"), ("970", "PS"),
+    ("971", "AE"), ("972", "IL"), ("973", "BH"), ("974", "QA"), ("975", "BT"),
+    ("976", "MN"), ("977", "NP"), ("992", "TJ"), ("993", "TM"), ("994", "AZ"),
+    ("995", "GE"), ("996", "KG"), ("998", "UZ"),
+]
+HIGH_RISK_DIAL = {"IR", "SY", "KP", "RU", "AF", "YE", "LY"}
+
+
+@frappe.whitelist()
+def lookup_phone(number: str) -> dict:
+    """Metadata offline da numero E.164: paese, validità base, flag rischio."""
+    raw = (number or "").strip()
+    digits = re.sub(r"[^\d+]", "", raw)
+    if digits.startswith("00"):          # prefisso internazionale 00 → +
+        digits = "+" + digits[2:]
+    e164 = digits if digits.startswith("+") else ("+" + digits if digits else "")
+    core = e164.lstrip("+")
+    country = ""
+    cc = ""
+    for code, ctry in sorted(DIAL_CODES, key=lambda x: -len(x[0])):
+        if core.startswith(code):
+            country, cc = ctry, code
+            break
+    national = core[len(cc):] if cc else core
+    valid = bool(country) and 6 <= len(national) <= 13
+    result = {
+        "input": raw, "e164": e164, "country": country or "unknown",
+        "country_code": ("+" + cc) if cc else "",
+        "national_number": national, "valid": valid,
+        "high_risk_country": any(c in HIGH_RISK_DIAL for c in country.split("/")),
+        "source": "phone_meta",
+    }
+    _persist_lookup("Phone", e164 or raw, result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# Aereo — OpenSky aircraft database (ICAO24 hex o registrazione), no key
+# --------------------------------------------------------------------------- #
+OPENSKY_META_URL = "https://opensky-network.org/api/metadata/aircraft/icao24/{hex}"
+
+
+@frappe.whitelist()
+def lookup_flight(query: str) -> dict:
+    """OpenSky — anagrafica aeromobile da ICAO24 hex. No key."""
+    q = (query or "").strip().lower().replace(" ", "")
+    if not re.fullmatch(r"[0-9a-f]{6}", q):
+        return {"error": "expect_icao24_hex", "hint": "6 hex (es. 3c6444)",
+                "source": "opensky"}
+    cached = _cache_get("opensky", q)
+    if cached:
+        return {**cached, "cached": True}
+    try:
+        r = requests.get(OPENSKY_META_URL.format(hex=q),
+                         headers={"user-agent": UA}, timeout=12)
+        if r.status_code == 200:
+            d = r.json() or {}
+            result = {"icao24": q, "registration": d.get("registration"),
+                      "manufacturer": d.get("manufacturerName"),
+                      "model": d.get("model"), "operator": d.get("operator"),
+                      "owner": d.get("owner"), "country": d.get("country"),
+                      "built": d.get("built"), "source": "opensky"}
+        elif r.status_code == 404:
+            result = {"found": False, "icao24": q, "source": "opensky"}
+        else:
+            result = {"error": f"opensky_status_{r.status_code}", "source": "opensky"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "opensky"}
+    _cache_set("opensky", q, result)
+    _persist_lookup("Username", q, result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# Navale — screening nave contro sanzioni (schema Vessel), offline+API
+# --------------------------------------------------------------------------- #
+@frappe.whitelist()
+def lookup_vessel(query: str) -> dict:
+    """Screening nave (nome o IMO) contro liste sanzioni — schema Vessel."""
+    res = screen_sanctions(query, schema="Vessel")
+    res["target"] = "vessel"
+    return res
+
