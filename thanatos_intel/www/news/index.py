@@ -49,4 +49,9 @@ def get_context(context):
 		except Exception:
 			pass
 	context.parents = [{"label": "Home", "route": "/"}]
+	try:
+		from thanatos_intel.news.stats import newsroom_stats
+		context.stats = newsroom_stats()
+	except Exception:
+		context.stats = None
 	return context

@@ -70,6 +70,27 @@ def _entry_image(entry, *contents) -> str | None:
 	return None
 
 
+def _og_image(page_url: str) -> str | None:
+	"""Fallback: estrae og:image / twitter:image dalla pagina dell'articolo."""
+	if not page_url:
+		return None
+	try:
+		import requests
+		r = requests.get(page_url, timeout=8, headers={"User-Agent": "Mozilla/5.0 thanatos-news"})
+		if r.status_code != 200:
+			return None
+		h = r.text[:200000]
+		for prop in ("og:image", "twitter:image"):
+			m = (re.search(r'<meta[^>]+property=["\']' + prop + r'["\'][^>]+content=["\']([^"\']+)', h, re.I)
+			     or re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']' + prop + r'["\']', h, re.I)
+			     or re.search(r'<meta[^>]+name=["\']' + prop + r'["\'][^>]+content=["\']([^"\']+)', h, re.I))
+			if m and m.group(1).startswith("http"):
+				return m.group(1)[:500]
+	except Exception:
+		return None
+	return None
+
+
 def _parse_datetime(raw) -> datetime | None:
 	if not raw:
 		return None
@@ -152,6 +173,8 @@ def fetch_source(name: str) -> dict:
 			content = raw_content or f"<p>{plain}</p>"
 
 		image_url = _entry_image(entry, raw_content, content)
+		if not image_url:
+			image_url = _og_image(url)
 
 		try:
 			doc = frappe.get_doc({
