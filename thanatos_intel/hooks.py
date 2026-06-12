@@ -1,6 +1,13 @@
 app_name='thanatos_intel'
 before_request=["thanatos_intel.patches.drive_access_patch.apply", "thanatos_intel.patches.mail_login_redirect.neutralize_mail_login_redirect"]
 auth_hooks=["thanatos_intel.thanatos_ddd.auth_patch.allow_thanatos_guest_paths"]
+
+# Il bundle CSS di Frappe (build bench-cli in temp dir) referenzia inter.css con un
+# path /tmp/.../inter.css inesistente -> 404 in console. Lo reindirizziamo al vero file
+# servito. Persistente in thanatos_intel, regge anche se cambia l'hash della temp dir.
+website_redirects=[
+	{"source": r"tmp/.*/inter.css", "target": "/assets/frappe/css/fonts/inter/inter.css"},
+]
 app_title='Thanatos Intel'
 app_version='0.1.0'
 app_description='Intelligence Investigation Platform MVP'
