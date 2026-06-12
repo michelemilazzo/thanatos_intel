@@ -13,6 +13,17 @@ def get_context(context):
     client_name = frappe.db.get_value("Investigation Client", {"platform_user": user}, "name")
     context.client = frappe.get_doc("Investigation Client", client_name) if client_name else None
 
+    context.is_credit = bool(getattr(context.client, "credit_granted", 0)) if context.client else False
+    context.payment_method = getattr(context.client, "payment_method", None) if context.client else None
+    if client_name:
+        from thanatos_intel.billing.credits import available_to_spend
+        context.available = available_to_spend(client_name)
+        context.active_addons = [a.strip() for a in
+                                 (getattr(context.client, "active_addons", "") or "").split(",") if a.strip()]
+    else:
+        context.available = 0
+        context.active_addons = []
+
     context.plans = frappe.get_all(
         "Investigation Subscription Plan",
         filters={"is_active": 1},

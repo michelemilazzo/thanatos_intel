@@ -99,9 +99,40 @@ def _ensure_stripe_price(plan_name: str) -> str:
     return price.id
 
 
+def _is_credit_client(client_name: str) -> bool:
+    return bool(frappe.db.get_value("Investigation Client", client_name, "credit_granted"))
+
+
+def activate_plan_on_credit(client_name: str, plan_name: str) -> dict:
+    """Cliente a credito: attiva il piano senza carta, fatturato a bonifico mensile."""
+    frappe.db.set_value("Investigation Client", client_name, {
+        "subscription_plan": plan_name,
+        "subscription_status": "Active",
+        "subscription_started_at": now_datetime(),
+    }, update_modified=False)
+    frappe.db.commit()
+    return {"credit": True, "message": _("Piano {0} attivato — fatturazione a bonifico mensile.").format(plan_name)}
+
+
+def activate_addon_on_credit(client_name: str, service_code: str) -> dict:
+    """Cliente a credito: attiva l'add-on ricorrente, fatturato a bonifico mensile."""
+    cur = (frappe.db.get_value("Investigation Client", client_name, "active_addons") or "")
+    codes = [c.strip() for c in cur.split(",") if c.strip()]
+    if service_code not in codes:
+        codes.append(service_code)
+    frappe.db.set_value("Investigation Client", client_name, "active_addons", ",".join(codes),
+                        update_modified=False)
+    frappe.db.commit()
+    name = frappe.db.get_value("Service Catalog", {"service_code": service_code}, "service_name") or service_code
+    return {"credit": True, "message": _("Add-on {0} attivato — fatturazione a bonifico mensile.").format(name)}
+
+
 @frappe.whitelist()
 def create_checkout_session(client_name: str, plan_name: str, trial_days: int = 0) -> dict:
-    """Crea Stripe Checkout Session per attivare un subscription plan."""
+    """Crea Stripe Checkout Session per attivare un subscription plan.
+    Cliente a credito: nessuna carta, attivazione a bonifico mensile."""
+    if _is_credit_client(client_name):
+        return activate_plan_on_credit(client_name, plan_name)
     stripe = _get_stripe()
     customer_id = get_or_create_stripe_customer(client_name)
     price_id = _ensure_stripe_price(plan_name)
@@ -164,9 +195,11 @@ def _ensure_catalog_recurring_price(service_code: str) -> str:
 def create_recurring_checkout(client_name: str, service_code: str) -> dict:
     """Checkout subscription per un servizio ricorrente del Service Catalog (add-on
     mensile: monitoraggio, alert di settore, newsletter premium)."""
-    stripe = _get_stripe()
     if service_code not in ADDON_SERVICE_CODES:
         frappe.throw(_("Servizio non acquistabile in self-service."))
+    if _is_credit_client(client_name):
+        return activate_addon_on_credit(client_name, service_code)
+    stripe = _get_stripe()
     customer_id = get_or_create_stripe_customer(client_name)
     price_id = _ensure_catalog_recurring_price(service_code)
 

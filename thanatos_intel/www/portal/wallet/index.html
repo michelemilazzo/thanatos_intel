@@ -39,6 +39,10 @@ h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 
   <div class="section-title">Credito servizi</div>
   <div class="cards">
     <div class="card big"><div class="v">{{ "%.2f"|format(credit) }}€</div><div class="l">Credito disponibile</div><div class="d">spendibile sui servizi nel portale</div></div>
+    {% if client %}
+    <div class="card"><div class="v">{{ payment_method }}</div><div class="l">Metodo di pagamento</div><div class="d">{% if is_credit %}servizi fatturati a bonifico mensile{% else %}servizi automatizzati prepagati a carta{% endif %}</div></div>
+    {% if is_credit %}<div class="card"><div class="v">{{ "%.2f"|format(available) }}€</div><div class="l">Fido disponibile</div><div class="d">su un fido di {{ "%.0f"|format(credit_limit) }}€</div></div>{% endif %}
+    {% endif %}
   </div>
   <a class="cta" href="/portal/segnala">Segnala e guadagna credito →</a>
   <a class="cta ghost" href="/portal/verifica-blacklist">Usa il credito (verifica blacklist)</a>

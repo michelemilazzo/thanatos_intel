@@ -79,7 +79,7 @@
 
 {% macro portal_nav(active='') -%}
 {%- set _user = frappe.session.user -%}
-{%- set _roles = frappe.get_roles(_user) | list -%}
+{%- set _roles = user_roles(_user) | list -%}
 {%- set _is_op = 'Investigator' in _roles or 'Investigation Manager' in _roles or 'System Manager' in _roles -%}
 {%- set _is_client = not _is_op -%}
 <style>

@@ -170,7 +170,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
 
       <!-- Sempre visibili -->
-      <a href="/portal" class="qa-icon {% if request.path == '/portal' %}qa-active{% endif %}">
+      <a href="/portal" class="qa-icon {% if frappe.request.path == '/portal' %}qa-active{% endif %}">
         <div class="qa-ic">🏠</div>
         <div class="qa-label">Dashboard</div>
       </a>

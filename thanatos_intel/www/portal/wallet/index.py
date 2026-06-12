@@ -14,6 +14,19 @@ def get_context(context):
     client = frappe.db.get_value("Investigation Client", {"platform_user": user}, "name")
     context.client = client
     context.credit = flt(frappe.db.get_value("Investigation Client", client, "service_credit")) if client else 0
+    if client:
+        cinfo = frappe.db.get_value("Investigation Client", client,
+                                    ["credit_granted", "payment_method", "credit_limit"], as_dict=True) or {}
+        from thanatos_intel.billing.credits import available_to_spend
+        context.is_credit = bool(cinfo.get("credit_granted"))
+        context.payment_method = cinfo.get("payment_method") or ("Bonifico" if cinfo.get("credit_granted") else "Carta")
+        context.credit_limit = flt(cinfo.get("credit_limit"))
+        context.available = available_to_spend(client)
+    else:
+        context.is_credit = False
+        context.payment_method = None
+        context.credit_limit = 0
+        context.available = 0
     context.client_moves = frappe.get_all(
         "Credit Ledger", filters={"party_type": "Client", "party": client} if client else {"name": ""},
         fields=["kind", "amount", "balance_after", "notes", "creation"],

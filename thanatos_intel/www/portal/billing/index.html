@@ -89,6 +89,21 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
   <div class="banner">Il tuo utente non risulta legato a un Investigation Client. Contatta l'amministratore.</div>
   {% endif %}
 
+  {% if client %}
+  <div class="current" style="border-left:4px solid var(--gold)">
+    <div class="label">Metodo di pagamento</div>
+    {% if is_credit %}
+    <h2>Credito concesso · Bonifico</h2>
+    <div class="meta">I servizi sono <b>fatturati a bonifico mensile</b>. Fido disponibile ora:
+      <b>€{{ "%.2f"|format(available) }}</b>. Attivando un piano o un add-on non ti verrà chiesta la carta.</div>
+    {% else %}
+    <h2>Carta · Prepagato</h2>
+    <div class="meta">I servizi automatizzati sono <b>prepagati con carta</b>. Credito disponibile:
+      <b>€{{ "%.2f"|format(available) }}</b>.</div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% if current_sub %}
   <div class="current">
     <div class="label">Abbonamento attivo</div>
@@ -116,10 +131,10 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
       </ul>
 
       <div class="cta">
-        {% if current_sub and current_sub.subscription_plan == p.name %}
+        {% if (current_sub and current_sub.subscription_plan == p.name) or (is_credit and client and client.subscription_plan == p.name and client.subscription_status == 'Active') %}
         <button class="btn" disabled>✓ Piano attuale</button>
         {% else %}
-        <button class="btn solid" {% if not stripe_configured or not client %}disabled{% endif %}
+        <button class="btn solid" {% if not client or (not stripe_configured and not is_credit) %}disabled{% endif %}
                 onclick="checkout('{{ p.name|e }}')">Attiva →</button>
         {% endif %}
       </div>
@@ -132,14 +147,18 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
   <p class="muted" style="margin-top:-8px">Servizi ricorrenti mensili attivabili in autonomia, in aggiunta al tuo piano.</p>
   <div class="grid">
     {% for a in addons %}
-    <div class="plan">
+    <div class="plan {% if a.service_code in active_addons %}highlight{% endif %}">
       <div class="lvl">Add-on</div>
       <h3>{{ a.service_name }}</h3>
       <div class="price">€{{ "%.0f"|format(a.price) }}<small> / mese</small></div>
       {% if a.description %}<ul><li>{{ a.description|striptags|truncate(120) }}</li></ul>{% endif %}
       <div class="cta">
-        <button class="btn solid" {% if not stripe_configured or not client %}disabled{% endif %}
+        {% if a.service_code in active_addons %}
+        <button class="btn" disabled>✓ Attivo</button>
+        {% else %}
+        <button class="btn solid" {% if not client or (not stripe_configured and not is_credit) %}disabled{% endif %}
                 onclick="checkoutAddon('{{ a.service_code|e }}')">Attiva →</button>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
@@ -168,6 +187,8 @@ async function checkout(planName) {
     const j = await r.json();
     if (j.message && j.message.url) {
       window.location = j.message.url;
+    } else if (j.message && j.message.credit) {
+      alert(j.message.message); location.reload();
     } else {
       alert("Errore: " + (j._error_message || j.exc || JSON.stringify(j)));
     }
@@ -188,6 +209,8 @@ async function checkoutAddon(serviceCode) {
     const j = await r.json();
     if (j.message && j.message.url) {
       window.location = j.message.url;
+    } else if (j.message && j.message.credit) {
+      alert(j.message.message); location.reload();
     } else {
       alert("Errore: " + (j._error_message || j.exc || JSON.stringify(j)));
     }
