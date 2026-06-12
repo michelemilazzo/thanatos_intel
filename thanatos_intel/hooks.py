@@ -1,5 +1,5 @@
 app_name='thanatos_intel'
-before_request=["thanatos_intel.patches.drive_access_patch.apply"]
+before_request=["thanatos_intel.patches.drive_access_patch.apply", "thanatos_intel.patches.mail_login_redirect.neutralize_mail_login_redirect"]
 auth_hooks=["thanatos_intel.thanatos_ddd.auth_patch.allow_thanatos_guest_paths"]
 app_title='Thanatos Intel'
 app_version='0.1.0'
