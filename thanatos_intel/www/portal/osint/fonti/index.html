@@ -1,0 +1,174 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}Fonti OSINT Gratuite — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body.osint-page{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+.osint-wrap{max-width:1240px;margin:0 auto;padding:32px 24px;}
+.osint-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:24px;flex-wrap:wrap;}
+.osint-head h1{color:var(--gold);font-weight:400;letter-spacing:5px;font-size:24px;margin:0;}
+.osint-head .sub{color:var(--muted);font-size:12px;letter-spacing:3px;text-transform:uppercase;}
+.searchbar{width:100%;margin-bottom:14px;}
+.searchbar input{width:100%;box-sizing:border-box;background:var(--navy2);border:1px solid var(--line);color:#E6E8EE;padding:14px 16px;font-family:inherit;font-size:15px;}
+.searchbar input:focus{border-color:var(--gold);outline:0;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.chip{background:transparent;border:1px solid var(--line);color:var(--muted);padding:7px 14px;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-family:inherit;}
+.chip:hover{border-color:var(--gold);color:var(--gold);}
+.chip.active{background:var(--gold);border-color:var(--gold);color:var(--navy);font-weight:bold;}
+.counter{color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:22px;}
+.cat-block{margin-bottom:30px;}
+.cat-block>h2{color:var(--gold);font-weight:400;letter-spacing:3px;font-size:16px;border-bottom:1px solid var(--line);padding-bottom:10px;margin:0 0 16px;}
+.cat-block>h2 .n{color:var(--muted);font-size:12px;letter-spacing:2px;margin-left:10px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;}
+.src{background:var(--navy2);border:1px solid var(--line);padding:20px;display:flex;flex-direction:column;}
+.src-top{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
+.src-top .ic{font-size:26px;line-height:1;}
+.src-top h3{margin:0;color:#E6E8EE;font-size:16px;font-weight:400;letter-spacing:1px;}
+.src-top .dom{color:var(--gold);font-size:12px;font-family:monospace;}
+.src .desc{color:#A4A9BC;font-size:13px;line-height:1.55;margin-bottom:12px;}
+.methods{border-top:1px dashed var(--line);padding-top:10px;margin-bottom:12px;}
+.methods .mh{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.method{margin-bottom:10px;}
+.method .badge{display:inline-block;font-size:9px;letter-spacing:2px;padding:3px 8px;border:1px solid;margin-right:8px;vertical-align:middle;font-family:monospace;}
+.badge.WEB{color:#7BC480;border-color:#7BC480;}
+.badge.API{color:#E0B860;border-color:#E0B860;}
+.badge.CLI{color:#6FA8DC;border-color:#6FA8DC;}
+.badge.DOWNLOAD{color:#C8A96E;border-color:#C8A96E;}
+.method .mt{color:#E6E8EE;font-size:12px;letter-spacing:.5px;}
+.method .mb{color:#A4A9BC;font-size:12px;line-height:1.5;margin:5px 0 0;}
+.method pre{background:#070A14;border:1px solid var(--line);color:#9FE0A8;font-family:monospace;font-size:11px;padding:9px 11px;margin:6px 0 0;overflow-x:auto;white-space:pre;}
+.src-links{margin-top:auto;display:flex;flex-wrap:wrap;gap:8px;}
+.src-links a{color:var(--gold);border:1px solid var(--line);padding:6px 12px;font-size:11px;letter-spacing:1px;text-decoration:none;}
+.src-links a:hover{border-color:var(--gold);}
+.src-tags{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;}
+.src-tags span{color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--line);padding:3px 8px;}
+.empty-msg{display:none;color:var(--muted);text-align:center;padding:48px;border:1px dashed var(--line);}
+.foot-note{color:var(--muted);font-size:10px;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-top:36px;border-top:1px solid var(--line);padding-top:18px;}
+@media(max-width:760px){
+  .osint-wrap{padding:20px 14px;}
+  .osint-head h1{font-size:20px;letter-spacing:3px;}
+  .grid{grid-template-columns:1fr;}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('portal') }}
+<body class="osint-page">
+<div class="osint-wrap">
+  <div class="osint-head">
+    <div>
+      <h1>FONTI GRATUITE GLOBALI</h1>
+      <div class="sub">Link + metodi estrazione dati · {{ total }} fonti · solo gratuito</div>
+    </div>
+    <div class="sub"><a href="/portal/osint" style="color:var(--gold);text-decoration:none;">← OSINT Console</a></div>
+  </div>
+
+  <div class="searchbar">
+    <input type="text" id="fonteSearch" placeholder="⌕ Cerca fonte, categoria, metodo, paese..." autocomplete="off">
+  </div>
+
+  <div class="chips" id="chips">
+    <button class="chip active" data-filter="*">Tutte</button>
+    {% for key, icon, label in categories %}
+    <button class="chip" data-filter="{{ key }}">{{ icon }} {{ label }}</button>
+    {% endfor %}
+    <button class="chip" data-filter="tag:api">🔑 Con API</button>
+    <button class="chip" data-filter="tag:persone">👤 Persone</button>
+  </div>
+  <div class="counter"><span id="visCount">{{ total }}</span> fonti visibili</div>
+
+  {% for key, icon, label, items in grouped %}
+  <div class="cat-block" data-cat="{{ key }}">
+    <h2>{{ icon }} {{ label }} <span class="n">{{ items|length }} fonti</span></h2>
+    <div class="grid">
+      {% for f in items %}
+      <div class="src" data-cat="{{ f.cat }}" data-tags="{{ f.tags|join(' ') }}"
+           data-search="{{ (f.name ~ ' ' ~ f.domain ~ ' ' ~ f.desc ~ ' ' ~ f.tags|join(' ') ~ ' ' ~ label)|lower }}">
+        <div class="src-top">
+          <div class="ic">{{ f.icon }}</div>
+          <div>
+            <h3>{{ f.name }}</h3>
+            <div class="dom">{{ f.domain }}</div>
+          </div>
+        </div>
+        <div class="desc">{{ f.desc }}</div>
+        <div class="methods">
+          <div class="mh">Metodi di estrazione dati</div>
+          {% for kind, mtitle, mbody, code in f.methods %}
+          <div class="method">
+            <span class="badge {{ kind }}">{{ kind }}</span><span class="mt">{{ mtitle }}</span>
+            {% if mbody %}<div class="mb">{{ mbody }}</div>{% endif %}
+            {% if code %}<pre>{{ code }}</pre>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <div class="src-links">
+          {% for llabel, lurl in f.links %}
+          <a href="{{ lurl }}" target="_blank" rel="noopener noreferrer">{{ llabel }} ↗</a>
+          {% endfor %}
+        </div>
+        <div class="src-tags">
+          {% for t in f.tags %}<span>{{ t }}</span>{% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="empty-msg" id="emptyMsg">Nessuna fonte corrisponde alla ricerca.</div>
+
+  <div class="foot-note">Thanatos Investigazioni — admin@thanatos.agency · Fonti gratuite — uso operatori</div>
+</div>
+
+<script>
+(function(){
+  var search = document.getElementById('fonteSearch');
+  var chips = document.querySelectorAll('#chips .chip');
+  var cards = document.querySelectorAll('.src');
+  var blocks = document.querySelectorAll('.cat-block');
+  var visCount = document.getElementById('visCount');
+  var emptyMsg = document.getElementById('emptyMsg');
+  var activeFilter = '*';
+
+  function apply(){
+    var q = search.value.trim().toLowerCase();
+    var visible = 0;
+    cards.forEach(function(c){
+      var okFilter;
+      if (activeFilter === '*') okFilter = true;
+      else if (activeFilter.indexOf('tag:') === 0)
+        okFilter = (' ' + c.dataset.tags + ' ').indexOf(' ' + activeFilter.slice(4) + ' ') !== -1;
+      else okFilter = c.dataset.cat === activeFilter;
+      var okSearch = !q || c.dataset.search.indexOf(q) !== -1 ||
+        c.textContent.toLowerCase().indexOf(q) !== -1;
+      var show = okFilter && okSearch;
+      c.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    blocks.forEach(function(b){
+      var any = Array.prototype.some.call(b.querySelectorAll('.src'), function(c){
+        return c.style.display !== 'none';
+      });
+      b.style.display = any ? '' : 'none';
+    });
+    visCount.textContent = visible;
+    emptyMsg.style.display = visible ? 'none' : 'block';
+  }
+
+  search.addEventListener('input', apply);
+  chips.forEach(function(ch){
+    ch.addEventListener('click', function(){
+      chips.forEach(function(o){ o.classList.remove('active'); });
+      ch.classList.add('active');
+      activeFilter = ch.dataset.filter;
+      apply();
+    });
+  });
+})();
+</script>
+{{ thanatos_footer() }}
+{% endblock %}
