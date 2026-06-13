@@ -55,6 +55,8 @@ body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page
   font-weight:700;cursor:pointer;transition:background .15s;}
 .ppu-card .btn:hover{background:var(--gold2);}
 .ppu-card .btn.disabled{background:transparent;color:var(--muted);border-color:var(--line);cursor:not-allowed;}
+.ppu-card .ppu-assist{display:block;text-align:center;padding:8px;margin-top:6px;color:var(--muted);text-decoration:none;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+.ppu-card .ppu-assist:hover{color:var(--gold);}
 
 .ppu-trust{background:var(--navy2);padding:48px 24px;text-align:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
 .ppu-trust h3{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:16px;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px;}
@@ -105,10 +107,11 @@ body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page
           {% if it.requires_analyst %}<span>· con analista</span>{% endif %}
         </div>
         {% if is_logged_in %}
-        <a class="btn" href="/portal/billing?service={{ it.service_code }}">Acquista →</a>
+        <a class="btn" href="javascript:void(0)" onclick="buyService('{{ it.service_code }}', this)">Acquista →</a>
         {% else %}
         <a class="btn" href="/login?redirect-to=/pay-per-use">Accedi per acquistare</a>
         {% endif %}
+        <a class="ppu-assist" href="/contatti?service={{ it.service_code }}">Richiedi assistenza</a>
       </div>
       {% endfor %}
     </div>
@@ -127,6 +130,21 @@ body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page
   </div>
 </section>
 
+<script>
+async function buyService(code, el){
+  const old=el.textContent; el.textContent='Reindirizzamento…'; el.style.pointerEvents='none';
+  try{
+    const r=await fetch('/api/method/thanatos_intel.billing.checkout.checkout_service',{method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':(window.frappe&&frappe.csrf_token)||''},
+      body:new URLSearchParams({service_code:code}).toString()});
+    const j=await r.json(); const m=j.message||{};
+    if(m.url){window.location.href=m.url;return;}
+    if(m.credit){alert(m.message||'Servizio attivato a credito.');location.href='/portal/billing';return;}
+    el.textContent=old; el.style.pointerEvents='';
+    alert((j._server_messages?JSON.parse(j._server_messages).map(x=>JSON.parse(x).message).join('\n'):'')||'Operazione non riuscita.');
+  }catch(e){el.textContent=old; el.style.pointerEvents=''; alert('Errore di rete.');}
+}
+</script>
 </body>
 {{ thanatos_footer() }}
 {% endblock %}
