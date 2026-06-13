@@ -1,0 +1,145 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
+{% block title %}{% if is_hub %}Soluzioni di intelligence — Thanatos Intel{% else %}{{ conf.title }} — Thanatos Intel{% endif %}{% endblock %}
+
+{% block head_include %}
+{% if is_hub %}
+{{ seo_head(title='Soluzioni di intelligence investigativa — Thanatos Intel',
+   description='Le soluzioni Thanatos: verifiche rapide, antifrode, cyber e financial intelligence, due diligence, sequestri. Prezzi trasparenti e valore legale.',
+   path='/soluzioni') }}
+{% else %}
+{{ seo_head(title=conf.title, description=conf.meta, path='/soluzioni/' ~ slug) }}
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Service","serviceType":{{ conf.eyebrow|tojson }},
+"provider":{"@type":"Organization","name":"Thanatos Investigazioni"},
+"areaServed":"EU","description":{{ conf.meta|tojson }},
+"url":"https://www.thanatos.agency/soluzioni/{{ slug }}"}
+</script>
+{% endif %}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+.sol-wrap{max-width:1080px;margin:0 auto;padding:48px 24px;}
+.sol-hero{text-align:center;margin-bottom:36px;}
+.sol-hero .eye{color:var(--muted);font-size:12px;letter-spacing:3px;text-transform:uppercase;}
+.sol-hero h1{color:var(--gold);font-weight:400;font-size:34px;letter-spacing:2px;margin:10px 0 0;font-family:'Cinzel',Georgia,serif;}
+.sol-intro{max-width:760px;margin:0 auto 8px;}
+.sol-intro p{color:#A4A9BC;font-size:15px;line-height:1.75;margin:0 0 14px;}
+.hub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:24px;}
+.hub-card{background:var(--navy2);border:1px solid var(--line);padding:22px;text-decoration:none;display:block;}
+.hub-card:hover{border-color:var(--gold);}
+.hub-card .ic{font-size:26px;}
+.hub-card h2{color:#E6E8EE;font-size:18px;font-weight:400;margin:8px 0 6px;letter-spacing:1px;}
+.hub-card p{color:var(--muted);font-size:13px;line-height:1.6;margin:0;}
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin:28px 0;}
+.svc{background:var(--navy2);border:1px solid var(--line);padding:18px;display:flex;flex-direction:column;}
+.svc .nm{color:#E6E8EE;font-size:15px;margin-bottom:4px;}
+.svc .code{font-family:monospace;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:10px;}
+.svc .desc{color:#A4A9BC;font-size:12px;line-height:1.55;margin-bottom:12px;flex:1;}
+.svc .price{color:var(--gold);font-family:Georgia,serif;font-size:22px;margin-bottom:2px;}
+.svc .price small{font-size:11px;color:var(--muted);}
+.svc .sla{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+.svc .buy{display:block;text-align:center;padding:10px;border:1px solid var(--gold);background:var(--gold);color:var(--navy);text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+.svc .assist{display:block;text-align:center;padding:7px;margin-top:5px;color:var(--muted);text-decoration:none;font-size:10px;letter-spacing:1px;text-transform:uppercase;}
+.svc .assist:hover{color:var(--gold);}
+.sol-cta{text-align:center;background:var(--navy2);border:1px solid var(--gold);padding:28px;margin:30px 0;}
+.sol-cta a{display:inline-block;margin:6px;padding:13px 26px;border:1px solid var(--gold);color:var(--gold);text-decoration:none;letter-spacing:2px;text-transform:uppercase;font-size:11px;}
+.sol-cta a.solid{background:var(--gold);color:var(--navy);}
+.sol-nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:24px;}
+.sol-nav a{color:var(--muted);font-size:11px;letter-spacing:1px;text-transform:uppercase;text-decoration:none;border:1px solid var(--line);padding:6px 11px;}
+.sol-nav a:hover{color:var(--gold);border-color:var(--gold);}
+.sol-rel{margin-top:26px;text-align:center;}
+.sol-rel a{color:var(--gold);text-decoration:none;font-size:13px;margin:0 8px;}
+@media(max-width:600px){.sol-hero h1{font-size:26px;}.sol-wrap{padding:32px 16px;}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header() }}
+<div class="sol-wrap">
+
+{% if is_hub %}
+  <div class="sol-hero">
+    <div class="eye">Soluzioni</div>
+    <h1>Intelligence per ogni esigenza</h1>
+  </div>
+  <div class="sol-intro"><p style="text-align:center;">Dieci aree di intelligence investigativa, dalle verifiche rapide alle investigazioni complete. Ogni soluzione con prezzi trasparenti dal catalogo e valore legale.</p></div>
+  <div class="hub-grid">
+    {% for c in cards %}
+    <a class="hub-card" href="/soluzioni/{{ c.slug }}">
+      <div class="ic">{{ c.icon }}</div>
+      <h2>{{ c.eyebrow }}</h2>
+      <p>{{ c.meta }}</p>
+    </a>
+    {% endfor %}
+  </div>
+
+{% else %}
+  <div class="sol-hero">
+    <div class="eye">{{ conf.icon }} {{ conf.eyebrow }}</div>
+    <h1>{{ conf.h1 }}</h1>
+  </div>
+  <div class="sol-intro">
+    {% for p in conf.intro %}<p>{{ p }}</p>{% endfor %}
+  </div>
+
+  {% if services %}
+  <div class="svc-grid">
+    {% for it in services %}
+    <div class="svc">
+      <div class="nm">{{ it.service_name }}</div>
+      <div class="code">{{ it.service_code }}</div>
+      {% if it.description %}<div class="desc">{{ it.description|striptags|truncate(140) }}</div>{% endif %}
+      <div class="price">{% if it.currency == 'EUR' %}€{% endif %}{{ "%.0f"|format(it.price_min or it.price or 0) }}<small> da</small></div>
+      {% if it.delivery_hours %}<div class="sla">SLA {{ it.delivery_hours }}h{% if it.requires_analyst %} · con analista{% endif %}</div>{% else %}<div class="sla">{% if it.requires_analyst %}con analista{% endif %}</div>{% endif %}
+      {% if logged_in %}
+      <a class="buy" href="javascript:void(0)" onclick="buySvc('{{ it.service_code }}', this)">Acquista →</a>
+      {% else %}
+      <a class="buy" href="/registrati?service={{ it.service_code }}">Acquista →</a>
+      {% endif %}
+      <a class="assist" href="/contatti?service={{ it.service_code }}">Richiedi assistenza</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="sol-cta">
+    <div style="color:#A4A9BC;margin-bottom:14px;font-size:14px;">Non sai quale servizio fa per te? Ti guidiamo noi.</div>
+    <a class="solid" href="/registrati?service={{ services[0].service_code if services else '' }}">Inizia ora</a>
+    <a href="/contatti">Parla con un analista</a>
+    <a href="/pricing">Vedi gli abbonamenti</a>
+  </div>
+
+  <div class="sol-nav">
+    {% for o in others %}<a href="/soluzioni/{{ o.slug }}">{{ o.label }}</a>{% endfor %}
+  </div>
+
+  {% if related_news %}
+  <div class="sol-rel">
+    <div style="color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Dalla newsroom</div>
+    {% for n in related_news %}<a href="/news/{{ n.slug }}">{{ n.title }}</a>{% endfor %}
+  </div>
+  {% endif %}
+{% endif %}
+
+</div>
+
+{% if not is_hub %}
+<script>
+async function buySvc(code, el){
+  const old=el.textContent; el.textContent='…'; el.style.pointerEvents='none';
+  try{
+    const r=await fetch('/api/method/thanatos_intel.billing.checkout.checkout_service',{method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':(window.frappe&&frappe.csrf_token)||''},
+      body:new URLSearchParams({service_code:code}).toString()});
+    const j=await r.json(); const m=j.message||{};
+    if(m.url){window.location.href=m.url;return;}
+    if(m.credit){alert(m.message||'Attivato.');location.href='/portal/billing';return;}
+    el.textContent=old; el.style.pointerEvents='';
+    alert((j._server_messages?JSON.parse(j._server_messages).map(x=>JSON.parse(x).message).join('\n'):'')||'Operazione non riuscita.');
+  }catch(e){el.textContent=old; el.style.pointerEvents=''; alert('Errore di rete.');}
+}
+</script>
+{% endif %}
+{{ thanatos_footer() }}
+{% endblock %}

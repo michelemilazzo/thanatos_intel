@@ -167,6 +167,7 @@ scheduler_events={
 website_route_rules=[
  {'from_route': '/portal/case/<name>', 'to_route': 'portal/case'},
  {'from_route': '/news/categoria/<slug>', 'to_route': 'news/categoria'},
+ {'from_route': '/soluzioni/<slug>', 'to_route': 'soluzioni'},
 ]
 permission_query_conditions={
  'Investigation Case':'thanatos_intel.permissions.case_query_conditions',
