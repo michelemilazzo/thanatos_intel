@@ -255,8 +255,10 @@ def lookup_wayback(target: str) -> dict:
     if cached:
         return {**cached, "cached": True}
     try:
-        avail = requests.get(WAYBACK_AVAILABLE_URL, headers={"user-agent": UA},
-                            params={"url": target}, timeout=12).json()
+        ar = requests.get(WAYBACK_AVAILABLE_URL, headers={"user-agent": UA},
+                          params={"url": target}, timeout=12)
+        avail = ar.json() if ar.headers.get("content-type", "").startswith("application/json") \
+            or ar.text.strip().startswith("{") else {}
         snap = (avail.get("archived_snapshots") or {}).get("closest") or {}
         cdx = requests.get(WAYBACK_CDX_URL, headers={"user-agent": UA}, params={
             "url": target, "output": "json", "limit": 1,
@@ -271,9 +273,9 @@ def lookup_wayback(target: str) -> dict:
         result = {"archived": bool(snap), "closest": snap.get("timestamp"),
                   "first_snapshot": first_ts,
                   "closest_url": snap.get("url"), "source": "wayback"}
+        _cache_set("wayback", target, result)   # cache SOLO i successi
     except Exception as e:
         result = {"error": str(e)[:200], "source": "wayback"}
-    _cache_set("wayback", target, result)
     return result
 
 
