@@ -244,6 +244,27 @@ def _by_key():
     return {s["key"]: s for s in SOURCES}
 
 
+# Credenziali aggiuntive richieste oltre `needs` (es. Censys id+secret).
+_EXTRA_NEEDS = {"censys": ["censys_api_secret"]}
+
+
+def _operational(s: dict) -> bool:
+    """True se la fonte è eseguibile ORA: ha un connettore e
+    (è gratis+automatica live) OPPURE (richiede una key che È configurata)."""
+    if not s.get("connector"):
+        return False
+    needs = s.get("needs")
+    if needs:
+        if not frappe.conf.get(needs):
+            return False
+        for extra in _EXTRA_NEEDS.get(s["key"], []):
+            if not frappe.conf.get(extra):
+                return False
+        return True
+    # nessuna key richiesta: operativa se marcata live (free_auto o CLI installata)
+    return s.get("status") == "live"
+
+
 @frappe.whitelist()
 def suggest(target_type: str, target_value: str = "") -> dict:
     """Suggerisce le fonti per un target, raggruppate per tier.
@@ -263,10 +284,9 @@ def suggest(target_type: str, target_value: str = "") -> dict:
         "target_type": tt,
         "target_value": target_value,
         "total": len(relevant),
-        "runnable_now": [s["key"] for s in relevant
-                         if s["tier"] == "free_auto" and s["status"] == "live"
-                         and s.get("connector")],
-        "needs_setup": [s["key"] for s in relevant if s["status"] == "needs_key"],
+        "runnable_now": [s["key"] for s in relevant if _operational(s)],
+        "needs_setup": [s["key"] for s in relevant
+                        if s.get("needs") and not _operational(s)],
         "evaluation": [s["key"] for s in relevant if s["status"] == "evaluation"],
         "groups": groups,
     }
@@ -275,7 +295,11 @@ def suggest(target_type: str, target_value: str = "") -> dict:
 def _decorate(s: dict) -> dict:
     d = dict(s)
     d["tier_label"] = TIER_LABEL.get(s["tier"], s["tier"])
-    d["runnable"] = bool(s["tier"] == "free_auto" and s["status"] == "live" and s.get("connector"))
+    op = _operational(s)
+    d["operational"] = op
+    d["runnable"] = op
+    # stato effettivo per la UI: una needs_key configurata risulta 'active'
+    d["effective_status"] = "active" if (op and s.get("needs")) else s["status"]
     subs = s.get("substitutes") or []
     by = _by_key()
     d["substitutes_names"] = [by[k]["name"] for k in subs if k in by]
@@ -284,10 +308,11 @@ def _decorate(s: dict) -> dict:
 
 @frappe.whitelist()
 def auto_run(target_type: str, target_value: str) -> dict:
-    """Esegue automaticamente TUTTE le fonti free_auto+live per il target.
+    """Esegue TUTTE le fonti OPERATIVE per il target: gratis+automatiche e
+    quelle a chiave già configurata. Aggrega i risultati.
 
-    Aggrega i risultati. Le free_key/trial/specialist NON vengono eseguite
-    (serve key/valutazione): vengono solo elencate come suggerimenti.
+    Le fonti che richiedono una key non ancora configurata o da valutare
+    NON vengono eseguite: restano come suggerimenti.
     """
     tt = (target_type or "").strip()
     val = (target_value or "").strip()
@@ -298,7 +323,7 @@ def auto_run(target_type: str, target_value: str) -> dict:
     for s in SOURCES:
         if tt not in s.get("targets", []):
             continue
-        if s["tier"] != "free_auto" or s["status"] != "live" or not s.get("connector"):
+        if not _operational(s):
             continue
         try:
             fn = frappe.get_attr(s["connector"])
@@ -324,8 +349,12 @@ def overview() -> dict:
         by_status[s["status"]] = by_status.get(s["status"], 0) + 1
     evaluation = [_decorate(s) for s in SOURCES
                   if s["status"] in ("evaluation", "substitutable", "planned")]
+    operational = sum(1 for s in SOURCES if _operational(s))
+    keyed_active = sum(1 for s in SOURCES if s.get("needs") and _operational(s))
     return {
         "total": len(SOURCES),
+        "operational": operational,
+        "keyed_active": keyed_active,
         "by_tier": [{"tier": t, "label": TIER_LABEL[t], "count": by_tier.get(t, 0)}
                     for t in TIER_ORDER if by_tier.get(t)],
         "by_status": by_status,

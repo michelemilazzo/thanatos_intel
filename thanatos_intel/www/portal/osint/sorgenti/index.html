@@ -32,7 +32,8 @@ body{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
 .src .nm{font-size:14px;color:#E6E8EE;}
 .src .meta{font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:.5px;}
 .src .st{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line);color:var(--muted);float:right;}
-.st.live{color:#7BC480;border-color:#7BC480;}
+.st.live,.st.active{color:#7BC480;border-color:#7BC480;}
+.st.active{background:rgba(123,196,128,.12);}
 .st.needs_key{color:#E0B860;border-color:#E0B860;}
 .st.evaluation,.st.substitutable,.st.planned{color:#E08B60;border-color:#E08B60;}
 .src .subs{font-size:10px;color:#6FA8DC;margin-top:6px;}
@@ -77,6 +78,8 @@ pre.out{background:#070A14;border:1px solid var(--line);color:#9FE0A8;font-famil
   <div class="card">
     <h2>Quadro registro fonti</h2>
     <div class="kpi">
+      <div class="k" style="border-color:#7BC480;"><b style="color:#7BC480">{{ overview.operational }}</b>Operative ora</div>
+      <div class="k"><b>{{ overview.keyed_active }}</b>Chiavi attive</div>
       {% for t in overview.by_tier %}
       <div class="k"><b>{{ t.count }}</b>{{ t.label }}</div>
       {% endfor %}
@@ -118,7 +121,8 @@ async function suggest(){
   for(const g of d.groups){
     h+=`<div class="tier"><h3>${esc(g.label)}<span class="badge b-${g.tier}">${g.sources.length}</span></h3><div class="srcgrid">`;
     for(const s of g.sources){
-      h+=`<div class="src"><span class="st ${s.status}">${s.status}</span><div class="nm">${esc(s.name)}</div>`;
+      const est=s.effective_status||s.status;
+      h+=`<div class="src"><span class="st ${est}">${est==='active'?'attiva':est}</span><div class="nm">${esc(s.name)}</div>`;
       h+=`<div class="meta">${esc(s.category)}${s.needs?(' · key: '+esc(s.needs)):''}</div>`;
       if(s.note)h+=`<div class="meta">${esc(s.note)}</div>`;
       if(s.substitutes_names&&s.substitutes_names.length)h+=`<div class="subs">↪ ${s.substitutes_names.map(esc).join(', ')}</div>`;
