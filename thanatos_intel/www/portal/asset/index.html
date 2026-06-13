@@ -1,0 +1,122 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import portal_nav %}
+{% block title %}Asset Cloud — Thanatos{% endblock %}
+
+{% block head_include %}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;--green:#1E8449;}
+body{background:var(--navy);color:#E6E8EE;font-family:-apple-system,system-ui,sans-serif;}
+.page_content{padding:0;max-width:100%;}
+.ac-wrap{max-width:980px;margin:28px auto;padding:0 20px;}
+.ac-hero{background:var(--navy2);border:1px solid var(--line);border-radius:12px;padding:22px 24px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start;}
+.ac-hero .lbl{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);}
+.ac-hero p{font-size:17px;line-height:1.6;margin:8px 0 0;max-width:460px;}
+.ac-hero .host{color:var(--gold);}
+.ac-val{font-family:Georgia,serif;font-size:32px;}
+.ac-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0;}
+.ac-card{background:var(--navy2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+.ac-card .k{font-size:12px;color:var(--muted);}
+.ac-card .v{font-size:22px;font-family:Georgia,serif;margin-top:2px;}
+.ac-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+.ac-box{background:var(--navy2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;}
+.ac-box h3{font-weight:400;font-size:15px;margin:0 0 12px;color:#F2F3F6;letter-spacing:.5px;}
+.geo{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px;}
+.geo .n{width:96px;color:var(--muted);}
+.geo .bar{flex:1;height:8px;background:var(--navy);border-radius:4px;overflow:hidden;}
+.geo .bar i{display:block;height:100%;background:var(--gold);}
+.geo .p{width:34px;text-align:right;}
+.kw-soon{font-size:13px;color:var(--muted);line-height:1.6;}
+.ac-cta{background:rgba(200,169,110,.12);border:1px solid rgba(200,169,110,.4);border-radius:12px;padding:16px 18px;margin-top:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;}
+.btn{background:var(--gold);color:var(--navy);border:0;padding:11px 18px;border-radius:6px;letter-spacing:1px;text-transform:uppercase;font-size:12px;cursor:pointer;font-family:inherit;}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--gold);}
+.sell{background:var(--navy2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:12px;}
+.sell .f{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;}
+.sell select,.sell input{background:var(--navy);border:1px solid var(--line);color:#E6E8EE;padding:10px 12px;border-radius:6px;font-family:inherit;}
+.msg{margin-top:10px;font-size:13px;}
+.note{font-size:11px;color:#5B6276;margin:12px 2px 0;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ portal_nav('asset') }}
+<div class="ac-wrap">
+  <div class="ac-hero">
+    <div>
+      <div class="lbl">Asset Cloud MMOS</div>
+      <p>Grazie al sistema MMOS, il tuo sito <span class="host">{{ card.host }}</span> oggi è un
+        <b>asset vendibile</b>. Valore stimato:</p>
+    </div>
+    <div style="text-align:right;">
+      <div class="ac-val">€ {{ "{:,.0f}".format(card.value).replace(",",".") }}</div>
+      <div style="font-size:12px;color:var(--muted);">stima da traffico e anzianità</div>
+    </div>
+  </div>
+
+  <div class="ac-cards">
+    <div class="ac-card"><div class="k">Visite / mese</div><div class="v">{{ card.monthly_visits }}</div></div>
+    <div class="ac-card"><div class="k">Visitatori unici</div><div class="v">{{ card.unique_visitors }}</div></div>
+    <div class="ac-card"><div class="k">Paesi</div><div class="v">{{ card.countries|length }}</div></div>
+    <div class="ac-card"><div class="k">Online dal</div><div class="v" style="font-size:15px;">{{ frappe.utils.formatdate(card.online_since,'MM/yyyy') }}</div></div>
+  </div>
+
+  <div class="ac-row">
+    <div class="ac-box">
+      <h3>Accessi per paese</h3>
+      {% for c in card.countries %}
+      <div class="geo"><span class="n">{{ c.country }}</span><span class="bar"><i style="width:{{ c.pct }}%"></i></span><span class="p">{{ c.pct }}%</span></div>
+      {% endfor %}
+      {% if not card.countries %}<div class="kw-soon">Raccolta dati in corso.</div>{% endif %}
+    </div>
+    <div class="ac-box">
+      <h3>Keyword e posizione SEO</h3>
+      <div class="kw-soon">Collega <b>Google Search Console</b> per vedere con quali parole compari e in che posizione sui motori di ricerca, e attivare il ranking.</div>
+    </div>
+  </div>
+
+  <div class="ac-cta">
+    <div style="max-width:430px;font-size:14px;color:var(--gold);">Vuoi salire in prima posizione sui motori di ricerca? Attiva il servizio di <b>ranking SEO MMOS</b>.</div>
+    <button class="btn" id="seoBtn">Migliora il ranking →</button>
+  </div>
+
+  <div class="sell">
+    <h3 style="margin:0 0 2px;font-weight:400;color:#F2F3F6;">Vuoi vendere questo asset?</h3>
+    <div style="font-size:13px;color:var(--muted);">Dominio, sito completo, progetto o app: ti troviamo l'acquirente.</div>
+    <div class="f">
+      <select id="atype">
+        <option value="Dominio">Cosa vendi — Dominio</option>
+        <option value="Sito completo">Sito completo</option>
+        <option value="Progetto / App">Progetto / App</option>
+        <option value="Brand">Solo il brand</option>
+      </select>
+      <input id="aprice" type="text" placeholder="Prezzo desiderato (€)"/>
+      <input id="anotes" type="text" placeholder="Note (opzionale)"/>
+      <button class="btn ghost" id="sellBtn">Invia richiesta →</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="note">Valore stimato da traffico, anzianità e posizionamento (parametri regolabili). Accessi: analytics interna; paese ricavato dal fuso orario del visitatore. Keyword/posizioni: in arrivo con Search Console.</div>
+</div>
+
+<script>
+const CSRF="{{ csrf_token }}";
+async function post(meth, data){
+  const r=await fetch('/api/method/'+meth,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':CSRF},body:new URLSearchParams(data).toString()});
+  return (await r.json()).message||{};
+}
+document.getElementById('seoBtn').addEventListener('click',async()=>{
+  try{ const m=await post('thanatos_intel.reporting.asset_value.request_seo',{}); if(m.ok) alert('Richiesta inviata. Ti contatteremo per il ranking SEO.'); }
+  catch(e){ alert('Errore: '+e.message); }
+});
+document.getElementById('sellBtn').addEventListener('click',async()=>{
+  const msg=document.getElementById('msg');
+  try{
+    const m=await post('thanatos_intel.reporting.asset_value.submit_sale',{
+      asset_type:document.getElementById('atype').value,
+      desired_price:document.getElementById('aprice').value,
+      notes:document.getElementById('anotes').value});
+    if(m.ok){ msg.style.color='#1E8449'; msg.textContent='Richiesta inviata. Ti ricontattiamo a breve.'; }
+  }catch(e){ msg.style.color='#C0392B'; msg.textContent='Errore: '+e.message; }
+});
+</script>
+{% endblock %}
