@@ -44,6 +44,9 @@ body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page
   color:var(--gold);text-decoration:none;font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700;transition:background .15s,color .15s;}
 .prc-card .btn:hover,.prc-card.featured .btn{background:var(--gold);color:var(--navy);}
 .prc-card.featured .btn:hover{background:var(--gold2);}
+.prc-card .btn-assist{display:block;text-align:center;padding:9px;margin-top:8px;color:var(--muted);
+  text-decoration:none;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
+.prc-card .btn-assist:hover{color:var(--gold);}
 
 .prc-ppu{background:var(--navy2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
   padding:48px 24px;text-align:center;}
@@ -77,10 +80,31 @@ body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page
     <ul>
       {% for f in p.features %}<li>{{ f }}</li>{% endfor %}
     </ul>
-    <a class="btn" href="{% if logged_in %}/portal/billing{% else %}/registrati?service={{ p.code }}{% endif %}">{{ p.cta }} →</a>
+    {% if logged_in %}
+    <a class="btn" href="javascript:void(0)" onclick="buyPlan('{{ p.label }}', this)">Acquista {{ p.label }} →</a>
+    {% else %}
+    <a class="btn" href="/registrati?service={{ p.code }}">{{ p.cta }} →</a>
+    {% endif %}
+    <a class="btn-assist" href="/contatti?service={{ p.code }}&piano={{ p.label }}">Richiedi assistenza</a>
   </div>
   {% endfor %}
 </div>
+
+<script>
+async function buyPlan(plan, el){
+  const old=el.textContent; el.textContent='Reindirizzamento…'; el.style.pointerEvents='none';
+  try{
+    const r=await fetch('/api/method/thanatos_intel.billing.checkout.checkout_plan',{method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':(window.frappe&&frappe.csrf_token)||''},
+      body:new URLSearchParams({plan:plan}).toString()});
+    const j=await r.json(); const m=j.message||{};
+    if(m.url){window.location.href=m.url;return;}
+    if(m.credit){alert(m.message||'Piano attivato a credito.');location.href='/portal/billing';return;}
+    el.textContent=old; el.style.pointerEvents='';
+    alert((j._server_messages?JSON.parse(j._server_messages).map(x=>JSON.parse(x).message).join('\n'):'')||'Operazione non riuscita.');
+  }catch(e){el.textContent=old; el.style.pointerEvents=''; alert('Errore di rete.');}
+}
+</script>
 
 <section class="prc-ppu">
   <h3>Niente abbonamento?</h3>
