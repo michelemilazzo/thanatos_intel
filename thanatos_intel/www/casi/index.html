@@ -1,0 +1,64 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
+{% block title %}Casi studio — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+{{ seo_head(
+   title='Casi studio — intelligence investigativa che fa la differenza',
+   description='Casi reali anonimizzati: antifrode crypto, remediation compliance, due diligence M&A. Come Thanatos trasforma i dati in decisioni e recupero.',
+   path='/casi') }}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+.cs-wrap{max-width:920px;margin:0 auto;padding:48px 24px;}
+.cs-hero{text-align:center;margin-bottom:40px;}
+.cs-hero .eye{color:var(--muted);font-size:12px;letter-spacing:3px;text-transform:uppercase;}
+.cs-hero h1{color:var(--gold);font-weight:400;font-size:32px;letter-spacing:2px;margin:10px 0 12px;font-family:'Cinzel',Georgia,serif;}
+.cs-hero p{color:#A4A9BC;font-size:15px;line-height:1.7;max-width:640px;margin:0 auto;}
+.cs{background:var(--navy2);border:1px solid var(--line);border-left:3px solid var(--gold);padding:26px 28px;margin-bottom:20px;}
+.cs .tag{color:var(--gold);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.cs h2{color:#E6E8EE;font-weight:400;font-size:20px;letter-spacing:.5px;margin:0 0 16px;}
+.cs .blk{margin-bottom:12px;}
+.cs .blk .k{color:var(--gold);font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;}
+.cs .blk p{color:#A4A9BC;font-size:14px;line-height:1.65;margin:0;}
+.cs .esito p{color:#E6E8EE;}
+.cs-cta{text-align:center;background:var(--navy2);border:1px solid var(--gold);padding:30px;margin-top:14px;}
+.cs-cta a{display:inline-block;margin:6px;padding:13px 26px;border:1px solid var(--gold);color:var(--gold);text-decoration:none;letter-spacing:2px;text-transform:uppercase;font-size:11px;}
+.cs-cta a.solid{background:var(--gold);color:var(--navy);}
+.cs-note{color:var(--muted);font-size:11px;text-align:center;margin-top:24px;line-height:1.6;}
+@media(max-width:600px){.cs-hero h1{font-size:25px;}.cs-wrap{padding:32px 16px;}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header() }}
+<div class="cs-wrap">
+  <div class="cs-hero">
+    <div class="eye">Casi studio</div>
+    <h1>Quando i dati diventano decisioni</h1>
+    <p>Casi reali, anonimizzati per riservatezza. Ogni intervento si chiude con un fascicolo
+       certificato a valore legale: prove verificate, fonti documentate, catena di custodia.</p>
+  </div>
+
+  {% for c in cases %}
+  <div class="cs">
+    <div class="tag">{{ c.tag }}</div>
+    <h2>{{ c.title }}</h2>
+    <div class="blk"><div class="k">Il problema</div><p>{{ c.problem }}</p></div>
+    <div class="blk"><div class="k">L'approccio Thanatos</div><p>{{ c.approach }}</p></div>
+    <div class="blk esito"><div class="k">L'esito</div><p>{{ c.outcome }}</p></div>
+  </div>
+  {% endfor %}
+
+  <div class="cs-cta">
+    <div style="color:#A4A9BC;margin-bottom:14px;font-size:15px;">Hai un caso simile? Parti da una verifica o parlane con un analista.</div>
+    <a class="solid" href="/verifica-rischio">Verifica del rischio gratuita</a>
+    <a href="/soluzioni">Vedi le soluzioni</a>
+    <a href="/contatti">Parla con noi</a>
+  </div>
+
+  <p class="cs-note">I casi sono anonimizzati e i dettagli alterati per tutelare la riservatezza dei clienti.
+  Importi ed esiti sono rappresentativi di interventi reali.</p>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

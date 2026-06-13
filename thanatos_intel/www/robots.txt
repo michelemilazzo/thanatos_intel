@@ -11,3 +11,4 @@ Disallow: /visa_case_status
 Disallow: /upload-test
 
 Sitemap: https://www.thanatos.agency/sitemap.xml
+Sitemap: https://www.thanatos.agency/sitemap-soluzioni.xml

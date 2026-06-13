@@ -160,6 +160,7 @@ def _append_sources_section(story, s, case_name, lang):
     story.append(Spacer(1, 4))
 
     seen = set()
+    hashes = []
     data = [["#", "Fonte", "Target", "SHA-256 (risultato)", "Verificata il"]]
     i = 0
     for st in steps:
@@ -170,6 +171,7 @@ def _append_sources_section(story, s, case_name, lang):
         if key in seen:
             continue
         seen.add(key)
+        hashes.append(sha)
         i += 1
         label = (labels.get(st.connector) or (st.connector, ""))[0]
         data.append([
@@ -191,7 +193,11 @@ def _append_sources_section(story, s, case_name, lang):
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
     story.append(t)
+    manifest = hashlib.sha256("\n".join(sorted(hashes)).encode("utf-8")).hexdigest()
+    story.append(Paragraph(
+        f"<b>Manifest fonti (SHA-256):</b> {manifest}", s["disclaimer"]))
     story.append(Spacer(1, 10))
+    return {"count": i, "manifest": manifest}
 
 
 def build_report_pdf(report_name: str) -> tuple[str, str]:
@@ -288,7 +294,7 @@ def build_report_pdf(report_name: str) -> tuple[str, str]:
         story.append(et)
         story.append(Spacer(1, 10))
 
-    _append_sources_section(story, s, case.name, lang)
+    sources_manifest = _append_sources_section(story, s, case.name, lang)
 
     story.append(Spacer(1, 14))
     story.append(Paragraph(DISCLAIMERS.get(lang, DISCLAIMERS["it"]), s["disclaimer"]))
@@ -343,6 +349,15 @@ def build_report_pdf(report_name: str) -> tuple[str, str]:
             "performed_by": frappe.session.user,
             "description": f"Report {report_name} generated — SHA-256: {sha[:16]}…",
         })
+        if sources_manifest and sources_manifest.get("count"):
+            case_doc.append("case_activities", {
+                "activity_type": "Report",
+                "activity_date": get_datetime(),
+                "performed_by": frappe.session.user,
+                "description": (f"{sources_manifest['count']} fonti OSINT verificate e "
+                                f"certificate nel report {report_name} — manifest SHA-256: "
+                                f"{sources_manifest['manifest'][:16]}…"),
+            })
         case_doc.db_update()
         for row in case_doc.case_activities:
             if not row.name:
