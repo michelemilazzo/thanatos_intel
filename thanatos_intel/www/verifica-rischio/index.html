@@ -1,0 +1,106 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
+{% block title %}Verifica rischio gratuita — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+{{ seo_head(
+   title='Verifica rischio gratuita — Thanatos Intel',
+   description='Controlla in pochi secondi il profilo di rischio di aziende, persone, domini, IP o wallet. Semaforo di rischio istantaneo da fonti pubbliche e liste sanzioni. Gratis.',
+   path='/verifica-rischio') }}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+.vr-wrap{max-width:760px;margin:0 auto;padding:56px 24px;text-align:center;}
+.vr-wrap h1{color:var(--gold);font-weight:400;letter-spacing:4px;font-size:30px;margin:0 0 10px;font-family:'Cinzel',Georgia,serif;}
+.vr-sub{color:var(--muted);font-size:15px;line-height:1.6;margin:0 auto 36px;max-width:560px;}
+.vr-card{background:var(--navy2);border:1px solid var(--line);padding:28px;}
+.vr-row{display:grid;grid-template-columns:210px 1fr;gap:10px;}
+.vr-row select,.vr-row input{background:var(--navy);border:1px solid var(--line);color:#E6E8EE;padding:13px 14px;font-family:inherit;font-size:15px;}
+.vr-row select:focus,.vr-row input:focus{border-color:var(--gold);outline:0;}
+.vr-btn{margin-top:14px;width:100%;background:var(--gold);color:var(--navy);border:0;padding:15px;letter-spacing:3px;text-transform:uppercase;font-size:13px;font-weight:bold;cursor:pointer;font-family:inherit;}
+.vr-btn:hover{background:#B8975A;}
+.vr-result{margin-top:26px;display:none;}
+.light{width:120px;height:120px;border-radius:50%;margin:0 auto 16px;border:3px solid;box-shadow:0 0 50px;transition:.3s;}
+.light.green{background:#1E8449;border-color:#7BC480;box-shadow:0 0 50px rgba(123,196,128,.55);}
+.light.yellow{background:#B7950B;border-color:#E0C56A;box-shadow:0 0 50px rgba(224,197,106,.55);}
+.light.orange{background:#B9770E;border-color:#E0935A;box-shadow:0 0 50px rgba(224,147,90,.55);}
+.light.red{background:#922B21;border-color:#E0685E;box-shadow:0 0 60px rgba(224,104,94,.65);}
+.vr-label{font-size:20px;color:#E6E8EE;letter-spacing:1px;margin-bottom:8px;}
+.vr-tone{color:var(--muted);font-size:14px;line-height:1.6;max-width:520px;margin:0 auto 22px;}
+.vr-cta{display:inline-block;background:transparent;border:1px solid var(--gold);color:var(--gold);padding:14px 28px;text-decoration:none;letter-spacing:2px;text-transform:uppercase;font-size:12px;}
+.vr-cta:hover{background:var(--gold);color:var(--navy);}
+.vr-cta.solid{background:var(--gold);color:var(--navy);margin-left:8px;}
+.vr-note{color:var(--muted);font-size:12px;margin-top:30px;line-height:1.6;}
+.vr-status{color:var(--muted);font-size:13px;letter-spacing:1px;margin-top:12px;min-height:16px;}
+.locked{margin-top:18px;border-top:1px dashed var(--line);padding-top:18px;color:var(--muted);font-size:13px;}
+.locked b{color:var(--gold);}
+@media(max-width:560px){.vr-row{grid-template-columns:1fr;}.vr-wrap{padding:36px 16px;}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header() }}
+<div class="vr-wrap">
+  <h1>VERIFICA DEL RISCHIO</h1>
+  <p class="vr-sub">Inserisci un'azienda, una persona, un dominio, un IP o un wallet:
+  in pochi secondi ottieni un <b style="color:#C8A96E">semaforo di rischio</b> basato su fonti pubbliche
+  e liste sanzioni internazionali. Istantaneo e gratuito.</p>
+
+  <div class="vr-card">
+    <div class="vr-row">
+      <select id="tt">
+        <option value="Company">Azienda</option>
+        <option value="Person">Persona</option>
+        <option value="Domain">Dominio</option>
+        <option value="IP">IP</option>
+        <option value="Wallet">Wallet crypto</option>
+        <option value="Phone">Telefono</option>
+        <option value="Username">Username</option>
+      </select>
+      <input id="tv" placeholder="Nome, dominio, indirizzo wallet…" autocomplete="off"/>
+    </div>
+    <button class="vr-btn" onclick="scan()">Verifica rischio</button>
+    <div class="vr-status" id="status"></div>
+
+    <div class="vr-result" id="result">
+      <div class="light" id="light"></div>
+      <div class="vr-label" id="lbl"></div>
+      <div class="vr-tone" id="tone"></div>
+      <div class="locked">
+        🔒 <b>Dettagli, fonti certificate e dossier con valore legale</b> sono riservati ai clienti.
+      </div>
+      <div style="margin-top:20px;">
+        <a class="vr-cta solid" href="/registrati?from=verifica-rischio">Registrati</a>
+        <a class="vr-cta" href="/servizi">Vedi i servizi</a>
+      </div>
+    </div>
+  </div>
+
+  <p class="vr-note">Il semaforo è un'indicazione preliminare automatizzata da fonti pubbliche, non costituisce
+  un report investigativo né una prova. L'analisi completa, le fonti verificate e la certificazione con catena
+  di custodia (art. 234-bis c.p.p.) sono disponibili dopo la registrazione.</p>
+</div>
+
+<script>
+async function scan(){
+  const tt=document.getElementById('tt').value, tv=document.getElementById('tv').value.trim();
+  const st=document.getElementById('status'), res=document.getElementById('result');
+  if(!tv){st.textContent='Inserisci un valore da verificare.';return;}
+  st.textContent='Analisi in corso sulle fonti pubbliche…'; res.style.display='none';
+  try{
+    const r=await fetch('/api/method/thanatos_intel.osint.public_scan.quick_signal',{method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':(window.frappe&&frappe.csrf_token)||''},
+      body:new URLSearchParams({target_type:tt,target_value:tv}).toString()});
+    const j=await r.json(); const m=j.message||{};
+    if(m.error){st.textContent=m.message||'Verifica non disponibile, riprova.';return;}
+    st.textContent='';
+    document.getElementById('light').className='light '+m.signal;
+    document.getElementById('lbl').textContent=m.label;
+    document.getElementById('tone').textContent=m.tone;
+    res.style.display='block';
+  }catch(e){st.textContent='Errore di rete, riprova.';}
+}
+document.getElementById('tv').addEventListener('keydown',e=>{if(e.key==='Enter')scan();});
+</script>
+{{ thanatos_footer() }}
+{% endblock %}
