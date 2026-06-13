@@ -23,10 +23,10 @@ class InvestigationEvidence(Document):
 			self._append_custody_log("Modified", "File aggiornato")
 
 	def on_trash(self):
-		# Catena di custodia (art. 234-bis c.p.p.): le prove NON si cancellano.
+		# Catena di custodia (Cod procedură penală (Legea 135/2010)): le prove NON si cancellano.
 		# Solo archive_evidence() può flaggare archived=1 senza distruggere.
 		frappe.throw(
-			_("Le prove non possono essere eliminate (catena di custodia ex art. 234-bis c.p.p.). "
+			_("Le prove non possono essere eliminate (catena di custodia ex Cod procedură penală (Legea 135/2010)). "
 			  "Usare il comando 'Archive' per marcare la prova come archiviata."),
 			frappe.PermissionError,
 		)

@@ -1,0 +1,53 @@
+{
+ "name": "Surveillance Observation",
+ "doctype": "DocType",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "istable": 1,
+ "editable_grid": 1,
+ "fields": [
+  {
+   "fieldname": "obs_time",
+   "fieldtype": "Datetime",
+   "label": "Ora",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Data",
+   "label": "Luogo",
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "observation",
+   "fieldtype": "Small Text",
+   "label": "Osservazione",
+   "in_list_view": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "cb_geo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "geo_lat",
+   "fieldtype": "Float",
+   "label": "Lat",
+   "precision": "6"
+  },
+  {
+   "fieldname": "geo_lng",
+   "fieldtype": "Float",
+   "label": "Lng",
+   "precision": "6"
+  },
+  {
+   "fieldname": "photo",
+   "fieldtype": "Attach Image",
+   "label": "Foto"
+  }
+ ],
+ "permissions": []
+}

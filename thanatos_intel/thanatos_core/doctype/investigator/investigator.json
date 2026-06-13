@@ -6,29 +6,133 @@
  "autoname": "field:full_name",
  "title_field": "full_name",
  "fields": [
-  {"fieldname":"sb_main","fieldtype":"Section Break","label":"Investigator"},
-  {"fieldname":"full_name","fieldtype":"Data","label":"Full Name","reqd":1,"in_list_view":1},
-  {"fieldname":"investigator_type","fieldtype":"Select","label":"Type","options":"Employee\nContractor\nAffiliate","default":"Employee","in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"availability","fieldtype":"Select","label":"Availability","options":"Available\nBusy\nUnavailable\nOn Leave","default":"Available","in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"cb_main","fieldtype":"Column Break"},
-  {"fieldname":"platform_user","fieldtype":"Link","label":"Platform User","options":"User"},
-  {"fieldname":"erp_employee_id","fieldtype":"Data","label":"ERP Employee ID"},
-  {"fieldname":"territory","fieldtype":"Data","label":"Territory"},
-  {"fieldname":"sb_license","fieldtype":"Section Break","label":"Licenses"},
-  {"fieldname":"tulps_license","fieldtype":"Data","label":"TULPS License (IT)"},
-  {"fieldname":"igpr_license","fieldtype":"Data","label":"IGPR License (RO)"},
-  {"fieldname":"cb_license","fieldtype":"Column Break"},
-  {"fieldname":"license_expiry","fieldtype":"Date","label":"License Expiry"},
-  {"fieldname":"sb_spec","fieldtype":"Section Break","label":"Specializations"},
-  {"fieldname":"specializations","fieldtype":"Table","label":"Specializations","options":"Investigator Specialization"},
-  {"fieldname":"sb_admin","fieldtype":"Section Break","label":"Administrative"},
-  {"fieldname":"active_cases_count","fieldtype":"Int","label":"Active Cases","read_only":1},
-  {"fieldname":"commission_rate","fieldtype":"Percent","label":"Commission Rate"},
-  {"fieldname":"cb_admin","fieldtype":"Column Break"},
-  {"fieldname":"bank_iban","fieldtype":"Data","label":"Bank IBAN"}
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Investigator"
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Full Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "investigator_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Employee\nContractor\nAffiliate",
+   "default": "Employee",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "availability",
+   "fieldtype": "Select",
+   "label": "Availability",
+   "options": "Available\nBusy\nUnavailable\nOn Leave",
+   "default": "Available",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "platform_user",
+   "fieldtype": "Link",
+   "label": "Platform User",
+   "options": "User"
+  },
+  {
+   "fieldname": "erp_employee_id",
+   "fieldtype": "Data",
+   "label": "ERP Employee ID"
+  },
+  {
+   "fieldname": "territory",
+   "fieldtype": "Data",
+   "label": "Territory"
+  },
+  {
+   "fieldname": "sb_license",
+   "fieldtype": "Section Break",
+   "label": "Licenze (Legea 329/2003)"
+  },
+  {
+   "fieldname": "atestat_detectiv",
+   "fieldtype": "Data",
+   "label": "Atestat detectiv particular"
+  },
+  {
+   "fieldname": "licenta_functionare",
+   "fieldtype": "Data",
+   "label": "Licență de funcționare (IGPR)"
+  },
+  {
+   "fieldname": "cb_license",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "license_expiry",
+   "fieldtype": "Date",
+   "label": "Scadenza atestat / licență"
+  },
+  {
+   "fieldname": "sb_spec",
+   "fieldtype": "Section Break",
+   "label": "Specializations"
+  },
+  {
+   "fieldname": "specializations",
+   "fieldtype": "Table",
+   "label": "Specializations",
+   "options": "Investigator Specialization"
+  },
+  {
+   "fieldname": "sb_admin",
+   "fieldtype": "Section Break",
+   "label": "Administrative"
+  },
+  {
+   "fieldname": "active_cases_count",
+   "fieldtype": "Int",
+   "label": "Active Cases",
+   "read_only": 1
+  },
+  {
+   "fieldname": "commission_rate",
+   "fieldtype": "Percent",
+   "label": "Commission Rate"
+  },
+  {
+   "fieldname": "cb_admin",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bank_iban",
+   "fieldtype": "Data",
+   "label": "Bank IBAN"
+  }
  ],
  "permissions": [
-  {"role":"Investigation Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1,"print":1,"email":1,"share":1},
-  {"role":"Investigator","read":1}
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Investigator",
+   "read": 1
+  }
  ]
 }

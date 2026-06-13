@@ -1,0 +1,152 @@
+{
+ "name": "Communication Log",
+ "doctype": "DocType",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "naming_rule": "Expression",
+ "autoname": "format:COM-{YYYY}-{#####}",
+ "track_changes": 1,
+ "sort_field": "occurred_at",
+ "sort_order": "DESC",
+ "fields": [
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Comunicazione"
+  },
+  {
+   "fieldname": "investigation_case",
+   "fieldtype": "Link",
+   "label": "Caso",
+   "options": "Investigation Case",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Select",
+   "label": "Canale",
+   "options": "Telefono\nSMS\nWhatsApp\nTelegram\nSignal\nEmail\nAltro",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "label": "Direzione",
+   "options": "In entrata\nIn uscita",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "occurred_at",
+   "fieldtype": "Datetime",
+   "label": "Data e ora",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "duration_seconds",
+   "fieldtype": "Int",
+   "label": "Durata (sec)",
+   "depends_on": "eval:doc.channel=='Telefono'"
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "counterparty_name",
+   "fieldtype": "Data",
+   "label": "Controparte",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "counterparty_contact",
+   "fieldtype": "Data",
+   "label": "Numero / Email controparte"
+  },
+  {
+   "fieldname": "subject_entity",
+   "fieldtype": "Data",
+   "label": "Soggetto collegato"
+  },
+  {
+   "fieldname": "investigator",
+   "fieldtype": "Link",
+   "label": "Investigatore",
+   "options": "Investigator",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sb_content",
+   "fieldtype": "Section Break",
+   "label": "Contenuto"
+  },
+  {
+   "fieldname": "content",
+   "fieldtype": "Text",
+   "label": "Trascrizione / Testo / Sintesi"
+  },
+  {
+   "fieldname": "sb_attach",
+   "fieldtype": "Section Break",
+   "label": "Registrazione / Allegato"
+  },
+  {
+   "fieldname": "attachment",
+   "fieldtype": "Attach",
+   "label": "File (registrazione, export, .eml)"
+  },
+  {
+   "fieldname": "cb_attach",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sha256",
+   "fieldtype": "Data",
+   "label": "SHA-256",
+   "read_only": 1
+  },
+  {
+   "fieldname": "evidence_ref",
+   "fieldtype": "Link",
+   "label": "Reperto",
+   "options": "Investigation Evidence",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_link",
+   "fieldtype": "Section Break",
+   "label": "Collegamenti"
+  },
+  {
+   "fieldname": "related_activity",
+   "fieldtype": "Link",
+   "label": "Attività collegata",
+   "options": "Field Activity"
+  },
+  {
+   "fieldname": "cb_link",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "legal_basis",
+   "fieldtype": "Select",
+   "label": "Base giuridica",
+   "options": "\nParte della conversazione\nConsenso del soggetto\nMandato del cliente\nContratto detective (Legea 329/2003)\nAltro"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

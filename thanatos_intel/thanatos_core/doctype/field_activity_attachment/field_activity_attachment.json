@@ -1,0 +1,50 @@
+{
+ "name": "Field Activity Attachment",
+ "doctype": "DocType",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "istable": 1,
+ "editable_grid": 1,
+ "fields": [
+  {
+   "fieldname": "file",
+   "fieldtype": "Attach",
+   "label": "File",
+   "in_list_view": 1,
+   "columns": 4,
+   "reqd": 1
+  },
+  {
+   "fieldname": "caption",
+   "fieldtype": "Data",
+   "label": "Didascalia",
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "captured_at",
+   "fieldtype": "Datetime",
+   "label": "Acquisito il",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "evidence_ref",
+   "fieldtype": "Link",
+   "label": "Reperto",
+   "options": "Investigation Evidence",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sha256",
+   "fieldtype": "Data",
+   "label": "SHA-256",
+   "read_only": 1
+  }
+ ],
+ "permissions": []
+}

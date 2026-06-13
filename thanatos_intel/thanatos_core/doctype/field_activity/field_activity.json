@@ -1,0 +1,229 @@
+{
+ "name": "Field Activity",
+ "doctype": "DocType",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "naming_rule": "Expression",
+ "autoname": "format:ATT-{YYYY}-{#####}",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "sort_field": "start_datetime",
+ "sort_order": "DESC",
+ "title_field": "activity_title",
+ "fields": [
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Attività"
+  },
+  {
+   "fieldname": "investigation_case",
+   "fieldtype": "Link",
+   "label": "Caso",
+   "options": "Investigation Case",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "activity_type",
+   "fieldtype": "Select",
+   "label": "Tipo attività",
+   "options": "Incontro\nPedinamento\nSopralluogo\nSpostamento\nChiamata\nMessaggio\nEmail\nOsservazione\nRaccolta prove",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "activity_title",
+   "fieldtype": "Data",
+   "label": "Titolo",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "investigator",
+   "fieldtype": "Link",
+   "label": "Investigatore",
+   "options": "Investigator",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "verified",
+   "fieldtype": "Check",
+   "label": "Verificata dal responsabile",
+   "read_only": 1
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Link",
+   "label": "Verificata da",
+   "options": "User",
+   "read_only": 1,
+   "depends_on": "verified"
+  },
+  {
+   "fieldname": "sb_time",
+   "fieldtype": "Section Break",
+   "label": "Tempo e luogo"
+  },
+  {
+   "fieldname": "start_datetime",
+   "fieldtype": "Datetime",
+   "label": "Inizio",
+   "reqd": 1
+  },
+  {
+   "fieldname": "end_datetime",
+   "fieldtype": "Datetime",
+   "label": "Fine"
+  },
+  {
+   "fieldname": "duration_minutes",
+   "fieldtype": "Float",
+   "label": "Durata (minuti)",
+   "read_only": 1,
+   "precision": "1"
+  },
+  {
+   "fieldname": "cb_time",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "location_address",
+   "fieldtype": "Data",
+   "label": "Indirizzo / Luogo"
+  },
+  {
+   "fieldname": "geo_lat",
+   "fieldtype": "Float",
+   "label": "Latitudine",
+   "precision": "6"
+  },
+  {
+   "fieldname": "geo_lng",
+   "fieldtype": "Float",
+   "label": "Longitudine",
+   "precision": "6"
+  },
+  {
+   "fieldname": "geo_accuracy",
+   "fieldtype": "Float",
+   "label": "Precisione GPS (m)",
+   "precision": "1"
+  },
+  {
+   "fieldname": "sb_subjects",
+   "fieldtype": "Section Break",
+   "label": "Soggetti coinvolti"
+  },
+  {
+   "fieldname": "subjects",
+   "fieldtype": "Small Text",
+   "label": "Soggetti / Entità (uno per riga)"
+  },
+  {
+   "fieldname": "sb_narrative",
+   "fieldtype": "Section Break",
+   "label": "Relazione"
+  },
+  {
+   "fieldname": "narrative",
+   "fieldtype": "Text Editor",
+   "label": "Relazione dettagliata"
+  },
+  {
+   "fieldname": "sb_surveillance",
+   "fieldtype": "Section Break",
+   "label": "Pedinamento / Osservazioni",
+   "depends_on": "eval:['Pedinamento','Osservazione','Sopralluogo'].includes(doc.activity_type)"
+  },
+  {
+   "fieldname": "observations",
+   "fieldtype": "Table",
+   "label": "Timeline osservazioni",
+   "options": "Surveillance Observation"
+  },
+  {
+   "fieldname": "sb_evidence",
+   "fieldtype": "Section Break",
+   "label": "Reperti e allegati"
+  },
+  {
+   "fieldname": "attachments",
+   "fieldtype": "Table",
+   "label": "Allegati",
+   "options": "Field Activity Attachment",
+   "description": "Ogni file caricato genera un reperto in catena di custodia (SHA-256) al submit."
+  },
+  {
+   "fieldname": "sb_billing",
+   "fieldtype": "Section Break",
+   "label": "Fatturazione"
+  },
+  {
+   "fieldname": "billable",
+   "fieldtype": "Check",
+   "label": "Fatturabile",
+   "default": "1"
+  },
+  {
+   "fieldname": "billable_hours",
+   "fieldtype": "Float",
+   "label": "Ore fatturabili",
+   "read_only": 1,
+   "precision": "2"
+  },
+  {
+   "fieldname": "cb_billing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "service_code",
+   "fieldtype": "Data",
+   "label": "Codice servizio (opz.)"
+  },
+  {
+   "fieldname": "sb_legal",
+   "fieldtype": "Section Break",
+   "label": "Base giuridica"
+  },
+  {
+   "fieldname": "legal_basis",
+   "fieldtype": "Select",
+   "label": "Base giuridica",
+   "options": "\nParte della conversazione\nConsenso del soggetto\nMandato del cliente\nContratto detective (Legea 329/2003)\nAltro",
+   "description": "Fondamento di liceità dell'attività ex Legea 329/2003 (detective particular) + GDPR/Legea 190/2018."
+  },
+  {
+   "fieldname": "consent_confirmed",
+   "fieldtype": "Check",
+   "label": "Liceità confermata"
+  },
+  {
+   "fieldname": "cb_legal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "legal_note",
+   "fieldtype": "Small Text",
+   "label": "Note legali"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}
