@@ -47,6 +47,21 @@ body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page
 .prc-card .btn-assist{display:block;text-align:center;padding:9px;margin-top:8px;color:var(--muted);
   text-decoration:none;font-size:10px;letter-spacing:2px;text-transform:uppercase;}
 .prc-card .btn-assist:hover{color:var(--gold);}
+.model-compare{max-width:980px;margin:0 auto 18px;padding:0 24px;display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.model{background:var(--navy2);border:1px solid var(--line);padding:26px;}
+.model.featured{border-color:var(--gold);}
+.model-tag{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.model.featured .model-tag{color:var(--gold);}
+.model h2{font-family:Georgia,serif;font-size:24px;color:#E6E8EE;margin:6px 0 2px;font-weight:400;}
+.model-sub{color:var(--gold);font-size:13px;margin-bottom:16px;}
+.model ul{list-style:none;padding:0;margin:0 0 20px;}
+.model li{color:#A4A9BC;font-size:13px;line-height:1.7;padding:3px 0;}
+.model-btn{display:inline-block;padding:12px 22px;border:1px solid var(--gold);color:var(--gold);text-decoration:none;
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:700;}
+.model-btn.solid,.model-btn:hover{background:var(--gold);color:var(--navy);}
+.prc-section-title{text-align:center;color:var(--muted);font-size:12px;letter-spacing:4px;text-transform:uppercase;
+  font-weight:400;margin:28px 0 16px;}
+@media(max-width:720px){.model-compare{grid-template-columns:1fr;}}
 
 .prc-ppu{background:var(--navy2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
   padding:48px 24px;text-align:center;}
@@ -63,12 +78,42 @@ body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page
 {{ thanatos_header('pricing') }}
 
 <section class="ppu-hero">
-  <div class="eyebrow">Piani &amp; prezzi</div>
-  <h1>Intelligence <em>continuativa</em></h1>
-  <p>Quattro piani per professionisti, studi e aziende. Tutti includono l'accesso al portale clienti
-     e l'onboarding KYC. Attivazione previa verifica.</p>
+  <div class="eyebrow">Come lavorare con Thanatos</div>
+  <h1>Due modi per <em>verificare</em></h1>
+  <p>Scegli in base alle tue esigenze: paga la singola verifica quando ti serve, oppure
+     attiva un abbonamento per lavorare con continuità a condizioni migliori.</p>
 </section>
 
+<div class="model-compare">
+  <div class="model">
+    <div class="model-tag">On-demand</div>
+    <h2>Pay-per-use</h2>
+    <div class="model-sub">Paghi solo ciò che usi</div>
+    <ul>
+      <li>✓ Prezzo trasparente per singola verifica</li>
+      <li>✓ Nessun canone, nessun impegno</li>
+      <li>✓ Attivazione immediata, paghi con carta</li>
+      <li>✓ Ideale per esigenze occasionali o una tantum</li>
+      <li>· SLA standard del servizio</li>
+    </ul>
+    <a class="model-btn" href="/pay-per-use">Sfoglia i servizi →</a>
+  </div>
+  <div class="model featured">
+    <div class="model-tag">Continuativo</div>
+    <h2>Abbonamento</h2>
+    <div class="model-sub">Canone mensile, più valore</div>
+    <ul>
+      <li>✓ Verifiche e pacchetti inclusi ogni mese</li>
+      <li>✓ Priorità SLA e referente dedicato</li>
+      <li>✓ Sconti dedicati (studi legali, commercialisti)</li>
+      <li>✓ Monitoraggio continuo e accesso API (piani alti)</li>
+      <li>✓ Ideale per chi verifica con continuità</li>
+    </ul>
+    <a class="model-btn solid" href="#piani">Scegli un piano →</a>
+  </div>
+</div>
+
+<h3 class="prc-section-title" id="piani">I piani in abbonamento</h3>
 <div class="prc-grid">
   {% for p in plans %}
   <div class="prc-card{% if p.featured %} featured{% endif %}">
