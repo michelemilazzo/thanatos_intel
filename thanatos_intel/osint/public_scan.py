@@ -56,8 +56,21 @@ def quick_signal(target_type: str, target_value: str) -> dict:
         return {"error": "rate_limited",
                 "message": "Troppe verifiche. Registrati per analisi illimitate."}
 
+    # categoria generica del riscontro (NESSUNA fonte/dettaglio) → solo per invogliare
+    HINT = {
+        "opensanctions": "Possibili riscontri in liste sanzioni / PEP internazionali",
+        "courtlistener": "Possibili procedimenti giudiziari collegati",
+        "rdap": "Dominio di registrazione recente",
+        "greynoise": "Segnalazioni di sicurezza sull'infrastruttura",
+        "otx": "Segnalazioni di threat intelligence",
+        "pulsedive": "Indicatori di rischio reputazionale",
+        "abuseipdb": "Segnalazioni di abuso sull'IP",
+        "virustotal": "Riscontri su motori di sicurezza",
+    }
+
     score = 0
     ran = 0
+    hints = []
     for s in sr.SOURCES:
         if tt not in s.get("targets", []):
             continue
@@ -71,6 +84,8 @@ def quick_signal(target_type: str, target_value: str) -> dict:
             name = {"opensanctions_local": "opensanctions"}.get(s["key"], s["key"])
             d, _ = _score_delta(name, res)
             score += d
+            if d > 0 and name in HINT and HINT[name] not in hints:
+                hints.append(HINT[name])
         except Exception:
             continue
 
@@ -82,5 +97,6 @@ def quick_signal(target_type: str, target_value: str) -> dict:
         "label": sig["label"],
         "tone": sig["tone"],
         "checked": ran,
+        "hints": hints[:3],
         "cta": "Registrati per il dossier completo, le fonti certificate e il valore legale.",
     }

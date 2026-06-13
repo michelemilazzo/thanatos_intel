@@ -66,6 +66,7 @@ body{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
       <div class="light" id="light"></div>
       <div class="vr-label" id="lbl"></div>
       <div class="vr-tone" id="tone"></div>
+      <ul id="hints" style="list-style:none;padding:0;margin:0 auto 18px;max-width:520px;text-align:left;display:none;"></ul>
       <div class="locked">
         🔒 <b>Dettagli, fonti certificate e dossier con valore legale</b> sono riservati ai clienti.
       </div>
@@ -97,6 +98,11 @@ async function scan(){
     document.getElementById('light').className='light '+m.signal;
     document.getElementById('lbl').textContent=m.label;
     document.getElementById('tone').textContent=m.tone;
+    const ul=document.getElementById('hints');
+    if(m.hints&&m.hints.length){
+      ul.innerHTML=m.hints.map(h=>`<li style="color:#E0B860;font-size:13px;padding:6px 0;border-bottom:1px solid #1F2742;">⚠ ${h}</li>`).join('');
+      ul.style.display='block';
+    }else{ul.style.display='none';ul.innerHTML='';}
     res.style.display='block';
   }catch(e){st.textContent='Errore di rete, riprova.';}
 }
