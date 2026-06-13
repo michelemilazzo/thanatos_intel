@@ -1,0 +1,113 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}Chiavi API OSINT — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+.ak-wrap{max-width:1040px;margin:0 auto;padding:32px 24px;}
+.ak-head{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:8px;flex-wrap:wrap;}
+.ak-head h1{color:var(--gold);font-weight:400;letter-spacing:4px;font-size:22px;margin:0;}
+.ak-head a{color:var(--gold);text-decoration:none;font-size:12px;letter-spacing:2px;}
+.ak-sub{color:var(--muted);font-size:12px;letter-spacing:1px;margin-bottom:22px;}
+.ak-sub b{color:var(--gold);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+.k{background:var(--navy2);border:1px solid var(--line);padding:16px 16px 14px;}
+.k .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.k .nm{font-size:15px;color:#E6E8EE;}
+.k .cat{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+.st{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border:1px solid;white-space:nowrap;}
+.st.on{color:#7BC480;border-color:#7BC480;}
+.st.off{color:#E0B860;border-color:#E0B860;}
+.k .cfg{font-family:monospace;font-size:11px;color:var(--muted);margin:8px 0 4px;}
+.k .reg{display:inline-block;font-size:11px;color:var(--gold);text-decoration:none;border:1px solid var(--line);padding:5px 10px;margin:6px 0 10px;letter-spacing:.5px;}
+.k .reg:hover{border-color:var(--gold);}
+.k .row{display:flex;gap:6px;margin-top:6px;}
+.k input{flex:1;background:var(--navy);border:1px solid var(--line);color:#E6E8EE;padding:9px 10px;font-family:monospace;font-size:13px;}
+.k input:focus{border-color:var(--gold);outline:0;}
+.btn{background:var(--gold);color:var(--navy);border:0;padding:9px 14px;letter-spacing:1px;text-transform:uppercase;font-size:10px;cursor:pointer;font-weight:bold;font-family:inherit;}
+.btn.rm{background:transparent;color:#E0867A;border:1px solid #4a2a2a;}
+.msg{font-size:11px;margin-top:6px;min-height:14px;}
+.msg.ok{color:#7BC480;}.msg.err{color:#E0867A;}
+.extra{margin-top:8px;}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('portal') }}
+<div class="ak-wrap">
+  <div class="ak-head">
+    <h1>CHIAVI API OSINT</h1>
+    <div><a href="/portal/osint/sorgenti">← Suggeritore fonti</a></div>
+  </div>
+  <div class="ak-sub"><b>{{ configured }}</b> / {{ total }} configurate · le chiavi sono salvate in site_config e mai mostrate. Registrazione gratuita, senza carta di credito.</div>
+
+  <div class="grid">
+    {% for s in sources %}
+    <div class="k" data-key="{{ s.config_key }}">
+      <div class="top">
+        <div>
+          <div class="nm">{{ s.name }}</div>
+          <div class="cat">{{ s.category }}</div>
+        </div>
+        <span class="st {{ 'on' if s.configured else 'off' }}" id="st-{{ s.config_key }}">{{ 'Configurata' if s.configured else 'Da configurare' }}</span>
+      </div>
+      <div class="cfg">{{ s.config_key }}</div>
+      <a class="reg" href="{{ s.signup }}" target="_blank" rel="noopener noreferrer">Registrati e ottieni la chiave ↗</a>
+      <div class="row">
+        <input type="password" id="in-{{ s.config_key }}" placeholder="incolla la API key"/>
+        <button class="btn" onclick="saveKey('{{ s.config_key }}')">Salva</button>
+        {% if s.configured %}<button class="btn rm" onclick="clearKey('{{ s.config_key }}')">×</button>{% endif %}
+      </div>
+      {% for e in s.extra %}
+      <div class="extra">
+        <div class="cfg">{{ e.config_key }} <span class="st {{ 'on' if e.configured else 'off' }}" id="st-{{ e.config_key }}" style="float:right">{{ 'Configurata' if e.configured else 'Da configurare' }}</span></div>
+        <div class="row">
+          <input type="password" id="in-{{ e.config_key }}" placeholder="{{ e.label }}"/>
+          <button class="btn" onclick="saveKey('{{ e.config_key }}')">Salva</button>
+        </div>
+      </div>
+      {% endfor %}
+      <div class="msg" id="msg-{{ s.config_key }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+const M='/api/method/thanatos_intel.osint.api_keys.';
+async function call(method, body){
+  const r=await fetch(M+method,{method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':frappe.csrf_token||''},
+    body:new URLSearchParams(body).toString()});
+  const j=await r.json();
+  if(!r.ok){throw new Error((j._server_messages?JSON.parse(j._server_messages)[0]:'')||('HTTP '+r.status));}
+  return j.message;
+}
+function setStatus(ck, on){
+  const st=document.getElementById('st-'+ck);
+  if(st){st.textContent=on?'Configurata':'Da configurare';st.className='st '+(on?'on':'off');}
+}
+function msg(card, text, ok){
+  const m=document.getElementById('msg-'+card);
+  if(m){m.textContent=text;m.className='msg '+(ok?'ok':'err');}
+}
+function cardOf(ck){const el=document.getElementById('in-'+ck).closest('.k');return el?el.dataset.key:ck;}
+async function saveKey(ck){
+  const v=document.getElementById('in-'+ck).value.trim();
+  if(!v){msg(cardOf(ck),'Inserisci un valore',false);return;}
+  try{await call('save_api_key',{config_key:ck,value:v});
+    setStatus(ck,true);document.getElementById('in-'+ck).value='';
+    msg(cardOf(ck),'Salvata ✓',true);}
+  catch(e){msg(cardOf(ck),'Errore: '+e.message,false);}
+}
+async function clearKey(ck){
+  if(!confirm('Rimuovere la chiave '+ck+'?'))return;
+  try{await call('clear_api_key',{config_key:ck});
+    setStatus(ck,false);msg(cardOf(ck),'Rimossa',true);}
+  catch(e){msg(cardOf(ck),'Errore: '+e.message,false);}
+}
+</script>
+{{ thanatos_footer() }}
+{% endblock %}
