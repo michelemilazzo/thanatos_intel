@@ -103,6 +103,97 @@ def _strip_html(value: str) -> str:
     return unescape(s).strip()
 
 
+_SOURCE_CERT = {
+    "it": ("Fonti OSINT verificate e certificate",
+           "Le fonti elencate sono state interrogate da Thanatos alla data indicata; "
+           "di ciascun risultato è conservato l'hash SHA-256, che ne attesta l'integrità e "
+           "la non alterazione (catena di custodia digitale, art. 234-bis c.p.p.). "
+           "Le evidenze sono verificate e riproducibili."),
+    "en": ("Verified & certified OSINT sources",
+           "The listed sources were queried by Thanatos on the stated date; for each result "
+           "the SHA-256 hash is retained, attesting integrity and non-tampering (digital chain "
+           "of custody). Evidence is verified and reproducible."),
+}
+
+
+def _source_labels():
+    """Mappa nome connettore → (nome leggibile, url) dal registry OSINT."""
+    try:
+        from thanatos_intel.osint.source_registry import SOURCES
+        m = {s["key"]: (s["name"], s.get("url") or "") for s in SOURCES}
+        # alias: nomi usati negli step del job → chiave registry
+        for alias, key in {"opensanctions": "opensanctions_local",
+                           "vessel": "vessel_sanctions",
+                           "wallet": "wallet_btc"}.items():
+            if key in m:
+                m[alias] = m[key]
+        return m
+    except Exception:
+        return {}
+
+
+def _append_sources_section(story, s, case_name, lang):
+    """Sezione fonti OSINT certificate: hash SHA-256 + timestamp per ogni risultato.
+
+    Deriva dai job OSINT del caso e dai loro step (connector + result_json).
+    """
+    jobs = frappe.get_all(
+        "OSINT Job",
+        filters={"investigation_case": case_name, "status": "Completed"},
+        fields=["name", "target_type", "target_value"], limit=200,
+    )
+    if not jobs:
+        return
+    job_map = {j.name: j for j in jobs}
+    steps = frappe.get_all(
+        "OSINT Job Step",
+        filters={"parent": ["in", list(job_map)], "status": "Ok"},
+        fields=["parent", "connector", "result_json", "started"],
+        order_by="started asc", limit=500,
+    )
+    if not steps:
+        return
+    labels = _source_labels()
+    title, statement = _SOURCE_CERT.get(lang, _SOURCE_CERT["it"])
+    story.append(Paragraph(title, s["h1"]))
+    story.append(Paragraph(statement, s["body"]))
+    story.append(Spacer(1, 4))
+
+    seen = set()
+    data = [["#", "Fonte", "Target", "SHA-256 (risultato)", "Verificata il"]]
+    i = 0
+    for st in steps:
+        sha = hashlib.sha256((st.result_json or "").encode("utf-8")).hexdigest()
+        j = job_map.get(st.parent)
+        tgt = f"{j.target_type}: {j.target_value}" if j else ""
+        key = (st.connector, tgt, sha)
+        if key in seen:
+            continue
+        seen.add(key)
+        i += 1
+        label = (labels.get(st.connector) or (st.connector, ""))[0]
+        data.append([
+            str(i), (label or st.connector or "-")[:30], tgt[:34],
+            sha[:24] + "…",
+            format_datetime(st.started, "dd/MM/yy HH:mm") if st.started else "-",
+        ])
+    if i == 0:
+        return
+    t = Table(data, colWidths=[8 * mm, 40 * mm, 46 * mm, 50 * mm, 22 * mm], repeatRows=1)
+    t.setStyle(TableStyle([
+        ("FONT", (0, 0), (-1, -1), "Helvetica", 7),
+        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 7),
+        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8F6F0")]),
+        ("BOX", (0, 0), (-1, -1), 0.5, GOLD),
+        ("INNERGRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#E0D7C0")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 10))
+
+
 def build_report_pdf(report_name: str) -> tuple[str, str]:
     """
     Render PDF, attach as private File to Investigation Report,
@@ -196,6 +287,8 @@ def build_report_pdf(report_name: str) -> tuple[str, str]:
         ]))
         story.append(et)
         story.append(Spacer(1, 10))
+
+    _append_sources_section(story, s, case.name, lang)
 
     story.append(Spacer(1, 14))
     story.append(Paragraph(DISCLAIMERS.get(lang, DISCLAIMERS["it"]), s["disclaimer"]))
