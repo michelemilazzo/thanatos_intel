@@ -7,8 +7,11 @@ Tutti degradano a {stub: True} se manca una chiave opzionale, senza errori.
 Site config keys (opzionali):
 opensanctions_api_key, etherscan_api_key, viewdns_api_key
 """
+import hashlib
 import json
 import re
+import shutil
+import subprocess
 from typing import Optional
 
 import frappe
@@ -558,4 +561,275 @@ def _norm_host(value: str) -> str:
         v = urlparse(v).hostname or v
     v = v.split("/")[0].strip(".")
     return v if "." in v else ""
+
+
+# --------------------------------------------------------------------------- #
+# GreyNoise Community — reputazione IP (rumore vs targetizzato), free key
+# --------------------------------------------------------------------------- #
+GREYNOISE_URL = "https://api.greynoise.io/v3/community/{ip}"
+
+
+@frappe.whitelist()
+def lookup_greynoise(ip: str) -> dict:
+    """GreyNoise Community — classifica IP benign/malicious/unknown."""
+    ip = (ip or "").strip()
+    cached = _cache_get("greynoise", ip)
+    if cached:
+        return {**cached, "cached": True}
+    key = _cfg("greynoise_api_key")
+    if not key:
+        result = {"stub": True, "source": "greynoise",
+                  "message": "greynoise_api_key non configurata"}
+        _cache_set("greynoise", ip, result)
+        return result
+    try:
+        r = requests.get(GREYNOISE_URL.format(ip=ip),
+                         headers={"key": key, "user-agent": UA}, timeout=12)
+        if r.status_code in (200, 404):
+            d = r.json() or {}
+            result = {"ip": ip, "noise": d.get("noise"), "riot": d.get("riot"),
+                      "classification": d.get("classification"),
+                      "name": d.get("name"), "last_seen": d.get("last_seen"),
+                      "source": "greynoise"}
+        else:
+            result = {"error": f"greynoise_status_{r.status_code}", "source": "greynoise"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "greynoise"}
+    _cache_set("greynoise", ip, result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# OTX AlienVault — IOC reputation IP/domain/hash, free key
+# --------------------------------------------------------------------------- #
+OTX_URL = "https://otx.alienvault.com/api/v1/indicators/{kind}/{val}/general"
+
+
+@frappe.whitelist()
+def lookup_otx(target: str, kind: str = "auto") -> dict:
+    """OTX AlienVault — pulse e reputazione per IP/dominio/hash."""
+    val = (target or "").strip()
+    if kind == "auto":
+        if re.fullmatch(r"[a-fA-F0-9]{32,64}", val):
+            kind = "file"
+        elif _is_ip(val):
+            kind = "IPv4"
+        else:
+            kind = "domain"
+            val = _norm_host(val) or val
+    cached = _cache_get("otx", f"{kind}:{val}")
+    if cached:
+        return {**cached, "cached": True}
+    key = _cfg("otx_api_key")
+    if not key:
+        result = {"stub": True, "source": "otx", "message": "otx_api_key non configurata"}
+        _cache_set("otx", f"{kind}:{val}", result)
+        return result
+    try:
+        r = requests.get(OTX_URL.format(kind=kind, val=val),
+                         headers={"X-OTX-API-KEY": key, "user-agent": UA}, timeout=12)
+        if r.status_code == 200:
+            d = r.json() or {}
+            pulses = (d.get("pulse_info") or {}).get("count", 0)
+            result = {"indicator": val, "kind": kind, "pulses": pulses,
+                      "reputation": d.get("reputation"),
+                      "country": d.get("country_name"), "source": "otx"}
+        else:
+            result = {"error": f"otx_status_{r.status_code}", "source": "otx"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "otx"}
+    _cache_set("otx", f"{kind}:{val}", result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# Pulsedive — threat intel IP/domain/url, free key
+# --------------------------------------------------------------------------- #
+PULSEDIVE_URL = "https://pulsedive.com/api/info.php"
+
+
+@frappe.whitelist()
+def lookup_pulsedive(indicator: str) -> dict:
+    """Pulsedive — risk score e threats per IP/dominio/URL."""
+    ind = (indicator or "").strip()
+    cached = _cache_get("pulsedive", ind)
+    if cached:
+        return {**cached, "cached": True}
+    key = _cfg("pulsedive_api_key")
+    if not key:
+        result = {"stub": True, "source": "pulsedive",
+                  "message": "pulsedive_api_key non configurata"}
+        _cache_set("pulsedive", ind, result)
+        return result
+    try:
+        r = requests.get(PULSEDIVE_URL, headers={"user-agent": UA},
+                         params={"indicator": ind, "pretty": 0, "key": key}, timeout=12)
+        if r.status_code == 200:
+            d = r.json() or {}
+            result = {"indicator": ind, "risk": d.get("risk"),
+                      "type": d.get("type"),
+                      "threats": [t.get("name") for t in (d.get("threats") or [])],
+                      "source": "pulsedive"}
+        else:
+            result = {"error": f"pulsedive_status_{r.status_code}", "source": "pulsedive"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "pulsedive"}
+    _cache_set("pulsedive", ind, result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# Pwned Passwords — k-anonymity, no key (utility, target=password)
+# --------------------------------------------------------------------------- #
+PWNED_RANGE_URL = "https://api.pwnedpasswords.com/range/{prefix}"
+
+
+@frappe.whitelist()
+def lookup_pwned_password(password: str) -> dict:
+    """Verifica quante volte una password compare nei breach (k-anonymity)."""
+    if not password:
+        return {"error": "empty", "source": "pwnedpasswords"}
+    sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()
+    prefix, suffix = sha1[:5], sha1[5:]
+    try:
+        r = requests.get(PWNED_RANGE_URL.format(prefix=prefix),
+                         headers={"user-agent": UA}, timeout=12)
+        count = 0
+        for line in r.text.splitlines():
+            h, _, c = line.partition(":")
+            if h.strip().upper() == suffix:
+                count = int(c.strip())
+                break
+        return {"pwned": count > 0, "count": count, "source": "pwnedpasswords"}
+    except Exception as e:
+        return {"error": str(e)[:200], "source": "pwnedpasswords"}
+
+
+# --------------------------------------------------------------------------- #
+# Holehe — email → servizi dove è registrata (CLI), no key
+# --------------------------------------------------------------------------- #
+@frappe.whitelist()
+def lookup_holehe(email: str) -> dict:
+    """Holehe — servizi dove l'email risulta registrata. Richiede CLI installata."""
+    email = (email or "").strip().lower()
+    if "@" not in email:
+        return {"error": "invalid_email", "source": "holehe"}
+    if not shutil.which("holehe"):
+        return {"stub": True, "source": "holehe", "message": "holehe non installato (pip install holehe)"}
+    cached = _cache_get("holehe", email)
+    if cached:
+        return {**cached, "cached": True}
+    try:
+        p = subprocess.run(["holehe", "--only-used", email],
+                           capture_output=True, text=True, timeout=120)
+        used = []
+        for line in p.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("[+]"):
+                used.append(line[3:].strip())
+        result = {"found": bool(used), "services": used, "source": "holehe"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "holehe"}
+    _cache_set("holehe", email, result)
+    _persist_lookup("Email", email, result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# ExifTool — metadati di un file evidenza (CLI), no key
+# --------------------------------------------------------------------------- #
+@frappe.whitelist()
+def lookup_exiftool(file_url: str) -> dict:
+    """ExifTool — metadati EXIF/GPS/timestamp da un File Frappe. Richiede CLI."""
+    if not shutil.which("exiftool"):
+        return {"stub": True, "source": "exiftool", "message": "exiftool non installato"}
+    fu = (file_url or "").strip()
+    try:
+        path = None
+        if fu.startswith("/files/") or fu.startswith("/private/files/"):
+            from frappe.utils.file_manager import get_file_path
+            path = get_file_path(fu.split("/files/")[-1])
+        elif fu.startswith("/"):
+            import os
+            cand = frappe.get_site_path("public", fu.lstrip("/"))
+            path = cand if os.path.exists(cand) else fu
+        else:
+            path = fu
+        p = subprocess.run(["exiftool", "-json", "-gps:all", "-time:all",
+                            "-make", "-model", "-software", path],
+                           capture_output=True, text=True, timeout=60)
+        data = json.loads(p.stdout or "[]")
+        meta = data[0] if data else {}
+        return {"file": fu, "metadata": meta,
+                "has_gps": any(k.lower().startswith("gps") for k in meta),
+                "source": "exiftool"}
+    except Exception as e:
+        return {"error": str(e)[:200], "source": "exiftool"}
+
+
+# --------------------------------------------------------------------------- #
+# Nominatim — geocoding indirizzo → coordinate, no key (free_auto)
+# --------------------------------------------------------------------------- #
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+
+
+@frappe.whitelist()
+def lookup_address(address: str) -> dict:
+    """Nominatim — geocoding di un indirizzo. No key."""
+    q = (address or "").strip()
+    if not q:
+        return {"error": "empty", "source": "nominatim"}
+    cached = _cache_get("nominatim", q)
+    if cached:
+        return {**cached, "cached": True}
+    try:
+        r = requests.get(NOMINATIM_URL, headers={"user-agent": UA + " (osint)"},
+                         params={"q": q, "format": "json", "limit": 5,
+                                 "addressdetails": 1}, timeout=12)
+        hits = [{"display_name": x.get("display_name"), "lat": x.get("lat"),
+                 "lon": x.get("lon"), "type": x.get("type"),
+                 "country": (x.get("address") or {}).get("country")}
+                for x in (r.json() or [])]
+        result = {"found": bool(hits), "results": hits,
+                  "best": hits[0] if hits else None, "source": "nominatim"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "nominatim"}
+    _cache_set("nominatim", q, result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# Mapillary — immagini street-level vicino a un punto, free key
+# --------------------------------------------------------------------------- #
+MAPILLARY_URL = "https://graph.mapillary.com/images"
+
+
+@frappe.whitelist()
+def lookup_mapillary(location: str) -> dict:
+    """Mapillary — immagini street-level vicino a un indirizzo o 'lat,lon'."""
+    loc = (location or "").strip()
+    token = _cfg("mapillary_token")
+    if not token:
+        return {"stub": True, "source": "mapillary", "message": "mapillary_token non configurata"}
+    # risolvi indirizzo → coordinate se non già lat,lon
+    m = re.fullmatch(r"\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*", loc)
+    if m:
+        lat, lon = float(m.group(1)), float(m.group(2))
+    else:
+        geo = lookup_address(loc)
+        best = geo.get("best")
+        if not best:
+            return {"error": "geocoding_failed", "source": "mapillary"}
+        lat, lon = float(best["lat"]), float(best["lon"])
+    d = 0.002
+    bbox = f"{lon-d},{lat-d},{lon+d},{lat+d}"
+    try:
+        r = requests.get(MAPILLARY_URL, headers={"user-agent": UA}, params={
+            "access_token": token, "bbox": bbox, "limit": 20,
+            "fields": "id,captured_at,compass_angle,geometry"}, timeout=12)
+        imgs = (r.json() or {}).get("data", [])
+        return {"lat": lat, "lon": lon, "count": len(imgs),
+                "images": imgs[:10], "source": "mapillary"}
+    except Exception as e:
+        return {"error": str(e)[:200], "source": "mapillary"}
 

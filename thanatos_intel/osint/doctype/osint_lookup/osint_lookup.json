@@ -6,7 +6,7 @@
   "autoname": "format:OSINT-{YYYY}-{#####}",
   "title_field": "target_value",
   "fields": [
-    {"fieldname": "target_type", "fieldtype": "Select", "label": "Target Type", "options": "Email\nIP\nDomain\nUrl\nHash\nCompany\nPhone\nUsername\nWallet\nFile", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "target_type", "fieldtype": "Select", "label": "Target Type", "options": "Email\nIP\nDomain\nUrl\nHash\nCompany\nPerson\nPhone\nUsername\nWallet\nVessel\nAircraft\nAddress\nFile", "reqd": 1, "in_list_view": 1},
     {"fieldname": "target_value", "fieldtype": "Data", "label": "Target", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
     {"fieldname": "source", "fieldtype": "Data", "label": "Source", "in_list_view": 1},
     {"fieldname": "col_1", "fieldtype": "Column Break"},

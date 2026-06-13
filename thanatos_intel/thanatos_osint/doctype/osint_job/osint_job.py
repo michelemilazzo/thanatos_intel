@@ -20,7 +20,8 @@ from thanatos_intel.osint import free_sources as fs
 
 PLAN = {
     "Email":    [("hibp", engine.lookup_email)],
-    "IP":       [("abuseipdb", engine.lookup_ip), ("ipinfo", engine.lookup_ipinfo)],
+    "IP":       [("abuseipdb", engine.lookup_ip), ("ipinfo", engine.lookup_ipinfo),
+                 ("greynoise", fs.lookup_greynoise)],
     "Domain":   [("rdap", engine.lookup_domain), ("urlscan", engine.lookup_urlscan)],
     "Url":      [("rdap", engine.lookup_domain), ("urlscan", engine.lookup_urlscan)],
     "Hash":     [("virustotal", lambda v: engine.lookup_virustotal(v, kind="hash"))],
@@ -28,25 +29,38 @@ PLAN = {
                  ("opensanctions", lambda v: fs.screen_sanctions(v, schema="Company")),
                  ("wikidata", fs.lookup_wikidata),
                  ("courtlistener", fs.lookup_courtlistener)],
+    "Person":   [("opensanctions", lambda v: fs.screen_sanctions(v, schema="Person")),
+                 ("wikidata", fs.lookup_wikidata),
+                 ("courtlistener", fs.lookup_courtlistener)],
     "Phone":    [("phone_meta", fs.lookup_phone)],
     "Username": [("username", fs.lookup_username)],
     "Wallet":   [("wallet", fs.lookup_wallet),
                  ("opensanctions", lambda v: fs.screen_sanctions(v, schema="CryptoWallet"))],
+    "Vessel":   [("vessel", fs.lookup_vessel)],
+    "Aircraft": [("opensky", fs.lookup_flight)],
+    "Address":  [("nominatim", fs.lookup_address)],
+    "File":     [("exiftool", fs.lookup_exiftool)],
 }
 
 DEEP_EXTRA = {
+    "Email":  [("holehe", fs.lookup_holehe)],
     "IP":     [("virustotal", lambda v: engine.lookup_virustotal(v, kind="ip")),
                ("shodan", engine.lookup_shodan),
-               ("censys", engine.lookup_censys)],
+               ("censys", engine.lookup_censys),
+               ("otx", lambda v: fs.lookup_otx(v, kind="IPv4")),
+               ("pulsedive", fs.lookup_pulsedive)],
     "Domain": [("securitytrails", engine.lookup_dns_history),
                ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain")),
                ("wayback", fs.lookup_wayback),
                ("viewdns", fs.lookup_viewdns_iphistory),
-               ("commoncrawl", fs.lookup_commoncrawl)],
+               ("commoncrawl", fs.lookup_commoncrawl),
+               ("otx", lambda v: fs.lookup_otx(v, kind="domain"))],
     "Url":    [("securitytrails", engine.lookup_dns_history),
                ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain")),
                ("wayback", fs.lookup_wayback)],
+    "Hash":   [("otx", lambda v: fs.lookup_otx(v, kind="file"))],
     "Username": [("opensanctions", lambda v: fs.screen_sanctions(v, schema="Person"))],
+    "Address": [("mapillary", fs.lookup_mapillary)],
 }
 
 
@@ -272,6 +286,44 @@ def _score_delta(connector: str, res: dict):
         if c:
             return 0, f"{c} URL indicizzati"
         return 0, ""
+    if connector == "greynoise":
+        if res.get("classification") == "malicious":
+            return 20, "GreyNoise malicious"
+        if res.get("noise"):
+            return 5, "GreyNoise noise"
+        return 0, ""
+    if connector == "otx":
+        p = res.get("pulses") or 0
+        if p >= 5:
+            return 15, f"OTX {p} pulse"
+        if p:
+            return 8, f"OTX {p} pulse"
+        return 0, ""
+    if connector == "pulsedive":
+        risk = (res.get("risk") or "").lower()
+        if risk in ("high", "critical"):
+            return 18, f"Pulsedive {risk}"
+        if risk == "medium":
+            return 8, "Pulsedive medium"
+        return 0, ""
+    if connector == "nominatim":
+        if res.get("best"):
+            return 0, "geocodificato"
+        return 0, ""
+    if connector == "holehe":
+        s = res.get("services") or []
+        if s:
+            return 0, f"{len(s)} servizi (holehe)"
+        return 0, ""
+    if connector == "exiftool":
+        if res.get("has_gps"):
+            return 0, "GPS nei metadati"
+        return 0, ""
+    if connector == "mapillary":
+        c = res.get("count") or 0
+        if c:
+            return 0, f"{c} foto street-level"
+        return 0, ""
     return 0, ""
 
 
@@ -311,4 +363,4 @@ def create_and_run(target_type: str, target_value: str,
 def _entity_type(target_type: str) -> str:
     return target_type if target_type in (
         "Email", "IP", "Domain", "Url", "Hash", "Phone",
-        "Username", "Wallet", "Company") else "Domain"
+        "Username", "Wallet", "Company", "Person", "File") else "Document"

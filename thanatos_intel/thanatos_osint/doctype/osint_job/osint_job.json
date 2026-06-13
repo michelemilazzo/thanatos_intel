@@ -15,7 +15,7 @@
     {"fieldname": "started_at", "fieldtype": "Datetime", "label": "Started"},
     {"fieldname": "completed_at", "fieldtype": "Datetime", "label": "Completed"},
     {"fieldname": "sb_input", "fieldtype": "Section Break", "label": "Input"},
-    {"fieldname": "target_type", "fieldtype": "Select", "label": "Target Type", "options": "Email\nIP\nDomain\nUrl\nHash\nCompany\nPhone\nUsername\nWallet"},
+    {"fieldname": "target_type", "fieldtype": "Select", "label": "Target Type", "options": "Email\nIP\nDomain\nUrl\nHash\nCompany\nPerson\nPhone\nUsername\nWallet\nVessel\nAircraft\nAddress\nFile"},
     {"fieldname": "target_value", "fieldtype": "Data", "label": "Target Value"},
     {"fieldname": "col_input", "fieldtype": "Column Break"},
     {"fieldname": "requested_by", "fieldtype": "Link", "label": "Requested By", "options": "User"},
