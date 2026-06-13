@@ -1,0 +1,145 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}Suggeritore Fonti OSINT — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
+body{background:var(--navy);color:#E6E8EE;font-family:Georgia,serif;}
+.sg-wrap{max-width:1180px;margin:0 auto;padding:32px 24px;}
+.sg-head{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px;flex-wrap:wrap;}
+.sg-head h1{color:var(--gold);font-weight:400;letter-spacing:4px;font-size:23px;margin:0;}
+.sg-head .sub{color:var(--muted);font-size:12px;letter-spacing:3px;text-transform:uppercase;}
+.sg-head a{color:var(--gold);text-decoration:none;font-size:12px;letter-spacing:2px;}
+.card{background:var(--navy2);border:1px solid var(--line);padding:22px;margin-bottom:18px;}
+.card h2{color:var(--gold);font-weight:400;letter-spacing:3px;font-size:13px;text-transform:uppercase;margin:0 0 14px;}
+.controls{display:grid;grid-template-columns:200px 1fr 180px 180px;gap:10px;}
+.controls select,.controls input{background:var(--navy);border:1px solid var(--line);color:#E6E8EE;padding:11px 12px;font-family:inherit;font-size:14px;}
+.controls select:focus,.controls input:focus{border-color:var(--gold);outline:0;}
+.btn{background:var(--gold);color:var(--navy);border:0;padding:11px 18px;letter-spacing:2px;text-transform:uppercase;font-size:11px;cursor:pointer;font-family:inherit;font-weight:bold;}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold);}
+.btn:hover{opacity:.9;}
+.tier{margin-bottom:18px;}
+.tier h3{font-size:13px;letter-spacing:2px;color:#E6E8EE;border-bottom:1px solid var(--line);padding-bottom:8px;margin:0 0 12px;}
+.tier h3 .badge{font-size:9px;padding:3px 8px;border:1px solid;margin-left:8px;letter-spacing:1px;vertical-align:middle;}
+.b-free_auto{color:#7BC480;border-color:#7BC480;}
+.b-free_key{color:#E0B860;border-color:#E0B860;}
+.b-trial{color:#6FA8DC;border-color:#6FA8DC;}
+.b-specialist{color:#E08B60;border-color:#E08B60;}
+.b-manual{color:#9aa0b4;border-color:#9aa0b4;}
+.srcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;}
+.src{border:1px solid var(--line);background:#070A14;padding:12px 14px;}
+.src .nm{font-size:14px;color:#E6E8EE;}
+.src .meta{font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:.5px;}
+.src .st{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line);color:var(--muted);float:right;}
+.st.live{color:#7BC480;border-color:#7BC480;}
+.st.needs_key{color:#E0B860;border-color:#E0B860;}
+.st.evaluation,.st.substitutable,.st.planned{color:#E08B60;border-color:#E08B60;}
+.src .subs{font-size:10px;color:#6FA8DC;margin-top:6px;}
+.kpi{display:flex;gap:10px;flex-wrap:wrap;}
+.kpi .k{border:1px solid var(--line);padding:10px 14px;font-size:12px;color:var(--muted);}
+.kpi .k b{color:var(--gold);font-size:18px;display:block;font-family:monospace;}
+pre.out{background:#070A14;border:1px solid var(--line);color:#9FE0A8;font-family:monospace;font-size:11px;padding:14px;max-height:420px;overflow:auto;white-space:pre-wrap;}
+.muted{color:var(--muted);font-size:12px;}
+@media(max-width:760px){.controls{grid-template-columns:1fr;}.sg-wrap{padding:18px 14px;}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('portal') }}
+<div class="sg-wrap">
+  <div class="sg-head">
+    <div>
+      <h1>SUGGERITORE FONTI OSINT</h1>
+      <div class="sub">Ricerca · classifica per accesso · esegue le automatiche</div>
+    </div>
+    <div>
+      <a href="/portal/osint/fonti">Catalogo fonti</a> &nbsp;·&nbsp;
+      <a href="/portal/osint">← Console</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Target</h2>
+    <div class="controls">
+      <select id="ttype">
+        {% for t in target_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+      <input id="tvalue" placeholder="Valore target (es. example.com / azienda / wallet / +39...)"/>
+      <button class="btn ghost" onclick="suggest()">Suggerisci</button>
+      <button class="btn" onclick="autorun()">Esegui automatiche</button>
+    </div>
+    <div id="suggest" style="margin-top:18px;"></div>
+    <div id="runout"></div>
+  </div>
+
+  <div class="card">
+    <h2>Quadro registro fonti</h2>
+    <div class="kpi">
+      {% for t in overview.by_tier %}
+      <div class="k"><b>{{ t.count }}</b>{{ t.label }}</div>
+      {% endfor %}
+      <div class="k"><b>{{ overview.total }}</b>Totale fonti</div>
+    </div>
+    <h2 style="margin-top:20px;">Da valutare / sostituire / da costruire</h2>
+    <div class="srcgrid">
+      {% for s in overview.to_evaluate %}
+      <div class="src">
+        <span class="st {{ s.status }}">{{ s.status }}</span>
+        <div class="nm">{{ s.name }}</div>
+        <div class="meta">{{ s.tier_label }} · {{ s.category }} · {{ s.targets|join(', ') }}</div>
+        {% if s.note %}<div class="meta">{{ s.note }}</div>{% endif %}
+        {% if s.substitutes_names %}<div class="subs">↪ sostituibile con: {{ s.substitutes_names|join(', ') }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+const M = '/api/method/thanatos_intel.osint.source_registry.';
+function tier(t){return t;}
+async function call(method, body){
+  const r = await fetch(M+method, {method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':frappe.csrf_token||''},
+    body:new URLSearchParams(body).toString()});
+  return (await r.json()).message;
+}
+function esc(s){return (s||'').toString().replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+async function suggest(){
+  const tt=document.getElementById('ttype').value, tv=document.getElementById('tvalue').value.trim();
+  document.getElementById('runout').innerHTML='';
+  const box=document.getElementById('suggest'); box.innerHTML='<span class="muted">Carico…</span>';
+  const d=await call('suggest',{target_type:tt,target_value:tv});
+  if(!d){box.innerHTML='<span class="muted">Nessun dato.</span>';return;}
+  let h=`<div class="muted">${d.total} fonti per <b>${esc(tt)}</b> · ${d.runnable_now.length} automatiche · ${d.needs_setup.length} con key · ${d.evaluation.length} da valutare</div>`;
+  for(const g of d.groups){
+    h+=`<div class="tier"><h3>${esc(g.label)}<span class="badge b-${g.tier}">${g.sources.length}</span></h3><div class="srcgrid">`;
+    for(const s of g.sources){
+      h+=`<div class="src"><span class="st ${s.status}">${s.status}</span><div class="nm">${esc(s.name)}</div>`;
+      h+=`<div class="meta">${esc(s.category)}${s.needs?(' · key: '+esc(s.needs)):''}</div>`;
+      if(s.note)h+=`<div class="meta">${esc(s.note)}</div>`;
+      if(s.substitutes_names&&s.substitutes_names.length)h+=`<div class="subs">↪ ${s.substitutes_names.map(esc).join(', ')}</div>`;
+      h+=`</div>`;
+    }
+    h+=`</div></div>`;
+  }
+  box.innerHTML=h;
+}
+
+async function autorun(){
+  const tt=document.getElementById('ttype').value, tv=document.getElementById('tvalue').value.trim();
+  if(!tv){alert('Inserisci un valore target');return;}
+  const out=document.getElementById('runout'); out.innerHTML='<span class="muted">Esecuzione fonti automatiche…</span>';
+  const d=await call('auto_run',{target_type:tt,target_value:tv});
+  if(!d){out.innerHTML='<span class="muted">Errore.</span>';return;}
+  let h=`<div class="muted" style="margin:14px 0 6px;">Eseguite: <b style="color:#7BC480">${d.executed.join(', ')||'nessuna'}</b>`;
+  if(d.suggested_with_key.length)h+=` · con key gratuita disponibili: ${d.suggested_with_key.join(', ')}`;
+  if(d.under_evaluation.length)h+=` · da valutare: ${d.under_evaluation.join(', ')}`;
+  h+=`</div><pre class="out">${esc(JSON.stringify(d.results,null,2))}</pre>`;
+  out.innerHTML=h;
+}
+</script>
+{{ thanatos_footer() }}
+{% endblock %}

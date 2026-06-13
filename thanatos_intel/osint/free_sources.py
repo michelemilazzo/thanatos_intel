@@ -450,3 +450,112 @@ def lookup_vessel(query: str) -> dict:
     res["target"] = "vessel"
     return res
 
+
+# --------------------------------------------------------------------------- #
+# CourtListener — procedimenti giudiziari USA (mirror gratuito di PACER), no key
+# --------------------------------------------------------------------------- #
+COURTLISTENER_URL = "https://www.courtlistener.com/api/rest/v4/search/"
+
+
+@frappe.whitelist()
+def lookup_courtlistener(query: str) -> dict:
+    """CourtListener — ricerca full-text procedimenti federali USA. No key."""
+    query = (query or "").strip()
+    if not query:
+        return {"error": "invalid_query", "source": "courtlistener"}
+    cached = _cache_get("courtlistener", query)
+    if cached:
+        return {**cached, "cached": True}
+    try:
+        r = requests.get(COURTLISTENER_URL, headers={"user-agent": UA},
+                         params={"q": query, "type": "r"}, timeout=12)
+        if r.status_code == 200:
+            d = r.json() or {}
+            hits = [{"case": x.get("caseName"), "court": x.get("court"),
+                     "date": x.get("dateFiled"),
+                     "url": "https://www.courtlistener.com" + (x.get("absolute_url") or "")}
+                    for x in (d.get("results") or [])[:10]]
+            result = {"found": bool(hits), "count": d.get("count", len(hits)),
+                      "cases": hits, "source": "courtlistener"}
+        else:
+            result = {"error": f"courtlistener_status_{r.status_code}",
+                      "source": "courtlistener"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "courtlistener"}
+    _cache_set("courtlistener", query, result)
+    _persist_lookup("Company", query, result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# CommonCrawl — URL indicizzati di un dominio (index API), no key
+# --------------------------------------------------------------------------- #
+COMMONCRAWL_INDEX = "https://index.commoncrawl.org/CC-MAIN-2024-51-index"
+
+
+@frappe.whitelist()
+def lookup_commoncrawl(domain: str) -> dict:
+    """CommonCrawl — URL pubblici indicizzati per il dominio. No key."""
+    d = _norm_host(domain)
+    if not d:
+        return {"error": "invalid_domain", "source": "commoncrawl"}
+    cached = _cache_get("commoncrawl", d)
+    if cached:
+        return {**cached, "cached": True}
+    try:
+        r = requests.get(COMMONCRAWL_INDEX, headers={"user-agent": UA},
+                         params={"url": f"*.{d}", "output": "json", "limit": 50},
+                         timeout=20)
+        urls = []
+        if r.status_code == 200:
+            for line in r.text.splitlines():
+                try:
+                    urls.append(json.loads(line).get("url"))
+                except Exception:
+                    continue
+        result = {"found": bool(urls), "count": len(urls),
+                  "sample_urls": [u for u in urls if u][:25], "source": "commoncrawl"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "commoncrawl"}
+    _cache_set("commoncrawl", d, result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# Wikidata — entità (azienda/persona) da nome, no key
+# --------------------------------------------------------------------------- #
+WIKIDATA_SEARCH = "https://www.wikidata.org/w/api.php"
+
+
+@frappe.whitelist()
+def lookup_wikidata(query: str) -> dict:
+    """Wikidata — entità collegate al nome (id, descrizione). No key."""
+    query = (query or "").strip()
+    if not query:
+        return {"error": "invalid_query", "source": "wikidata"}
+    cached = _cache_get("wikidata", query)
+    if cached:
+        return {**cached, "cached": True}
+    try:
+        r = requests.get(WIKIDATA_SEARCH, headers={"user-agent": UA}, params={
+            "action": "wbsearchentities", "search": query, "language": "en",
+            "format": "json", "limit": 7}, timeout=12)
+        ents = [{"id": e.get("id"), "label": e.get("label"),
+                 "description": e.get("description"),
+                 "url": e.get("concepturi")}
+                for e in ((r.json() or {}).get("search") or [])]
+        result = {"found": bool(ents), "entities": ents, "source": "wikidata"}
+    except Exception as e:
+        result = {"error": str(e)[:200], "source": "wikidata"}
+    _cache_set("wikidata", query, result)
+    return result
+
+
+def _norm_host(value: str) -> str:
+    v = (value or "").strip().lower()
+    if "://" in v:
+        from urllib.parse import urlparse
+        v = urlparse(v).hostname or v
+    v = v.split("/")[0].strip(".")
+    return v if "." in v else ""
+

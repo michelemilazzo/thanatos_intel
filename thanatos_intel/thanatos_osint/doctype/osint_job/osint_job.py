@@ -25,7 +25,9 @@ PLAN = {
     "Url":      [("rdap", engine.lookup_domain), ("urlscan", engine.lookup_urlscan)],
     "Hash":     [("virustotal", lambda v: engine.lookup_virustotal(v, kind="hash"))],
     "Company":  [("opencorporates", engine.lookup_company),
-                 ("opensanctions", lambda v: fs.screen_sanctions(v, schema="Company"))],
+                 ("opensanctions", lambda v: fs.screen_sanctions(v, schema="Company")),
+                 ("wikidata", fs.lookup_wikidata),
+                 ("courtlistener", fs.lookup_courtlistener)],
     "Phone":    [("phone_meta", fs.lookup_phone)],
     "Username": [("username", fs.lookup_username)],
     "Wallet":   [("wallet", fs.lookup_wallet),
@@ -39,7 +41,8 @@ DEEP_EXTRA = {
     "Domain": [("securitytrails", engine.lookup_dns_history),
                ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain")),
                ("wayback", fs.lookup_wayback),
-               ("viewdns", fs.lookup_viewdns_iphistory)],
+               ("viewdns", fs.lookup_viewdns_iphistory),
+               ("commoncrawl", fs.lookup_commoncrawl)],
     "Url":    [("securitytrails", engine.lookup_dns_history),
                ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain")),
                ("wayback", fs.lookup_wayback)],
@@ -253,6 +256,21 @@ def _score_delta(connector: str, res: dict):
         c = res.get("count") or 0
         if c:
             return 0, f"{c} IP storici"
+        return 0, ""
+    if connector == "courtlistener":
+        c = res.get("count") or 0
+        if c:
+            return 10, f"{c} procedimenti USA"
+        return 0, ""
+    if connector == "wikidata":
+        e = res.get("entities") or []
+        if e:
+            return 0, f"{len(e)} entità Wikidata"
+        return 0, ""
+    if connector == "commoncrawl":
+        c = res.get("count") or 0
+        if c:
+            return 0, f"{c} URL indicizzati"
         return 0, ""
     return 0, ""
 
