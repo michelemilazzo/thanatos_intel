@@ -17,7 +17,6 @@ from thanatos_intel.osint.source_registry import SOURCES
 
 # Pagina di registrazione dove ottenere la API key gratuita (senza carta).
 SIGNUP = {
-    "hibp_api_key": "https://haveibeenpwned.com/API/Key",
     "abuseipdb_api_key": "https://www.abuseipdb.com/account/api",
     "ipinfo_token": "https://ipinfo.io/signup",
     "virustotal_api_key": "https://www.virustotal.com/gui/join-us",
@@ -58,6 +57,8 @@ def key_sources() -> list:
     for s in SOURCES:
         k = s.get("needs")
         if not k or k in seen:
+            continue
+        if s.get("tier") == "paid":          # fonti a pagamento: escluse dalla pagina
             continue
         seen.add(k)
         out.append({

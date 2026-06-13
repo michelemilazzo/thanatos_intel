@@ -93,10 +93,13 @@ SOURCES = [
          url="https://nominatim.openstreetmap.org", note="Geocoding indirizzo→coordinate, no key."),
 
     # ===== REGISTRAZIONE SENZA CARTA (key gratuita) =====
-    dict(key="hibp", name="Have I Been Pwned", tier="free_key", status="needs_key",
-         category="breach", targets=["Email"],
+    dict(key="hibp", name="Have I Been Pwned (breach API)", tier="paid",
+         status="evaluation", category="breach", targets=["Email"],
          connector="thanatos_intel.osint.engine.lookup_email",
-         needs="hibp_api_key", url="https://haveibeenpwned.com"),
+         needs="hibp_api_key", url="https://haveibeenpwned.com",
+         substitutes=["pwnedpasswords", "intelx", "holehe"],
+         note="API breach a pagamento (costosa) — ESCLUSA per ora. Le password "
+         "restano gratis via Pwned Passwords; per email valutare Holehe/IntelX."),
     dict(key="abuseipdb", name="AbuseIPDB", tier="free_key", status="needs_key",
          category="cyber", targets=["IP"],
          connector="thanatos_intel.osint.engine.lookup_ip",
