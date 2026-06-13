@@ -67,6 +67,17 @@ def get_context(context):
     except Exception:
         context.tickets = []
 
+    try:
+        context.osint_jobs = frappe.get_all(
+            "OSINT Job",
+            filters={"investigation_case": case.name},
+            fields=["name", "target_type", "target_value", "status",
+                    "risk_score", "risk_band", "creation"],
+            order_by="creation desc", limit=20,
+        )
+    except Exception:
+        context.osint_jobs = []
+
     context.case = case
     context.evidences = evidences
     context.reports = reports

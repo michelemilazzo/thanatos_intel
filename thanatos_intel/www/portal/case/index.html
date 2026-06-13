@@ -152,6 +152,42 @@ table{min-width:520px}
   </div>
 
   <div class="section">
+    <div class="section-title">OSINT del caso ({{ osint_jobs|length }})</div>
+    {% if is_investigator %}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+      <select id="oj-tt" style="padding:8px;background:#0A0E1A;color:#E6E8EE;border:1px solid #1F2742;">
+        <option value="Company">Azienda</option><option value="Person">Persona</option>
+        <option value="Domain">Dominio</option><option value="IP">IP</option>
+        <option value="Wallet">Wallet</option><option value="Email">Email</option>
+        <option value="Phone">Telefono</option><option value="Username">Username</option>
+      </select>
+      <input id="oj-tv" placeholder="valore target" style="flex:1;min-width:160px;padding:8px;background:#0A0E1A;color:#E6E8EE;border:1px solid #1F2742;"/>
+      <button onclick="runCaseOsint()" style="padding:8px 16px;background:#C8A96E;color:#0A0E1A;border:0;font-weight:bold;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-size:11px;">Esegui OSINT</button>
+    </div>
+    <div id="oj-status" style="color:#7A8294;font-size:12px;margin-bottom:8px;"></div>
+    {% endif %}
+    {% if osint_jobs %}
+    <div class="tbl-scroll">
+    <table>
+      <thead><tr><th>Target</th><th>Tipo</th><th>Stato</th><th>Rischio</th><th>Quando</th></tr></thead>
+      <tbody>
+        {% for j in osint_jobs %}
+        <tr>
+          <td>{{ j.target_value }}</td><td>{{ j.target_type }}</td>
+          <td>{{ j.status }}</td>
+          <td>{% if j.risk_band %}<span class="tag">{{ j.risk_score }} · {{ j.risk_band }}</span>{% else %}—{% endif %}</td>
+          <td>{{ frappe.utils.format_datetime(j.creation, 'dd/MM/yy HH:mm') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="empty">Nessuna ricerca OSINT sul caso. Le fonti certificate finiranno nel report.</div>
+    {% endif %}
+  </div>
+
+  <div class="section">
     <div class="section-title">Report ({{ reports|length }})</div>
     {% if reports %}
     <div class="tbl-scroll">
@@ -234,6 +270,22 @@ table{min-width:520px}
         window.location.href = d.message.url;
       }
     });
+  }
+
+  async function runCaseOsint(){
+    const tt=document.getElementById('oj-tt').value, tv=document.getElementById('oj-tv').value.trim();
+    const st=document.getElementById('oj-status');
+    if(!tv){st.textContent='Inserisci un valore target.';return;}
+    st.textContent='Ricerca OSINT su tutte le fonti operative…';
+    try{
+      const r=await fetch('/api/method/thanatos_intel.thanatos_osint.doctype.osint_job.osint_job.create_and_run',{
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':(window.frappe&&frappe.csrf_token)||''},
+        body:new URLSearchParams({target_type:tt,target_value:tv,mode:'Deep Investigation',investigation_case:'{{ case.name }}'}).toString()});
+      const j=await r.json();
+      if(j.message){st.textContent='Completato · rischio '+(j.message.risk_score)+' ('+(j.message.risk_band)+'). Le fonti finiscono nel report.';setTimeout(()=>location.reload(),1400);}
+      else{st.textContent='Errore: '+(j._server_messages||'verifica i permessi');}
+    }catch(e){st.textContent='Errore di rete.';}
   }
   </script>
 
