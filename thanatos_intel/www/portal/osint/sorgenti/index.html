@@ -54,7 +54,7 @@ pre.out{background:#070A14;border:1px solid var(--line);color:#9FE0A8;font-famil
       <div class="sub">Ricerca · classifica per accesso · esegue le automatiche</div>
     </div>
     <div>
-      <a href="/portal/osint/chiavi">Chiavi API</a> &nbsp;·&nbsp;
+      {% if is_admin %}<a href="/portal/osint/chiavi">Chiavi API</a> &nbsp;·&nbsp;{% endif %}
       <a href="/portal/osint/fonti">Catalogo fonti</a> &nbsp;·&nbsp;
       <a href="/portal/osint">← Console</a>
     </div>
