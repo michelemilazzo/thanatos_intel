@@ -28,12 +28,12 @@ import frappe
 SOURCES = [
     # ===== FREE + AUTOMATICHE (gira subito, no auth) =====
     dict(key="rdap", name="RDAP (WHOIS)", tier="free_auto", status="live",
-         category="cyber", targets=["Domain", "IP", "Url"],
+         category="cyber", targets=["Domain", "Url"],
          connector="thanatos_intel.osint.engine.lookup_domain",
-         url="https://rdap.org", note="Registrazione dominio/IP, no key."),
+         url="https://rdap.org", note="Registrazione dominio, no key."),
     dict(key="opensanctions_local", name="OpenSanctions (cache locale 285k)",
          tier="free_auto", status="live", category="sanzioni",
-         targets=["Company", "Person", "Username", "Wallet", "Vessel"],
+         targets=["Company", "Person", "Username", "Wallet"],
          connector="thanatos_intel.osint.free_sources.screen_sanctions",
          url="https://opensanctions.org",
          note="Aggrega OFAC/UN/EU/Interpol; refresh 24h; offline, istantaneo."),

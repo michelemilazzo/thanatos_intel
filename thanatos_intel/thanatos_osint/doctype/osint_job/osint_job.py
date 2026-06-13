@@ -18,50 +18,47 @@ from frappe.utils import now_datetime
 from thanatos_intel.osint import engine
 from thanatos_intel.osint import free_sources as fs
 
+# La ricerca è guidata dal REGISTRY: per ogni target si eseguono TUTTE le fonti
+# operative adeguate (vedi _registry_extra). PLAN contiene solo i casi speciali
+# che il registry non può chiamare genericamente (dispatch per-chain del wallet).
 PLAN = {
-    "Email":    [("hibp", engine.lookup_email)],
-    "IP":       [("abuseipdb", engine.lookup_ip), ("ipinfo", engine.lookup_ipinfo),
-                 ("greynoise", fs.lookup_greynoise)],
-    "Domain":   [("rdap", engine.lookup_domain), ("urlscan", engine.lookup_urlscan)],
-    "Url":      [("rdap", engine.lookup_domain), ("urlscan", engine.lookup_urlscan)],
-    "Hash":     [("virustotal", lambda v: engine.lookup_virustotal(v, kind="hash"))],
-    "Company":  [("opencorporates", engine.lookup_company),
-                 ("opensanctions", lambda v: fs.screen_sanctions(v, schema="Company")),
-                 ("wikidata", fs.lookup_wikidata),
-                 ("courtlistener", fs.lookup_courtlistener)],
-    "Person":   [("opensanctions", lambda v: fs.screen_sanctions(v, schema="Person")),
-                 ("wikidata", fs.lookup_wikidata),
-                 ("courtlistener", fs.lookup_courtlistener)],
-    "Phone":    [("phone_meta", fs.lookup_phone)],
-    "Username": [("username", fs.lookup_username)],
-    "Wallet":   [("wallet", fs.lookup_wallet),
-                 ("opensanctions", lambda v: fs.screen_sanctions(v, schema="CryptoWallet"))],
-    "Vessel":   [("vessel", fs.lookup_vessel)],
-    "Aircraft": [("opensky", fs.lookup_flight)],
-    "Address":  [("nominatim", fs.lookup_address)],
-    "File":     [("exiftool", fs.lookup_exiftool)],
+    "Wallet": [("wallet", fs.lookup_wallet)],
 }
 
-DEEP_EXTRA = {
-    "Email":  [("holehe", fs.lookup_holehe)],
-    "IP":     [("virustotal", lambda v: engine.lookup_virustotal(v, kind="ip")),
-               ("shodan", engine.lookup_shodan),
-               ("censys", engine.lookup_censys),
-               ("otx", lambda v: fs.lookup_otx(v, kind="IPv4")),
-               ("pulsedive", fs.lookup_pulsedive)],
-    "Domain": [("securitytrails", engine.lookup_dns_history),
-               ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain")),
-               ("wayback", fs.lookup_wayback),
-               ("viewdns", fs.lookup_viewdns_iphistory),
-               ("commoncrawl", fs.lookup_commoncrawl),
-               ("otx", lambda v: fs.lookup_otx(v, kind="domain"))],
-    "Url":    [("securitytrails", engine.lookup_dns_history),
-               ("virustotal", lambda v: engine.lookup_virustotal(v, kind="domain")),
-               ("wayback", fs.lookup_wayback)],
-    "Hash":   [("otx", lambda v: fs.lookup_otx(v, kind="file"))],
-    "Username": [("opensanctions", lambda v: fs.screen_sanctions(v, schema="Person"))],
-    "Address": [("mapillary", fs.lookup_mapillary)],
+# Allineamento chiavi registry → nome usato nel piano curato (per deduplicare).
+_COVER_ALIAS = {
+    "opensanctions_local": "opensanctions",
+    "vessel_sanctions": "vessel",
 }
+# Explorer crypto coperti dal dispatcher 'wallet' (lookup_wallet): non eseguirli a parte.
+_SKIP_IN_JOB = {"wallet_btc", "wallet_tron", "etherscan"}
+
+
+def _registry_extra(ttype, covered):
+    """Tutte le fonti del registry OPERATIVE per il target, non già nel piano.
+
+    Restituisce [(nome, fn)]. Solo fonti eseguibili ora (gratis o con chiave
+    configurata) → nessuno stub da chiave mancante.
+    """
+    from thanatos_intel.osint import source_registry as sr
+    extra = []
+    for s in sr.SOURCES:
+        if ttype not in s.get("targets", []):
+            continue
+        if s["key"] in _SKIP_IN_JOB or not s.get("connector"):
+            continue
+        if not sr._operational(s):
+            continue
+        name = _COVER_ALIAS.get(s["key"], s["key"])
+        if name in covered:
+            continue
+        try:
+            fn = frappe.get_attr(s["connector"])
+        except Exception:
+            continue
+        extra.append((name, fn))
+        covered.add(name)
+    return extra
 
 
 class OSINTJob(Document):
@@ -83,9 +80,11 @@ class OSINTJob(Document):
 
         target = (self.target_value or "").strip()
         ttype = self.target_type
+        # Ricerca su TUTTE le fonti adeguate al target: piano curato
+        # (parametrizzato) + ogni fonte del registry eseguibile ORA (gratis o con
+        # chiave configurata) non già coperta. Niente stub di chiavi mancanti.
         plan: List = list(PLAN.get(ttype, []))
-        if self.mode in ("Deep Investigation", "Legal Review"):
-            plan += DEEP_EXTRA.get(ttype, [])
+        plan += _registry_extra(ttype, {name for name, _ in plan})
 
         aggregated: Dict[str, dict] = {}
         score = 0
