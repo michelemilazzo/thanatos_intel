@@ -1,0 +1,119 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import seo_head, thanatos_footer %}
+{% block title %}Thanatos Intel — European Investigative Intelligence{% endblock %}
+
+{% block head_include %}
+{{ seo_head(
+   title='Thanatos Intel — European Investigative Intelligence',
+   description='Turn a name, an IBAN, a wallet or a domain into court-ready evidence. Anti-fraud, due diligence, OSINT and asset tracing across Europe — with legal value.',
+   path='/en', lang='en', alt_path='/') }}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--gold2:#E0C58A;--muted:#7A8294;--text:#E6E8EE;--line:#1F2742;}
+body{background:var(--navy);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;}
+.en-nav{position:sticky;top:0;z-index:50;background:rgba(10,14,26,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+.en-nav-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;}
+.en-brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;}
+.en-brand img{height:36px;}
+.en-brand .wm{font-family:Georgia,serif;font-size:15px;letter-spacing:5px;color:var(--text);}
+.en-links a{color:#A4A9BC;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:8px 10px;}
+.en-links a:hover{color:var(--gold);}
+.en-lang{border:1px solid var(--gold);color:var(--gold);padding:6px 12px;font-size:11px;letter-spacing:1px;text-decoration:none;}
+.en-hero{text-align:center;padding:90px 24px 60px;background:radial-gradient(ellipse at top,#13192C,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.en-hero h1{font-family:'Cinzel',Georgia,serif;font-weight:500;font-size:46px;letter-spacing:2px;color:var(--text);margin:0 0 18px;line-height:1.15;}
+.en-hero h1 em{color:var(--gold);font-style:normal;}
+.en-hero p{max-width:680px;margin:0 auto 28px;color:#A4A9BC;font-size:18px;line-height:1.6;}
+.en-cta a{display:inline-block;margin:6px;padding:15px 30px;text-decoration:none;letter-spacing:2px;text-transform:uppercase;font-size:12px;font-weight:700;}
+.en-cta .solid{background:var(--gold);color:var(--navy);}
+.en-cta .ghost{border:1px solid var(--gold);color:var(--gold);}
+.en-sec{max-width:1080px;margin:0 auto;padding:60px 24px;}
+.en-sec h2{font-family:'Cinzel',Georgia,serif;font-weight:400;color:var(--gold);font-size:13px;letter-spacing:4px;text-transform:uppercase;text-align:center;margin:0 0 30px;}
+.en-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;}
+.en-card{background:var(--navy2);border:1px solid var(--line);padding:24px;}
+.en-card .ic{font-size:24px;}
+.en-card h3{font-weight:500;font-size:17px;color:var(--text);margin:10px 0 8px;}
+.en-card p{color:#A4A9BC;font-size:14px;line-height:1.6;margin:0;}
+.en-models{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.en-model{background:var(--navy2);border:1px solid var(--line);padding:26px;}
+.en-model.feat{border-color:var(--gold);}
+.en-model h3{font-family:Georgia,serif;font-weight:400;font-size:22px;color:var(--text);margin:0 0 4px;}
+.en-model .sub{color:var(--gold);font-size:13px;margin-bottom:14px;}
+.en-model ul{list-style:none;padding:0;margin:0 0 18px;}
+.en-model li{color:#A4A9BC;font-size:13px;line-height:1.7;}
+.en-model a{display:inline-block;padding:11px 22px;border:1px solid var(--gold);color:var(--gold);text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;}
+.en-model a.solid{background:var(--gold);color:var(--navy);}
+.en-trust{text-align:center;color:var(--muted);font-size:13px;line-height:2;border-top:1px solid var(--line);padding:30px 24px;}
+.en-trust b{color:var(--gold);}
+.en-final{text-align:center;padding:60px 24px;}
+.en-final h2{font-family:'Cinzel',Georgia,serif;color:var(--text);font-size:28px;font-weight:400;margin:0 0 20px;}
+@media(max-width:680px){.en-hero h1{font-size:32px;}.en-models{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="en-nav"><div class="en-nav-in">
+  <a class="en-brand" href="/en"><img src="/assets/thanatos_intel/images/thanatos-icon-192.png" alt=""/><span class="wm">THANATOS</span></a>
+  <div class="en-links">
+    <a href="/en#solutions">Solutions</a>
+    <a href="/en#models">Pricing</a>
+    <a href="/verifica-rischio">Risk check</a>
+    <a href="/" class="en-lang">IT</a>
+  </div>
+</div></nav>
+
+<section class="en-hero">
+  <h1>Where fraud <em>meets its end</em></h1>
+  <p>Thanatos turns a name, an IBAN, a wallet or a domain into <b style="color:#C8A96E">court-ready evidence</b>.
+     European investigative intelligence for law firms, accountants and companies — anti-fraud, due diligence, OSINT and asset tracing.</p>
+  <div class="en-cta">
+    <a class="solid" href="/verifica-rischio">Free risk check</a>
+    <a class="ghost" href="/contatti">Talk to an analyst</a>
+  </div>
+</section>
+
+<section class="en-sec" id="solutions">
+  <h2>What we do</h2>
+  <div class="en-grid">
+    <div class="en-card"><div class="ic">🛡</div><h3>Anti-fraud</h3><p>Investment scams, crypto fraud, phishing: we trace the money and document the case for recovery.</p></div>
+    <div class="en-card"><div class="ic">🏛</div><h3>Due diligence</h3><p>Corporate structures, ultimate beneficial owners, reputation and litigation — before you sign.</p></div>
+    <div class="en-card"><div class="ic">₿</div><h3>Crypto & asset tracing</h3><p>Multi-chain wallet tracing and patrimonial mapping for recovery and seizures.</p></div>
+    <div class="en-card"><div class="ic">⚙</div><h3>Cyber intelligence</h3><p>Domains, IPs, malware and IOCs turned into attributable, actionable evidence.</p></div>
+  </div>
+</section>
+
+<section class="en-sec">
+  <h2>Why Thanatos</h2>
+  <div class="en-grid">
+    <div class="en-card"><h3>Legal value</h3><p>Not screenshots — evidence with SHA-256 chain of custody, usable in court.</p></div>
+    <div class="en-card"><h3>Automated OSINT</h3><p>Every search runs across dozens of sources, with daily-updated sanctions screening on 285,000+ entities.</p></div>
+    <div class="en-card"><h3>European & confidential</h3><p>GDPR-native, vetted KYC/KYB onboarding, data in the EU.</p></div>
+  </div>
+</section>
+
+<section class="en-sec" id="models">
+  <h2>Two ways to work with us</h2>
+  <div class="en-models">
+    <div class="en-model">
+      <h3>Pay-per-use</h3><div class="sub">Pay only for what you need</div>
+      <ul><li>✓ Transparent per-check pricing</li><li>✓ No commitment, instant activation</li><li>✓ Ideal for occasional needs</li></ul>
+      <a href="/pay-per-use">Browse services →</a>
+    </div>
+    <div class="en-model feat">
+      <h3>Subscription</h3><div class="sub">Monthly, more value</div>
+      <ul><li>✓ Included checks and packages</li><li>✓ Priority SLA and dedicated contact</li><li>✓ Continuous monitoring & API (higher tiers)</li></ul>
+      <a class="solid" href="/pricing">See plans →</a>
+    </div>
+  </div>
+</section>
+
+<div class="en-trust">
+  <b>SHA-256</b> chain of custody · <b>GDPR</b> compliant · Thanatos Investigazioni S.R.L. · Constanța, Romania · RO 46901022
+</div>
+
+<section class="en-final">
+  <h2>Know who you're dealing with.</h2>
+  <div class="en-cta"><a class="solid" href="/verifica-rischio">Run a free risk check</a><a class="ghost" href="/contatti">Contact us</a></div>
+</section>
+
+{{ thanatos_footer() }}
+{% endblock %}

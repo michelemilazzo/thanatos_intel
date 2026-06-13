@@ -55,6 +55,7 @@
       <a href="/about" class="{% if active=='about' %}act{% endif %}">Chi siamo</a>
       <a href="/collabora" class="{% if active=='collabora' %}act{% endif %}">Collabora</a>
       <a href="/portal" class="{% if active=='portal' %}act{% endif %}">Portale</a>
+      <a href="/en" title="English" style="border:1px solid #1F2742;padding:5px 9px;">EN</a>
       {% if frappe.session.user == 'Guest' %}
       <a class="tx-cta" href="/registrati">Registrati</a>
       <a class="tx-cta solid" href="/login?redirect-to=/portal">Accedi</a>
@@ -200,11 +201,15 @@
 
 {# SEO head — call in {% block head_include %} of public pages:
    {{ seo_head(title='...', description='...', path='/servizi', image='', type='website') }} #}
-{% macro seo_head(title, description, path='', image='', type='website', published='', modified='') -%}
+{% macro seo_head(title, description, path='', image='', type='website', published='', modified='', lang='it', alt_path='') -%}
 {%- set base = 'https://www.thanatos.agency' -%}
 {%- set canon = base ~ (path or (frappe.request.path if frappe.request else '')) -%}
 {%- set img = image or (base ~ '/assets/thanatos_intel/images/thanatos-logo-mark.png') -%}
 <link rel="canonical" href="{{ canon }}"/>
+{% if alt_path %}<link rel="alternate" hreflang="{{ 'en' if lang=='it' else 'it' }}" href="{{ base ~ alt_path }}"/>
+<link rel="alternate" hreflang="{{ lang }}" href="{{ canon }}"/>
+<link rel="alternate" hreflang="x-default" href="{{ canon }}"/>{% endif %}
+{% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}"/>{% endif %}
 <meta name="description" content="{{ description }}"/>
 <meta name="robots" content="index, follow, max-image-preview:large"/>
 <meta name="author" content="Thanatos Investigazioni"/>
