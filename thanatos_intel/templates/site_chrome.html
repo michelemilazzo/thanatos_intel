@@ -209,7 +209,7 @@
 {% if alt_path %}<link rel="alternate" hreflang="{{ 'en' if lang=='it' else 'it' }}" href="{{ base ~ alt_path }}"/>
 <link rel="alternate" hreflang="{{ lang }}" href="{{ canon }}"/>
 <link rel="alternate" hreflang="x-default" href="{{ canon }}"/>{% endif %}
-{% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}"/>{% endif %}
+{% set _gsc = gsc_code() %}{% if _gsc %}<meta name="google-site-verification" content="{{ _gsc }}"/>{% endif %}
 <meta name="description" content="{{ description }}"/>
 <meta name="robots" content="index, follow, max-image-preview:large"/>
 <meta name="author" content="Thanatos Investigazioni"/>

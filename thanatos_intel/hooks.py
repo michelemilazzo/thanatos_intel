@@ -35,8 +35,6 @@ website_context={
  'brand_html': '<img src="/assets/thanatos_intel/images/thanatos-logo-mark.png" alt="Thanatos Intel" style="height:32px"/>',
 }
 
-update_website_context='thanatos_intel.utils.seo.update_website_context'
-
 role_home_page={
  'Investigation Client': '/portal',
  'Affiliate': '/portal',
@@ -198,5 +196,6 @@ jinja={
    'thanatos_intel.thanatos_core.currency.converter.convert_all',
    'thanatos_intel.permissions.is_full_access',
    'thanatos_intel.utils.jinja_helpers.user_roles',
+   'thanatos_intel.utils.seo.gsc_code',
  ],
 }
