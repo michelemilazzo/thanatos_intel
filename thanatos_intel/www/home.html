@@ -1,10 +1,13 @@
 {% extends "templates/web.html" %}
-{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
 
 {% block title %}Thanatos Intel — Intelligence Investigativa Europea{% endblock %}
 
 {% block head_include %}
-<meta name="description" content="Piattaforma SaaS di intelligence investigativa: antifrode, due diligence, OSINT, sequestri. News e analisi quotidiane."/>
+{{ seo_head(
+   title='Thanatos Intel — Intelligence Investigativa Europea',
+   description='Piattaforma SaaS di intelligence investigativa: antifrode, due diligence, OSINT, sequestri. News e analisi quotidiane.',
+   path='/', lang='it', alt_path='/en') }}
 <!-- Gothic + serif fonts for Thanatos brand -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
