@@ -1,0 +1,144 @@
+{
+ "name": "Tracked Asset",
+ "doctype": "DocType",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "naming_rule": "Expression",
+ "autoname": "format:TRK-{YYYY}-{#####}",
+ "track_changes": 1,
+ "title_field": "label",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "fields": [
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Asset tracciato"
+  },
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "label": "Etichetta",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "asset_type",
+   "fieldtype": "Select",
+   "label": "Tipo",
+   "options": "Veicolo\nSmartphone\nGPS Tracker\nNumero di telefono\nPersona consenziente",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "identifier",
+   "fieldtype": "Data",
+   "label": "Identificativo (IMEI / targa / numero / IMSI)",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "investigation_case",
+   "fieldtype": "Link",
+   "label": "Caso",
+   "options": "Investigation Case",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "owner_name",
+   "fieldtype": "Data",
+   "label": "Titolare dell'asset"
+  },
+  {
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Tracciamento attivo",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_legal",
+   "fieldtype": "Section Break",
+   "label": "Base giuridica (obbligatoria)",
+   "description": "Nessun tracciamento può essere attivato senza base giuridica e documento di consenso/mandato allegato. Legea 329/2003 + GDPR/Legea 190/2018."
+  },
+  {
+   "fieldname": "legal_basis",
+   "fieldtype": "Select",
+   "label": "Base giuridica",
+   "options": "\nConsenso scritto del titolare\nMandato su bene del cliente\nBene di proprietà del cliente\nAltro (specificare nelle note)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "consent_document",
+   "fieldtype": "Attach",
+   "label": "Documento consenso / mandato"
+  },
+  {
+   "fieldname": "cb_legal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "legal_note",
+   "fieldtype": "Small Text",
+   "label": "Note legali"
+  },
+  {
+   "fieldname": "sb_window",
+   "fieldtype": "Section Break",
+   "label": "Periodo autorizzato"
+  },
+  {
+   "fieldname": "authorized_from",
+   "fieldtype": "Date",
+   "label": "Autorizzato dal"
+  },
+  {
+   "fieldname": "cb_window",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "authorized_to",
+   "fieldtype": "Date",
+   "label": "Autorizzato fino al"
+  },
+  {
+   "fieldname": "sb_ingest",
+   "fieldtype": "Section Break",
+   "label": "Ingest posizioni"
+  },
+  {
+   "fieldname": "ingest_token",
+   "fieldtype": "Data",
+   "label": "Token ingest",
+   "read_only": 1,
+   "description": "Token per il webhook hardware tracker / app consensuale."
+  },
+  {
+   "fieldname": "cb_ingest",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_seen",
+   "fieldtype": "Datetime",
+   "label": "Ultima posizione",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

@@ -1,0 +1,82 @@
+{
+ "name": "Geo Track Point",
+ "doctype": "DocType",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "naming_rule": "Expression",
+ "autoname": "hash",
+ "sort_field": "captured_at",
+ "sort_order": "DESC",
+ "fields": [
+  {
+   "fieldname": "investigator",
+   "fieldtype": "Link",
+   "label": "Investigatore",
+   "options": "Investigator",
+   "in_standard_filter": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "field_activity",
+   "fieldtype": "Link",
+   "label": "Attività",
+   "options": "Field Activity",
+   "in_standard_filter": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "captured_at",
+   "fieldtype": "Datetime",
+   "label": "Ora",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "geo_lat",
+   "fieldtype": "Float",
+   "label": "Latitudine",
+   "precision": "6",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "geo_lng",
+   "fieldtype": "Float",
+   "label": "Longitudine",
+   "precision": "6",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "accuracy",
+   "fieldtype": "Float",
+   "label": "Precisione (m)",
+   "precision": "1"
+  },
+  {
+   "fieldname": "speed",
+   "fieldtype": "Float",
+   "label": "Velocità (km/h)",
+   "precision": "1"
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "label": "Sorgente",
+   "default": "browser"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}

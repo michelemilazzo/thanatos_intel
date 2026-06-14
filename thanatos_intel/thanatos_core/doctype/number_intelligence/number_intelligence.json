@@ -1,0 +1,122 @@
+{
+ "name": "Number Intelligence",
+ "doctype": "DocType",
+ "module": "Thanatos Core",
+ "engine": "InnoDB",
+ "naming_rule": "Expression",
+ "autoname": "format:NUM-{YYYY}-{#####}",
+ "track_changes": 1,
+ "title_field": "phone_number",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "fields": [
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Numero"
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "label": "Numero (E.164)",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "investigation_case",
+   "fieldtype": "Link",
+   "label": "Caso",
+   "options": "Investigation Case",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Data",
+   "label": "Paese",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "carrier",
+   "fieldtype": "Data",
+   "label": "Operatore",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "line_type",
+   "fieldtype": "Select",
+   "label": "Tipo linea",
+   "options": "\nMobile\nFisso\nVoIP\nToll-free\nSconosciuto"
+  },
+  {
+   "fieldname": "valid",
+   "fieldtype": "Check",
+   "label": "Numero valido"
+  },
+  {
+   "fieldname": "sb_attr",
+   "fieldtype": "Section Break",
+   "label": "Attribuzione (OSINT)"
+  },
+  {
+   "fieldname": "attributed_name",
+   "fieldtype": "Data",
+   "label": "Identità attribuita"
+  },
+  {
+   "fieldname": "linked_entities",
+   "fieldtype": "Small Text",
+   "label": "Entità collegate"
+  },
+  {
+   "fieldname": "cb_attr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "social_profiles",
+   "fieldtype": "Small Text",
+   "label": "Profili social collegati"
+  },
+  {
+   "fieldname": "breach_hits",
+   "fieldtype": "Small Text",
+   "label": "Presenza in data breach"
+  },
+  {
+   "fieldname": "sb_meta",
+   "fieldtype": "Section Break",
+   "label": "Fonti ed esito"
+  },
+  {
+   "fieldname": "sources",
+   "fieldtype": "Small Text",
+   "label": "Fonti consultate"
+  },
+  {
+   "fieldname": "risk_notes",
+   "fieldtype": "Text",
+   "label": "Note / valutazione"
+  },
+  {
+   "fieldname": "raw_result",
+   "fieldtype": "Code",
+   "label": "Risultato grezzo",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  }
+ ]
+}
