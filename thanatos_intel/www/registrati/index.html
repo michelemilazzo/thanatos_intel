@@ -442,7 +442,11 @@ document.getElementById('c-send').addEventListener('click', async () => {
   } catch(e) {
     const txt = String(e.message || e);
     msg.className = 'msg err';
-    msg.textContent = txt.includes('già un account') ? 'Questa email è già registrata. Accedi.' : txt;
+    if (txt.includes('già un account')) {
+      msg.innerHTML = 'Questa email è già registrata. <a href="/login?redirect-to=/portal" style="color:var(--gold);font-weight:700;text-decoration:underline">Accedi al tuo account →</a>';
+    } else {
+      msg.textContent = txt;
+    }
   }
   btn.disabled = false;
 });
