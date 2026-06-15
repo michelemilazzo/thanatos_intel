@@ -149,6 +149,49 @@ frappe.ui.form.on('Investigation Case', {
             }, __('Intelligence'));
         }
 
+        // ---- MMOS AI: ingest documenti (OCR + estrazione AI + reperto) ----
+        if (!frm.is_new()) {
+            frm.add_custom_button(__('Ingest documento'), () => {
+                const files = (frm.get_files ? frm.get_files() : []);
+                if (!files.length) { frappe.msgprint(__('Nessun allegato sul caso. Carica prima un documento.')); return; }
+                const d = new frappe.ui.Dialog({
+                    title: __('MMOS AI - Ingest documento'),
+                    fields: [
+                        { fieldname: 'file_url', fieldtype: 'Select', label: __('Documento'), reqd: 1,
+                          options: files.map(f => f.file_url).join('\n') },
+                        { fieldname: 'document_type', fieldtype: 'Select', label: __('Tipo'), default: 'generic',
+                          options: ['generic','passport','id_card','company_doc','financial_doc','contract'].join('\n') }
+                    ],
+                    primary_action_label: __('Analizza con AI'),
+                    primary_action(v) {
+                        d.hide();
+                        frappe.call({
+                            method: 'thanatos_intel.ai.doc_ingest.ingest_document',
+                            args: { file_url: v.file_url, investigation_case: frm.doc.name, document_type: v.document_type },
+                            freeze: true, freeze_message: __('OCR + estrazione MMOS AI...'),
+                            callback(r) {
+                                const m = r.message || {};
+                                const ex = m.extracted || {};
+                                const ents = (ex.entities || []).map(e => e.name + (e.role ? ' ('+e.role+')' : '')).join(', ');
+                                const flags = (ex.risk_flags || []).join('; ');
+                                frappe.msgprint({
+                                    title: __('Ingest completato'),
+                                    indicator: flags ? 'orange' : 'green',
+                                    message: '<b>Sintesi:</b> ' + frappe.utils.escape_html(ex.summary || '-') + '<br>' +
+                                             '<b>Entita:</b> ' + frappe.utils.escape_html(ents || '-') + '<br>' +
+                                             (flags ? '<b style="color:#c0392b">Red flag:</b> ' + frappe.utils.escape_html(flags) + '<br>' : '') +
+                                             '<b>Reperto:</b> ' + (m.evidence || '-') + ' . OCR ' + (m.ocr ? m.ocr.provider : '-') +
+                                             (m.ai_available ? '' : '<br><i>AI non raggiungibile - solo OCR</i>')
+                                });
+                                frm.reload_doc();
+                            }
+                        });
+                    }
+                });
+                d.show();
+            }, __('MMOS AI'));
+        }
+
         // ---- Report: genera per tema, PDF in Drive con tag cliente, firma DocuSeal ----
         if (!frm.is_new()) {
             const kinds = {
