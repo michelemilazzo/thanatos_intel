@@ -19,13 +19,23 @@ BENCH=thanatos
 SITE=thanatos.onekeyco.com
 BIN=/home/frappe/bench-cli/bench
 
+# I worker gunicorn cachano la conf del sito: dopo aver cambiato maintenance_mode
+# serve un restart, altrimenti il flag (on/off) si applica solo a parte dei worker
+# -> home intermittente 503/200. La finestra di restart e' coperta dall'error_page.
+restart_web() {
+  local u; u=$(id -u frappe)
+  sudo -u frappe XDG_RUNTIME_DIR="/run/user/$u" systemctl --user restart "${BENCH}-web.service"
+}
+
 case "${1:-}" in
   on)
     sudo -u frappe "$BIN" -b "$BENCH" --site "$SITE" set-maintenance-mode on
+    restart_web
     echo "Manutenzione ATTIVA su $SITE"
     ;;
   off)
     sudo -u frappe "$BIN" -b "$BENCH" --site "$SITE" set-maintenance-mode off
+    restart_web
     echo "Manutenzione DISATTIVATA su $SITE"
     ;;
   status)
