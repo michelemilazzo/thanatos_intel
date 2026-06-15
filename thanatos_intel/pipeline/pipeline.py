@@ -389,14 +389,20 @@ def get_case_pipeline(case_name: str) -> list:
 def get_ddd_pipeline(ddd_case_name: str) -> list:
     case = frappe.db.get_value(
         "Diplomatic Eligibility Case", ddd_case_name,
-        ["name", "status", "client"], as_dict=1,
+        ["name", "workflow_state", "linked_investigation_case"], as_dict=1,
     )
     if not case:
         return []
     case["case_type"] = "DDD"
-    case["case_status"] = case.get("status", "")
+    case["case_status"] = case.get("workflow_state", "")
     case["pipeline_key"] = "DDD"
-    if case.get("client"):
-        ct = frappe.db.get_value("Investigation Client", case["client"], "client_type")
-        case["client_type"] = ct
+    # Il DDD case non ha un campo client diretto: lo si ricava dal caso investigativo collegato
+    client = None
+    if case.get("linked_investigation_case"):
+        client = frappe.db.get_value(
+            "Investigation Case", case["linked_investigation_case"], "client"
+        )
+    case["client"] = client
+    if client:
+        case["client_type"] = frappe.db.get_value("Investigation Client", client, "client_type")
     return get_pipeline(case)
