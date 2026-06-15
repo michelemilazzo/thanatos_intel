@@ -206,7 +206,11 @@ document.getElementById('signupForm').addEventListener('submit', async function(
     } else {
       const msg = j.message?.error || j._error_message || 'Errore creazione account';
       alertBox.className = 's-alert';
-      alertBox.textContent = msg;
+      if (/già registrat/i.test(msg)) {
+        alertBox.innerHTML = 'Questa email è già registrata. <a href="/login?redirect-to=/portal" style="color:var(--gold);font-weight:700;text-decoration:underline">Accedi al tuo account →</a>';
+      } else {
+        alertBox.textContent = msg;
+      }
       alertBox.style.display = 'block';
       btn.disabled = false;
       btn.textContent = 'Crea account →';
