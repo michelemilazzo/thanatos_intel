@@ -7,7 +7,18 @@ firmato, report pronto). Template = Email Template con prefisso "Thanatos -".
 import frappe
 from frappe import _
 
-SENDER = "admin@thanatos.agency"
+# Mittenti per ruolo. Le comunicazioni cliente partono da info@; l'amministrazione
+# da admin@. Frappe usa l'account in uscita di default per il trasporto e imposta
+# il From al mittente indicato (stesso dominio, autenticato -> passa l'anti-spoof).
+SENDERS = {
+    "info": "info@thanatos.agency",        # comunicazioni cliente
+    "admin": "admin@thanatos.agency",       # amministrazione
+    "noreply": "no-replies@thanatos.agency",
+}
+
+
+def _sender(category="info"):
+    return SENDERS.get(category, SENDERS["info"])
 
 
 def _case_of(doc):
@@ -44,7 +55,7 @@ def _send(case_name, template, ctx_doc=None):
     tpl = frappe.get_doc("Email Template", template)
     ctx = {"client_name": name, "case": case_name, "doc": ctx_doc}
     frappe.sendmail(
-        recipients=[email], sender=SENDER,
+        recipients=[email], sender=_sender('info'),
         subject=frappe.render_template(tpl.subject or "", ctx),
         message=frappe.render_template(tpl.response_html or tpl.response or "", ctx),
         reference_doctype="Investigation Case", reference_name=case_name,
