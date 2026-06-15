@@ -58,7 +58,10 @@ fixtures=[
  {'doctype': 'Country Framework', 'filters': []},
  {'doctype': 'Number Card', 'filters': [['name', 'in', [
    'Casi aperti', 'Casi in lavorazione', 'Evidenze da custodire',
-   'Mandati DDD attivi', 'OSINT job attivi', 'Clienti']]]},
+   'Mandati DDD attivi', 'OSINT job attivi', 'Clienti',
+   'Thanatos - Casi aperti', 'Thanatos - Casi totali',
+   'Thanatos - Attività sul campo', 'Thanatos - Reperti in custodia',
+   'Thanatos - Asset tracciati attivi', 'Thanatos - Case DDD']]]},
  {'doctype': 'Dashboard Chart', 'filters': [['name', 'in', [
    'Casi per stato', 'Mandati DDD per fase', 'Nuovi casi nel tempo']]]},
  {'doctype': 'Custom Field', 'filters': [['name', 'in', [

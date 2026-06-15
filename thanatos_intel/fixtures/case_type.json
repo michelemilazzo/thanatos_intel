@@ -1,9 +1,72 @@
 [
-  {"doctype": "Case Type", "name": "Fraud", "type_name": "Fraud", "pipeline_key": "Antifrode", "description": "Indagini antifrode su persone fisiche o giuridiche", "is_active": 1},
-  {"doctype": "Case Type", "name": "Corporate", "type_name": "Corporate", "pipeline_key": "Corporate", "description": "Due diligence e intelligence su aziende", "is_active": 1},
-  {"doctype": "Case Type", "name": "Cyber", "type_name": "Cyber", "pipeline_key": "OSINT", "description": "Indagini OSINT e cyber intelligence", "is_active": 1},
-  {"doctype": "Case Type", "name": "Seizure", "type_name": "Seizure", "pipeline_key": "Investigation", "description": "Indagini patrimoniali e sequestro beni", "is_active": 1},
-  {"doctype": "Case Type", "name": "Family", "type_name": "Family", "pipeline_key": "Investigation", "description": "Indagini familiari (separazioni, affidamenti)", "is_active": 1},
-  {"doctype": "Case Type", "name": "Asset Recovery", "type_name": "Asset Recovery", "pipeline_key": "Investigation", "description": "Recupero crediti e asset tracing", "is_active": 1},
-  {"doctype": "Case Type", "name": "Due Diligence", "type_name": "Due Diligence", "pipeline_key": "DDD", "description": "Due diligence diplomatica (DDD)", "is_active": 1}
+ {
+  "description": "Indagini antifrode su persone fisiche o giuridiche",
+  "docstatus": 0,
+  "doctype": "Case Type",
+  "is_active": 1,
+  "modified": "2026-06-13 00:28:05.536929",
+  "name": "Fraud",
+  "pipeline_key": "Antifrode",
+  "type_name": "Fraud"
+ },
+ {
+  "description": "Due diligence e intelligence su aziende",
+  "docstatus": 0,
+  "doctype": "Case Type",
+  "is_active": 1,
+  "modified": "2026-06-13 00:28:05.546117",
+  "name": "Corporate",
+  "pipeline_key": "Corporate",
+  "type_name": "Corporate"
+ },
+ {
+  "description": "Indagini OSINT e cyber intelligence",
+  "docstatus": 0,
+  "doctype": "Case Type",
+  "is_active": 1,
+  "modified": "2026-06-13 00:28:05.553918",
+  "name": "Cyber",
+  "pipeline_key": "OSINT",
+  "type_name": "Cyber"
+ },
+ {
+  "description": "Indagini patrimoniali e sequestro beni",
+  "docstatus": 0,
+  "doctype": "Case Type",
+  "is_active": 1,
+  "modified": "2026-06-13 00:28:05.561213",
+  "name": "Seizure",
+  "pipeline_key": "Investigation",
+  "type_name": "Seizure"
+ },
+ {
+  "description": "Indagini familiari (separazioni, affidamenti)",
+  "docstatus": 0,
+  "doctype": "Case Type",
+  "is_active": 1,
+  "modified": "2026-06-13 00:28:05.567204",
+  "name": "Family",
+  "pipeline_key": "Investigation",
+  "type_name": "Family"
+ },
+ {
+  "description": "Recupero crediti e asset tracing",
+  "docstatus": 0,
+  "doctype": "Case Type",
+  "is_active": 1,
+  "modified": "2026-06-13 00:28:05.573167",
+  "name": "Asset Recovery",
+  "pipeline_key": "Investigation",
+  "type_name": "Asset Recovery"
+ },
+ {
+  "description": "Due diligence diplomatica (DDD)",
+  "docstatus": 0,
+  "doctype": "Case Type",
+  "is_active": 1,
+  "modified": "2026-06-13 00:28:05.579007",
+  "name": "Due Diligence",
+  "pipeline_key": "DDD",
+  "type_name": "Due Diligence"
+ }
 ]
