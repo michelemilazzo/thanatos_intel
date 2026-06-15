@@ -149,6 +149,34 @@ frappe.ui.form.on('Investigation Case', {
             }, __('Intelligence'));
         }
 
+        // ---- Comunicazioni al cliente (template email, dentro Thanatos) ----
+        if (!frm.is_new()) {
+            frm.add_custom_button(__('Email al cliente'), () => {
+                frappe.call('thanatos_intel.integrations.client_comms.list_templates').then(r => {
+                    const tpls = r.message || [];
+                    if (!tpls.length) { frappe.msgprint(__('Nessun template disponibile. Crea un Email Template con nome "Thanatos - ...".')); return; }
+                    const d = new frappe.ui.Dialog({
+                        title: __('Email al cliente'),
+                        fields: [{ fieldname: 'template', fieldtype: 'Select', label: __('Template'), reqd: 1, options: tpls.join('\n') }],
+                        primary_action_label: __('Invia'),
+                        primary_action(v) {
+                            d.hide();
+                            frappe.call({
+                                method: 'thanatos_intel.integrations.client_comms.send_to_client',
+                                args: { case: frm.doc.name, template: v.template },
+                                freeze: true, freeze_message: __('Invio in corso...'),
+                                callback(r2) {
+                                    const m = r2.message || {};
+                                    if (m.ok) frappe.show_alert({ message: __('Email accodata a {0}', [m.to]), indicator: 'green' }, 6);
+                                }
+                            });
+                        }
+                    });
+                    d.show();
+                });
+            }, __('Comunicazioni'));
+        }
+
         // ---- MMOS AI: ingest documenti (OCR + estrazione AI + reperto) ----
         if (!frm.is_new()) {
             frm.add_custom_button(__('Ingest documento'), () => {
