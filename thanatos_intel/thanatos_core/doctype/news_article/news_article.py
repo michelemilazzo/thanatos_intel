@@ -12,6 +12,18 @@ class NewsArticle(WebsiteGenerator):
 		page_title_field="title",
 	)
 
+	def autoname(self):
+		# WebsiteGenerator nominerebbe dal titolo "scrubbed" -> piu articoli con lo stesso
+		# titolo (es. "#AccadeOggi") collidono su name='accadeoggi'. Usiamo lo slug, gia
+		# reso univoco dall'ingest; fallback alla serie NEWS-YYYY-#####.
+		if self.title and not self.slug:
+			self.slug = _slug(self.title)[:160]
+		if self.slug:
+			self.name = self.slug
+		else:
+			from frappe.model.naming import make_autoname
+			self.name = make_autoname("NEWS-.YYYY.-.#####")
+
 	def before_save(self):
 		if self.title and not self.slug:
 			self.slug = _slug(self.title)[:160]
