@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Thanatos Intel — Manutenzione</title>
+<style>
+  :root{
+    --navy:#0A0E1A; --panel:#111729; --line:#1F2742;
+    --gold:#C8A96E; --gold-d:#8C6E3C;
+    --tx-hi:#F2F3F7; --tx-body:#D8DBE6; --tx-low:#8A909E;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--navy); color:var(--tx-body);
+    font-family:Georgia,'Times New Roman',serif;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; padding:24px;
+    background-image:radial-gradient(circle at 50% 30%, #131a30 0%, var(--navy) 60%);
+  }
+  .card{max-width:520px; text-align:center}
+  .mark{width:72px; height:72px; margin:0 auto 28px; display:block}
+  h1{
+    font-size:30px; letter-spacing:.04em; color:var(--tx-hi);
+    margin:0 0 6px; font-weight:600;
+  }
+  .sub{
+    font-size:13px; letter-spacing:.28em; text-transform:uppercase;
+    color:var(--gold); margin:0 0 28px;
+  }
+  .rule{
+    width:60px; height:1px; background:var(--gold); opacity:.6;
+    margin:0 auto 28px;
+  }
+  p{font-size:16px; line-height:1.6; margin:0 0 14px; color:var(--tx-body)}
+  .en{color:var(--tx-low); font-size:14px}
+  .foot{margin-top:34px; font-size:12px; letter-spacing:.2em;
+        text-transform:uppercase; color:var(--tx-low)}
+</style>
+</head>
+<body>
+  <div class="card">
+    <svg class="mark" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#C8A96E"/>
+          <stop offset="100%" stop-color="#8C6E3C"/>
+        </linearGradient>
+      </defs>
+      <g transform="translate(15,15)">
+        <path d="M0 0 L50 0 L50 7 L29 7 L29 50 L21 50 L21 7 L0 7 Z" fill="url(#g)"/>
+      </g>
+      <line x1="15" y1="68" x2="65" y2="68" stroke="#C8A96E" stroke-width="0.8" opacity="0.7"/>
+    </svg>
+
+    <h1>Thanatos Intel</h1>
+    <div class="sub">Manutenzione in corso</div>
+    <div class="rule"></div>
+
+    <p>Stiamo eseguendo un aggiornamento. Torniamo operativi tra pochi minuti — la pagina si ricaricherà da sola.</p>
+    <p class="en">We are performing a scheduled update. We'll be back online in a few minutes — this page will refresh automatically.</p>
+
+    <div class="foot">European Investigative Intelligence</div>
+  </div>
+
+  <script>
+    // Auto-retry: ricarica finché l'origine non torna 200.
+    setTimeout(function(){ location.reload(); }, 15000);
+  </script>
+</body>
+</html>
