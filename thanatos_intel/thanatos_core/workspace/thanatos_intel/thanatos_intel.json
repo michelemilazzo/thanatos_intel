@@ -516,14 +516,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Wallet & Pagamenti",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Strumenti & App",
    "link_count": 6,
    "link_type": "DocType",
@@ -706,16 +698,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Risk Rule",
-   "link_count": 0,
-   "link_to": "Risk Rule",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Campo & Tracciamento",
    "link_count": 6,
    "link_type": "DocType",
@@ -783,7 +765,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-06-15 16:51:10.954122",
+ "modified": "2026-06-15 19:12:34.511191",
  "modified_by": "Administrator",
  "module": "Thanatos Core",
  "name": "Thanatos Intel",
@@ -873,12 +855,6 @@
    "label": "Centro Operativo",
    "type": "URL",
    "url": "/portal/ops"
-  },
-  {
-   "color": "Green",
-   "label": "Drive File Manager",
-   "type": "URL",
-   "url": "/drive"
   },
   {
    "color": "Orange",
