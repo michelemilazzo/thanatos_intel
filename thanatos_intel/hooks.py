@@ -101,6 +101,7 @@ doc_events={
  },
  'Investigation Report': {
    'before_save': 'thanatos_intel.integrations.intel_inbox.before_save_report',
+   'after_insert': 'thanatos_intel.integrations.client_comms.auto_report_ready',
    'on_update': ['thanatos_intel.integrations.intel_inbox.on_update_report',
                  'thanatos_intel.integrations.waba_notifications.on_investigation_report_update'],
  },
@@ -114,9 +115,6 @@ doc_events={
    'validate': 'thanatos_intel.billing.billing_entity.stamp_ddd_billing_entity',
    'on_update': ['thanatos_intel.billing.ddd_billing.on_mandate_update',
                  'thanatos_intel.integrations.client_comms.auto_mandate_signed'],
- },
- 'Investigation Report': {
-   'after_insert': 'thanatos_intel.integrations.client_comms.auto_report_ready',
  },
  'Revenue Distribution': {
    'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
