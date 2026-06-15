@@ -50,3 +50,29 @@ a[href*="thanatos-intel"] .icon-container > svg {
   bottom: 84px !important; top: auto !important;
   z-index: 1030 !important;
 }
+
+
+/* Pulsante fisso Home Thanatos nella navbar */
+#thanatos-home-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  margin: 0 4px 0 8px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1f3a;
+  background: rgba(196, 164, 90, 0.12);
+  border: 1px solid rgba(196, 164, 90, 0.35);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+#thanatos-home-btn:hover {
+  background: rgba(196, 164, 90, 0.22);
+  border-color: rgba(196, 164, 90, 0.6);
+  color: #1a1f3a;
+  text-decoration: none;
+}
+#thanatos-home-btn svg { color: #b8923f; }
