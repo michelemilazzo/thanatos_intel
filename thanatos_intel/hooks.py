@@ -112,7 +112,11 @@ doc_events={
  },
  'Agency Mandate': {
    'validate': 'thanatos_intel.billing.billing_entity.stamp_ddd_billing_entity',
-   'on_update': 'thanatos_intel.billing.ddd_billing.on_mandate_update',
+   'on_update': ['thanatos_intel.billing.ddd_billing.on_mandate_update',
+                 'thanatos_intel.integrations.client_comms.auto_mandate_signed'],
+ },
+ 'Investigation Report': {
+   'after_insert': 'thanatos_intel.integrations.client_comms.auto_report_ready',
  },
  'Revenue Distribution': {
    'validate': 'thanatos_intel.thanatos_core.currency.ron_accounting.apply_ron',
