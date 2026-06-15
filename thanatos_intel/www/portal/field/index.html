@@ -1,0 +1,293 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import portal_nav, thanatos_footer %}
+
+{% block title %}Cattura sul campo — Thanatos{% endblock %}
+
+{% block head %}
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold2:#E0C58A;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel2:#161D33;--border:#1F2842;
+  --red:#d05a5a;--ok:#7BC480;}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:560px;margin:0 auto;padding:24px 16px 80px}
+h1{font-family:Georgia,serif;font-weight:400;font-size:24px;color:#fff;margin:0 0 4px}
+.sub{color:var(--grey);font-size:12.5px;margin:0 0 22px}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px;margin-bottom:16px}
+label.lbl{display:block;font-size:10.5px;color:var(--grey);letter-spacing:1.5px;
+  text-transform:uppercase;margin-bottom:8px}
+select,input,textarea{width:100%;background:var(--dark);color:#E8E9F0;border:1px solid var(--border);
+  padding:13px 14px;border-radius:6px;font-size:16px;font-family:inherit}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--gold)}
+textarea{min-height:90px;resize:vertical}
+
+/* chip selector tipo attività */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 14px;border:1px solid var(--border);border-radius:20px;background:var(--panel2);
+  color:var(--grey);font-size:13px;cursor:pointer;user-select:none}
+.chip.active{border-color:var(--gold);background:var(--gold-soft);color:var(--gold2)}
+
+/* GPS status */
+.gps{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--grey);margin-top:12px}
+.gps .dot{width:9px;height:9px;border-radius:50%;background:var(--grey);flex-shrink:0}
+.gps.ok .dot{background:var(--ok)} .gps.err .dot{background:var(--red)}
+
+/* media buttons */
+.media-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.mbtn{padding:14px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);
+  color:#E8E9F0;font-size:13px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:6px;font-family:inherit}
+.mbtn:active{border-color:var(--gold)}
+.mbtn .ic{font-size:22px}
+.mbtn.rec.on{background:rgba(208,90,90,.18);border-color:var(--red);color:#e79a9a}
+.captures{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.cap{position:relative;width:64px;height:64px;border-radius:6px;overflow:hidden;border:1px solid var(--border);
+  background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--grey)}
+.cap img{width:100%;height:100%;object-fit:cover}
+.cap .x{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;
+  width:18px;height:18px;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+
+/* legal */
+.legal-box{margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)}
+.consent{display:flex;align-items:flex-start;gap:10px;margin-top:12px;font-size:13px;line-height:1.4}
+.consent input{width:18px;height:18px;accent-color:var(--gold);flex-shrink:0;margin-top:1px}
+
+.btn-primary{width:100%;padding:16px;background:var(--gold);color:var(--dark);border:0;border-radius:8px;
+  font-size:14px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-primary:disabled{opacity:.4}
+.btn-ghost{width:100%;padding:13px;background:transparent;color:var(--gold);border:1px solid rgba(200,169,110,.4);
+  border-radius:8px;font-size:13px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:inherit;margin-top:10px}
+.timer{font-family:Georgia,serif;font-size:30px;color:var(--gold);text-align:center;margin:6px 0}
+.msg{margin-top:14px;padding:12px 14px;border-radius:6px;font-size:13px;display:none}
+.msg.ok{display:block;background:rgba(106,166,106,.14);border:1px solid rgba(106,166,106,.4);color:#8fd08f}
+.msg.err{display:block;background:rgba(208,90,90,.14);border:1px solid rgba(208,90,90,.4);color:#e79a9a}
+.hidden{display:none}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ portal_nav('field') }}
+<div class="shell">
+  <h1>Cattura sul campo</h1>
+  <p class="sub">Registra attività, posizione GPS, audio e foto. Tutto agganciato al caso e alla catena di custodia.</p>
+
+  <!-- STEP 1: setup -->
+  <div id="setup">
+    <div class="card">
+      <label class="lbl">Caso</label>
+      <select id="f-case">
+        {% for c in cases %}<option value="{{ c.name }}">{{ c.name }} — {{ c.case_title or '' }}</option>{% endfor %}
+      </select>
+      {% if not cases %}<p class="sub" style="margin-top:10px">Nessun caso assegnato.</p>{% endif %}
+
+      <label class="lbl" style="margin-top:16px">Tipo attività</label>
+      <div class="chips" id="f-types">
+        {% for t in activity_types %}<div class="chip" data-type="{{ t }}">{{ t }}</div>{% endfor %}
+      </div>
+
+      <div class="gps" id="gps"><span class="dot"></span><span id="gps-txt">GPS non ancora rilevato</span></div>
+    </div>
+    <button class="btn-primary" id="btn-start" disabled>▶ Avvia attività</button>
+  </div>
+
+  <!-- STEP 2: active -->
+  <div id="active" class="hidden">
+    <div class="card">
+      <label class="lbl">In corso · <span id="active-type"></span></label>
+      <div class="timer" id="timer">00:00</div>
+
+      <div class="media-row">
+        <button class="mbtn rec" id="btn-rec"><span class="ic">⏺</span><span id="rec-lbl">Registra audio</span></button>
+        <button class="mbtn" id="btn-photo"><span class="ic">📸</span>Foto</button>
+      </div>
+      <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden">
+      <div class="captures" id="captures"></div>
+
+      <label class="lbl" style="margin-top:18px">Soggetti coinvolti</label>
+      <input id="f-subjects" placeholder="Nome / entità (uno per riga)">
+
+      <label class="lbl" style="margin-top:14px">Relazione</label>
+      <textarea id="f-narrative" placeholder="Cosa è successo, osservazioni…"></textarea>
+
+      <div class="legal-box">
+        <label class="lbl">Base giuridica</label>
+        <select id="f-legal">
+          <option value="">— seleziona —</option>
+          {% for b in legal_bases %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+        </select>
+        <div class="consent">
+          <input type="checkbox" id="f-consent">
+          <label for="f-consent">Confermo la liceità dell'attività (Legea 329/2003 + GDPR/Legea 190/2018). Obbligatorio per pedinamento e registrazioni.</label>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="btn-finish">■ Termina e registra</button>
+    <button class="btn-ghost" id="btn-cancel">Annulla</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+</div>
+{{ thanatos_footer() }}
+
+<script>
+const CSRF = "{{ csrf_token }}";
+const API = "/api/method/thanatos_intel.thanatos_core.";
+let activityType = null, startTime = null, geo = null, timerInt = null;
+let mediaRecorder = null, recChunks = [], audioBlob = null, photos = [];
+
+// ── tipo attività ──
+document.querySelectorAll('#f-types .chip').forEach(c => c.onclick = () => {
+  document.querySelectorAll('#f-types .chip').forEach(x => x.classList.remove('active'));
+  c.classList.add('active'); activityType = c.dataset.type; checkStart();
+});
+
+// ── GPS ──
+const gpsEl = document.getElementById('gps'), gpsTxt = document.getElementById('gps-txt');
+function watchGPS(){
+  if (!navigator.geolocation){ gpsEl.classList.add('err'); gpsTxt.textContent='GPS non disponibile'; return; }
+  navigator.geolocation.watchPosition(p => {
+    geo = {lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy};
+    gpsEl.classList.remove('err'); gpsEl.classList.add('ok');
+    gpsTxt.textContent = `GPS ok · ±${Math.round(geo.acc)}m`;
+    checkStart();
+  }, e => { gpsEl.classList.add('err'); gpsTxt.textContent='GPS negato'; },
+  {enableHighAccuracy:true, maximumAge:5000, timeout:15000});
+}
+watchGPS();
+
+function checkStart(){
+  document.getElementById('btn-start').disabled = !(activityType && document.getElementById('f-case').value);
+}
+
+// ── avvio ──
+document.getElementById('btn-start').onclick = () => {
+  startTime = new Date();
+  document.getElementById('setup').classList.add('hidden');
+  document.getElementById('active').classList.remove('hidden');
+  document.getElementById('active-type').textContent = activityType;
+  sendBreadcrumb();
+  timerInt = setInterval(tick, 1000); tick();
+};
+function tick(){
+  const s = Math.floor((Date.now()-startTime)/1000);
+  const m = String(Math.floor(s/60)).padStart(2,'0'), ss = String(s%60).padStart(2,'0');
+  document.getElementById('timer').textContent = `${m}:${ss}`;
+  if (s % 30 === 0) sendBreadcrumb();
+}
+
+async function sendBreadcrumb(){
+  if (!geo) return;
+  try {
+    await fetch(API + "tracking_api.track_point", {method:"POST",
+      headers:{"X-Frappe-CSRF-Token":CSRF,"Content-Type":"application/x-www-form-urlencoded"},
+      body:new URLSearchParams({lat:geo.lat, lng:geo.lng, accuracy:geo.acc||""})});
+  } catch(e){}
+}
+
+// ── audio ──
+document.getElementById('btn-rec').onclick = async () => {
+  const btn = document.getElementById('btn-rec'), lbl = document.getElementById('rec-lbl');
+  if (mediaRecorder && mediaRecorder.state === 'recording'){
+    mediaRecorder.stop(); return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    recChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => e.data.size>0 && recChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      audioBlob = new Blob(recChunks, {type:'audio/webm'});
+      stream.getTracks().forEach(t=>t.stop());
+      btn.classList.remove('on'); lbl.textContent = '✓ Audio pronto';
+      renderCaptures();
+    };
+    mediaRecorder.start(); btn.classList.add('on'); lbl.textContent = 'Stop';
+  } catch(e){ alert('Microfono non disponibile'); }
+};
+
+// ── foto ──
+document.getElementById('btn-photo').onclick = () => document.getElementById('photo-input').click();
+document.getElementById('photo-input').onchange = e => {
+  for (const f of e.target.files) photos.push(f);
+  renderCaptures();
+};
+
+function renderCaptures(){
+  const box = document.getElementById('captures'); box.innerHTML = '';
+  if (audioBlob){
+    const d = document.createElement('div'); d.className='cap'; d.textContent='🎙';
+    const x = document.createElement('div'); x.className='x'; x.textContent='×';
+    x.onclick = ()=>{ audioBlob=null; document.getElementById('rec-lbl').textContent='Registra audio'; renderCaptures(); };
+    d.appendChild(x); box.appendChild(d);
+  }
+  photos.forEach((p, i) => {
+    const d = document.createElement('div'); d.className='cap';
+    const img = document.createElement('img'); img.src = URL.createObjectURL(p); d.appendChild(img);
+    const x = document.createElement('div'); x.className='x'; x.textContent='×';
+    x.onclick = ()=>{ photos.splice(i,1); renderCaptures(); };
+    d.appendChild(x); box.appendChild(d);
+  });
+}
+
+// ── upload helper ──
+async function uploadBlob(blob, filename){
+  const fd = new FormData();
+  fd.append('file', blob, filename);
+  fd.append('is_private', 1);
+  const r = await fetch('/api/method/upload_file', {method:'POST',
+    headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd});
+  const j = await r.json();
+  return j.message ? j.message.file_url : null;
+}
+
+// ── termina ──
+document.getElementById('btn-finish').onclick = async () => {
+  const btn = document.getElementById('btn-finish'), msg = document.getElementById('msg');
+  const legal = document.getElementById('f-legal').value;
+  const consent = document.getElementById('f-consent').checked;
+  if (['Pedinamento','Chiamata'].includes(activityType) && !consent){
+    msg.className='msg err'; msg.textContent='Per pedinamento/chiamata serve la conferma di liceità.'; return;
+  }
+  if (mediaRecorder && mediaRecorder.state==='recording') mediaRecorder.stop();
+  btn.disabled = true; msg.className='msg'; msg.style.display='none';
+  try {
+    const att = [];
+    const nowIso = new Date().toISOString();
+    if (audioBlob){ const u = await uploadBlob(audioBlob, 'audio.webm'); if(u) att.push({file_url:u, caption:'Registrazione audio', captured_at:nowIso}); }
+    for (let i=0;i<photos.length;i++){ const u = await uploadBlob(photos[i], `foto_${i+1}.jpg`); if(u) att.push({file_url:u, caption:`Foto ${i+1}`, captured_at:nowIso}); }
+
+    const body = new URLSearchParams({
+      investigation_case: document.getElementById('f-case').value,
+      activity_type: activityType,
+      activity_title: `${activityType} — ${new Date().toLocaleDateString('it-IT')}`,
+      start_datetime: toFrappeDt(startTime),
+      end_datetime: toFrappeDt(new Date()),
+      geo_lat: geo? geo.lat : '', geo_lng: geo? geo.lng : '', geo_accuracy: geo? geo.acc : '',
+      subjects: document.getElementById('f-subjects').value,
+      narrative: document.getElementById('f-narrative').value,
+      legal_basis: legal, consent_confirmed: consent? 1:0,
+      attachments: JSON.stringify(att), submit: 1,
+    });
+    const r = await fetch(API + 'field_ops.log_activity', {method:'POST',
+      headers:{'X-Frappe-CSRF-Token':CSRF,'Content-Type':'application/x-www-form-urlencoded'}, body});
+    const j = await r.json(); const m = j.message || j;
+    if (m && m.ok){
+      clearInterval(timerInt);
+      msg.className='msg ok'; msg.textContent=`Attività ${m.name} registrata.`;
+      setTimeout(()=>location.reload(), 1600);
+    } else throw new Error((m && m.exc) || JSON.stringify(m));
+  } catch(e){ msg.className='msg err'; msg.textContent='Errore: '+e.message; btn.disabled=false; }
+};
+
+document.getElementById('btn-cancel').onclick = () => location.reload();
+
+function toFrappeDt(d){
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+</script>
+{% endblock %}
