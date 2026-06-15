@@ -1,0 +1,14 @@
+{
+ "name": "thanatos-cockpit",
+ "doctype": "Page",
+ "module": "Thanatos Core",
+ "page_name": "thanatos-cockpit",
+ "title": "Thanatos Cockpit",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Investigation Manager"},
+  {"role": "Investigator"}
+ ]
+}
