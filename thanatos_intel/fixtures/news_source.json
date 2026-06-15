@@ -9,7 +9,7 @@
   "is_active": 1,
   "language": "it",
   "last_error": "",
-  "last_fetched_at": "2026-06-15 12:15:06.046483",
+  "last_fetched_at": "2026-06-15 16:15:06.789983",
   "last_status": "OK",
   "max_articles_per_fetch": 15,
   "modified": "2026-06-13 00:28:07.521398",
@@ -17,7 +17,7 @@
   "rss_url": "https://www.commissariatodips.it/rss.xml",
   "source_name": "Polizia Postale",
   "source_type": "RSS",
-  "total_fetched": 0
+  "total_fetched": 1
  },
  {
   "ai_summarize": 1,
@@ -29,7 +29,7 @@
   "is_active": 1,
   "language": "it",
   "last_error": "",
-  "last_fetched_at": "2026-06-15 12:15:05.798161",
+  "last_fetched_at": "2026-06-15 16:15:06.453634",
   "last_status": "OK",
   "max_articles_per_fetch": 15,
   "modified": "2026-06-13 00:28:07.529001",
@@ -37,7 +37,7 @@
   "rss_url": "https://cert-agid.gov.it/feed/",
   "source_name": "CERT-AGID",
   "source_type": "RSS",
-  "total_fetched": 1
+  "total_fetched": 2
  },
  {
   "ai_summarize": 1,
@@ -49,7 +49,7 @@
   "is_active": 1,
   "language": "it",
   "last_error": "",
-  "last_fetched_at": "2026-06-15 12:15:05.579760",
+  "last_fetched_at": "2026-06-15 16:15:06.221887",
   "last_status": "OK",
   "max_articles_per_fetch": 10,
   "modified": "2026-06-13 00:28:07.535004",
@@ -57,7 +57,7 @@
   "rss_url": "https://www.ansa.it/sito/notizie/cronaca/cronaca_rss.xml",
   "source_name": "ANSA Cronaca",
   "source_type": "RSS",
-  "total_fetched": 55
+  "total_fetched": 65
  },
  {
   "ai_summarize": 1,
@@ -69,7 +69,7 @@
   "is_active": 1,
   "language": "en",
   "last_error": "",
-  "last_fetched_at": "2026-06-15 12:15:05.493505",
+  "last_fetched_at": "2026-06-15 16:15:06.029005",
   "last_status": "OK",
   "max_articles_per_fetch": 15,
   "modified": "2026-06-13 00:28:07.541426",
@@ -77,7 +77,7 @@
   "rss_url": "https://www.bleepingcomputer.com/feed/",
   "source_name": "BleepingComputer",
   "source_type": "RSS",
-  "total_fetched": 4
+  "total_fetched": 9
  },
  {
   "ai_summarize": 1,
@@ -89,7 +89,7 @@
   "is_active": 1,
   "language": "en",
   "last_error": "",
-  "last_fetched_at": "2026-06-15 12:15:05.407549",
+  "last_fetched_at": "2026-06-15 16:15:04.632766",
   "last_status": "OK",
   "max_articles_per_fetch": 15,
   "modified": "2026-06-13 00:28:07.547398",
@@ -97,7 +97,7 @@
   "rss_url": "https://feeds.feedburner.com/TheHackersNews",
   "source_name": "The Hacker News",
   "source_type": "RSS",
-  "total_fetched": 4
+  "total_fetched": 7
  },
  {
   "ai_summarize": 1,
@@ -109,7 +109,7 @@
   "is_active": 1,
   "language": "en",
   "last_error": "",
-  "last_fetched_at": "2026-06-15 12:15:05.218445",
+  "last_fetched_at": "2026-06-15 16:15:04.410598",
   "last_status": "OK",
   "max_articles_per_fetch": 10,
   "modified": "2026-06-13 00:28:07.553204",
@@ -129,7 +129,7 @@
   "is_active": 1,
   "language": "it",
   "last_error": "<unknown>:127:77: not well-formed (invalid token)",
-  "last_fetched_at": "2026-06-15 12:15:05.130263",
+  "last_fetched_at": "2026-06-15 16:15:04.299601",
   "last_status": "Error",
   "max_articles_per_fetch": 10,
   "modified": "2026-06-13 00:28:07.559329",
@@ -149,7 +149,7 @@
   "is_active": 1,
   "language": "en",
   "last_error": "<unknown>:2:0: syntax error",
-  "last_fetched_at": "2026-06-15 12:15:04.743215",
+  "last_fetched_at": "2026-06-15 16:15:03.954488",
   "last_status": "Error",
   "max_articles_per_fetch": 12,
   "modified": "2026-06-13 00:28:07.565204",
@@ -169,7 +169,7 @@
   "is_active": 1,
   "language": "it",
   "last_error": "<unknown>:122:85: not well-formed (invalid token)",
-  "last_fetched_at": "2026-06-15 12:15:04.627842",
+  "last_fetched_at": "2026-06-15 16:15:03.867816",
   "last_status": "Error",
   "max_articles_per_fetch": 15,
   "modified": "2026-06-13 00:28:07.571105",
