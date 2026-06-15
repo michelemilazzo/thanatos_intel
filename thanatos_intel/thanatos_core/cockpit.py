@@ -16,8 +16,8 @@ def _count(dt, filters=None):
 
 def _sum(dt, field, filters=None):
     try:
-        rows = frappe.get_all(dt, filters=filters or {}, fields=[f"sum(`{field}`) as t"])
-        return flt(rows[0].t) if rows else 0
+        rows = frappe.get_all(dt, filters=filters or {}, fields=[field], limit=0)
+        return sum(flt(r.get(field)) for r in rows)
     except Exception:
         return 0
 
