@@ -39,8 +39,8 @@ role_home_page={
  'Investigation Client': '/portal',
  'Affiliate': '/portal',
  'Investigator': '/portal',
- 'Investigation Manager': '/app',
- 'System Manager': '/app',
+ 'Investigation Manager': '/app/thanatos',
+ 'System Manager': '/app/thanatos',
 }
 
 get_website_user_home_page='thanatos_intel.utils.portal.get_home_page'

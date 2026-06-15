@@ -1,0 +1,308 @@
+{
+ "app": "thanatos_intel",
+ "charts": [],
+ "content": "[{\"id\": \"hdr\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Thanatos Intel</b></span>\", \"col\": 12}}, {\"id\": \"sch\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\">Accesso rapido</span>\", \"col\": 12}}, {\"id\": \"sc0\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Casi\", \"col\": 2}}, {\"id\": \"sc1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Campo\", \"col\": 2}}, {\"id\": \"sc2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"DDD\", \"col\": 2}}, {\"id\": \"sc3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Passaporti\", \"col\": 2}}, {\"id\": \"sc4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"OSINT Console\", \"col\": 2}}, {\"id\": \"sc5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Cattura campo\", \"col\": 2}}, {\"id\": \"spc\", \"type\": \"spacer\", \"data\": {\"col\": 12}}, {\"id\": \"clh\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\">Aree operative</span>\", \"col\": 12}}, {\"id\": \"card0\", \"type\": \"card\", \"data\": {\"card_name\": \"Indagini\", \"col\": 4}}, {\"id\": \"card1\", \"type\": \"card\", \"data\": {\"card_name\": \"Campo & Tracciamento\", \"col\": 4}}, {\"id\": \"card2\", \"type\": \"card\", \"data\": {\"card_name\": \"Due Diligence Diplomatica\", \"col\": 4}}, {\"id\": \"card3\", \"type\": \"card\", \"data\": {\"card_name\": \"Intelligence & OSINT\", \"col\": 4}}, {\"id\": \"card4\", \"type\": \"card\", \"data\": {\"card_name\": \"Anagrafiche\", \"col\": 4}}, {\"id\": \"card5\", \"type\": \"card\", \"data\": {\"card_name\": \"Fatturazione\", \"col\": 4}}]",
+ "creation": "2026-06-15 12:33:36.262963",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "crm",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Thanatos",
+ "link_type": "DocType",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Indagini",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Caso d'indagine",
+   "link_count": 0,
+   "link_to": "Investigation Case",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Reperti / Catena custodia",
+   "link_count": 0,
+   "link_to": "Investigation Evidence",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Entit\u00e0 del caso",
+   "link_count": 0,
+   "link_to": "Case Entity",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Risk Score",
+   "link_count": 0,
+   "link_to": "Risk Score",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Campo & Tracciamento",
+   "link_count": 5,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Attivit\u00e0 sul campo",
+   "link_count": 0,
+   "link_to": "Field Activity",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Comunicazioni",
+   "link_count": 0,
+   "link_to": "Communication Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Asset tracciati",
+   "link_count": 0,
+   "link_to": "Tracked Asset",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Posizioni",
+   "link_count": 0,
+   "link_to": "Asset Position",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breadcrumb GPS",
+   "link_count": 0,
+   "link_to": "Geo Track Point",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Due Diligence Diplomatica",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Case DDD",
+   "link_count": 0,
+   "link_to": "Diplomatic Eligibility Case",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Analisi passaporti",
+   "link_count": 0,
+   "link_to": "Passport Analysis",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Mandati",
+   "link_count": 0,
+   "link_to": "Agency Mandate",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Dossier finali",
+   "link_count": 0,
+   "link_to": "Final Dossier",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Intelligence & OSINT",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Intelligence numeri",
+   "link_count": 0,
+   "link_to": "Number Intelligence",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "News / Newsroom",
+   "link_count": 0,
+   "link_to": "News Article",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Anagrafiche",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Clienti",
+   "link_count": 0,
+   "link_to": "Investigation Client",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Investigatori",
+   "link_count": 0,
+   "link_to": "Investigator",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Fatturazione",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Piani abbonamento",
+   "link_count": 0,
+   "link_to": "Subscription Plan",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-06-15 12:33:36.262963",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "Thanatos",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 0.1,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Casi",
+   "link_to": "Investigation Case",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Campo",
+   "link_to": "Field Activity",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "",
+   "label": "DDD",
+   "link_to": "Diplomatic Eligibility Case",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "Passaporti",
+   "link_to": "Passport Analysis",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "",
+   "label": "OSINT Console",
+   "type": "URL",
+   "url": "/portal/osint"
+  },
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Cattura campo",
+   "type": "URL",
+   "url": "/portal/field"
+  }
+ ],
+ "title": "Thanatos",
+ "type": "Workspace"
+}

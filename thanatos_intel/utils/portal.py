@@ -10,7 +10,7 @@ def get_home_page(user=None):
         return "home"
     roles = set(frappe.get_roles(user))
     if roles & DESK_ROLES:
-        return "/app"
+        return "/app/thanatos"
     if roles & PORTAL_ROLES:
         return "/portal"
     return "/portal"
