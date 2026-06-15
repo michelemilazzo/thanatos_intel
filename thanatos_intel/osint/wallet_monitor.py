@@ -104,9 +104,13 @@ def snapshot_case(case_name, notify=True):
         diffs = _diff(prev, cur)
         raw[STATE_KEY] = {k: cur[k] for k in
                           ("balance", "received", "tx", "entity", "label", "cashout", "illicit", "ts")}
-        ent.osint_raw = json.dumps(raw, default=str)[:130000]
-        ent.last_osint_run = now_datetime()
-        ent.save(ignore_permissions=True)
+        # update atomico dei soli campi scalari: evita TimestampMismatch quando
+        # arkham/altri arricchimenti toccano la stessa entita in concorrenza
+        # (e non clobbera le risk_indicators gestite altrove).
+        frappe.db.set_value("Investigation Entity", addr, {
+            "osint_raw": json.dumps(raw, default=str)[:130000],
+            "last_osint_run": now_datetime(),
+        }, update_modified=True)
         real = [d for d in diffs if d[0] != "BASELINE"]
         if real:
             changes.append((addr, cur, real))
