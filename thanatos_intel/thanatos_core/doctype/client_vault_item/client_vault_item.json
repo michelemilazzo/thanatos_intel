@@ -1,0 +1,88 @@
+{
+  "doctype": "DocType",
+  "name": "Client Vault Item",
+  "module": "Thanatos Core",
+  "naming_rule": "Expression",
+  "autoname": "format:VAULT-{client}-{#####}",
+  "title_field": "title",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "client",
+      "fieldtype": "Link",
+      "label": "Cliente",
+      "options": "Investigation Client",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "doc_kind",
+      "fieldtype": "Select",
+      "label": "Tipo",
+      "options": "KYC\nKYB\nCIS\nKIT\nAltro",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "label": "Titolo",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "file",
+      "fieldtype": "Attach",
+      "label": "File"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Stato",
+      "options": "In verifica\nValido\nScaduto",
+      "default": "In verifica",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "valid_until",
+      "fieldtype": "Date",
+      "label": "Valido fino al",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "verified_by",
+      "fieldtype": "Link",
+      "label": "Verificato da",
+      "options": "User"
+    },
+    {
+      "fieldname": "verified_on",
+      "fieldtype": "Date",
+      "label": "Verificato il"
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Note"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1
+    }
+  ]
+}

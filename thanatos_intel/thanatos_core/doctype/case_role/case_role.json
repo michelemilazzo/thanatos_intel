@@ -1,0 +1,76 @@
+{
+  "doctype": "DocType",
+  "name": "Case Role",
+  "module": "Thanatos Core",
+  "naming_rule": "By fieldname",
+  "autoname": "field:role_name",
+  "title_field": "role_name",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "role_name",
+      "fieldtype": "Data",
+      "label": "Nome ruolo",
+      "reqd": 1,
+      "unique": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "frappe_role",
+      "fieldtype": "Link",
+      "label": "Frappe Role",
+      "options": "Role",
+      "description": "Ruolo Frappe che abilita questa figura"
+    },
+    {
+      "fieldname": "is_client",
+      "fieldtype": "Check",
+      "label": "È il cliente",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "is_internal",
+      "fieldtype": "Check",
+      "label": "Interno alla struttura",
+      "default": "1",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "can_be_assigned",
+      "fieldtype": "Check",
+      "label": "Assegnabile per-caso",
+      "default": "1"
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Attivo",
+      "default": "1"
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Small Text",
+      "label": "Descrizione"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1
+    }
+  ]
+}

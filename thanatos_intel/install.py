@@ -23,6 +23,12 @@ def after_install():
 def after_migrate():
     ensure_pdf_settings()
     _setup_pipeline()
+    _seed_workflow()
+
+
+def _seed_workflow():
+    from thanatos_intel.workflow.seed import seed_workflow
+    seed_workflow()
 
 
 def _setup_pipeline():
