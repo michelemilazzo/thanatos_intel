@@ -39,6 +39,27 @@ def _txt_to_html(text):
     return "<p>" + "</p><p>".join(paras) + "</p>" if paras else "<p></p>"
 
 
+def _seed_yjs(docname, text):
+    """Semina lo stato Yjs (campo content) dal testo: l'editor collaborativo
+    Tiptap ignora raw_content, il testo deve stare nel doc Yjs. Best-effort."""
+    import os, subprocess
+    try:
+        fe = os.path.join(frappe.utils.get_bench_path(),
+                          "benches", "thanatos", "apps", "drive", "frontend")
+        if not os.path.isdir(fe):
+            fe = os.path.join(frappe.utils.get_bench_path(), "apps", "drive", "frontend")
+        script = os.path.join(os.path.dirname(__file__), "pm2yjs.cjs")
+        r = subprocess.run(["node", script, fe], input=text or "",
+                           capture_output=True, text=True, timeout=40)
+        if r.returncode == 0 and r.stdout.strip():
+            frappe.db.set_value("Drive Document", docname, "content", r.stdout.strip())
+            return True
+        frappe.log_error((r.stderr or "")[:500], "legal_drafts._seed_yjs")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "legal_drafts._seed_yjs")
+    return False
+
+
 def _legale_subfolder(case):
     folder = case.get("drive_folder")
     if not folder or not frappe.db.exists("Drive File", folder):
@@ -76,11 +97,10 @@ def ensure_legal_writers(case_name):
             ename = ent.get("name") if isinstance(ent, dict) else ent.name
             docname = frappe.db.get_value("Drive File", ename, "document")
             if docname:
-                # raw_content = HTML iniziale; content(yjs) azzerato così l'editor
-                # collaborativo fa seeding dal raw_content (altrimenti lo stato yjs
-                # vuoto di create_document_entity vince e il writer appare bianco).
-                frappe.db.set_value("Drive Document", docname,
-                                    {"raw_content": _txt_to_html(text), "content": None})
+                # raw_content = HTML (preview/PDF); content = stato Yjs seminato dal
+                # testo (l'editor Collaboration legge il Yjs, non il raw_content).
+                frappe.db.set_value("Drive Document", docname, "raw_content", _txt_to_html(text))
+                _seed_yjs(docname, text)
             created.append(ename)
         except Exception:
             frappe.log_error(frappe.get_traceback(), "legal_drafts.ensure")
