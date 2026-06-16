@@ -46,15 +46,14 @@ def setup_from_blueprint(case):
 
 
 def identity_satisfied(case):
-    """(ok, missing) — verifica che il Vault del cliente copra il tier richiesto."""
+    """(ok, missing) — il cliente soddisfa il tier identità richiesto?
+    Integra stato onboarding (kyc/kyb) + Vault (vedi workflow.vault)."""
+    from thanatos_intel.workflow import vault
     tier = case.get("identity_tier_required") or "Base"
-    need = _TIER_DOC.get(tier)
-    if not need or not case.client:
+    if tier == "Base" or not case.client:
         return True, []
-    has = frappe.db.exists("Client Vault Item", {
-        "client": case.client, "doc_kind": need, "status": "Valido",
-    })
-    return bool(has), ([] if has else [need])
+    ok = vault.tier_satisfied(case.client, tier)
+    return ok, ([] if ok else [tier])
 
 
 def _role_users(role_name):

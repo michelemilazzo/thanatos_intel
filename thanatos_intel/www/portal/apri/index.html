@@ -100,7 +100,8 @@ if(btn) btn.addEventListener('click',async()=>{
     fd.append('jurisdiction',document.getElementById('jurisdiction').value.trim());
     const r=await fetch('/api/method/thanatos_intel.workflow.api.open_practice',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd});
     const d=await r.json(); const m=d.message||d;
-    if(m && m.url){ msg.className='msg ok'; msg.textContent='Pratica creata. Ti porto alla pratica…'; setTimeout(()=>location.href=m.url,800); }
+    if(m && m.needs_identity){ msg.className='msg err'; msg.textContent=m.message+' →'; setTimeout(()=>location.href=m.vault_url||'/portal/vault',1500); }
+    else if(m && m.url){ msg.className='msg ok'; msg.textContent='Pratica creata. Ti porto alla pratica…'; setTimeout(()=>location.href=m.url,800); }
     else { msg.className='msg err'; msg.textContent='Errore: '+(d._server_messages||'riprova'); btn.disabled=false; }
   }catch(e){ msg.className='msg err'; msg.textContent='Errore di rete: '+e; btn.disabled=false; }
 });

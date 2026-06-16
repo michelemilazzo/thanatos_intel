@@ -63,6 +63,15 @@ def open_practice(blueprint, case_title, subject=None, objective=None, jurisdict
         frappe.throw(_("Nessun profilo cliente associato all'utente."))
     bp = frappe.get_doc("Service Blueprint", blueprint)
 
+    # Gate identità: se il cliente non soddisfa il tier richiesto, rimanda al Vault
+    tier = bp.get("identity_tier") or "Base"
+    if cl and tier != "Base":
+        from thanatos_intel.workflow import vault
+        if not vault.tier_satisfied(cl.name, tier):
+            return {"needs_identity": tier, "vault_url": "/portal/vault",
+                    "message": f"Per questo servizio serve l'identità {tier}. "
+                               f"Completa il tuo archivio documenti."}
+
     desc_parts = []
     if subject:
         desc_parts.append(f"<p><b>Soggetto / obiettivo:</b> {frappe.utils.escape_html(subject)}</p>")

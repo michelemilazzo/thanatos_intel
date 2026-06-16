@@ -1,0 +1,117 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}{{ title }}{% endblock %}
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2842;--ok:#6aa66a;--err:#d05a5a;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:820px;margin:0 auto;padding:40px 24px 60px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 6px}
+.sub{color:var(--grey);font-size:13px;margin:0 0 22px}
+.tiers{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+.tier{border:1px solid var(--border);border-radius:8px;padding:10px 16px;font-size:13px}
+.tier .n{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--grey)}
+.tier.ok{border-color:rgba(106,166,106,.5)} .tier.ok .v{color:#8fd08f}
+.tier.no .v{color:#e79a9a}
+.card{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:18px;margin-bottom:18px}
+label{display:block;color:var(--grey);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin:12px 0 6px}
+select,input{width:100%;background:var(--bg);color:#E8E9F0;border:1px solid var(--border);padding:11px 13px;border-radius:4px;font-size:14px;font-family:inherit}
+.btn{margin-top:16px;background:var(--gold);color:#0A0E1A;border:0;padding:12px 26px;border-radius:4px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;cursor:pointer}
+.btn.sm{padding:6px 12px;font-size:10px;margin:0}
+.msg{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:13px;display:none}
+.msg.ok{display:block;background:rgba(106,166,106,.14);border:1px solid rgba(106,166,106,.4);color:#8fd08f}
+.msg.err{display:block;background:rgba(208,90,90,.14);border:1px solid rgba(208,90,90,.4);color:#e79a9a}
+.item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1A2035;flex-wrap:wrap}
+.tag{font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:3px}
+.tag.v{background:rgba(106,166,106,.15);color:#8fd08f} .tag.p{background:rgba(200,169,110,.12);color:var(--gold)} .tag.s{background:rgba(208,90,90,.15);color:#e79a9a}
+.empty{padding:30px;text-align:center;color:var(--grey);border:1px dashed var(--border);border-radius:4px}
+</style>
+{% endblock %}
+{% block content %}
+{{ thanatos_header('portal') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> › Il mio archivio</div>
+  <h1>Il mio archivio documenti</h1>
+  <p class="sub">I tuoi documenti d'identità conservati in sicurezza presso Thanatos, riusabili per ogni pratica. Tienili aggiornati.</p>
+
+  {% if not has_client %}
+  <div class="empty">Il tuo account non è collegato a un profilo cliente.</div>
+  {% else %}
+  <div class="tiers">
+    {% for t in ['Base','KYC','KYB','KIT'] %}
+    <div class="tier {{ 'ok' if identity.get(t) else 'no' }}">
+      <div class="n">{{ t }}</div>
+      <div class="v">{{ '✓ ok' if identity.get(t) else '— mancante' }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">Carica un documento</div>
+    <label>Tipo</label>
+    <select id="kind"><option value="KYC">KYC — documento identità (privato)</option><option value="KYB">KYB — documenti azienda</option><option value="CIS">CIS — visura/camerale</option><option value="KIT">KIT — due diligence rafforzata</option><option value="Altro">Altro</option></select>
+    <label>Titolo / descrizione</label>
+    <input id="title" placeholder="es. Carta d'identità fronte-retro">
+    <label>File</label>
+    <input id="file" type="file">
+    <label>Valido fino al (opzionale)</label>
+    <input id="valid" type="date">
+    <button class="btn" id="send">Carica nel mio archivio</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <div style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Documenti</div>
+    {% if not items %}<div class="empty">Nessun documento ancora.</div>{% endif %}
+    {% for it in items %}
+    <div class="item">
+      <div>
+        <div style="font-size:14px;color:#E8E9F0">{{ it.doc_kind }} — {{ it.title }}</div>
+        <div style="font-size:11px;color:var(--grey);margin-top:2px">
+          {% if it.file %}<a href="{{ it.file }}" target="_blank" style="color:#6A9FD8">apri file</a> · {% endif %}
+          {% if it.valid_until %}scade {{ frappe.utils.formatdate(it.valid_until,'dd/MM/yyyy') }}{% else %}nessuna scadenza{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="tag {{ 'v' if it.status=='Valido' else ('s' if it.status=='Scaduto' else 'p') }}">{{ it.status }}</span>
+        {% if is_operator and it.status!='Valido' %}<button class="btn sm" onclick="verify('{{ it.name }}',this)">Verifica ✓</button>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+<script>
+const CSRF="{{ csrf_token }}";
+const btn=document.getElementById('send'),msg=document.getElementById('msg');
+if(btn) btn.addEventListener('click',async()=>{
+  const fEl=document.getElementById('file');
+  if(!fEl.files||!fEl.files[0]){msg.className='msg err';msg.textContent='Scegli un file.';return;}
+  btn.disabled=true; msg.className='msg'; msg.style.display='block'; msg.textContent='Caricamento…';
+  try{
+    const uf=new FormData(); uf.append('file',fEl.files[0]); uf.append('is_private',1);
+    const ur=await fetch('/api/method/upload_file',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:uf});
+    const ud=await ur.json(); const url=(ud.message&&ud.message.file_url)||'';
+    if(!url){msg.className='msg err';msg.textContent='Upload fallito.';btn.disabled=false;return;}
+    const fd=new FormData(); fd.append('doc_kind',document.getElementById('kind').value);
+    fd.append('title',document.getElementById('title').value); fd.append('file_url',url);
+    const vv=document.getElementById('valid').value; if(vv) fd.append('valid_until',vv);
+    const r=await fetch('/api/method/thanatos_intel.workflow.vault.vault_upload',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd});
+    const d=await r.json();
+    if((d.message&&d.message.ok)){ msg.className='msg ok'; msg.textContent='Caricato. In verifica.'; setTimeout(()=>location.reload(),900); }
+    else { msg.className='msg err'; msg.textContent='Errore: '+(d._server_messages||''); btn.disabled=false; }
+  }catch(e){ msg.className='msg err'; msg.textContent='Errore: '+e; btn.disabled=false; }
+});
+async function verify(name,el){
+  el.disabled=true; el.textContent='…';
+  const fd=new FormData(); fd.append('item',name);
+  const r=await fetch('/api/method/thanatos_intel.workflow.vault.vault_verify',{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd});
+  const d=await r.json();
+  if(d.message&&d.message.ok){ location.reload(); } else { el.disabled=false; el.textContent='Riprova'; }
+}
+</script>
+{% endblock %}
