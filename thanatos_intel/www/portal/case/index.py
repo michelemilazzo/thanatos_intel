@@ -103,6 +103,14 @@ def get_context(context):
             key=lambda a: a.get("activity_date") or "", reverse=True)[:25]
     context.csrf_token = frappe.sessions.get_csrf_token()
 
+    # Bozze legali come writer condivisi (Drive Document)
+    context.legal_drafts = []
+    try:
+        from thanatos_intel.integrations.legal_drafts import list_legal_writers
+        context.legal_drafts = list_legal_writers(case.name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "case page legal_drafts")
+
     context.title = f"{case.case_number or case.name} — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context

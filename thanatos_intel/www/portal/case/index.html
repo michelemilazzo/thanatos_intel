@@ -162,6 +162,30 @@ table{min-width:520px}
   </div>
   {% endif %}
 
+  {% if legal_drafts %}
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:28px">
+    <div style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Documenti legali (bozze)</div>
+    <div style="color:var(--grey);font-size:11px;margin-bottom:12px">Apri per modificare nel writer condiviso (Drive). Inviare PRIMA le richieste di preservazione, poi i takedown.</div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);padding:6px 8px;border-bottom:1px solid var(--border)">Documento</th>
+        <th style="text-align:left;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);padding:6px 8px;border-bottom:1px solid var(--border)">Destinatario</th>
+        <th style="text-align:left;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);padding:6px 8px;border-bottom:1px solid var(--border)">Scopo</th>
+      </tr></thead>
+      <tbody>
+      {% for d in legal_drafts %}
+        <tr>
+          <td style="padding:8px;border-bottom:1px solid #1A2035"><a href="{{ d.url }}" target="_blank" style="color:#6A9FD8;text-decoration:none">📝 {{ d.title }}</a></td>
+          <td style="padding:8px;border-bottom:1px solid #1A2035;color:#E8E9F0;font-size:12px">{{ d.destinatario or '—' }}</td>
+          <td style="padding:8px;border-bottom:1px solid #1A2035;color:var(--gold);font-size:12px">{{ d.scopo or '' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div style="color:#5B6276;font-size:10px;margin-top:12px;font-style:italic">I modelli sono predisposti per essere inoltrati dal legale della persona offesa e/o dall'autorità. Thanatos fornisce supporto tecnico-investigativo; gli atti formali competono al legale.</div>
+  </div>
+  {% endif %}
+
   <div class="grid">
     <div class="kv"><div class="l">Cliente</div><div class="v">{{ case.client or '—' }}</div></div>
     <div class="kv"><div class="l">Apertura</div><div class="v">{{ frappe.utils.format_datetime(case.creation, 'dd/MM/yyyy HH:mm') }}</div></div>
