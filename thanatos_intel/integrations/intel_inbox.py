@@ -94,6 +94,57 @@ def on_communication_insert(doc, method=None):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "intel_inbox folder")
 
+    # Deposita gli allegati dell'email nel box (cartella Drive del caso) e
+    # classifica i documenti d'identità nel Vault del cliente.
+    try:
+        _deposit_attachments(doc, case_name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "intel_inbox deposit")
+
+
+# tipo documento Vault dedotto dal nome file (per gli allegati inbound)
+_VAULT_HINTS = (
+    ("KYB", ("visura", "kyb", "camerale", "company", "ubo")),
+    ("KYC", ("carta", "identit", "passaport", "patente", "cie", "kyc", "id_")),
+    ("CIS", ("cis", "casellario", "certificat")),
+)
+
+
+def _vault_kind_for(filename):
+    n = (filename or "").lower()
+    for kind, hints in _VAULT_HINTS:
+        if any(h in n for h in hints):
+            return kind
+    return None
+
+
+def _deposit_attachments(comm_doc, case_name):
+    """Allegati della Communication → cartella Drive del caso (box, via
+    _push_file_to_drive con dedup) + se documenti d'identità crea un Client
+    Vault Item (In verifica)."""
+    files = frappe.get_all("File", filters={
+        "attached_to_doctype": "Communication", "attached_to_name": comm_doc.name},
+        fields=["name", "file_name"])
+    if not files:
+        return
+    from thanatos_intel.reporting.case_reports import _push_file_to_drive
+    client = frappe.db.get_value("Investigation Case", case_name, "client")
+    for f in files:
+        frappe.db.set_value("File", f.name, {
+            "attached_to_doctype": "Investigation Case", "attached_to_name": case_name})
+        try:
+            _push_file_to_drive(f.name, case_name)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "intel_inbox push")
+        kind = _vault_kind_for(f.file_name)
+        if client and kind and not frappe.db.exists("Client Vault Item",
+                {"client": client, "title": f.file_name}):
+            file_url = frappe.db.get_value("File", f.name, "file_url")
+            frappe.get_doc({
+                "doctype": "Client Vault Item", "client": client, "doc_kind": kind,
+                "title": f.file_name, "file": file_url, "status": "In verifica",
+            }).insert(ignore_permissions=True)
+
 
 def _extract_email(s: str) -> str | None:
     m = EMAIL_RE.search(s or "")
