@@ -144,7 +144,10 @@ table{min-width:520px}
   </div>
 
   <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:28px">
-    <div style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">Bacheca</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <span style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">Bacheca</span>
+      {% if wf.is_operator %}<button id="ai-suggest" style="background:transparent;color:#6A9FD8;border:1px solid #2a3550;padding:5px 12px;border-radius:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">🤖 Suggerimento AI</button>{% endif %}
+    </div>
     <div id="bacheca" style="display:flex;flex-direction:column;gap:10px;max-height:340px;overflow:auto">
       {% for a in bacheca %}
       <div style="border-left:2px solid var(--border);padding:2px 0 2px 12px">
@@ -397,6 +400,14 @@ table{min-width:520px}
       const d=await post(method,fd);
       if(d.message){ location.reload(); } else { b.disabled=false; b.textContent=old; alert('Errore: '+(d._server_messages||'')); }
     }));
+    const ai=document.getElementById('ai-suggest');
+    if(ai) ai.addEventListener('click',async()=>{
+      ai.disabled=true; const o=ai.textContent; ai.textContent='AI sta pensando…';
+      const fd=new FormData(); fd.append('case_name',CASE);
+      const d=await post('thanatos_intel.workflow.ai_concierge.suggest_next',fd);
+      if(d.message&&d.message.ok){ location.reload(); }
+      else { ai.disabled=false; ai.textContent=o; alert('AI: '+((d.message&&d.message.error)||'non disponibile')); }
+    });
     const mi=document.getElementById('msgin'), ms=document.getElementById('msgsend');
     if(ms) ms.addEventListener('click',async()=>{
       const t=(mi.value||'').trim(); if(!t) return;
