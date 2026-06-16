@@ -76,7 +76,11 @@ def ensure_legal_writers(case_name):
             ename = ent.get("name") if isinstance(ent, dict) else ent.name
             docname = frappe.db.get_value("Drive File", ename, "document")
             if docname:
-                frappe.db.set_value("Drive Document", docname, "raw_content", _txt_to_html(text))
+                # raw_content = HTML iniziale; content(yjs) azzerato così l'editor
+                # collaborativo fa seeding dal raw_content (altrimenti lo stato yjs
+                # vuoto di create_document_entity vince e il writer appare bianco).
+                frappe.db.set_value("Drive Document", docname,
+                                    {"raw_content": _txt_to_html(text), "content": None})
             created.append(ename)
         except Exception:
             frappe.log_error(frappe.get_traceback(), "legal_drafts.ensure")
