@@ -3,7 +3,8 @@ Investigation Report PDF generator.
 
 Brand: Thanatos Intel (NAVY #0D1B3E, GOLD #C8A96E, serif Georgia)
 Custody: SHA-256 hash del PDF salvato sul Report + custody log su Case
-Disclaimer: art. 234-bis c.p.p. + GDPR art. 6
+Disclaimer: Legea 329/2003 (detectiv particular) + GDPR art. 6 (default RO;
+salvo incarichi trasferiti ad agenzie partner in altra giurisdizione)
 """
 import io
 import hashlib
@@ -28,20 +29,28 @@ GREY = colors.HexColor("#4A4A4A")
 
 DISCLAIMERS = {
     "it": (
-        "Il presente report è redatto ai sensi dell'art. 234-bis c.p.p. (acquisizione di dati informatici). "
+        "Il presente report è redatto da Thanatos Investigazioni S.R.L. (Constanța, RO) "
+        "nell'esercizio dell'attività di investigazione privata ai sensi della Legge rumena n. 329/2003. "
         "La catena di custodia delle prove digitali è garantita da hash crittografico SHA-256 e log di accesso. "
-        "I dati personali sono trattati ex art. 6 GDPR per legittimo interesse investigativo. "
+        "I dati personali sono trattati ex art. 6 GDPR (Reg. UE 2016/679; Legge rumena 190/2018) per legittimo interesse investigativo. "
+        "Salvo incarichi trasferiti ad agenzie partner in altra giurisdizione (ove prevale la legge del relativo territorio), si applica la legge rumena. "
         "Il documento contiene informazioni riservate; la divulgazione non autorizzata è vietata."
     ),
     "en": (
-        "This report is issued pursuant to art. 234-bis of the Italian Code of Criminal Procedure. "
+        "This report is issued by Thanatos Investigazioni S.R.L. (Constanța, Romania) in the exercise of "
+        "private investigation activity under Romanian Law no. 329/2003. "
         "Digital evidence chain of custody is secured via SHA-256 cryptographic hashing and access log. "
-        "Personal data is processed under GDPR art. 6 (legitimate interest). Confidential — unauthorized disclosure prohibited."
+        "Personal data is processed under GDPR art. 6 (Reg. EU 2016/679; Romanian Law 190/2018) for legitimate investigative interest. "
+        "Save for assignments transferred to partner agencies in another jurisdiction (where the law of that territory prevails), Romanian law applies. "
+        "Confidential — unauthorized disclosure prohibited."
     ),
     "ro": (
-        "Acest raport este emis conform art. 234-bis C.p.p. italian. "
+        "Prezentul raport este emis de Thanatos Investigazioni S.R.L. (Constanța) în exercitarea "
+        "activității de detectiv particular conform Legii nr. 329/2003. "
         "Lanțul de custodie al probelor digitale este asigurat prin hash SHA-256 și jurnal de acces. "
-        "Datele personale sunt prelucrate conform art. 6 GDPR. Confidențial — divulgarea neautorizată este interzisă."
+        "Datele personale sunt prelucrate conform art. 6 GDPR (Reg. UE 2016/679; Legea nr. 190/2018). "
+        "Cu excepția mandatelor transferate unor agenții partenere din altă jurisdicție (unde prevalează legea teritoriului respectiv), se aplică legea română. "
+        "Confidențial — divulgarea neautorizată este interzisă."
     ),
 }
 
@@ -107,7 +116,7 @@ _SOURCE_CERT = {
     "it": ("Fonti OSINT verificate e certificate",
            "Le fonti elencate sono state interrogate da Thanatos alla data indicata; "
            "di ciascun risultato è conservato l'hash SHA-256, che ne attesta l'integrità e "
-           "la non alterazione (catena di custodia digitale, art. 234-bis c.p.p.). "
+           "la non alterazione (catena di custodia digitale). "
            "Le evidenze sono verificate e riproducibili."),
     "en": ("Verified & certified OSINT sources",
            "The listed sources were queried by Thanatos on the stated date; for each result "
