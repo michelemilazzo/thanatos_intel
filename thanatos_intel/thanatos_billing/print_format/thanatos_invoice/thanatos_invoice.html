@@ -1,0 +1,107 @@
+{#- Thanatos Invoice — bilingue: Inglese sempre + lingua del paese del cliente.
+    Italia->IT, Romania->RO, Francia->FR, Spagna->ES, Germania->DE (estendibile in _LMAP). -#}
+{%- set _country = (frappe.db.get_value("Address", doc.customer_address, "country") if doc.customer_address else "") or doc.get("territory") or "" -%}
+{%- set _LMAP = {"Italy":"it","Italia":"it","Romania":"ro","România":"ro","France":"fr","Spain":"es","España":"es","Germany":"de","Deutschland":"de"} -%}
+{%- set LANG2 = _LMAP.get(_country, "") -%}
+{%- macro L(en, it="", ro="", fr="", es="", de="") -%}
+{{ en }}{%- set _tr = {"it":it,"ro":ro,"fr":fr,"es":es,"de":de}.get(LANG2, "") -%}{%- if _tr %} <span class="t2">/ {{ _tr }}</span>{%- endif -%}
+{%- endmacro -%}
+{%- set comp_tax = frappe.db.get_value("Company", doc.company, "tax_id") -%}
+{%- set cur = doc.currency -%}
+
+<style>
+  .ti{font-family:Georgia,'Times New Roman',serif;color:#0A0E1A;font-size:12px}
+  .ti .gold{color:#C8A96E}
+  .ti h1{font-size:24px;letter-spacing:.04em;margin:0;color:#0A0E1A}
+  .ti .t2{color:#6b7280;font-weight:normal}
+  .ti .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #C8A96E;padding-bottom:10px;margin-bottom:16px}
+  .ti .seller{font-size:11px;line-height:1.5}
+  .ti .seller .name{font-size:15px;font-weight:bold}
+  .ti .meta{text-align:right;font-size:11px;line-height:1.6}
+  .ti .parties{display:flex;gap:24px;margin:14px 0 18px}
+  .ti .box{flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px}
+  .ti .box .lbl{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#C8A96E;margin-bottom:4px}
+  table.items{width:100%;border-collapse:collapse;margin:8px 0}
+  table.items th{background:#0A0E1A;color:#fff;font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:8px;text-align:left}
+  table.items td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:11px;vertical-align:top}
+  table.items td.num,table.items th.num{text-align:right}
+  .ti .totals{width:46%;margin-left:auto;margin-top:8px}
+  .ti .totals tr td{padding:5px 8px;font-size:12px}
+  .ti .totals tr.grand td{border-top:2px solid #0A0E1A;font-weight:bold;font-size:14px}
+  .ti .ron{font-size:10px;color:#6b7280;text-align:right;margin-top:4px}
+  .ti .legal{margin-top:22px;border-top:1px solid #e5e7eb;padding-top:10px;font-size:9px;color:#6b7280;line-height:1.5}
+</style>
+
+<div class="ti">
+  <div class="hdr">
+    <div class="seller">
+      <div class="name gold">{{ doc.company }}</div>
+      {% if comp_tax %}CUI/VAT: {{ comp_tax }}<br>{% endif %}
+      Constanța, România<br>
+      <span class="t2">{{ L("Investigation &amp; Intelligence services","Servizi investigativi e di intelligence","Servicii de investigații și intelligence") }}</span>
+    </div>
+    <div class="meta">
+      <h1>{{ L("INVOICE","FATTURA","FACTURĂ") }}</h1>
+      <div><b>{{ doc.name }}</b></div>
+      <div>{{ L("Date","Data","Data") }}: {{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yyyy") }}</div>
+      {% if doc.due_date %}<div>{{ L("Due date","Scadenza","Scadență") }}: {{ frappe.utils.formatdate(doc.due_date, "dd/MM/yyyy") }}</div>{% endif %}
+      {% if doc.po_no or doc.project %}<div>{{ L("Ref.","Rif.","Ref.") }}: {{ doc.project or doc.po_no }}</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="box">
+      <div class="lbl">{{ L("Bill to","Cliente","Client") }}</div>
+      <b>{{ doc.customer_name }}</b><br>
+      {{ doc.address_display or "" }}
+      {% if doc.tax_id %}<br>{{ L("Tax code","Codice fiscale","Cod fiscal") }}: {{ doc.tax_id }}{% endif %}
+    </div>
+    <div class="box">
+      <div class="lbl">{{ L("Currency","Valuta","Monedă") }}</div>
+      {{ cur }}
+      {% if doc.get("custom_eur_ron_rate") %}<br><span class="t2">{{ L("Exchange (BNR)","Cambio (BNR)","Curs (BNR)") }}: 1 EUR = {{ doc.custom_eur_ron_rate }} RON</span>{% endif %}
+    </div>
+  </div>
+
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:6%">#</th>
+        <th>{{ L("Description","Descrizione","Descriere") }}</th>
+        <th class="num" style="width:10%">{{ L("Qty","Q.tà","Cant.") }}</th>
+        <th class="num" style="width:18%">{{ L("Unit price","Prezzo unit.","Preț unitar") }}</th>
+        <th class="num" style="width:20%">{{ L("Amount","Importo","Sumă") }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in doc.items %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ item.description or item.item_name }}</td>
+        <td class="num">{{ item.qty | round(2) }}</td>
+        <td class="num">{{ frappe.utils.fmt_money(item.rate, currency=cur) }}</td>
+        <td class="num">{{ frappe.utils.fmt_money(item.amount, currency=cur) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td>{{ L("Subtotal","Imponibile","Bază impozabilă") }}</td><td class="num" style="text-align:right">{{ frappe.utils.fmt_money(doc.net_total, currency=cur) }}</td></tr>
+    {% for t in doc.taxes %}
+    <tr><td>{{ t.description }}</td><td class="num" style="text-align:right">{{ frappe.utils.fmt_money(t.tax_amount, currency=cur) }}</td></tr>
+    {% endfor %}
+    <tr class="grand"><td>{{ L("Total","Totale","Total") }}</td><td class="num" style="text-align:right">{{ frappe.utils.fmt_money(doc.grand_total, currency=cur) }}</td></tr>
+  </table>
+  {% if doc.get("custom_grand_total_ron") %}
+  <div class="ron">{{ L("Equivalent","Controvalore","Echivalent") }}: {{ frappe.utils.fmt_money(doc.custom_grand_total_ron, currency="RON") }}</div>
+  {% endif %}
+
+  <div class="legal">
+    {{ L(
+      "Issued by Thanatos Investigazioni S.R.L. (Constanța, Romania) under Romanian Law no. 329/2003 (private detective). Personal data processed under GDPR art. 6 (Reg. EU 2016/679; Romanian Law 190/2018). Save for assignments transferred to partner agencies in another jurisdiction, Romanian law applies. Confidential — unauthorized disclosure prohibited.",
+      "Emessa da Thanatos Investigazioni S.R.L. (Constanța, Romania) ai sensi della Legge rumena n. 329/2003 (investigatore privato). Dati trattati ex art. 6 GDPR (Reg. UE 2016/679; Legge rumena 190/2018). Salvo incarichi trasferiti ad agenzie partner in altra giurisdizione, si applica la legge rumena. Documento riservato.",
+      "Emisă de Thanatos Investigazioni S.R.L. (Constanța) conform Legii nr. 329/2003 (detectiv particular). Date prelucrate conform art. 6 GDPR (Reg. UE 2016/679; Legea 190/2018). Cu excepția mandatelor transferate altor agenții în altă jurisdicție, se aplică legea română. Confidențial."
+    ) }}
+  </div>
+</div>
