@@ -76,6 +76,9 @@ def _resolve_assignee(case, step):
         return None
     users, is_client = _role_users(step.actor_role)
     if is_client and case.client:
+        pu = frappe.db.get_value("Investigation Client", case.client, "platform_user")
+        if pu and frappe.db.exists("User", pu):
+            return pu
         email = frappe.db.get_value("Investigation Client", case.client, "email")
         if email and frappe.db.exists("User", email):
             return email

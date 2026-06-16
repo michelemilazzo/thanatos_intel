@@ -75,7 +75,7 @@ table{min-width:520px}
     </div>
   </div>
 
-  {% if pipeline %}
+  {% if pipeline and not wf %}
   <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:28px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <span style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">Avanzamento pratica</span>
@@ -108,6 +108,56 @@ table{min-width:520px}
         </div>
       </div>
       {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if wf and wf.has_workflow %}
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:24px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">Avanzamento pratica</span>
+      <span style="color:var(--grey);font-size:11px">{{ wf.done }}/{{ wf.total }} step</span>
+    </div>
+    <div style="background:var(--border);height:6px;border-radius:3px;margin-bottom:18px;overflow:hidden">
+      <div style="background:var(--gold);height:6px;width:{{ wf.pct }}%"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0">
+      {% for step in wf.steps %}
+      {% set ic = '✓' if step.status=='done' else ('▶' if step.status=='current' else '○') %}
+      <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #1A2035{% if loop.last %};border-bottom:none{% endif %}{% if step.status=='current' %};background:rgba(200,169,110,.04);margin:0 -10px;padding:10px{% endif %}">
+        <div style="width:22px;height:22px;border-radius:50%;border:2px solid {% if step.status=='done' %}#2ecc71{% elif step.status=='current' %}var(--gold){% else %}var(--border){% endif %};display:flex;align-items:center;justify-content:center;font-size:10px;color:{% if step.status=='done' %}#2ecc71{% elif step.status=='current' %}var(--gold){% else %}var(--grey){% endif %};flex-shrink:0;margin-top:2px">{{ ic }}</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:13px;color:{% if step.status=='done' %}var(--grey){% else %}#E8E9F0{% endif %};{% if step.status=='done' %}text-decoration:line-through;{% endif %}{% if step.status=='current' %}font-weight:600;{% endif %}">{{ step.label }}</span>
+            <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:3px;background:{% if step.actor=='client' %}rgba(106,159,216,.15){% else %}rgba(200,169,110,.1){% endif %};color:{% if step.actor=='client' %}#6A9FD8{% else %}var(--gold){% endif %}">{{ 'Tu' if step.actor=='client' else step.role }}</span>
+            {% if step.raw_status == 'Awaiting Client' %}<span style="font-size:9px;color:#6A9FD8;letter-spacing:1px">IN ATTESA DI TE</span>{% endif %}
+          </div>
+          {% if step.status=='current' and step.actor=='client' and step.raw_status=='Awaiting Client' %}
+          <button class="wf-act" data-seq="{{ step.seq }}" data-kind="client" style="margin-top:8px;padding:6px 14px;background:var(--gold);color:#0A0E1A;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:0;cursor:pointer">Procedi ›</button>
+          {% elif step.status=='current' and wf.is_operator %}
+          <button class="wf-act" data-seq="{{ step.seq }}" data-kind="gate" style="margin-top:8px;padding:6px 14px;background:transparent;color:var(--gold);border:1px solid var(--gold);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer">Completa step ✓</button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:28px">
+    <div style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">Bacheca</div>
+    <div id="bacheca" style="display:flex;flex-direction:column;gap:10px;max-height:340px;overflow:auto">
+      {% for a in bacheca %}
+      <div style="border-left:2px solid var(--border);padding:2px 0 2px 12px">
+        <div style="font-size:13px;color:#E8E9F0">{{ a.description }}</div>
+        <div style="font-size:10px;color:var(--grey);margin-top:2px">{{ frappe.utils.format_datetime(a.activity_date, 'dd/MM/yyyy HH:mm') }} · {{ a.operator or 'sistema' }}</div>
+      </div>
+      {% else %}
+      <div style="color:var(--grey);font-size:12px">Nessun aggiornamento ancora.</div>
+      {% endfor %}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <input id="msgin" placeholder="Scrivi un messaggio…" style="flex:1;background:var(--bg);color:#E8E9F0;border:1px solid var(--border);padding:10px 12px;border-radius:4px;font-size:13px;font-family:inherit">
+      <button id="msgsend" style="background:var(--gold);color:#0A0E1A;border:0;padding:0 18px;border-radius:4px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;cursor:pointer">Invia</button>
     </div>
   </div>
   {% endif %}
@@ -287,6 +337,34 @@ table{min-width:520px}
       else{st.textContent='Errore: '+(j._server_messages||'verifica i permessi');}
     }catch(e){st.textContent='Errore di rete.';}
   }
+  </script>
+
+  <script>
+  (function(){
+    const CSRF="{{ csrf_token }}";
+    const CASE="{{ case.name }}";
+    async function post(method,fd){
+      const r=await fetch('/api/method/'+method,{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd});
+      return r.json();
+    }
+    document.querySelectorAll('.wf-act').forEach(b=>b.addEventListener('click',async()=>{
+      b.disabled=true; const old=b.textContent; b.textContent='…';
+      const fd=new FormData(); fd.append('case_name',CASE); fd.append('seq',b.dataset.seq);
+      const method = b.dataset.kind==='client'
+        ? 'thanatos_intel.workflow.api.client_act'
+        : 'thanatos_intel.workflow.api.complete_gate';
+      const d=await post(method,fd);
+      if(d.message){ location.reload(); } else { b.disabled=false; b.textContent=old; alert('Errore: '+(d._server_messages||'')); }
+    }));
+    const mi=document.getElementById('msgin'), ms=document.getElementById('msgsend');
+    if(ms) ms.addEventListener('click',async()=>{
+      const t=(mi.value||'').trim(); if(!t) return;
+      ms.disabled=true;
+      const fd=new FormData(); fd.append('case_name',CASE); fd.append('message',t);
+      const d=await post('thanatos_intel.workflow.api.post_message',fd);
+      if(d.message!==undefined){ location.reload(); } else { ms.disabled=false; alert('Errore invio'); }
+    });
+  })();
   </script>
 
   <div class="footer-note">

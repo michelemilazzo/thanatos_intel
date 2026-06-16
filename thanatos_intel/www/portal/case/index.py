@@ -87,6 +87,22 @@ def get_context(context):
     context.pipeline_total = len(pipeline)
     context.pipeline_pct = int(context.pipeline_done / context.pipeline_total * 100) if pipeline else 0
     context.current_step = next((s for s in pipeline if s["status"] == "current"), None)
+
+    # Motore Pratiche (Service Blueprint): se il caso ne ha uno, la board del
+    # motore sostituisce la pipeline legacy + mostra bacheca e azioni.
+    context.wf = None
+    context.bacheca = []
+    if case.get("blueprint"):
+        try:
+            from thanatos_intel.workflow.api import board
+            context.wf = board(case.name)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "case page board")
+        context.bacheca = sorted(
+            case.get("case_activities") or [],
+            key=lambda a: a.get("activity_date") or "", reverse=True)[:25]
+    context.csrf_token = frappe.sessions.get_csrf_token()
+
     context.title = f"{case.case_number or case.name} — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context
