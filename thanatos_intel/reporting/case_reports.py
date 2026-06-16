@@ -355,7 +355,47 @@ def _push_file_to_drive(file_name_doc, case_name):
     mime = {"pdf": "application/pdf", "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "html": "text/html", "json": "application/json", "zip": "application/zip"}.get(
         f.file_name.rsplit(".", 1)[-1].lower(), "text/plain")
-    return _put_in_drive(case_name, f.file_name, open(src, "rb").read(), mime, client, subfolder=sub)
+    drive_name = _put_in_drive(case_name, f.file_name, open(src, "rb").read(), mime, client, subfolder=sub)
+    _dedup_flat_attachment(src, drive_name)
+    return drive_name
+
+
+def _dedup_flat_attachment(src, drive_file_name):
+    """Sostituisce il file flat (allegato) con un symlink alla copia nel box
+    (cartella Drive), eliminando il duplicato locale. Best-effort, idempotente."""
+    try:
+        if not drive_file_name or not src or os.path.islink(src) or not os.path.exists(src):
+            return
+        rel = frappe.db.get_value("Drive File", drive_file_name, "path")
+        if not rel:
+            return
+        real = os.path.realpath(frappe.get_site_path("private", "files", rel))
+        if not os.path.exists(real) or os.path.getsize(real) != os.path.getsize(src):
+            return  # copia box non pronta/diversa: non toccare il flat
+        os.remove(src)
+        os.symlink(real, src)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "case_reports._dedup_flat_attachment")
+
+
+@frappe.whitelist()
+def migrate_flat_attachments_to_box(case_name=None):
+    """Migra gli allegati flat dei casi nel box: push in Drive + dedup del flat
+    (symlink). Idempotente. Senza case_name processa tutti i casi."""
+    frappe.only_for(("System Manager", "Investigation Manager"))
+    cases = [case_name] if case_name else frappe.get_all(
+        "Investigation Case", pluck="name")
+    done = 0
+    for cn in cases:
+        files = frappe.get_all("File", filters={
+            "attached_to_doctype": "Investigation Case", "attached_to_name": cn}, pluck="name")
+        for fn in files:
+            try:
+                if _push_file_to_drive(fn, cn):
+                    done += 1
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "migrate_flat_attachments_to_box")
+    return {"cases": len(cases), "deduped": done}
 
 
 @frappe.whitelist()
