@@ -111,6 +111,15 @@ def get_context(context):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "case page legal_drafts")
 
+    # Tutti i documenti del caso dalla cartella Drive (vista unica), raggruppati
+    context.case_documents = {}
+    try:
+        from thanatos_intel.integrations.legal_drafts import list_case_documents
+        for d in list_case_documents(case.name):
+            context.case_documents.setdefault(d["folder"], []).append(d)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "case page case_documents")
+
     context.title = f"{case.case_number or case.name} — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context

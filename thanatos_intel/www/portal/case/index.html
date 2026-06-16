@@ -162,6 +162,23 @@ table{min-width:520px}
   </div>
   {% endif %}
 
+  {% if case_documents %}
+  <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:24px">
+    <div style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px">Documenti del caso (Drive)</div>
+    {% for folder, docs in case_documents.items() %}
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);margin-bottom:6px">{{ folder }}</div>
+      {% for d in docs %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1A2035">
+        <a href="{{ d.url }}" target="_blank" style="color:#6A9FD8;text-decoration:none;font-size:13px">{{ '📝' if d.is_doc else '📄' }} {{ d.title }}</a>
+        <span style="color:#5B6276;font-size:10px">{{ 'writer' if d.is_doc else (d.kb ~ ' KB') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% if legal_drafts %}
   <div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:28px">
     <div style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Documenti legali (bozze)</div>

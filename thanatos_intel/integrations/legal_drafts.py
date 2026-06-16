@@ -110,6 +110,35 @@ def ensure_legal_writers(case_name):
 
 
 @frappe.whitelist()
+def list_case_documents(case_name):
+    """Tutti i documenti del caso dalla cartella Drive (per la vista unica nel
+    portale). Raggruppati per sottocartella; link al writer (frappe_doc) o al
+    file Drive."""
+    from thanatos_intel.workflow.api import _can_see_case
+    if not _can_see_case(case_name):
+        frappe.throw("Accesso negato.", frappe.PermissionError)
+    case = frappe.get_doc("Investigation Case", case_name)
+    folder = case.get("drive_folder")
+    if not folder or not frappe.db.exists("Drive File", folder):
+        return []
+    base = frappe.db.get_value("Drive File", folder, "path") or ""
+    rows = frappe.get_all(
+        "Drive File",
+        filters={"path": ["like", base + "%"], "is_group": 0},
+        fields=["name", "title", "path", "mime_type", "document", "file_size"],
+        order_by="path")
+    out = []
+    for r in rows:
+        rel = (r.path or "")[len(base):].strip("/")
+        sub = rel.split("/")[0] if "/" in rel else "—"
+        is_doc = r.mime_type == "frappe_doc"
+        url = f"/drive/document/{r.name}" if is_doc else f"/drive/file/{r.name}"
+        out.append({"title": r.title, "folder": sub, "is_doc": is_doc, "url": url,
+                    "kb": round((r.file_size or 0) / 1024) if not is_doc else None})
+    return out
+
+
+@frappe.whitelist()
 def list_legal_writers(case_name):
     """Bozze legali del caso come link al writer (crea i mancanti, poi elenca)."""
     from thanatos_intel.workflow.api import _can_see_case
