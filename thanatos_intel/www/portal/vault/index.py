@@ -1,5 +1,4 @@
 import frappe
-import frappe.sessions
 
 no_cache = 1
 
@@ -17,7 +16,6 @@ def get_context(context):
     context.identity = v.get("identity") or {}
     context.has_client = bool(v.get("client"))
     context.is_operator = _is_operator(frappe.session.user)
-    context.csrf_token = frappe.sessions.get_csrf_token()
     context.title = "Il mio archivio documenti — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context

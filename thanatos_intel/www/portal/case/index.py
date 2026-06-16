@@ -1,5 +1,4 @@
 import frappe
-import frappe.sessions
 from frappe import _
 
 no_cache = 1
@@ -102,7 +101,6 @@ def get_context(context):
         context.bacheca = sorted(
             case.get("case_activities") or [],
             key=lambda a: a.get("activity_date") or "", reverse=True)[:25]
-    context.csrf_token = frappe.sessions.get_csrf_token()
 
     # Bozze legali come writer condivisi (Drive Document)
     context.legal_drafts = []
