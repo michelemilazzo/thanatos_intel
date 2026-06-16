@@ -109,14 +109,44 @@ Indagine (esempio step):
 OSINT: salta 3,4,9 (mandato/firma/legale) se sotto soglia; resta self-serve a
 carta (pay-per-use esistente).
 
+## Webmail-Ingest integrata (la plancia unica)
+
+Thanatos Intel e' l'UNICA plancia operativa: la webmail non e' un programma a
+parte, e' dentro il sistema. Sotto c'e' Frappe (app `mail` = webmail, `drive`,
+`helpdesk`, `mmos_ai`), ma l'operatore vive in Thanatos Intel.
+
+- **Outbound azionabile.** Quando l'operatore scrive a un cliente, il messaggio
+  include automaticamente i LINK del motore relativi allo step corrente (firma
+  mandato, paga, carica documenti). I link sono generati dal motore e tracciati:
+  il click avanza la pratica.
+- **Inbound che si auto-deposita.** Quando il cliente risponde, gli allegati
+  vanno DA SOLI nel posto giusto: la pratica corretta (match per
+  case-id/threading) e il Client Vault (KYC/KYB/CIS). Riusa
+  `integrations/intel_inbox.py` (hook Communication after_insert) come punto di
+  ingresso.
+- **Ingest universale.** Ogni informazione che entra (email, allegati, messaggi
+  WhatsApp/Telegram, upload portale) viene ingerita -> classificata ->
+  collocata su caso/entita' -> analizzata dall'AI (mmos_ai gateway, gia' usato
+  per OCR/entita'/risk, vedi memory mmos_ai_doc_ingest). L'AI suggerisce il
+  prossimo passo o segnala sviluppi nella bacheca del caso.
+- **Routing.** Un dispatcher di ingest associa il contenuto al caso (thread/id),
+  all'entita', al vault; se ambiguo, crea un task di smistamento per l'operatore.
+
+Mattoni gia' presenti da orchestrare: app `mail` (webmail), `intel_inbox`,
+`helpdesk_bridge`, `waba_notifications`, `mmos_ai` gateway, `Investigation
+Evidence`/catena custodia, `Client Vault Item`.
+
 ## Fasi di build
 
-- **F1 — Fondamenta** : DocTypes nuovi + estensioni + `engine.advance` +
-  `notify.dispatch` (aggrega email/whatsapp esistenti) + ToDo nativi. No UI.
+- **F1 — Fondamenta** ✅ FATTA: DocTypes + estensioni + `engine.advance` +
+  `notify` (email/whatsapp) + ToDo nativi + seed. Smoke-test OK in prod.
 - **F2 — Wizard + Bacheca** : pagina portale "Apri pratica" generata dal
   Blueprint + bacheca per-caso (timeline+chat+domande) + viste TODO per ruolo.
 - **F3 — Identità tier + Vault** : gate scalare + archivio cliente sempre
   aggiornato (scadenze, re-verifica).
-- **F4 — AI concierge + canali** : mmos_ai sulle domande caso + Telegram/push.
+- **F4 — Webmail-Ingest** : outbound azionabile + inbound auto-deposito +
+  ingest universale + routing (sezione sopra). Aggancia app mail + intel_inbox.
+- **F5 — AI concierge + canali** : mmos_ai pone le domande al cliente e
+  analizza/suggerisce + Telegram/push.
 
 Pilota live: Indagine + OSINT end-to-end prima di estendere alle altre.
