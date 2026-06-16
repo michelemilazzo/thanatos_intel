@@ -123,10 +123,21 @@ def start(case_name):
 
 def advance(case_name):
     """Esegue gli step AUTO finche' non incontra uno step che richiede attesa
-    (GATE non completato, oppure AUTO che attende un evento esterno)."""
+    (GATE non completato, oppure AUTO che attende un evento esterno).
+
+    Un solo save sul caso per chiamata; le notifiche esterne sono accodate e
+    inviate dopo il save."""
     case = frappe.get_doc("Investigation Case", case_name)
     if not case.get("workflow_active"):
         return {"status": "inactive"}
+
+    pending = []  # (message, subject, event, client_visible) da inviare post-save
+
+    def _finish(result):
+        case.save(ignore_permissions=True)
+        for msg, subj, ev, cv in pending:
+            notify.channels(case_name, msg, subject=subj, event=ev, client_visible=cv)
+        return result
 
     for step in sorted(case.case_steps, key=lambda s: s.seq):
         if _step_done(step):
@@ -134,69 +145,70 @@ def advance(case_name):
 
         case.current_step_seq = step.seq
 
-        if step.status == "Pending":
-            if step.mode == "GATE":
-                step.status = "In Progress"
-                _open_todo(case, step)
-                msg = f"Pratica in attesa: «{step.step_label}»."
-                case.save(ignore_permissions=True)
-                notify.dispatch(case_name, msg, subject="Aggiornamento pratica",
-                                client_visible=bool(step.client_visible))
-                return {"status": "gated", "step": step.seq, "label": step.step_label,
-                        "assignee": step.assignee}
-            else:
-                # AUTO: gli step ad azione esterna (firma/pagamento/upload del
-                # cliente) attendono l'evento; gli altri li chiude il chiamante.
-                if step.action_type in ("sign", "pay", "upload", "ai_question"):
-                    step.status = "Awaiting Client"
-                    case.save(ignore_permissions=True)
-                    notify.dispatch(case_name,
-                                    f"Azione richiesta: «{step.step_label}».",
-                                    subject="Azione richiesta sulla pratica",
-                                    event=_STEP_EVENT.get(step.action_type),
-                                    client_visible=bool(step.client_visible))
-                    return {"status": "awaiting", "step": step.seq, "label": step.step_label}
-                # azioni di sistema (notify/work auto/deliver auto): segna in corso
-                step.status = "In Progress"
-                case.save(ignore_permissions=True)
-                return {"status": "running", "step": step.seq, "label": step.step_label}
+        if step.status in ("In Progress", "Awaiting Client"):
+            # gia' fermo qui (gate/evento non ancora risolto)
+            return _finish({"status": "waiting", "step": step.seq,
+                            "label": step.step_label, "step_status": step.status})
 
-        # gia' In Progress / Awaiting Client -> resta fermo qui
-        case.save(ignore_permissions=True)
-        return {"status": "waiting", "step": step.seq, "label": step.step_label,
-                "step_status": step.status}
+        # status Pending
+        if step.mode == "GATE":
+            step.status = "In Progress"
+            _open_todo(case, step)
+            notify.append_activity(case, f"In attesa: «{step.step_label}» ({step.actor_role}).")
+            pending.append((f"Pratica «{case_name}»: in lavorazione, fase «{step.step_label}».",
+                            "Aggiornamento pratica", None, bool(step.client_visible)))
+            return _finish({"status": "gated", "step": step.seq,
+                            "label": step.step_label, "assignee": step.assignee})
 
-    # nessuno step pendente -> pratica completata
+        # AUTO ad azione ESTERNA: attende l'evento del cliente
+        if step.action_type in ("sign", "pay", "upload", "ai_question"):
+            step.status = "Awaiting Client"
+            notify.append_activity(case, f"Azione richiesta al cliente: «{step.step_label}».")
+            pending.append((f"È richiesta un'azione sulla pratica «{case_name}»: {step.step_label}.",
+                            "Azione richiesta sulla pratica",
+                            _STEP_EVENT.get(step.action_type), bool(step.client_visible)))
+            return _finish({"status": "awaiting", "step": step.seq, "label": step.step_label})
+
+        # AUTO di sistema (apertura, notify, work/deliver automatici): pass-through.
+        # L'azione reale (genera mandato, consegna report...) si aggancera' qui in F2.
+        step.status = "Done"
+        step.completed_on = now_datetime()
+        notify.append_activity(case, f"«{step.step_label}» eseguito.")
+        if step.client_visible:
+            pending.append((f"Pratica «{case_name}»: {step.step_label}.",
+                            "Aggiornamento pratica",
+                            _STEP_EVENT.get(step.action_type), True))
+        continue
+
     case.workflow_active = 0
-    case.save(ignore_permissions=True)
-    notify.dispatch(case_name, "Pratica completata. Tutti gli step sono chiusi.",
-                    subject="Pratica completata", event="report_ready")
-    return {"status": "done"}
+    notify.append_activity(case, "Pratica completata.")
+    pending.append(("La sua pratica è stata completata. Trova il report nel portale.",
+                    "Pratica completata", "report_ready", True))
+    return _finish({"status": "done"})
 
 
 @frappe.whitelist()
 def complete_step(case_name, seq, note=None):
-    """Chiude lo step indicato e fa proseguire la pratica."""
+    """Chiude lo step indicato (gate sbloccato) e fa proseguire la pratica."""
     case = frappe.get_doc("Investigation Case", case_name)
     seq = int(seq)
+    label = None
     for step in case.case_steps:
         if step.seq == seq:
             step.status = "Done"
             step.completed_on = now_datetime()
             if note:
                 step.note = note
+            label = step.step_label
             break
-    else:
+    if label is None:
         frappe.throw(f"Step {seq} non trovato nella pratica {case_name}")
+    notify.append_activity(case, f"Step «{label}» completato.")
     case.save(ignore_permissions=True)
-    # chiudi eventuale ToDo aperto
     for td in frappe.get_all("ToDo", filters={
         "reference_type": "Investigation Case", "reference_name": case_name,
         "status": "Open", "description": ["like", f"%[step {seq}]%"]}, pluck="name"):
         frappe.db.set_value("ToDo", td, "status", "Closed")
-    notify.dispatch(case_name, f"Step «{step.step_label}» completato.",
-                    subject="Aggiornamento pratica",
-                    client_visible=bool(step.client_visible))
     return advance(case_name)
 
 
