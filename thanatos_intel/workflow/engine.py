@@ -137,8 +137,9 @@ def advance(case_name):
 
     def _finish(result):
         case.save(ignore_permissions=True)
-        for msg, subj, ev, cv in pending:
-            notify.channels(case_name, msg, subject=subj, event=ev, client_visible=cv)
+        for msg, subj, ev, cv, act in pending:
+            notify.channels(case_name, msg, subject=subj, event=ev,
+                            client_visible=cv, action_type=act)
         return result
 
     for step in sorted(case.case_steps, key=lambda s: s.seq):
@@ -158,7 +159,7 @@ def advance(case_name):
             _open_todo(case, step)
             notify.append_activity(case, f"In attesa: «{step.step_label}» ({step.actor_role}).")
             pending.append((f"Pratica «{case_name}»: in lavorazione, fase «{step.step_label}».",
-                            "Aggiornamento pratica", None, bool(step.client_visible)))
+                            "Aggiornamento pratica", None, bool(step.client_visible), None))
             return _finish({"status": "gated", "step": step.seq,
                             "label": step.step_label, "assignee": step.assignee})
 
@@ -168,7 +169,7 @@ def advance(case_name):
             notify.append_activity(case, f"Azione richiesta al cliente: «{step.step_label}».")
             pending.append((f"È richiesta un'azione sulla pratica «{case_name}»: {step.step_label}.",
                             "Azione richiesta sulla pratica",
-                            _STEP_EVENT.get(step.action_type), bool(step.client_visible)))
+                            _STEP_EVENT.get(step.action_type), bool(step.client_visible), step.action_type))
             return _finish({"status": "awaiting", "step": step.seq, "label": step.step_label})
 
         # AUTO di sistema (apertura, notify, work/deliver automatici): pass-through.
@@ -179,13 +180,13 @@ def advance(case_name):
         if step.client_visible:
             pending.append((f"Pratica «{case_name}»: {step.step_label}.",
                             "Aggiornamento pratica",
-                            _STEP_EVENT.get(step.action_type), True))
+                            _STEP_EVENT.get(step.action_type), True, step.action_type))
         continue
 
     case.workflow_active = 0
     notify.append_activity(case, "Pratica completata.")
     pending.append(("La sua pratica è stata completata. Trova il report nel portale.",
-                    "Pratica completata", "report_ready", True))
+                    "Pratica completata", "report_ready", True, "deliver"))
     return _finish({"status": "done"})
 
 
