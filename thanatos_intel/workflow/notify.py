@@ -61,6 +61,9 @@ def _email_client(case_name, subject, message, action_type=None):
                     f"<a href='{frappe.utils.get_url()}/portal/case/{case_name}'>{case_name}</a></p>"
                     f"<p>— Thanatos Intel</p>",
             reference_doctype="Investigation Case", reference_name=case_name,
+            # Reply-to dedicato SOLO alle notifiche di pratica: le risposte del
+            # cliente arrivano a cases@ → ingest inbound (link al caso + box/Vault).
+            reply_to="cases@thanatos.agency",
         )
         return True
     except Exception:
