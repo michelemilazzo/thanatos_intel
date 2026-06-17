@@ -250,6 +250,9 @@ def _ensure_drive_folder(case_name: str) -> str:
     for sub in ["01 Documenti Cliente", "02 Evidenze", "03 OSINT",
                 "04 Blockchain", "05 Report", "06 Email"]:
         ensure(sub, case_folder)
+    # salva il riferimento sul caso, altrimenti _put_in_drive non sa dove depositare
+    if frappe.db.get_value("Investigation Case", case_name, "drive_folder") != case_folder:
+        frappe.db.set_value("Investigation Case", case_name, "drive_folder", case_folder)
     return case_folder
 
 
