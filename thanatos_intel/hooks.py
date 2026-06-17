@@ -210,6 +210,7 @@ jinja={
    'thanatos_intel.thanatos_core.currency.converter.convert_all',
    'thanatos_intel.permissions.is_full_access',
    'thanatos_intel.utils.jinja_helpers.user_roles',
+   'thanatos_intel.utils.jinja_helpers.portal_user',
    'thanatos_intel.utils.seo.gsc_code',
  ],
 }
