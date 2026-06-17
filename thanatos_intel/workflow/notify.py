@@ -64,6 +64,8 @@ def _email_client(case_name, subject, message, action_type=None):
             # Reply-to dedicato SOLO alle notifiche di pratica: le risposte del
             # cliente arrivano a cases@ → ingest inbound (link al caso + box/Vault).
             reply_to="cases@thanatos.agency",
+            # container = logo Thanatos in intestazione (brand_logo dell'account).
+            with_container=True,
         )
         return True
     except Exception:
