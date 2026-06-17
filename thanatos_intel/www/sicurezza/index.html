@@ -1,0 +1,64 @@
+{% extends "templates/web.html" %}
+{% block title %}Sicurezza account{% endblock %}
+
+{% block page_content %}
+<div class="container" style="max-width: 720px; margin: 0 auto;">
+  <h2>Sicurezza account</h2>
+  <p class="text-muted">Account: <strong>{{ user }}</strong></p>
+
+  <div style="border:1px solid #ddd; border-radius:6px; padding:16px; margin-top:16px;">
+    <h4 style="margin-top:0;">Autenticazione a due fattori (2FA)</h4>
+    <p class="text-muted" style="font-size:14px;">
+      Aggiunge un secondo livello di sicurezza all'accesso con un'app authenticator
+      (Google Authenticator, Authy, ecc.). È <strong>facoltativa</strong>.
+    </p>
+
+    <p>Stato attuale:
+      <strong id="status_label" style="color:{{ 'green' if enabled else '#999' }}">
+        {{ 'Attiva' if enabled else 'Non attiva' }}
+      </strong>
+    </p>
+
+    <button type="button" id="toggle_btn" class="btn {{ 'btn-default' if enabled else 'btn-primary' }}">
+      {{ 'Disattiva 2FA' if enabled else 'Attiva 2FA' }}
+    </button>
+    <div id="result" style="margin-top:12px;"></div>
+
+    <p class="text-muted" style="font-size:13px; margin-top:12px;">
+      Dopo l'attivazione, al <strong>prossimo accesso</strong> il sistema mostrerà un QR
+      da scansionare con l'app authenticator; da quel momento all'accesso sarà richiesto
+      il codice a 6 cifre.
+    </p>
+  </div>
+
+  <script>
+  (function() {
+    let enabled = {{ enabled | tojson }};
+    const btn = document.getElementById('toggle_btn');
+    const label = document.getElementById('status_label');
+    const result = document.getElementById('result');
+
+    btn.onclick = function() {
+      const target = enabled ? 0 : 1;
+      btn.disabled = true; result.textContent = '…';
+      frappe.call({
+        method: 'thanatos_intel.two_factor.set_two_factor',
+        args: { enable: target },
+        callback: function(r) {
+          enabled = !!(r.message && r.message.enabled);
+          label.textContent = enabled ? 'Attiva' : 'Non attiva';
+          label.style.color = enabled ? 'green' : '#999';
+          btn.textContent = enabled ? 'Disattiva 2FA' : 'Attiva 2FA';
+          btn.className = 'btn ' + (enabled ? 'btn-default' : 'btn-primary');
+          result.innerHTML = enabled
+            ? '<span style="color:green">2FA attivata. Al prossimo accesso configura l\'app authenticator.</span>'
+            : '<span style="color:#555">2FA disattivata.</span>';
+          btn.disabled = false;
+        },
+        error: function() { result.innerHTML = '<span style="color:red">Operazione non riuscita.</span>'; btn.disabled = false; }
+      });
+    };
+  })();
+  </script>
+</div>
+{% endblock %}
