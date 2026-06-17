@@ -9,6 +9,7 @@ def on_case_after_insert(doc, method=None):
     if not doc.get("blueprint") or doc.get("case_steps"):
         return
     try:
+        doc.reload()
         engine.setup_from_blueprint(doc)
         doc.save(ignore_permissions=True)
     except Exception:

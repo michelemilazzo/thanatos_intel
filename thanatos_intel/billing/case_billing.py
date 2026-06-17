@@ -141,7 +141,8 @@ def ensure_billing_project(case):
         "doctype": "Project", "project_name": doc.get("case_title") or doc.name,
         "customer": customer, "company": company,
     }).insert(ignore_permissions=True)
-    doc.db_set("project", project.name)
+    frappe.db.set_value("Investigation Case", doc.name, "project",
+                        project.name, update_modified=False)
     frappe.db.commit()
     return project.name
 

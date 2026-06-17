@@ -281,23 +281,34 @@ def _ensure_file_folder(case_name: str) -> str:
 
 
 def ensure_case_folder_hook(doc, method=None):
-    """Wrapper called by Frappe doc_events on Investigation Case after_insert.
+    """after_insert su Investigation Case: crea la cartella Drive del caso.
 
-    La cartella Drive del caso e una risorsa di sistema: va creata anche quando
-    il caso e aperto da un cliente (che NON ha permessi Drive). Si esegue percio
-    come Administrator, ripristinando l'utente originale (evita il leak di
-    'You don't have permissions' nei _server_messages e crea davvero la cartella).
+    Eseguita in background DOPO il commit (enqueue_after_commit) per due motivi:
+    (1) i clienti non hanno permessi Drive -> il job gira come Administrator;
+    (2) creare la cartella muta la riga del caso e, se fatto in-linea durante
+    l'after_insert, manda in TimestampMismatch i save successivi di engine.start
+    (open_practice). Async = nessun conflitto, cartella creata comunque.
     """
-    user = frappe.session.user
+    frappe.enqueue(
+        "thanatos_intel.integrations.intel_inbox.ensure_case_folder_job",
+        queue="short",
+        enqueue_after_commit=True,
+        deduplicate=True,
+        job_id=f"case_folder_{doc.name}",
+        case_name=doc.name,
+    )
+
+
+def ensure_case_folder_job(case_name):
+    """Job background: crea la cartella Drive del caso come Administrator."""
+    frappe.set_user("Administrator")
     try:
-        frappe.set_user("Administrator")
-        folder_id = ensure_case_folder(doc.name)
+        folder_id = ensure_case_folder(case_name)
         if folder_id:
-            frappe.db.set_value("Investigation Case", doc.name, "drive_folder", folder_id, update_modified=False)
+            frappe.db.set_value("Investigation Case", case_name, "drive_folder", folder_id, update_modified=False)
+            frappe.db.commit()
     except Exception:
-        frappe.log_error(frappe.get_traceback(), "ensure_case_folder_hook")
-    finally:
-        frappe.set_user(user)
+        frappe.log_error(frappe.get_traceback(), "ensure_case_folder_job")
 
 
 @frappe.whitelist()

@@ -140,6 +140,7 @@ def _alert(case, changes):
         "Agire con tempestivita se compaiono fondi su un wallet del soggetto.</p>"
         % (case.name, now(), rows))
 
+    case.reload()
     case.append("case_activities", dict(
         activity_date=now_datetime(), activity_type="OSINT",
         description="ALERT monitoraggio: " + " | ".join(lines[:6]) + (" …" if len(lines) > 6 else ""),
