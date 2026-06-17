@@ -41,6 +41,13 @@ def _wallets_of_case(case):
 
 
 def _recipients(case):
+    # La casella ufficiale ha precedenza: se configurata, gli alert di
+    # monitoraggio NON vanno alle email personali degli investigatori.
+    extra = frappe.conf.get("monitor_alert_recipients")
+    if extra:
+        rec = [e.strip() for e in str(extra).split(",") if e.strip()]
+        if rec:
+            return list(dict.fromkeys(rec))
     rec = []
     inv = case.get("assigned_investigator")
     if inv:
@@ -49,9 +56,6 @@ def _recipients(case):
             em = frappe.db.get_value("User", user, "email") or user
             if em and "@" in em:
                 rec.append(em)
-    extra = frappe.conf.get("monitor_alert_recipients")
-    if extra:
-        rec += [e.strip() for e in str(extra).split(",") if e.strip()]
     if not rec:
         rec.append("admin@thanatos.agency")
     return list(dict.fromkeys(rec))
