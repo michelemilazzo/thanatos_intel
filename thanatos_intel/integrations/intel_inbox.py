@@ -36,10 +36,10 @@ def on_communication_insert(doc, method=None):
     """
     if doc.communication_type != "Communication":
         return
-    if doc.reference_doctype and doc.reference_name:
-        return  # già linkato (es. da threading Message-ID)
     if doc.sent_or_received != "Received":
         return  # solo inbound
+    # NB: NON saltiamo se già linkato — la pratica ha priorità su Helpdesk/CRM
+    # (che girano prima e potrebbero aver linkato l'email a un HD Ticket).
 
     sender = _extract_email(doc.sender or "")
     if not sender:
@@ -58,7 +58,10 @@ def on_communication_insert(doc, method=None):
                 {"platform_user": user}, "name")
 
     if not client_name:
-        _create_lead_from_unknown(doc, sender)
+        # nessun cliente noto: se Helpdesk/threading l'ha già linkato (HD Ticket),
+        # lascia stare; altrimenti crea un Lead CRM.
+        if not (doc.reference_doctype and doc.reference_name):
+            _create_lead_from_unknown(doc, sender)
         return
 
     # Find latest open case for this client
