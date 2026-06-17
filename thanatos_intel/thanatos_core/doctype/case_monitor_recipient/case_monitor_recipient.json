@@ -1,0 +1,53 @@
+{
+ "actions": [],
+ "creation": "2026-06-17 00:00:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "recipient_type",
+  "operator",
+  "email"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "default": "Investigatore assegnato",
+   "fieldname": "recipient_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Destinatario",
+   "options": "Investigatore assegnato\nCliente\nOperatore del caso\nEmail personalizzata",
+   "reqd": 1
+  },
+  {
+   "columns": 4,
+   "depends_on": "eval:doc.recipient_type=='Operatore del caso'",
+   "fieldname": "operator",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Operatore"
+  },
+  {
+   "columns": 4,
+   "depends_on": "eval:doc.recipient_type=='Email personalizzata'",
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Email",
+   "options": "Email"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-17 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "Case Monitor Recipient",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

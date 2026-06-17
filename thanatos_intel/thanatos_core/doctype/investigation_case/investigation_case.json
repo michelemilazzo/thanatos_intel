@@ -1,280 +1,296 @@
 {
-  "doctype": "DocType",
-  "name": "Investigation Case",
-  "module": "Thanatos Core",
-  "track_changes": 1,
-  "autoname": "field:case_number",
-  "title_field": "case_title",
-  "search_fields": "case_number,case_title,client",
-  "fields": [
-    {
-      "fieldname": "sb_identity",
-      "fieldtype": "Section Break",
-      "label": "Case Identity"
-    },
-    {
-      "fieldname": "case_number",
-      "fieldtype": "Data",
-      "label": "Case Number",
-      "read_only": 1,
-      "in_list_view": 1,
-      "description": "Auto: CASE-YYYY-NNNN",
-      "unique": 1
-    },
-    {
-      "fieldname": "case_title",
-      "fieldtype": "Data",
-      "label": "Case Title",
-      "reqd": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "case_type",
-      "fieldtype": "Link",
-      "label": "Case Type",
-      "options": "Case Type",
-      "reqd": 1,
-      "in_list_view": 1,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "cb_identity",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "status",
-      "fieldtype": "Select",
-      "label": "Status",
-      "options": "Draft\nOpen\nIn Progress\nReview\nClosed\nCancelled",
-      "default": "Draft",
-      "in_list_view": 1,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "priority",
-      "fieldtype": "Select",
-      "label": "Priority",
-      "options": "Normal\nHigh\nUrgent",
-      "default": "Normal",
-      "in_list_view": 1,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "sb_parties",
-      "fieldtype": "Section Break",
-      "label": "Parties"
-    },
-    {
-      "fieldname": "client",
-      "fieldtype": "Link",
-      "label": "Client",
-      "options": "Investigation Client",
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "assigned_investigator",
-      "fieldtype": "Link",
-      "label": "Assigned Investigator",
-      "options": "Investigator",
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "cb_parties",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "services",
-      "fieldtype": "Table MultiSelect",
-      "label": "Servizi",
-      "options": "Case Service Item"
-    },
-    {
-      "fieldname": "payment_status",
-      "fieldtype": "Select",
-      "label": "Payment Status",
-      "options": "Pending\nPaid\nPartial",
-      "default": "Pending"
-    },
-    {
-      "fieldname": "sb_dates",
-      "fieldtype": "Section Break",
-      "label": "Timeline"
-    },
-    {
-      "fieldname": "opening_date",
-      "fieldtype": "Date",
-      "label": "Opening Date",
-      "default": "Today"
-    },
-    {
-      "fieldname": "cb_dates",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "closing_date",
-      "fieldtype": "Date",
-      "label": "Closing Date"
-    },
-    {
-      "fieldname": "sb_desc",
-      "fieldtype": "Section Break",
-      "label": "Description"
-    },
-    {
-      "fieldname": "description",
-      "fieldtype": "Text Editor",
-      "label": "Description"
-    },
-    {
-      "fieldname": "summary",
-      "fieldtype": "Text",
-      "label": "Summary / AI Draft"
-    },
-    {
-      "fieldname": "sb_assignments",
-      "fieldtype": "Section Break",
-      "label": "Case Assignments / Commissions",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "case_assignments",
-      "fieldtype": "Table",
-      "label": "Assignments",
-      "options": "Case Assignment",
-      "description": "Investigatori / Agenzie / Avvocati / Commercialisti che gestiscono il caso con relativa % commissione su revenue"
-    },
-    {
-      "fieldname": "sb_entities",
-      "fieldtype": "Section Break",
-      "label": "Entities Involved"
-    },
-    {
-      "fieldname": "case_entities",
-      "fieldtype": "Table",
-      "label": "Entities",
-      "options": "Case Entity"
-    },
-    {
-      "fieldname": "sb_activities",
-      "fieldtype": "Section Break",
-      "label": "Activities Log"
-    },
-    {
-      "fieldname": "case_activities",
-      "fieldtype": "Table",
-      "label": "Activities",
-      "options": "Case Activity"
-    },
-    {
-      "fieldname": "sb_integrations",
-      "fieldtype": "Section Break",
-      "label": "Integrazioni",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "drive_folder",
-      "fieldtype": "Data",
-      "label": "Drive Folder ID",
-      "read_only": 1,
-      "hidden": 0,
-      "in_list_view": 0,
-      "in_standard_filter": 0,
-      "no_copy": 1,
-      "print_hide": 1
-    },
-    {
-      "fieldname": "sb_outcome",
-      "fieldtype": "Section Break",
-      "label": "Outcome",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "final_verdict",
-      "fieldtype": "Select",
-      "label": "Final Verdict",
-      "options": "Pending\nFraud Confirmed\nClean\nInconclusive",
-      "default": "Pending"
-    },
-    {
-      "fieldname": "cb_outcome",
-      "fieldtype": "Column Break"
-    },
-    {
-      "fieldname": "risk_score_final",
-      "fieldtype": "Int",
-      "label": "Final Risk Score",
-      "description": "0-100"
-    },
-    {
-      "fieldname": "wf_section",
-      "fieldtype": "Section Break",
-      "label": "Workflow pratica",
-      "collapsible": 1
-    },
-    {
-      "fieldname": "blueprint",
-      "fieldtype": "Link",
-      "label": "Service Blueprint",
-      "options": "Service Blueprint"
-    },
-    {
-      "fieldname": "workflow_active",
-      "fieldtype": "Check",
-      "label": "Motore attivo",
-      "default": "0"
-    },
-    {
-      "fieldname": "current_step_seq",
-      "fieldtype": "Int",
-      "label": "Step corrente"
-    },
-    {
-      "fieldname": "identity_tier_required",
-      "fieldtype": "Select",
-      "label": "Identità richiesta",
-      "options": "Base\nKYC\nKYB\nKIT",
-      "read_only": 1
-    },
-    {
-      "fieldname": "case_steps",
-      "fieldtype": "Table",
-      "label": "Step della pratica",
-      "options": "Case Step Instance"
-    }
-  ],
-  "permissions": [
-    {
-      "role": "Investigation Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 1,
-      "report": 1,
-      "export": 1,
-      "print": 1,
-      "email": 1,
-      "share": 1
-    },
-    {
-      "role": "Investigator",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "report": 1,
-      "print": 1
-    },
-    {
-      "role": "Lawyer",
-      "read": 1,
-      "print": 1
-    },
-    {
-      "role": "Billing Manager",
-      "read": 1
-    },
-    {
-      "role": "Investigation Client",
-      "read": 1
-    }
-  ]
+ "doctype": "DocType",
+ "name": "Investigation Case",
+ "module": "Thanatos Core",
+ "track_changes": 1,
+ "autoname": "field:case_number",
+ "title_field": "case_title",
+ "search_fields": "case_number,case_title,client",
+ "fields": [
+  {
+   "fieldname": "sb_identity",
+   "fieldtype": "Section Break",
+   "label": "Case Identity"
+  },
+  {
+   "fieldname": "case_number",
+   "fieldtype": "Data",
+   "label": "Case Number",
+   "read_only": 1,
+   "in_list_view": 1,
+   "description": "Auto: CASE-YYYY-NNNN",
+   "unique": 1
+  },
+  {
+   "fieldname": "case_title",
+   "fieldtype": "Data",
+   "label": "Case Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "case_type",
+   "fieldtype": "Link",
+   "label": "Case Type",
+   "options": "Case Type",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "cb_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nOpen\nIn Progress\nReview\nClosed\nCancelled",
+   "default": "Draft",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "Normal\nHigh\nUrgent",
+   "default": "Normal",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sb_parties",
+   "fieldtype": "Section Break",
+   "label": "Parties"
+  },
+  {
+   "fieldname": "client",
+   "fieldtype": "Link",
+   "label": "Client",
+   "options": "Investigation Client",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "assigned_investigator",
+   "fieldtype": "Link",
+   "label": "Assigned Investigator",
+   "options": "Investigator",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "cb_parties",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "services",
+   "fieldtype": "Table MultiSelect",
+   "label": "Servizi",
+   "options": "Case Service Item"
+  },
+  {
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment Status",
+   "options": "Pending\nPaid\nPartial",
+   "default": "Pending"
+  },
+  {
+   "fieldname": "sb_dates",
+   "fieldtype": "Section Break",
+   "label": "Timeline"
+  },
+  {
+   "fieldname": "opening_date",
+   "fieldtype": "Date",
+   "label": "Opening Date",
+   "default": "Today"
+  },
+  {
+   "fieldname": "cb_dates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "closing_date",
+   "fieldtype": "Date",
+   "label": "Closing Date"
+  },
+  {
+   "fieldname": "sb_desc",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description"
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Text",
+   "label": "Summary / AI Draft"
+  },
+  {
+   "fieldname": "sb_assignments",
+   "fieldtype": "Section Break",
+   "label": "Case Assignments / Commissions",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "case_assignments",
+   "fieldtype": "Table",
+   "label": "Assignments",
+   "options": "Case Assignment",
+   "description": "Investigatori / Agenzie / Avvocati / Commercialisti che gestiscono il caso con relativa % commissione su revenue"
+  },
+  {
+   "fieldname": "sb_entities",
+   "fieldtype": "Section Break",
+   "label": "Entities Involved"
+  },
+  {
+   "fieldname": "case_entities",
+   "fieldtype": "Table",
+   "label": "Entities",
+   "options": "Case Entity"
+  },
+  {
+   "fieldname": "sb_activities",
+   "fieldtype": "Section Break",
+   "label": "Activities Log"
+  },
+  {
+   "fieldname": "case_activities",
+   "fieldtype": "Table",
+   "label": "Activities",
+   "options": "Case Activity"
+  },
+  {
+   "fieldname": "sb_integrations",
+   "fieldtype": "Section Break",
+   "label": "Integrazioni",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "drive_folder",
+   "fieldtype": "Data",
+   "label": "Drive Folder ID",
+   "read_only": 1,
+   "hidden": 0,
+   "in_list_view": 0,
+   "in_standard_filter": 0,
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "sb_monitor",
+   "fieldtype": "Section Break",
+   "label": "Monitoraggio Wallet"
+  },
+  {
+   "fieldname": "monitor_alerts_html",
+   "fieldtype": "HTML",
+   "options": "<p class='text-muted small'>Chi riceve gli alert di monitoraggio dei wallet di questo caso. Se vuoto, l'alert va alla casella ufficiale configurata (o all'investigatore assegnato). L'investigatore puo delegare: aggiungere righe per inviare a se stesso, al cliente, a un operatore del caso (tecnico, CTU, legale...) o a un'email personalizzata.</p>"
+  },
+  {
+   "fieldname": "monitor_recipients",
+   "fieldtype": "Table",
+   "label": "Destinatari Alert",
+   "options": "Case Monitor Recipient"
+  },
+  {
+   "fieldname": "sb_outcome",
+   "fieldtype": "Section Break",
+   "label": "Outcome",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "final_verdict",
+   "fieldtype": "Select",
+   "label": "Final Verdict",
+   "options": "Pending\nFraud Confirmed\nClean\nInconclusive",
+   "default": "Pending"
+  },
+  {
+   "fieldname": "cb_outcome",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "risk_score_final",
+   "fieldtype": "Int",
+   "label": "Final Risk Score",
+   "description": "0-100"
+  },
+  {
+   "fieldname": "wf_section",
+   "fieldtype": "Section Break",
+   "label": "Workflow pratica",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "blueprint",
+   "fieldtype": "Link",
+   "label": "Service Blueprint",
+   "options": "Service Blueprint"
+  },
+  {
+   "fieldname": "workflow_active",
+   "fieldtype": "Check",
+   "label": "Motore attivo",
+   "default": "0"
+  },
+  {
+   "fieldname": "current_step_seq",
+   "fieldtype": "Int",
+   "label": "Step corrente"
+  },
+  {
+   "fieldname": "identity_tier_required",
+   "fieldtype": "Select",
+   "label": "Identit\u00e0 richiesta",
+   "options": "Base\nKYC\nKYB\nKIT",
+   "read_only": 1
+  },
+  {
+   "fieldname": "case_steps",
+   "fieldtype": "Table",
+   "label": "Step della pratica",
+   "options": "Case Step Instance"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Investigator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Lawyer",
+   "read": 1,
+   "print": 1
+  },
+  {
+   "role": "Billing Manager",
+   "read": 1
+  },
+  {
+   "role": "Investigation Client",
+   "read": 1
+  }
+ ]
 }

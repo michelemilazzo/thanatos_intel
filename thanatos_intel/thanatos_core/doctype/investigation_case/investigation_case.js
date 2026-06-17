@@ -11,6 +11,8 @@ frappe.ui.form.on('Investigation Case', {
             frm.page.set_indicator(frm.doc.status, colors[frm.doc.status] || 'grey');
         }
 
+        thanatos_set_monitor_operators(frm);
+
         if (!frm.is_new() && frm.doc.drive_folder) {
             frm.add_custom_button(__('Apri Drive'), () => {
                 window.open('/drive?entity=' + frm.doc.drive_folder, '_blank');
@@ -277,4 +279,26 @@ frappe.ui.form.on('Investigation Case', {
     after_save(frm) {
         ThanatosPipeline.render(frm, 'get_case_pipeline');
     }
+});
+
+
+function thanatos_set_monitor_operators(frm) {
+    // Popola la dropdown 'Operatore' dei destinatari alert con gli operatori
+    // assegnati al caso (tecnico, CTU, legale, ...). Il valore conserva l'email
+    // cosi' il backend la estrae direttamente.
+    const grid = frm.fields_dict.monitor_recipients && frm.fields_dict.monitor_recipients.grid;
+    if (!grid) return;
+    const opts = [''];
+    (frm.doc.case_assignments || []).forEach(a => {
+        if (!a.assignee_email) return;
+        const role = a.role_description ? ` ${a.role_description}` : '';
+        opts.push(`${a.assignee || a.assignee_type} (${a.assignee_type}${role}) — ${a.assignee_email}`);
+    });
+    grid.update_docfield_property('operator', 'options', opts.join('\n'));
+    grid.refresh();
+}
+
+frappe.ui.form.on('Case Assignment', {
+    assignee_email(frm) { thanatos_set_monitor_operators(frm); },
+    case_assignments_remove(frm) { thanatos_set_monitor_operators(frm); }
 });

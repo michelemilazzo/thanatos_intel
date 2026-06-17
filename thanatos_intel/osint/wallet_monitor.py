@@ -10,6 +10,7 @@ Stato precedente conservato in osint_raw['_monitor'] della Investigation Entity.
 Destinatari override: site_config 'monitor_alert_recipients' (csv).
 """
 import json
+import re
 
 import frappe
 from frappe.utils import now, now_datetime
@@ -40,25 +41,67 @@ def _wallets_of_case(case):
     return out
 
 
+_EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+
+
+def _investigator_email(case):
+    inv = case.get("assigned_investigator")
+    if not inv:
+        return None
+    user = frappe.db.get_value("Investigator", inv, "platform_user")
+    if not user:
+        return None
+    em = frappe.db.get_value("User", user, "email") or user
+    return em if em and "@" in em else None
+
+
+def _client_email(case):
+    cl = case.get("client")
+    if not cl:
+        return None
+    em = frappe.db.get_value("Investigation Client", cl, "email")
+    if not em:
+        pu = frappe.db.get_value("Investigation Client", cl, "platform_user")
+        em = frappe.db.get_value("User", pu, "email") if pu else None
+    return em if em and "@" in em else None
+
+
+def _row_email(case, row):
+    t = row.get("recipient_type")
+    if t == "Investigatore assegnato":
+        return _investigator_email(case)
+    if t == "Cliente":
+        return _client_email(case)
+    if t == "Operatore del caso":
+        m = _EMAIL_RE.search(row.get("operator") or "")
+        return m.group(0) if m else None
+    if t == "Email personalizzata":
+        em = (row.get("email") or "").strip()
+        return em if "@" in em else None
+    return None
+
+
 def _recipients(case):
-    # La casella ufficiale ha precedenza: se configurata, gli alert di
-    # monitoraggio NON vanno alle email personali degli investigatori.
+    # 1) Selezione per-caso (delega dell'investigatore): se valorizzata e'
+    #    autoritativa e ha precedenza su tutto.
+    rec = []
+    for row in (case.get("monitor_recipients") or []):
+        em = _row_email(case, row)
+        if em:
+            rec.append(em)
+    if rec:
+        return list(dict.fromkeys(rec))
+    # 2) Casella ufficiale globale (site_config), niente email personali.
     extra = frappe.conf.get("monitor_alert_recipients")
     if extra:
         rec = [e.strip() for e in str(extra).split(",") if e.strip()]
         if rec:
             return list(dict.fromkeys(rec))
-    rec = []
-    inv = case.get("assigned_investigator")
-    if inv:
-        user = frappe.db.get_value("Investigator", inv, "platform_user")
-        if user:
-            em = frappe.db.get_value("User", user, "email") or user
-            if em and "@" in em:
-                rec.append(em)
-    if not rec:
-        rec.append("admin@thanatos.agency")
-    return list(dict.fromkeys(rec))
+    # 3) Investigatore assegnato, infine fallback admin.
+    em = _investigator_email(case)
+    if em:
+        return [em]
+    return ["admin@thanatos.agency"]
 
 
 def check_wallet(address):
