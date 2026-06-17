@@ -465,8 +465,6 @@ def dispatch(mandate: str, method: str, **kw) -> dict:
         return libresign_send(mandate)
     if method == "MMOS_SIGN":
         return mmos_sign_send(mandate)
-    if method == "DOCUSEAL":
-        return docuseal_send(mandate)
     if method == "DOCUMENSO":
         return documenso_send(mandate)
     if method == "OPENSIGN":

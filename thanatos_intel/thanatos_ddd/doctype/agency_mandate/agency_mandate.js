@@ -17,43 +17,26 @@ frappe.ui.form.on('Agency Mandate', {
             }, __('Firma'));
         }
 
-        // Invia a DocuSeal
-        if (!frm.is_new() && frm.doc.mandate_pdf && !frm.doc.docuseal_submission_id
-                && frm.doc.status !== 'Signed') {
-            frm.add_custom_button(__('Invia a DocuSeal ✍'), () => {
+        // Invia per firma (MMOS Sign — metodo default)
+        if (!frm.is_new() && frm.doc.mandate_pdf && frm.doc.status !== 'Signed') {
+            frm.add_custom_button(__('Invia per firma (MMOS Sign) ✍'), () => {
                 frappe.confirm(
-                    'Inviare il mandato a DocuSeal per la firma digitale?',
+                    'Inviare il mandato in firma con MMOS Sign?',
                     () => {
                         frappe.show_alert({ message: 'Invio in corso...', indicator: 'blue' });
                         frappe.call({
-                            method: 'thanatos_intel.integrations.docuseal.send_to_docuseal',
-                            args: { mandate_name: frm.doc.name },
+                            method: 'thanatos_intel.thanatos_ddd.signature_methods.dispatch',
+                            args: { mandate: frm.doc.name, method: 'MMOS_SIGN' },
                             callback(r) {
-                                if (r.message && r.message.ok) {
-                                    frappe.show_alert({ message: 'Inviato! Link firma: ' + (r.message.signing_url || ''), indicator: 'green' });
+                                if (r.message && r.message.status === 'sent') {
+                                    frappe.show_alert({ message: 'Inviato! Link firma: ' + (r.message.sign_url || ''), indicator: 'green' });
                                     frm.reload_doc();
                                 } else {
-                                    frappe.msgprint({ title: 'Errore', message: r.message?.error || 'Errore DocuSeal', indicator: 'red' });
+                                    frappe.msgprint({ title: 'Errore', message: r.message?.error || 'Errore invio firma', indicator: 'red' });
                                 }
                             }
                         });
                     }
-                );
-            }, __('Firma'));
-        }
-
-        // Link al PDF firmato
-        if (frm.doc.docuseal_signing_url && frm.doc.status === 'Pending Signature') {
-            frm.add_custom_button(__('Apri link firma'), () => {
-                window.open(frm.doc.docuseal_signing_url, '_blank');
-            }, __('Firma'));
-        }
-
-        // Copia link negli appunti
-        if (frm.doc.docuseal_signing_url && frm.doc.status === 'Pending Signature') {
-            frm.add_custom_button(__('Copia link firma'), () => {
-                navigator.clipboard.writeText(frm.doc.docuseal_signing_url).then(() =>
-                    frappe.show_alert({ message: 'Link copiato!', indicator: 'green' })
                 );
             }, __('Firma'));
         }
