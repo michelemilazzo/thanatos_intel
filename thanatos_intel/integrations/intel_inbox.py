@@ -281,13 +281,23 @@ def _ensure_file_folder(case_name: str) -> str:
 
 
 def ensure_case_folder_hook(doc, method=None):
-    """Wrapper called by Frappe doc_events on Investigation Case after_insert."""
+    """Wrapper called by Frappe doc_events on Investigation Case after_insert.
+
+    La cartella Drive del caso e una risorsa di sistema: va creata anche quando
+    il caso e aperto da un cliente (che NON ha permessi Drive). Si esegue percio
+    come Administrator, ripristinando l'utente originale (evita il leak di
+    'You don't have permissions' nei _server_messages e crea davvero la cartella).
+    """
+    user = frappe.session.user
     try:
+        frappe.set_user("Administrator")
         folder_id = ensure_case_folder(doc.name)
         if folder_id:
             frappe.db.set_value("Investigation Case", doc.name, "drive_folder", folder_id, update_modified=False)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "ensure_case_folder_hook")
+    finally:
+        frappe.set_user(user)
 
 
 @frappe.whitelist()
