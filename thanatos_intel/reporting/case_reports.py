@@ -337,6 +337,66 @@ def send_report_to_docuseal(file_url, case_name, signer_email=None, signer_name=
     return {"ok": True, "signing_url": url,
             "submission_id": first.get("submission_id") or first.get("id")}
 
+@frappe.whitelist()
+def send_report_to_mmos_sign(file_url, case_name, signer_email=None, signer_name=None):
+    """Invia un PDF report a MMOS Sign (engine PAdES interno) per la firma.
+
+    Gemella di :func:`send_report_to_docuseal` (WAVE 2, additiva): non sostituisce
+    DocuSeal, lo affianca. Crea una Signature Request mmos_sign dal PDF gia'
+    certificato e la invia in firma via mmos_sign.api.
+    """
+    frappe.only_for(("System Manager", "Investigation Manager", "Investigator"))
+    import os
+    from mmos_sign import api as _ms
+
+    if not file_url.lower().endswith(".pdf"):
+        frappe.throw("Inviare un PDF. Converti prima il file con 'Converti in PDF'.")
+
+    case = frappe.get_doc("Investigation Case", case_name)
+    if not signer_email and case.client:
+        signer_email = frappe.db.get_value("Investigation Client", case.client, "email")
+        signer_name = signer_name or frappe.db.get_value("Investigation Client", case.client, "client_name")
+    if not signer_email:
+        frappe.throw("Email del firmatario mancante.")
+
+    pdf_path = frappe.get_site_path(
+        "private", "files", file_url.split("/private/files/")[-1]
+    ) if "/private/files/" in file_url else frappe.get_site_path(
+        "public", "files", file_url.split("/files/")[-1])
+    if not os.path.exists(pdf_path):
+        frappe.throw("PDF non trovato: " + pdf_path)
+    with open(pdf_path, "rb") as fh:
+        pdf_bytes = fh.read()
+
+    req = frappe.new_doc("Signature Request")
+    req.reference_doctype = "Investigation Case"
+    req.reference_name = case_name
+    req.signing_mode = "Single"
+    req.signer_email = signer_email
+    req.signer_name = signer_name or signer_email
+    try:
+        req.signing_plan = "Advanced (AdES)"
+    except Exception:
+        pass
+    req.insert(ignore_permissions=True)
+    fdoc = frappe.get_doc({
+        "doctype": "File", "file_name": f"{req.name}_source.pdf",
+        "attached_to_doctype": "Signature Request", "attached_to_name": req.name,
+        "is_private": 1, "content": pdf_bytes,
+    }).insert(ignore_permissions=True)
+    req.db_set("source_pdf", fdoc.file_url, update_modified=False)
+    frappe.db.commit()
+
+    res = _ms.send_request(req.name)
+
+    case.append("case_activities", {"activity_type": "Report", "activity_date": now_datetime(),
+                "description": "Report %s inviato a MMOS Sign per firma (%s)." % (os.path.basename(file_url), signer_email),
+                "operator": frappe.session.user})
+    case.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"ok": True, "signing_url": res.get("url"), "signature_request": req.name}
+
+
 
 # ---------------------------------------------------------------------------
 # Organizzazione Drive (bottone + hook automatico)

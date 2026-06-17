@@ -378,6 +378,63 @@ def libresign_send(mandate: str) -> dict:
         return {"error": str(e)[:300], "method": "LIBRESIGN"}
 
 
+# ---------- MMOS Sign (engine PAdES, additivo accanto a DocuSeal) ----------
+def mmos_sign_send(mandate: str) -> dict:
+    """Crea una Signature Request mmos_sign dal mandato e la invia in firma.
+
+    Metodo AGGIUNTIVO accanto a DocuSeal: usa l'engine PAdES interno
+    (mmos-sign-engine) via mmos_sign.api. Riusa il PDF gia' renderizzato del
+    mandato (m.mandate_pdf) se presente, altrimenti rende il print format.
+    """
+    m = frappe.get_doc("Agency Mandate", mandate)
+    app = frappe.get_doc("Applicant Profile", m.applicant) if m.applicant else None
+    signer_email = (app.email if app and app.email else None) or "guest@thanatos.agency"
+    signer_name = (app.full_legal_name if app else None) or signer_email
+
+    from mmos_sign import api as _ms
+
+    # Se esiste gia' un PDF del mandato, crea la richiesta direttamente da quel PDF;
+    # altrimenti delega al render del print format via create_request_from_print.
+    if m.mandate_pdf:
+        src = frappe.get_site_path("private", "files",
+            m.mandate_pdf.split("/private/files/")[-1])
+        with open(src, "rb") as f:
+            pdf_bytes = f.read()
+        req = frappe.new_doc("Signature Request")
+        req.reference_doctype = "Agency Mandate"
+        req.reference_name = m.name
+        req.signing_mode = "Single"
+        req.signer_email = signer_email
+        req.signer_name = signer_name
+        try:
+            req.signing_plan = "Advanced (AdES)"
+        except Exception:
+            pass
+        req.insert(ignore_permissions=True)
+        fdoc = frappe.get_doc({
+            "doctype": "File", "file_name": f"{req.name}_source.pdf",
+            "attached_to_doctype": "Signature Request", "attached_to_name": req.name,
+            "is_private": 1, "content": pdf_bytes,
+        }).insert(ignore_permissions=True)
+        req.db_set("source_pdf", fdoc.file_url, update_modified=False)
+        frappe.db.commit()
+        res = _ms.send_request(req.name)
+        sig_req, sign_url = req.name, res.get("url")
+    else:
+        out = _ms.create_request_from_print(
+            reference_doctype="Agency Mandate", reference_name=m.name,
+            signer_email=signer_email, signer_name=signer_name, send=True,
+        )
+        sig_req, sign_url = out.get("signature_request"), out.get("url")
+
+    m.signature_ref = f"MMOSSign:{sig_req}"
+    m.status = "Pending Signature"
+    m.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"method": "MMOS_SIGN", "signature_request": sig_req,
+            "sign_url": sign_url, "status": "sent"}
+
+
 # ---------- Dispatcher -------------------------------------------------------
 @frappe.whitelist(methods=["POST"])
 def dispatch(mandate: str, method: str, **kw) -> dict:
@@ -406,6 +463,8 @@ def dispatch(mandate: str, method: str, **kw) -> dict:
         return hellosign_send(mandate)
     if method == "LIBRESIGN":
         return libresign_send(mandate)
+    if method == "MMOS_SIGN":
+        return mmos_sign_send(mandate)
     if method == "DOCUSEAL":
         return docuseal_send(mandate)
     if method == "DOCUMENSO":
@@ -418,6 +477,9 @@ def dispatch(mandate: str, method: str, **kw) -> dict:
 @frappe.whitelist()
 def list_methods() -> list:
     return [
+        {"id": "MMOS_SIGN", "label": "MMOS Sign \u2014 PAdES interno (firma avanzata)",
+         "scope": "Globale (ISO 32000 / ETSI PAdES)", "level": "Avanzata (default)",
+         "enabled": True, "default": True},
         {"id": "SES", "label": "Firma elettronica semplice (canvas)",
          "scope": "Globale", "level": "Base", "enabled": True},
         {"id": "SES_OTP", "label": "SES + OTP SMS",

@@ -201,7 +201,7 @@ function showUI(){
   document.getElementById("ui-canvas").style.display = ["SES","SES_OTP"].includes(m) ? "block":"none";
   document.getElementById("ui-otp").style.display    = m === "SES_OTP" ? "block":"none";
   document.getElementById("ui-pades").style.display  = m === "AES_PADES" ? "block":"none";
-  document.getElementById("ui-ext").style.display    = ["DOCUSIGN","ADOBE_SIGN","HELLOSIGN","DOCUSEAL","DOCUMENSO","OPENSIGN","LIBRESIGN"].includes(m) ? "block":"none";
+  document.getElementById("ui-ext").style.display    = ["MMOS_SIGN","DOCUSIGN","ADOBE_SIGN","HELLOSIGN","DOCUSEAL","DOCUMENSO","OPENSIGN","LIBRESIGN"].includes(m) ? "block":"none";
   check();
 }
 document.querySelectorAll('input[name=sigmethod]').forEach(r=>r.onchange=showUI);
@@ -214,7 +214,7 @@ function check(){
   if (m==="SES" || m==="SES_OTP") ok = ok && hasDrawn;
   if (m==="SES_OTP") ok = ok && document.getElementById("otp-code").value.length === 6;
   document.getElementById("submit").disabled = !ok;
-  const QR_OK = ["DOCUSEAL","DOCUMENSO","OPENSIGN","LIBRESIGN","DOCUSIGN","ADOBE_SIGN","HELLOSIGN"];
+  const QR_OK = ["MMOS_SIGN","DOCUSEAL","DOCUMENSO","OPENSIGN","LIBRESIGN","DOCUSIGN","ADOBE_SIGN","HELLOSIGN"];
   document.getElementById("qr-btn").disabled = !(accepted && QR_OK.includes(m));
 }
 document.getElementById("otp-code").addEventListener("input", check);
