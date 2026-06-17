@@ -125,15 +125,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
     <hr class="divider-line" style="margin:24px auto 20px;">
     <div class="section-label">Vuoi ricevere mandati di incarico</div>
     <div class="types" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));">
-      <div class="type-card" onclick="selectType('affiliate')">
+      <div class="type-card" onclick="selectAffiliate('Investigator')">
         <div class="ico">🕵️</div>
         <h3>Investigatore privato</h3>
         <p>Ricevi mandati nella tua area operativa. Entra nella rete.</p>
       </div>
-      <div class="type-card" onclick="selectType('affiliate')">
+      <div class="type-card" onclick="selectAffiliate('Agency')">
         <div class="ico">🔍</div>
         <h3>Agenzia investigativa</h3>
         <p>Collabora su pratiche complesse o internazionali.</p>
+      </div>
+      <div class="type-card" onclick="selectAffiliate('Consultant')">
+        <div class="ico">🧰</div>
+        <h3>Collaboratore tecnico / CTU</h3>
+        <p>CTU, perito, consulente tecnico o specialista. Ricevi incarichi su competenza.</p>
       </div>
     </div>
   </div>
@@ -282,6 +287,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
       <select id="a-role">
         <option value="Investigator">Investigatore privato</option>
         <option value="Agency">Agenzia investigativa</option>
+        <option value="Consultant">Collaboratore tecnico / CTU / Perito</option>
+        <option value="Lawyer">Avvocato collaboratore</option>
+        <option value="Accountant">Commercialista collaboratore</option>
       </select>
     </div>
   </div>
@@ -294,7 +302,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
   <div class="grid2">
     <div class="field"><label>Licenza / n. autorizzazione</label><input id="a-license"></div>
     <div class="field"><label>Specializzazione</label>
-      <input id="a-spec" placeholder="es. DDD passaporti, OSINT, sorveglianza"></div>
+      <input id="a-spec" placeholder="es. CTU, perizia tecnica, DDD passaporti, OSINT, sorveglianza"></div>
   </div>
   <div class="field"><label>Note</label>
     <textarea id="a-msg" style="min-height:70px" placeholder="Esperienza, lingue, disponibilità…"></textarea></div>
@@ -342,10 +350,17 @@ function getExtraInfo(typeKey) {
   }
 }
 
+function selectAffiliate(role) {
+  const sel = document.getElementById('a-role');
+  if (sel && role) sel.value = role;
+  selectType('affiliate');
+}
+
 function selectType(t) {
   if (t === 'affiliate') {
     document.getElementById('step1').style.display = 'none';
     document.getElementById('form-affiliate').classList.add('show');
+    window.scrollTo(0, 0);
     return;
   }
   const cfg = TYPE_CFG[t] || TYPE_CFG.altro;
