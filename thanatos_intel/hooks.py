@@ -48,6 +48,10 @@ role_home_page={
 
 get_website_user_home_page='thanatos_intel.utils.portal.get_home_page'
 
+update_website_context=[
+ "thanatos_intel.utils.portal.add_csrf_token",
+]
+
 after_install='thanatos_intel.install.after_install'
 after_migrate='thanatos_intel.install.after_migrate'
 fixtures=[
