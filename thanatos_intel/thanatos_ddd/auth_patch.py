@@ -11,12 +11,9 @@ def allow_thanatos_guest_paths() -> None:
         return
 
     _extra = [
-        "/api/method/thanatos_intel.thanatos_ddd.docuseal.webhook",
-        "/api/method/thanatos_intel.thanatos_ddd.docuseal.serve_mandate_pdf",
-        "/api/method/thanatos_intel.thanatos_ddd.signature_methods.docuseal_webhook",
         "/api/method/thanatos_intel.thanatos_ddd.signature_methods.fetch_mandate_pdf",
         "/api/method/mmos_brand.password_sync.receive_password_sync",
-        # mmos_sign guest e-signature flow (WAVE 2, additivo accanto a DocuSeal)
+        # mmos_sign guest e-signature flow
         "/sign",
         "/api/method/mmos_sign.api.get_request",
         "/api/method/mmos_sign.api.submit_signature",

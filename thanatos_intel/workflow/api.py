@@ -147,7 +147,7 @@ def board(case_name):
 def client_act(case_name, seq):
     """Il cliente completa la propria azione corrente (firma/pagamento/upload).
 
-    F2: registra il completamento e avanza. L'aggancio reale a DocuSeal/Stripe/
+    F2: registra il completamento e avanza. L'aggancio reale a MMOS Sign/Stripe/
     upload sara' agganciato in F2.x/F4 sostituendo questo completamento manuale."""
     if not _can_see_case(case_name):
         frappe.throw(_("Accesso negato."), frappe.PermissionError)

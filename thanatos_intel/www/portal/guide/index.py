@@ -10,7 +10,7 @@ PROCEDURES = [
         "new_url": "/app/diplomatic-eligibility-case/new",
         "steps": [
             {"label": "Verifica identità (KYB/KYC)", "actor": "Operatore", "description": "Verifica documenti del richiedente: persone fisiche → KYC, aziende → KYB."},
-            {"label": "Mandato d'incarico", "actor": "Operatore", "description": "Genera il PDF del mandato e invialo al cliente tramite DocuSeal."},
+            {"label": "Mandato d'incarico", "actor": "Operatore", "description": "Genera il PDF del mandato e invialo al cliente tramite MMOS Sign."},
             {"label": "Firma mandato", "actor": "Cliente", "description": "Il cliente firma elettronicamente il mandato d'incarico."},
             {"label": "Preventivo DDD", "actor": "Operatore", "description": "Emetti la proforma con l'importo del servizio DDD."},
             {"label": "Pagamento", "actor": "Cliente", "description": "Il cliente salda la proforma tramite portale."},

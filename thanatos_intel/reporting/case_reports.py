@@ -1,5 +1,5 @@
 """Report di case: split per tema, PDF brandizzato, push in Drive con tag cliente,
-conversione PDF e invio a DocuSeal per la firma.
+conversione PDF e invio a MMOS Sign per la firma.
 
 Bottoni sul form Investigation Case (menu Report).
 """
@@ -283,67 +283,10 @@ def convert_to_pdf(file_url):
 
 
 @frappe.whitelist()
-def send_report_to_docuseal(file_url, case_name, signer_email=None, signer_name=None):
-    """Invia un PDF report a DocuSeal per la firma. Riusa l'integrazione esistente."""
-    frappe.only_for(("System Manager", "Investigation Manager", "Investigator"))
-    import os
-    import requests
-    from thanatos_intel.integrations.docuseal import _conf, _headers, _create_template_from_pdf, _resolve_pdf_path
-
-    conf = _conf()
-    if not conf["base_url"] or not conf["api_key"]:
-        frappe.throw("DocuSeal non configurato in site_config.")
-    if not file_url.lower().endswith(".pdf"):
-        frappe.throw("Inviare un PDF. Converti prima il file con 'Converti in PDF'.")
-
-    case = frappe.get_doc("Investigation Case", case_name)
-    if not signer_email:
-        if case.client:
-            signer_email = frappe.db.get_value("Investigation Client", case.client, "email")
-            signer_name = signer_name or frappe.db.get_value("Investigation Client", case.client, "client_name")
-    if not signer_email:
-        frappe.throw("Email del firmatario mancante.")
-
-    pdf_path = _resolve_pdf_path(file_url)
-    if not os.path.exists(pdf_path):
-        frappe.throw("PDF non trovato: " + pdf_path)
-
-    ref = (case_name + "-" + os.path.basename(file_url))[:60]
-    template_id = _create_template_from_pdf(ref, pdf_path)
-    tmpl = requests.get(f"{conf['base_url']}/api/templates/{template_id}", headers=_headers(), timeout=10)
-    role = "Prima parte"
-    if tmpl.status_code == 200:
-        roles = [s.get("name", "") for s in tmpl.json().get("submitters", [])]
-        if roles:
-            role = roles[0]
-    payload = {"send_email": True, "submitters": [{"role": role, "email": signer_email, "name": signer_name or signer_email}],
-               "metadata": {"case": case_name, "report": os.path.basename(file_url)}}
-    resp = requests.post(f"{conf['base_url']}/api/templates/{template_id}/submissions",
-                         headers=_headers(), json=payload, timeout=15)
-    if resp.status_code not in (200, 201):
-        requests.delete(f"{conf['base_url']}/api/templates/{template_id}", headers=_headers(), timeout=5)
-        frappe.throw("DocuSeal error %s: %s" % (resp.status_code, resp.text[:200]))
-    data = resp.json()
-    subs = data if isinstance(data, list) else data.get("submitters", [])
-    first = subs[0] if subs else {}
-    slug = first.get("slug", "")
-    url = f"{conf['base_url']}/s/{slug}" if slug else first.get("embed_src", "")
-
-    case.append("case_activities", {"activity_type": "Report", "activity_date": now_datetime(),
-                "description": "Report %s inviato a DocuSeal per firma (%s)." % (os.path.basename(file_url), signer_email),
-                "operator": frappe.session.user})
-    case.save(ignore_permissions=True)
-    frappe.db.commit()
-    return {"ok": True, "signing_url": url,
-            "submission_id": first.get("submission_id") or first.get("id")}
-
-@frappe.whitelist()
 def send_report_to_mmos_sign(file_url, case_name, signer_email=None, signer_name=None):
     """Invia un PDF report a MMOS Sign (engine PAdES interno) per la firma.
 
-    Gemella di :func:`send_report_to_docuseal` (WAVE 2, additiva): non sostituisce
-    DocuSeal, lo affianca. Crea una Signature Request mmos_sign dal PDF gia'
-    certificato e la invia in firma via mmos_sign.api.
+    Crea una Signature Request mmos_sign dal PDF certificato e la invia in firma.
     """
     frappe.only_for(("System Manager", "Investigation Manager", "Investigator"))
     import os

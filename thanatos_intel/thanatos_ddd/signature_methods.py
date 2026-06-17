@@ -222,29 +222,6 @@ def hellosign_send(mandate: str) -> dict:
             "configured": True}
 
 
-# ---------- DocuSeal (17k⭐, single container, MIT) ------------------------
-# Logica spostata in docuseal.py — queste funzioni sono stub di compatibilità.
-
-@frappe.whitelist(allow_guest=True)
-def fetch_mandate_pdf(mandate: str, token: str):
-    """Compat shim → docuseal.serve_mandate_pdf."""
-    from .docuseal import serve_mandate_pdf
-    return serve_mandate_pdf(mandate, token)
-
-
-@frappe.whitelist(allow_guest=True, methods=["POST"])
-def docuseal_webhook():
-    """Compat shim → docuseal.webhook."""
-    from .docuseal import webhook
-    return webhook()
-
-
-def docuseal_send(mandate: str) -> dict:
-    """Compat shim → docuseal.send."""
-    from .docuseal import send
-    return send(mandate)
-
-
 # ---------- Documenso (13k⭐, Next.js, supporta PAdES) ---------------------
 def documenso_send(mandate: str) -> dict:
     base = frappe.conf.get("documenso_base_url")
@@ -378,11 +355,11 @@ def libresign_send(mandate: str) -> dict:
         return {"error": str(e)[:300], "method": "LIBRESIGN"}
 
 
-# ---------- MMOS Sign (engine PAdES, additivo accanto a DocuSeal) ----------
+# ---------- MMOS Sign (engine PAdES interno) ----------
 def mmos_sign_send(mandate: str) -> dict:
     """Crea una Signature Request mmos_sign dal mandato e la invia in firma.
 
-    Metodo AGGIUNTIVO accanto a DocuSeal: usa l'engine PAdES interno
+    Usa l'engine PAdES interno
     (mmos-sign-engine) via mmos_sign.api. Riusa il PDF gia' renderizzato del
     mandato (m.mandate_pdf) se presente, altrimenti rende il print format.
     """

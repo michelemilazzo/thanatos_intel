@@ -75,7 +75,7 @@
                   font-size: 7.5pt; color: #888; text-align: center; line-height: 1.5; }
 
   /* Watermark BOZZA */
-  {% if not doc.docuseal_signed_pdf %}
+  {% if not doc.signed_on %}
   .watermark { position: fixed; top: 45%; left: 20%; transform: rotate(-30deg);
                font-size: 72pt; color: rgba(200,169,110,0.07); font-family: Georgia, serif;
                letter-spacing: 12px; z-index: -1; pointer-events: none; }
@@ -91,7 +91,7 @@
 </head>
 <body>
 
-{% if not doc.docuseal_signed_pdf %}<div class="watermark">BOZZA</div>{% endif %}
+{% if not doc.signed_on %}<div class="watermark">BOZZA</div>{% endif %}
 
 <!-- HEADER -->
 <div class="tx-header">
@@ -227,7 +227,7 @@
   <div class="sig-block">
     <div class="sig-label">Per il Mandatario</div>
     <div class="sig-name">{{ emittente }}</div>
-    {% if doc.docuseal_signed_pdf %}
+    {% if doc.signed_on %}
     <p class="small">Firmato digitalmente il {{ frappe.utils.formatdate(doc.signed_on, "dd/MM/yyyy") if doc.signed_on else "—" }}</p>
     {% else %}
     <div style="height: 40px; margin-top: 10px;"></div>
@@ -237,7 +237,7 @@
   <div class="sig-block">
     <div class="sig-label">Per il Mandante</div>
     <div class="sig-name">{{ applicant.full_legal_name if applicant else "—" }}</div>
-    {% if doc.docuseal_signed_pdf %}
+    {% if doc.signed_on %}
     <p class="small">Firmato digitalmente il {{ frappe.utils.formatdate(doc.signed_on, "dd/MM/yyyy") if doc.signed_on else "—" }}</p>
     {% else %}
     <div style="height: 40px; margin-top: 10px;"></div>

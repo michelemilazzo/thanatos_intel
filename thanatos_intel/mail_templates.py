@@ -159,7 +159,7 @@ def draft_mandate_signing(mandate_name: str) -> dict:
     m = frappe.get_doc("Agency Mandate", mandate_name)
     client_email = _client_email(m.applicant)
     client_name = _client_name(m.applicant)
-    signing_url = m.docuseal_signing_url or ""
+    signing_url = ""
     country = ""
     if m.ddd_case:
         country = frappe.db.get_value("Diplomatic Eligibility Case", m.ddd_case, "country") or ""
@@ -179,7 +179,7 @@ def draft_mandate_signing(mandate_name: str) -> dict:
 
 {"<p><a href='" + signing_url + "' style='background:#1a1a2e;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;display:inline-block;margin-top:12px'>➤ Firma il Mandato</a></p>" if signing_url else "<p><em>(Link firma non ancora disponibile)</em></p>"}
 
-<p>La firma è richiesta tramite la piattaforma sicura DocuSeal. Il processo richiede meno di 2 minuti.</p>
+<p>La firma è richiesta tramite la piattaforma sicura MMOS Sign. Il processo richiede meno di 2 minuti.</p>
 <p>Una volta firmato il documento, riceverà automaticamente una copia via email.</p>
 
 <p>Cordiali saluti,<br>

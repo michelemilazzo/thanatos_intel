@@ -220,7 +220,7 @@ frappe.ui.form.on('Investigation Case', {
             }, __('MMOS AI'));
         }
 
-        // ---- Report: genera per tema, PDF in Drive con tag cliente, firma DocuSeal ----
+        // ---- Report: genera per tema, PDF in Drive con tag cliente, firma MMOS Sign ----
         if (!frm.is_new()) {
             const kinds = {
                 'Report KYB': 'kyb', 'Report Blockchain': 'blockchain',
@@ -244,10 +244,10 @@ frappe.ui.form.on('Investigation Case', {
                 }, __('Report'));
             });
 
-            frm.add_custom_button(__('Invia a DocuSeal (firma)'), () => {
+            frm.add_custom_button(__('Invia per firma (MMOS Sign)'), () => {
                 const files = (frm.get_files ? frm.get_files() : []).filter(f => (f.file_url || '').toLowerCase().endsWith('.pdf'));
                 const d = new frappe.ui.Dialog({
-                    title: __('Invia report a DocuSeal'),
+                    title: __('Invia report per firma'),
                     fields: [
                         { fieldname: 'file_url', fieldtype: 'Select', label: __('PDF da firmare'), reqd: 1,
                           options: files.map(f => f.file_url).join('\n') },
@@ -257,9 +257,9 @@ frappe.ui.form.on('Investigation Case', {
                     primary_action_label: __('Invia'),
                     primary_action(v) {
                         frappe.call({
-                            method: 'thanatos_intel.reporting.case_reports.send_report_to_docuseal',
+                            method: 'thanatos_intel.reporting.case_reports.send_report_to_mmos_sign',
                             args: { file_url: v.file_url, case_name: frm.doc.name, signer_email: v.signer_email, signer_name: v.signer_name },
-                            freeze: true, freeze_message: __('Invio a DocuSeal…'),
+                            freeze: true, freeze_message: __('Invio in firma…'),
                             callback(r) {
                                 if (r.message && r.message.ok) {
                                     frappe.show_alert({ message: __('Inviato per firma'), indicator: 'green' });

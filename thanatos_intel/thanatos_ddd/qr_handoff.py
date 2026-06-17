@@ -2,7 +2,7 @@
 
 Flow universale:
 1. Cliente apre /portal/ddd/sign?mandate=MND-... su desktop
-2. Sceglie metodo (DocuSeal/Documenso/OpenSign/LibreSign/...)
+2. Sceglie metodo (MMOS Sign/Documenso/OpenSign/LibreSign/...)
 3. Backend chiama provider → riceve sign_url
 4. Genera QR PNG dell'URL e lo restituisce
 5. Cliente scansiona col telefono → completa firma sul mobile
@@ -29,7 +29,7 @@ def _qr_png_base64(url: str, size: int = 10) -> str:
 def create_qr_signing(mandate: str, method: str) -> dict:
     """Lancia il metodo, prende il sign_url, genera QR.
 
-    Per provider che hanno 'sign_url' nel ritorno (DocuSeal, OpenSign,
+    Per provider che hanno 'sign_url' nel ritorno (MMOS Sign, OpenSign,
     LibreSign), incorpora direttamente. Per Documenso/DocuSign che spediscono
     via email, costruisce un fallback link al sign URL del provider.
     """

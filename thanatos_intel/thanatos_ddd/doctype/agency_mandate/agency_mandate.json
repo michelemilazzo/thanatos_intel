@@ -27,17 +27,13 @@
   "section_pdf",
   "mandate_pdf",
   "signed_on",
-  "signature_ref",
-  "section_docuseal",
-  "docuseal_submission_id",
-  "docuseal_signing_url",
-  "docuseal_signed_pdf"
+  "signature_ref"
  ],
  "fields": [
   {
    "fieldname": "billing_entity",
    "fieldtype": "Link",
-   "label": "Entità di fatturazione",
+   "label": "Entit\u00e0 di fatturazione",
    "options": "Billing Entity",
    "read_only": 1,
    "in_list_view": 1,
@@ -174,29 +170,6 @@
    "fieldtype": "Data",
    "label": "Ref firma legacy",
    "hidden": 1
-  },
-  {
-   "fieldname": "section_docuseal",
-   "fieldtype": "Section Break",
-   "label": "DocuSeal"
-  },
-  {
-   "fieldname": "docuseal_submission_id",
-   "fieldtype": "Int",
-   "label": "DocuSeal Submission ID",
-   "read_only": 1
-  },
-  {
-   "fieldname": "docuseal_signing_url",
-   "fieldtype": "Data",
-   "label": "Link firma (invia al cliente)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "docuseal_signed_pdf",
-   "fieldtype": "Attach",
-   "label": "PDF firmato",
-   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,

@@ -32,7 +32,7 @@ PIPELINES = {
             "key": "mandate_signed",
             "label": "Firma mandato",
             "actor": "client",
-            "description": "Il cliente firma il mandato tramite DocuSeal.",
+            "description": "Il cliente firma il mandato tramite MMOS Sign.",
             "portal_url": "/portal",
             "check": lambda c: _check_mandate_signed(c),
         },

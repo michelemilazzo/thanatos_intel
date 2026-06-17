@@ -28,7 +28,7 @@
     {"fieldname": "col_3", "fieldtype": "Column Break"},
     {"fieldname": "sent_on", "fieldtype": "Datetime", "label": "Inviato il", "read_only": 1},
     {"fieldname": "sent_to", "fieldtype": "Data", "label": "Inviato a"},
-    {"fieldname": "sent_channel", "fieldtype": "Select", "label": "Canale invio", "options": "\nEmail\nDocuSeal\nPEC\nConsegna a mano\nMMOS Sign"},
+    {"fieldname": "sent_channel", "fieldtype": "Select", "label": "Canale invio", "options": "\nEmail\nPEC\nConsegna a mano\nMMOS Sign"},
     {"fieldname": "sb_misc", "fieldtype": "Section Break"},
     {"fieldname": "drive_file", "fieldtype": "Data", "label": "Drive File ID", "read_only": 1},
     {"fieldname": "notes", "fieldtype": "Small Text", "label": "Note"},

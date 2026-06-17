@@ -83,7 +83,7 @@ frappe.ui.form.on('Agency Mandate', {
                 });
             }, __('Email'));
 
-            if (frm.doc.docuseal_signing_url) {
+            if (frm.doc.signature_ref) {
                 frm.add_custom_button(__('✉ Link Firma'), () => {
                     frappe.call({
                         method: 'thanatos_intel.mail_templates.draft_mandate_signing',

@@ -65,13 +65,13 @@ frappe.ui.form.on('Case Document', {
 				__('Invio'), __('Conferma'));
 			}, __('Protocollo'));
 
-			frm.add_custom_button(__('Invia a DocuSeal (firma)'), () => {
+			frm.add_custom_button(__('Invia per firma (MMOS Sign)'), () => {
 				frappe.prompt([
 					{fieldname:'signer_email',fieldtype:'Data',label:__('Email firmatario')},
 					{fieldname:'signer_name',fieldtype:'Data',label:__('Nome firmatario')}
-				], (v) => frappe.call({method:'send_docuseal', doc:frm.doc, args:{signer_email:v.signer_email, signer_name:v.signer_name}, freeze:true, freeze_message:__('Invio…'),
+				], (v) => frappe.call({method:'send_mmos_sign', doc:frm.doc, args:{signer_email:v.signer_email, signer_name:v.signer_name}, freeze:true, freeze_message:__('Invio…'),
 					callback(r){ if(r.message&&r.message.ok){ frappe.show_alert({message:__('Inviato per firma'),indicator:'green'}); if(r.message.signing_url) window.open(r.message.signing_url,'_blank'); frm.reload_doc(); } }}),
-				__('Firma DocuSeal'), __('Invia'));
+				__('Firma'), __('Invia'));
 			}, __('Protocollo'));
 		}
 	}

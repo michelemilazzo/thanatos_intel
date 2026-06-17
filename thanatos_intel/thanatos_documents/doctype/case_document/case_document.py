@@ -181,18 +181,8 @@ class CaseDocument(Document):
         return {"status": "Inviato", "protocol_number": self.protocol_number}
 
     @frappe.whitelist()
-    def send_docuseal(self, signer_email=None, signer_name=None):
-        if not self.certified_pdf:
-            frappe.throw("Certificare prima il documento.")
-        from thanatos_intel.reporting.case_reports import send_report_to_docuseal
-        r = send_report_to_docuseal(self.certified_pdf, self.investigation_case, signer_email, signer_name)
-        if r.get("ok"):
-            self.mark_sent("DocuSeal", signer_email)
-        return r
-
-    @frappe.whitelist()
     def send_mmos_sign(self, signer_email=None, signer_name=None):
-        """Gemella di send_docuseal (WAVE 2, additiva): firma via MMOS Sign (engine PAdES)."""
+        """Firma via MMOS Sign (engine PAdES)."""
         if not self.certified_pdf:
             frappe.throw("Certificare prima il documento.")
         from thanatos_intel.reporting.case_reports import send_report_to_mmos_sign
