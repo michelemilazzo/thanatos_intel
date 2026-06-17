@@ -83,13 +83,26 @@ def on_communication_insert(doc, method=None):
         return
 
     case_name = cases[0].name
-    doc.reference_doctype = "Investigation Case"
-    doc.reference_name = case_name
-    doc.save(ignore_permissions=True)
 
-    _audit("email.linked_to_case", case_name,
-           {"sender": sender, "client": client_name,
-            "subject": doc.subject})
+    # KEEP BOTH: se Helpdesk ha già aperto un HD Ticket per questa email, NON
+    # sovrascriviamo — lasciamo l'email sul ticket e colleghiamo il ticket al
+    # caso (campo HD Ticket.investigation_case). Altrimenti linkiamo la
+    # Communication direttamente al caso.
+    if doc.reference_doctype == "HD Ticket" and doc.reference_name:
+        try:
+            if frappe.db.get_value("HD Ticket", doc.reference_name, "investigation_case") != case_name:
+                frappe.db.set_value("HD Ticket", doc.reference_name, "investigation_case", case_name)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "intel_inbox ticket-link")
+        _audit("email.ticket_linked_to_case", case_name,
+               {"sender": sender, "client": client_name, "ticket": doc.reference_name,
+                "subject": doc.subject})
+    else:
+        doc.reference_doctype = "Investigation Case"
+        doc.reference_name = case_name
+        doc.save(ignore_permissions=True)
+        _audit("email.linked_to_case", case_name,
+               {"sender": sender, "client": client_name, "subject": doc.subject})
 
     # Ensure Drive folder exists for this case (creation idempotent)
     try:
