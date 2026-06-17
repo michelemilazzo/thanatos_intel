@@ -8,7 +8,7 @@ per i soli path 'login'/'signup'. PathResolver usa path.strip('/ ') come chiave.
 """
 import frappe
 
-_BYPASS = ("login", "signup")
+_BYPASS = ("login", "signup", "")  # "" = root /, home marketing (webmail su webmail.thanatos.agency via nginx)
 
 
 def neutralize_mail_login_redirect():
@@ -18,6 +18,6 @@ def neutralize_mail_login_redirect():
             return
         path = (req.path or "").strip("/ ")
         if path in _BYPASS:
-            frappe.cache.hset("website_redirects", path, False)
+            frappe.cache.hset("website_redirects", path or "/", False)
     except Exception:
         pass
