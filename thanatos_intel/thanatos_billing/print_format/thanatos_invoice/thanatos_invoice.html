@@ -3,6 +3,8 @@
 {%- set _country = (frappe.db.get_value("Address", doc.customer_address, "country") if doc.customer_address else "") or doc.get("territory") or "" -%}
 {%- set _LMAP = {"Italy":"it","Italia":"it","Romania":"ro","România":"ro","France":"fr","Spain":"es","España":"es","Germany":"de","Deutschland":"de"} -%}
 {%- set LANG2 = _LMAP.get(_country, "") -%}
+{#- se il documento è in lingua "en" → solo inglese (no seconda lingua) -#}
+{%- if doc.get("language") == "en" %}{% set LANG2 = "" %}{% endif -%}
 {%- macro L(en, it="", ro="", fr="", es="", de="") -%}
 {{ en }}{%- set _tr = {"it":it,"ro":ro,"fr":fr,"es":es,"de":de}.get(LANG2, "") -%}{%- if _tr %} <span class="t2">/ {{ _tr }}</span>{%- endif -%}
 {%- endmacro -%}
