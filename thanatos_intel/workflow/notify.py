@@ -49,17 +49,35 @@ def _email_client(case_name, subject, message, action_type=None):
     if not email:
         return False
     url, label = action_link(case_name, action_type)
-    cta = (f"<p style='margin:18px 0'><a href='{url}' "
-           f"style='background:#C8A96E;color:#0A0E1A;padding:10px 20px;border-radius:4px;"
-           f"text-decoration:none;font-weight:bold'>{label} &rsaquo;</a></p>")
+    case_url = f"{frappe.utils.get_url()}/portal/case/{case_name}"
+    # Bulletproof button (table+bgcolor): Outlook ignora il padding sui link <a>,
+    # quindi il bottone va costruito su una cella di tabella con bgcolor.
+    cta = (
+        "<table role='presentation' cellpadding='0' cellspacing='0' border='0' "
+        "style='margin:6px 0 20px'><tr>"
+        f"<td bgcolor='#C8A96E' style='border-radius:4px'>"
+        f"<a href='{url}' style='display:inline-block;padding:13px 26px;"
+        "font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;"
+        f"color:#0A0E1A;text-decoration:none;border-radius:4px'>{label} &rsaquo;</a>"
+        "</td></tr></table>"
+    )
+    # Corpo fluido table-based (Outlook usa il motore Word: niente max-width su div).
+    body = (
+        "<table role='presentation' width='100%' cellpadding='0' cellspacing='0' border='0'>"
+        "<tr><td style='font-family:Arial,Helvetica,sans-serif;font-size:15px;"
+        "line-height:1.6;color:#222'>"
+        f"<p style='margin:0 0 12px'>Gentile {name or 'Cliente'},</p>"
+        f"<p style='margin:0 0 4px'>{message}</p>"
+        f"{cta}"
+        "<p style='margin:0;font-size:12px;color:#777'>Oppure apri la pratica: "
+        f"<a href='{case_url}' style='color:#C8A96E'>{case_name}</a></p>"
+        "</td></tr></table>"
+    )
     try:
         frappe.sendmail(
             recipients=[email],
             subject=subject,
-            message=f"<p>Gentile {name or 'Cliente'},</p><p>{message}</p>{cta}"
-                    f"<p style='font-size:12px;color:#777'>Oppure apri la pratica: "
-                    f"<a href='{frappe.utils.get_url()}/portal/case/{case_name}'>{case_name}</a></p>"
-                    f"<p>— Thanatos Intel</p>",
+            message=body,
             reference_doctype="Investigation Case", reference_name=case_name,
             # Reply-to dedicato SOLO alle notifiche di pratica: le risposte del
             # cliente arrivano a cases@ → ingest inbound (link al caso + box/Vault).
