@@ -6,36 +6,193 @@
  "autoname": "field:service_code",
  "title_field": "service_name",
  "fields": [
-  {"fieldname":"sb_main","fieldtype":"Section Break","label":"Service"},
-  {"fieldname":"service_code","fieldtype":"Data","label":"Service Code","reqd":1,"unique":1,"in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"service_name","fieldtype":"Data","label":"Service Name","reqd":1,"in_list_view":1},
-  {"fieldname":"category","fieldtype":"Select","label":"Category","reqd":1,"in_list_view":1,"in_standard_filter":1,"options":"Verifiche Rapide\nAnalisi Documenti\nAntifrode\nCyber Intelligence\nCorporate Intelligence\nFinancial Intelligence\nSequestri e Confische\nInvestigazioni Complete\nAbbonamenti e Academy\nEnterprise & API"},
-  {"fieldname":"cb_main","fieldtype":"Column Break"},
-  {"fieldname":"is_active","fieldtype":"Check","label":"Is Active","default":1,"in_list_view":1,"in_standard_filter":1},
-  {"fieldname":"requires_analyst","fieldtype":"Check","label":"Requires Analyst"},
-  {"fieldname":"delivery_hours","fieldtype":"Int","label":"Delivery Hours","description":"Standard SLA in ore lavorative"},
-  {"fieldname":"sb_pricing","fieldtype":"Section Break","label":"Pricing"},
-  {"fieldname":"price_min","fieldtype":"Currency","label":"Price Min","reqd":1,"in_list_view":1,"description":"Prezzo minimo del range"},
-  {"fieldname":"price_max","fieldtype":"Currency","label":"Price Max","reqd":1,"in_list_view":1,"description":"Prezzo massimo del range"},
-  {"fieldname":"price","fieldtype":"Currency","label":"Price (default)","read_only":1,"description":"Calcolato come media; usato come unit_price default in Usage Event"},
-  {"fieldname":"cb_pricing","fieldtype":"Column Break"},
-  {"fieldname":"currency","fieldtype":"Select","label":"Currency","options":"EUR\nRON\nUSD","default":"EUR"},
-  {"fieldname":"urgent_multiplier","fieldtype":"Float","label":"Urgent Multiplier","default":1.5,"precision":"2"},
-  {"fieldname":"sb_disc","fieldtype":"Section Break","label":"Discounts","collapsible":1},
-  {"fieldname":"discount_law_firm","fieldtype":"Percent","label":"Law Firm Discount %","default":10},
-  {"fieldname":"discount_accountant","fieldtype":"Percent","label":"Accountant Discount %","default":10},
-  {"fieldname":"cb_disc","fieldtype":"Column Break"},
-  {"fieldname":"discount_enterprise","fieldtype":"Percent","label":"Enterprise Discount %","default":20},
-  {"fieldname":"sb_erp","fieldtype":"Section Break","label":"ERPNext","collapsible":1},
-  {"fieldname":"erp_item_code","fieldtype":"Data","label":"ERP Item Code"},
-  {"fieldname":"sb_desc","fieldtype":"Section Break","label":"Description"},
-  {"fieldname":"description","fieldtype":"Text Editor","label":"Description"}
+  {
+   "fieldname": "sb_main",
+   "fieldtype": "Section Break",
+   "label": "Service"
+  },
+  {
+   "fieldname": "service_code",
+   "fieldtype": "Data",
+   "label": "Service Code",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "service_name",
+   "fieldtype": "Data",
+   "label": "Service Name",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "label": "Category",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "options": "Verifiche Rapide\nAnalisi Documenti\nAntifrode\nCyber Intelligence\nCorporate Intelligence\nFinancial Intelligence\nSequestri e Confische\nInvestigazioni Complete\nAbbonamenti e Academy\nEnterprise & API"
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active",
+   "default": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "is_investigation_upgrade",
+   "fieldtype": "Check",
+   "label": "Opzione approfondimento crypto",
+   "description": "Mostrato nel portale come modulo di approfondimento indagine (Fase 4)."
+  },
+  {
+   "fieldname": "requires_analyst",
+   "fieldtype": "Check",
+   "label": "Requires Analyst"
+  },
+  {
+   "fieldname": "delivery_hours",
+   "fieldtype": "Int",
+   "label": "Delivery Hours",
+   "description": "Standard SLA in ore lavorative"
+  },
+  {
+   "fieldname": "sb_pricing",
+   "fieldtype": "Section Break",
+   "label": "Pricing"
+  },
+  {
+   "fieldname": "price_min",
+   "fieldtype": "Currency",
+   "label": "Price Min",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Prezzo minimo del range"
+  },
+  {
+   "fieldname": "price_max",
+   "fieldtype": "Currency",
+   "label": "Price Max",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Prezzo massimo del range"
+  },
+  {
+   "fieldname": "price",
+   "fieldtype": "Currency",
+   "label": "Price (default)",
+   "read_only": 1,
+   "description": "Calcolato come media; usato come unit_price default in Usage Event"
+  },
+  {
+   "fieldname": "cb_pricing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Select",
+   "label": "Currency",
+   "options": "EUR\nRON\nUSD",
+   "default": "EUR"
+  },
+  {
+   "fieldname": "urgent_multiplier",
+   "fieldtype": "Float",
+   "label": "Urgent Multiplier",
+   "default": 1.5,
+   "precision": "2"
+  },
+  {
+   "fieldname": "sb_disc",
+   "fieldtype": "Section Break",
+   "label": "Discounts",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "discount_law_firm",
+   "fieldtype": "Percent",
+   "label": "Law Firm Discount %",
+   "default": 10
+  },
+  {
+   "fieldname": "discount_accountant",
+   "fieldtype": "Percent",
+   "label": "Accountant Discount %",
+   "default": 10
+  },
+  {
+   "fieldname": "cb_disc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "discount_enterprise",
+   "fieldtype": "Percent",
+   "label": "Enterprise Discount %",
+   "default": 20
+  },
+  {
+   "fieldname": "sb_erp",
+   "fieldtype": "Section Break",
+   "label": "ERPNext",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "erp_item_code",
+   "fieldtype": "Data",
+   "label": "ERP Item Code"
+  },
+  {
+   "fieldname": "sb_desc",
+   "fieldtype": "Section Break",
+   "label": "Description"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description"
+  }
  ],
  "permissions": [
-  {"role":"Investigation Manager","read":1,"write":1,"create":1,"delete":1,"report":1,"export":1,"print":1,"email":1,"share":1},
-  {"role":"Billing Manager","read":1,"write":1,"create":1,"report":1,"print":1},
-  {"role":"Investigator","read":1},
-  {"role":"Lawyer","read":1},
-  {"role":"Accountant","read":1}
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Billing Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "print": 1
+  },
+  {
+   "role": "Investigator",
+   "read": 1
+  },
+  {
+   "role": "Lawyer",
+   "read": 1
+  },
+  {
+   "role": "Accountant",
+   "read": 1
+  }
  ]
 }

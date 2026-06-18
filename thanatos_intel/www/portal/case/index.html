@@ -502,6 +502,35 @@ table{min-width:520px}
         else{alert('Errore: '+(r._server_messages||''));pay.disabled=false;pay.textContent='Paga e verifica ›';}
       });
     });
+    const upBtn=document.getElementById('up-load');
+    if(upBtn) upBtn.addEventListener('click',async()=>{
+      upBtn.disabled=true; const o=upBtn.textContent; upBtn.textContent='…';
+      const fd=new FormData(); fd.append('case_name',CASE);
+      const d=await post('thanatos_intel.workflow.upgrade.upgrade_options',fd);
+      upBtn.disabled=false; upBtn.textContent=o;
+      const box=document.getElementById('up-list'); const m=d.message;
+      if(!m||!m.options.length){box.innerHTML='<span style="color:var(--grey);font-size:12px">Nessun modulo disponibile.</span>';return;}
+      let rows=m.options.map(o=>`<label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #1A2035;font-size:12px">
+          <input type="checkbox" class="up-chk" data-code="${o.service_code}" data-price="${o.price}" style="margin-top:3px">
+          <span style="flex:1;color:#E8E9F0"><b>${o.service_name}</b><br><span style="color:var(--grey);font-size:11px">${o.category||''}</span></span>
+          <span style="color:var(--gold);white-space:nowrap">€ ${Number(o.price).toLocaleString()}</span>
+        </label>`).join('');
+      box.innerHTML=rows+`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <span style="font-size:12px;color:var(--grey)">Preventivo indicativo: <b id="up-total" style="color:var(--gold)">€ 0</b></span>
+        <button id="up-go" disabled style="background:var(--gold);color:#0A0E1A;border:0;padding:7px 16px;border-radius:4px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;opacity:.5">Richiedi approfondimento ›</button></div>`;
+      const chks=[...box.querySelectorAll('.up-chk')], go=box.querySelector('#up-go'), tot=box.querySelector('#up-total');
+      function upd(){const sel=chks.filter(c=>c.checked); const t=sel.reduce((a,c)=>a+Number(c.dataset.price||0),0);
+        tot.textContent='€ '+t.toLocaleString(); go.disabled=sel.length===0; go.style.opacity=go.disabled?.5:1;}
+      chks.forEach(c=>c.addEventListener('change',upd));
+      go.addEventListener('click',async()=>{
+        const codes=chks.filter(c=>c.checked).map(c=>c.dataset.code);
+        go.disabled=true; go.textContent='…';
+        const f=new FormData(); f.append('case_name',CASE); f.append('codes',JSON.stringify(codes));
+        const r=await post('thanatos_intel.workflow.upgrade.request_full_investigation',f);
+        if(r.message&&r.message.url){ alert('Pratica di approfondimento creata (preventivo € '+r.message.total.toLocaleString()+'). Ti portiamo alla nuova pratica.'); location.href=r.message.url; }
+        else { alert('Errore: '+(r._server_messages||'')); go.disabled=false; go.textContent='Richiedi approfondimento ›'; }
+      });
+    });
     const mi=document.getElementById('msgin'), ms=document.getElementById('msgsend');
     if(ms) ms.addEventListener('click',async()=>{
       const t=(mi.value||'').trim(); if(!t) return;
@@ -521,6 +550,16 @@ table{min-width:520px}
     </div>
     <div style="font-size:12px;color:var(--grey);margin-bottom:10px">Elenco dei token presenti sui wallet della pratica. Seleziona quali verificare: ogni token ha un costo.</div>
     <div id="tok-list"></div>
+  </div>
+  {% endif %}
+  {% if has_wallets and not case.parent_case %}
+  <div id="upgrade-panel" style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:28px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">Approfondisci l'Indagine</span>
+      <button id="up-load" style="background:transparent;color:#6A9FD8;border:1px solid #2a3550;padding:5px 12px;border-radius:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">Vedi opzioni</button>
+    </div>
+    <div style="font-size:12px;color:var(--grey);margin-bottom:10px">Oltre la verifica automatizzata puoi attivare un incarico investigativo completo: seleziona i moduli, riceverai una nuova pratica dedicata con preventivo.</div>
+    <div id="up-list"></div>
   </div>
   {% endif %}
   <div class="footer-note">

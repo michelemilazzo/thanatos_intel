@@ -280,6 +280,14 @@
    "collapsible": 1
   },
   {
+   "fieldname": "parent_case",
+   "fieldtype": "Link",
+   "options": "Investigation Case",
+   "label": "Pratica di origine",
+   "read_only": 1,
+   "description": "Se questa pratica nasce come approfondimento di un'altra."
+  },
+  {
    "fieldname": "blueprint",
    "fieldtype": "Link",
    "label": "Service Blueprint",
