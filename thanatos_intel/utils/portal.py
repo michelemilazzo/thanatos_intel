@@ -24,3 +24,38 @@ def add_csrf_token(context):
 	if user and user != "Guest":
 		from frappe.sessions import get_csrf_token
 		context.csrf_token = get_csrf_token()
+
+
+def confine_client_session(login_manager=None):
+    """on_session_creation: i clienti (e ruoli portale) restano sempre nel portale.
+    Anche se hanno un ruolo desk spurio (es. Wiki User), il redirect post-login va a
+    /portal. Lo staff vero (DESK_ROLES) va al desk."""
+    user = getattr(frappe.session, "user", None)
+    if not user or user == "Guest":
+        return
+    roles = set(frappe.get_roles(user))
+    if roles & DESK_ROLES:
+        return
+    if roles & PORTAL_ROLES:
+        frappe.local.response["home_page"] = "/portal"
+
+
+def bounce_client_from_desk():
+    """before_request: un cliente (ruolo portale, non staff) non deve MAI vedere il
+    desk. Qualsiasi richiesta a /app viene rimandata a /portal. I System User hanno
+    il ruolo intrinseco 'Desk User' (desk_access=1), quindi la confinazione si fa qui."""
+    try:
+        path = (frappe.local.request.path or "")
+    except Exception:
+        return
+    if not (path == "/app" or path.startswith("/app/") or path.startswith("/app?")):
+        return
+    user = getattr(frappe.session, "user", None)
+    if not user or user == "Guest":
+        return
+    roles = set(frappe.get_roles(user))
+    if roles & DESK_ROLES:
+        return
+    if roles & PORTAL_ROLES:
+        frappe.local.flags.redirect_location = "/portal"
+        raise frappe.Redirect

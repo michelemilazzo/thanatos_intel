@@ -1,5 +1,6 @@
 app_name='thanatos_intel'
-before_request=["thanatos_intel.patches.drive_access_patch.apply"]
+before_request=["thanatos_intel.utils.portal.bounce_client_from_desk",
+                "thanatos_intel.patches.drive_access_patch.apply"]
 auth_hooks=["thanatos_intel.thanatos_ddd.auth_patch.allow_thanatos_guest_paths"]
 
 # Il bundle CSS di Frappe (build bench-cli in temp dir) referenzia inter.css con un
@@ -47,6 +48,8 @@ role_home_page={
 }
 
 get_website_user_home_page='thanatos_intel.utils.portal.get_home_page'
+
+on_session_creation=['thanatos_intel.utils.portal.confine_client_session']
 
 update_website_context=[
  "thanatos_intel.utils.portal.add_csrf_token",
