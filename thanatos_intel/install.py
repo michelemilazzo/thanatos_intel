@@ -24,6 +24,21 @@ def after_migrate():
     ensure_pdf_settings()
     _setup_pipeline()
     _seed_workflow()
+    _register_kyc_provider()
+
+
+def _register_kyc_provider():
+    """Aggancia il KYC Thanatos (Vault) a mmos_sign come provider (idempotente)."""
+    if "mmos_sign" not in frappe.get_installed_apps():
+        return
+    try:
+        meta = frappe.get_meta("Signing Settings")
+        if meta.has_field("kyc_provider"):
+            path = "thanatos_intel.kyc.ThanatosKycProvider"
+            if frappe.db.get_single_value("Signing Settings", "kyc_provider") != path:
+                frappe.db.set_single_value("Signing Settings", "kyc_provider", path)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "register_kyc_provider")
 
 
 def _seed_workflow():
