@@ -4,7 +4,19 @@
 (function () {
   if (!/^\/login/.test(location.pathname)) return;
 
+  function relabelMmosId() {
+    // Il Social Login Key "frappe" punta all'IdP MMOS (id.onekeyco.com):
+    // rietichetta il bottone "Login with Frappe" -> "Accedi con MMOS ID".
+    var btn = document.querySelector("a.btn-frappe");
+    if (btn && !btn.dataset.mmosid) {
+      btn.dataset.mmosid = "1";
+      btn.textContent = "🔐 Accedi con MMOS ID";
+      btn.style.fontWeight = "600";
+    }
+  }
+
   function inject() {
+    relabelMmosId();
     if (document.getElementById("thx-signup-link")) return;
     var card =
       document.querySelector(".page-card-actions") ||
