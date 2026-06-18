@@ -65,6 +65,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
 .login-link a{color:var(--gold);text-decoration:none;}
 /* affiliate inline */
 #form-affiliate .form-title{font-size:20px;}
+.btn-vies{background:transparent;border:1px solid var(--border);border-radius:6px;
+  color:#E8E9F0;padding:0 12px;cursor:pointer;font-size:15px;white-space:nowrap;
+  flex-shrink:0;transition:border-color .15s;}
+.btn-vies:hover{border-color:var(--gold);}
 </style>
 
 <div class="rw">
@@ -180,7 +184,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
         <input id="c-albo" placeholder="es. 12345"></div>
     </div>
     <div class="field"><label>P.IVA / Codice fiscale studio</label>
-      <input id="c-vat-avv" placeholder="IT…"></div>
+      <div style="display:flex;gap:6px;">
+        <input id="c-vat-avv" placeholder="IT…" style="flex:1">
+        <button type="button" class="btn-vies" onclick="viesLookupPortal('c-vat-avv')" title="Cerca su VIES">🔍</button>
+      </div></div>
   </div>
 
   <!-- Commercialista -->
@@ -194,7 +201,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
         <input id="c-albo-comm" placeholder="es. 9876"></div>
     </div>
     <div class="field"><label>P.IVA / Codice fiscale studio</label>
-      <input id="c-vat-comm" placeholder="IT…"></div>
+      <div style="display:flex;gap:6px;">
+        <input id="c-vat-comm" placeholder="IT…" style="flex:1">
+        <button type="button" class="btn-vies" onclick="viesLookupPortal('c-vat-comm')" title="Cerca su VIES">🔍</button>
+      </div></div>
   </div>
 
   <!-- Azienda / PMI -->
@@ -203,7 +213,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold);}
     <span class="lbl-section">Dati aziendali</span>
     <div class="grid2">
       <div class="field"><label>P.IVA *</label>
-        <input id="c-vat-az" placeholder="IT…"></div>
+        <div style="display:flex;gap:6px;">
+          <input id="c-vat-az" placeholder="IT…" style="flex:1">
+          <button type="button" class="btn-vies" onclick="viesLookupPortal('c-vat-az')" title="Cerca su VIES">🔍</button>
+        </div></div>
       <div class="field"><label>Settore</label>
         <input id="c-settore" placeholder="es. Logistica, Retail, Tech"></div>
     </div>
@@ -494,5 +507,46 @@ document.getElementById('a-send').addEventListener('click', async () => {
   } catch(e) { msg.className = 'msg err'; msg.textContent = String(e.message || e); }
   btn.disabled = false;
 });
+
+// ── VIES autofill ──
+async function viesLookupPortal(vatFieldId) {
+  const vatEl = document.getElementById(vatFieldId);
+  if (!vatEl) return;
+  const vat = vatEl.value.trim();
+  if (!vat) { alert('Inserisci prima la P.IVA.'); return; }
+
+  const btn = vatEl.parentElement?.querySelector('.btn-vies');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+
+  try {
+    const r = await fetch('/api/method/thanatos_intel.integrations.vies_lookup.lookup?' +
+      new URLSearchParams({ vat_number: vat }), {
+        headers: { 'X-Frappe-CSRF-Token': CSRF }
+      });
+    const json = await r.json();
+    const d = json.message || {};
+
+    if (!d.ok) {
+      alert('VIES: ' + (d.error || 'Nessun dato trovato.'));
+      return;
+    }
+
+    // compila ragione sociale nel campo company se vuoto
+    const compEl = document.getElementById('c-company');
+    if (compEl && !compEl.value) compEl.value = d.company_name || '';
+
+    // compila name se vuoto
+    const nameEl = document.getElementById('c-name');
+    if (nameEl && !nameEl.value) nameEl.value = d.company_name || '';
+
+    const status = d.valid ? '✅ Valida' : '⚠️ Non validata da VIES';
+    const note = d.offline ? ' (dati approssimativi)' : '';
+    alert(`${status} — ${d.company_name}${note}`);
+  } catch(e) {
+    alert('Errore VIES: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '🔍'; btn.disabled = false; }
+  }
+}
 </script>
 {% endblock %}
