@@ -46,7 +46,14 @@ def get_or_create_stripe_customer(client_name: str) -> str:
     stripe = _get_stripe()
     client = frappe.get_doc("Investigation Client", client_name)
     if getattr(client, "stripe_customer_id", None):
-        return client.stripe_customer_id
+        # valida che il customer esista sull'account Stripe ATTIVO: id creati su un
+        # account diverso (es. dopo switch MMOS->Thanatos) non sono validi -> ricrea.
+        try:
+            c = stripe.Customer.retrieve(client.stripe_customer_id)
+            if not c.get("deleted"):
+                return client.stripe_customer_id
+        except Exception:
+            pass
 
     cust = stripe.Customer.create(
         email=client.email,
@@ -296,6 +303,7 @@ def create_case_step_checkout(case_name, seq=None):
     ue = frappe.get_doc({"doctype": "Usage Event", "client": case.client, "case": case.name,
                          "service": step.get("service_code") or None, "status": "Pending",
                          "quantity": 1, "unit_price": amount, "total": amount, "currency": "EUR"})
+    ue.flags.ignore_mandatory = True
     ue.insert(ignore_permissions=True)
 
     if case.client and _is_credit_client(case.client):
@@ -354,6 +362,7 @@ def create_token_verification_checkout(case_name, keys):
     ue = frappe.get_doc({"doctype": "Usage Event", "client": case.client, "case": case.name,
                          "status": "Pending", "quantity": len(selected), "unit_price": unit,
                          "total": amount, "currency": "EUR"})
+    ue.flags.ignore_mandatory = True
     ue.insert(ignore_permissions=True)
 
     if case.client and _is_credit_client(case.client):

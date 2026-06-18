@@ -14,6 +14,13 @@ class UsageEvent(Document):
 		self._compute_pricing()
 
 	def _compute_pricing(self):
+		# UE con prezzo esplicito (step workflow / verifica token / preventivo):
+		# nessun servizio a catalogo -> mantieni unit_price gia\u0300 impostato.
+		if not self.service:
+			self.total = round(float(self.quantity or 1) * float(self.unit_price or 0), 2)
+			if not self.currency:
+				self.currency = "EUR"
+			return
 		# Determina client_type e flag enterprise
 		client_type = "Individual"
 		is_enterprise = False
