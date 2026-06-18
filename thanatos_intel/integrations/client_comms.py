@@ -6,6 +6,7 @@ firmato, report pronto). Template = Email Template con prefisso "Thanatos -".
 """
 import frappe
 from frappe import _
+from thanatos_intel.integrations import email_render
 
 # Mittenti per ruolo. Le comunicazioni cliente partono da info@; l'amministrazione
 # da admin@. Frappe usa l'account in uscita di default per il trasporto e imposta
@@ -54,10 +55,12 @@ def _send(case_name, template, ctx_doc=None):
         return False
     tpl = frappe.get_doc("Email Template", template)
     ctx = {"client_name": name, "case": case_name, "doc": ctx_doc}
+    subj = frappe.render_template(tpl.subject or "", ctx)
+    body = frappe.render_template(tpl.response_html or tpl.response or "", ctx)
     frappe.sendmail(
         recipients=[email], sender=_sender('info'),
-        subject=frappe.render_template(tpl.subject or "", ctx),
-        message=frappe.render_template(tpl.response_html or tpl.response or "", ctx),
+        subject=subj,
+        message=email_render.render(body, title=subj, preheader=subj),
         reference_doctype="Investigation Case", reference_name=case_name,
     )
     return True

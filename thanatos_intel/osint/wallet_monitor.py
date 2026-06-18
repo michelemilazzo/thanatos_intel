@@ -179,7 +179,7 @@ def _alert(case, changes):
         "<h2 style='color:#0D1B3E'>Thanatos Intel — ALERT monitoraggio wallet</h2>"
         "<p>Caso <b>%s</b> &middot; %s</p>"
         "<p>Sono state rilevate variazioni sugli indirizzi monitorati h24:</p>"
-        "<table border='1' cellpadding='5' style='border-collapse:collapse'>"
+        "<table cellpadding='6' style='border-collapse:collapse;width:100%;border:1px solid #e3e6ea;font-size:13px'>"
         "<tr style='background:#0D1B3E;color:#fff'><th>Indirizzo</th><th>Tipo</th><th>Dettaglio</th></tr>"
         "%s</table>"
         "<p style='font-size:12px;color:#555'>Alert automatico. Gli indirizzi del caso sono sorvegliati "
@@ -196,8 +196,11 @@ def _alert(case, changes):
 
     rec = _recipients(case)
     try:
+        from thanatos_intel.integrations import email_render
         frappe.sendmail(recipients=rec, subject="[Thanatos] Alert wallet — %s" % case.name,
-                        message=html, reference_doctype="Investigation Case", reference_name=case.name)
+                        message=email_render.render(html, preheader="Variazioni sui wallet monitorati",
+                                                    cta=("Apri la pratica", "https://thanatos.onekeyco.com/portal/case/%s" % case.name)),
+                        reference_doctype="Investigation Case", reference_name=case.name)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "monitor alert email")
     for user in rec:

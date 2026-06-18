@@ -140,12 +140,16 @@ def _notify_client(case, file_url):
     if not em:
         return
     try:
+        from thanatos_intel.integrations import email_render
+        _body = _("Gentile Cliente,<br><br>l'incarico per la pratica <b>{0}</b> è stato "
+                  "<b>perfezionato</b> con il pagamento. In allegato il documento firmato, "
+                  "disponibile anche nella sua area clienti.").format(case.name)
         frappe.sendmail(
             recipients=[em],
             subject=_("Thanatos — Incarico verifica wallet (perfezionato)"),
-            message=_("Gentile Cliente,<br>l'incarico per la pratica <b>{0}</b> è stato perfezionato "
-                      "con il pagamento. In allegato il documento firmato, disponibile anche nel suo "
-                      "portale.").format(case.name),
+            message=email_render.render(_body, title=_("Incarico perfezionato"),
+                                        preheader=_("Il suo incarico è attivo"),
+                                        cta=(_("Apri la pratica"), "https://thanatos.onekeyco.com/portal/case/%s" % case.name)),
             attachments=[{"fname": f"incarico_{case.name}.pdf",
                           "fcontent": frappe.get_doc("File", {"file_url": file_url}).get_content()}],
             reference_doctype="Investigation Case", reference_name=case.name,
