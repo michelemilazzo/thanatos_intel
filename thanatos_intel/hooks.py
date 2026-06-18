@@ -28,7 +28,7 @@ app_include_js=['/assets/thanatos_intel/js/bootstrap_jq.js',
                 '/assets/thanatos_intel/js/fx_widget.js',
                 '/assets/thanatos_intel/js/pipeline_widget.js']
 web_include_css=['/assets/thanatos_intel/css/thanatos_web.css']
-web_include_js=['/assets/thanatos_intel/js/fx_widget.js']
+web_include_js=['/assets/thanatos_intel/js/fx_widget.js', '/assets/thanatos_intel/js/thanatos_login.js']
 
 # Riduce la finestra stale-while-revalidate delle pagine sito (no 404 appiccicati 3h)
 after_request = ['thanatos_intel.web_response.tune_cache']
