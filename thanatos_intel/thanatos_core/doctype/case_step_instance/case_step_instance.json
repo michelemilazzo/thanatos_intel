@@ -1,79 +1,92 @@
 {
-  "doctype": "DocType",
-  "name": "Case Step Instance",
-  "module": "Thanatos Core",
-  "istable": 1,
-  "fields": [
-    {
-      "fieldname": "seq",
-      "fieldtype": "Int",
-      "label": "#",
-      "in_list_view": 1,
-      "columns": 1
-    },
-    {
-      "fieldname": "step_label",
-      "fieldtype": "Data",
-      "label": "Step",
-      "in_list_view": 1,
-      "columns": 3
-    },
-    {
-      "fieldname": "actor_role",
-      "fieldtype": "Link",
-      "label": "Ruolo",
-      "options": "Case Role",
-      "in_list_view": 1,
-      "columns": 2
-    },
-    {
-      "fieldname": "mode",
-      "fieldtype": "Select",
-      "label": "Modo",
-      "options": "AUTO\nGATE"
-    },
-    {
-      "fieldname": "action_type",
-      "fieldtype": "Data",
-      "label": "Azione"
-    },
-    {
-      "fieldname": "status",
-      "fieldtype": "Select",
-      "label": "Stato",
-      "options": "Pending\nIn Progress\nAwaiting Client\nDone\nSkipped\nBlocked",
-      "default": "Pending",
-      "in_list_view": 1,
-      "columns": 2
-    },
-    {
-      "fieldname": "assignee",
-      "fieldtype": "Link",
-      "label": "Assegnatario",
-      "options": "User",
-      "in_list_view": 1,
-      "columns": 2
-    },
-    {
-      "fieldname": "due",
-      "fieldtype": "Datetime",
-      "label": "Scadenza"
-    },
-    {
-      "fieldname": "completed_on",
-      "fieldtype": "Datetime",
-      "label": "Completato il"
-    },
-    {
-      "fieldname": "client_visible",
-      "fieldtype": "Check",
-      "label": "Visibile cliente",
-      "default": "1"
-    },
-    {
-      "fieldname": "note",
-      "fieldtype": "Small Text",
-      "label": "Note"
-    }
-  ]
+ "doctype": "DocType",
+ "name": "Case Step Instance",
+ "module": "Thanatos Core",
+ "istable": 1,
+ "fields": [
+  {
+   "fieldname": "seq",
+   "fieldtype": "Int",
+   "label": "#",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "step_label",
+   "fieldtype": "Data",
+   "label": "Step",
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "actor_role",
+   "fieldtype": "Link",
+   "label": "Ruolo",
+   "options": "Case Role",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "mode",
+   "fieldtype": "Select",
+   "label": "Modo",
+   "options": "AUTO\nGATE"
+  },
+  {
+   "fieldname": "action_type",
+   "fieldtype": "Data",
+   "label": "Azione"
+  },
+  {
+   "fieldname": "service_code",
+   "fieldtype": "Link",
+   "options": "Service Catalog",
+   "label": "Servizio (catalogo)",
+   "description": "Voce di catalogo che determina il prezzo dello step (per step 'pay')."
+  },
+  {
+   "fieldname": "price",
+   "fieldtype": "Currency",
+   "label": "Prezzo step (EUR)",
+   "description": "Prezzo fisso dello step se non si usa il catalogo. Lasciare 0 per step gratuiti."
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Stato",
+   "options": "Pending\nIn Progress\nAwaiting Client\nDone\nSkipped\nBlocked",
+   "default": "Pending",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "assignee",
+   "fieldtype": "Link",
+   "label": "Assegnatario",
+   "options": "User",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "due",
+   "fieldtype": "Datetime",
+   "label": "Scadenza"
+  },
+  {
+   "fieldname": "completed_on",
+   "fieldtype": "Datetime",
+   "label": "Completato il"
+  },
+  {
+   "fieldname": "client_visible",
+   "fieldtype": "Check",
+   "label": "Visibile cliente",
+   "default": "1"
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Small Text",
+   "label": "Note"
+  }
+ ]
 }

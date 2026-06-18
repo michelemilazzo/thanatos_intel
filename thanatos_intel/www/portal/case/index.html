@@ -121,6 +121,18 @@ table{min-width:520px}
     <div style="background:var(--border);height:6px;border-radius:3px;margin-bottom:18px;overflow:hidden">
       <div style="background:var(--gold);height:6px;width:{{ wf.pct }}%"></div>
     </div>
+    {% set cur = wf.steps|selectattr('status','equalto','current')|first %}
+    {% if cur %}
+    <div style="background:rgba(200,169,110,.08);border:1px solid var(--gold);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px">
+      <span style="color:var(--grey)">Prossimo step:</span>
+      <b style="color:#E8E9F0">{{ cur.label }}</b>
+      <span style="color:var(--grey)"> · Responsabile:</span>
+      <b style="color:{% if cur.actor=='client' %}#6A9FD8{% else %}var(--gold){% endif %}">{{ 'Tu (cliente)' if cur.actor=='client' else cur.role }}</b>
+      {% if cur.actor!='client' %}
+      <button id="ask-investigator" style="margin-left:10px;background:transparent;color:#6A9FD8;border:1px solid #2a3550;padding:3px 10px;border-radius:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">Chiedi aggiornamento</button>
+      {% endif %}
+    </div>
+    {% endif %}
     <div style="display:flex;flex-direction:column;gap:0">
       {% for step in wf.steps %}
       {% set ic = '✓' if step.status=='done' else ('▶' if step.status=='current' else '○') %}
@@ -133,7 +145,11 @@ table{min-width:520px}
             {% if step.raw_status == 'Awaiting Client' %}<span style="font-size:9px;color:#6A9FD8;letter-spacing:1px">IN ATTESA DI TE</span>{% endif %}
           </div>
           {% if step.status=='current' and step.actor=='client' and step.raw_status=='Awaiting Client' %}
+          {% if step.action_type=='pay' %}
+          <button class="wf-pay" data-seq="{{ step.seq }}" style="margin-top:8px;padding:6px 14px;background:var(--gold);color:#0A0E1A;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:0;cursor:pointer">Rivedi incarico e paga ›</button>
+          {% else %}
           <button class="wf-act" data-seq="{{ step.seq }}" data-kind="client" style="margin-top:8px;padding:6px 14px;background:var(--gold);color:#0A0E1A;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:0;cursor:pointer">Procedi ›</button>
+          {% endif %}
           {% elif step.status=='current' and wf.is_operator %}
           <button class="wf-act" data-seq="{{ step.seq }}" data-kind="gate" style="margin-top:8px;padding:6px 14px;background:transparent;color:var(--gold);border:1px solid var(--gold);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer">Completa step ✓</button>
           {% endif %}
@@ -391,6 +407,49 @@ table{min-width:520px}
       const r=await fetch('/api/method/'+method,{method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd});
       return r.json();
     }
+    function modal(html){
+      const ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+      const bx=document.createElement('div');
+      bx.style.cssText='background:#fff;color:#0D1B3E;max-width:760px;max-height:88vh;overflow:auto;border-radius:6px;padding:22px';
+      bx.innerHTML=html; ov.appendChild(bx); document.body.appendChild(ov);
+      ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+      return {ov,bx};
+    }
+    document.querySelectorAll('.wf-pay').forEach(b=>b.addEventListener('click',async()=>{
+      b.disabled=true; const old=b.textContent; b.textContent='…';
+      const fd=new FormData(); fd.append('case_name',CASE);
+      const g=await post('thanatos_intel.workflow.engagement.get_engagement',fd);
+      b.disabled=false; b.textContent=old;
+      if(!g.message){alert('Errore caricamento incarico');return;}
+      const seq=b.dataset.seq;
+      const {ov,bx}=modal(g.message.html
+        + '<label style="display:flex;gap:8px;align-items:flex-start;margin-top:16px;font-size:13px"><input type="checkbox" id="acc-chk" style="margin-top:3px"> Ho letto e accetto l\'incarico. Con il pagamento l\'accettazione vale come sottoscrizione.</label>'
+        + '<div style="margin-top:14px;text-align:right"><button id="acc-cancel" style="background:#eee;border:0;padding:8px 14px;border-radius:4px;margin-right:8px;cursor:pointer">Annulla</button>'
+        + '<button id="acc-pay" disabled style="background:#C8A96E;color:#0A0E1A;border:0;padding:8px 16px;border-radius:4px;cursor:pointer;opacity:.5">Paga e firma ›</button></div>');
+      const chk=bx.querySelector('#acc-chk'), pay=bx.querySelector('#acc-pay');
+      chk.addEventListener('change',()=>{pay.disabled=!chk.checked;pay.style.opacity=chk.checked?1:.5;});
+      bx.querySelector('#acc-cancel').addEventListener('click',()=>ov.remove());
+      pay.addEventListener('click',async()=>{
+        pay.disabled=true; pay.textContent='…';
+        const f1=new FormData(); f1.append('case_name',CASE);
+        await post('thanatos_intel.workflow.engagement.accept_engagement',f1);
+        const f2=new FormData(); f2.append('case_name',CASE); f2.append('seq',seq);
+        const r=await post('thanatos_intel.integrations.stripe_bridge.create_case_step_checkout',f2);
+        if(r.message&&r.message.url){ location.href=r.message.url; }
+        else if(r.message&&r.message.credit){ alert(r.message.message); location.reload(); }
+        else { alert('Errore pagamento: '+(r._server_messages||'')); pay.disabled=false; pay.textContent='Paga e firma ›'; }
+      });
+    }));
+    const askInv=document.getElementById('ask-investigator');
+    if(askInv) askInv.addEventListener('click',async()=>{
+      const msg=prompt('Cosa vuoi chiedere all\'investigatore sulla tua pratica?');
+      if(!msg) return;
+      const fd=new FormData(); fd.append('case_name',CASE); fd.append('message','[RICHIESTA AGGIORNAMENTO] '+msg);
+      const d=await post('thanatos_intel.workflow.api.post_message',fd);
+      if(d.message!==undefined){ alert('Richiesta inviata all\'investigatore.'); location.reload(); }
+      else alert('Errore invio richiesta.');
+    });
     document.querySelectorAll('.wf-act').forEach(b=>b.addEventListener('click',async()=>{
       b.disabled=true; const old=b.textContent; b.textContent='…';
       const fd=new FormData(); fd.append('case_name',CASE); fd.append('seq',b.dataset.seq);

@@ -1,0 +1,59 @@
+<div class="engagement-doc" style="font-family:Georgia,serif;color:#0D1B3E;font-size:13px;line-height:1.6">
+  <h2 style="color:#0D1B3E;border-bottom:2px solid #C8A96E;padding-bottom:6px">
+    Incarico di Verifica Automatizzata Wallet
+  </h2>
+  <p style="font-size:11px;color:#666">Rif. pratica <b>{{ case.name }}</b> · {{ frappe.utils.format_datetime(now, "dd/MM/yyyy HH:mm") }}</p>
+
+  <table style="width:100%;border-collapse:collapse;margin:14px 0">
+    <tr>
+      <td style="vertical-align:top;width:50%;padding:8px;border:1px solid #e3e3e3">
+        <b>Mandatario</b><br>{{ emittente }}<br>
+        <span style="font-size:11px;color:#555">{{ emittente_addr }}</span>
+        {% if emittente_vat %}<br><span style="font-size:11px;color:#555">P.IVA/C.F.: {{ emittente_vat }}</span>{% endif %}
+      </td>
+      <td style="vertical-align:top;width:50%;padding:8px;border:1px solid #e3e3e3">
+        <b>Mandante (Cliente)</b><br>{{ client_name }}
+        {% if client_email %}<br><span style="font-size:11px;color:#555">{{ client_email }}</span>{% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <h3 style="color:#C8A96E">Oggetto</h3>
+  <p>Il Mandante conferisce al Mandatario l'incarico di eseguire una <b>verifica automatizzata</b>
+  sugli indirizzi di portafoglio (wallet) indicati nella pratica, mediante consultazione di fonti
+  pubbliche on-chain e servizi di attribuzione (OSINT). La verifica è erogata come funzione
+  automatica a step, ciascuno con un proprio corrispettivo indicato in fase di pagamento.</p>
+
+  {% if wallets %}
+  <p><b>Indirizzi oggetto di verifica:</b></p>
+  <ul style="font-family:monospace;font-size:11px">
+    {% for w in wallets %}<li>{{ w }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+
+  <h3 style="color:#C8A96E">Autorizzazioni</h3>
+  <p>Il Mandante autorizza il Mandatario al trattamento dei dati necessari alla verifica OSINT e
+  alla consultazione di registri e fonti pubbliche. Nessun contatto con terzi è previsto in questa fase.</p>
+
+  <h3 style="color:#C8A96E">Clausola di non garanzia di risultato</h3>
+  <p>La verifica restituisce esclusivamente informazioni rilevabili da fonti pubbliche al momento
+  dell'esecuzione. Il Mandatario non garantisce alcun esito specifico, recupero di fondi o
+  attribuzione certa, e non risponde di dati incompleti o non disponibili presso le fonti.</p>
+
+  <h3 style="color:#C8A96E">Corrispettivo e perfezionamento</h3>
+  <p>L'incarico si perfeziona con il <b>pagamento</b> del primo step (verifica indirizzo): con il
+  pagamento, l'accettazione qui prestata acquista efficacia di sottoscrizione. Gli step successivi
+  (es. verifica dei token presenti) sono facoltativi e attivabili dal Mandante con separato
+  corrispettivo. Per approfondimenti oltre la verifica automatizzata è previsto un distinto incarico
+  investigativo, con condizioni e costi dedicati.</p>
+
+  <p style="font-size:11px;color:#555;margin-top:18px">Legge applicabile: {{ gov_law }}. Foro: {{ foro }}.</p>
+
+  {% if accepted %}
+  <div style="margin-top:18px;padding:10px;border:1px solid #C8A96E;background:#faf6ee;font-size:12px">
+    Accettato dal Mandante il <b>{{ frappe.utils.format_datetime(accepted_on, "dd/MM/yyyy HH:mm") }}</b>
+    (IP {{ accepted_ip or "n/d" }}).
+    {% if perfected_on %}<br>Perfezionato con pagamento il <b>{{ frappe.utils.format_datetime(perfected_on, "dd/MM/yyyy HH:mm") }}</b>.{% endif %}
+  </div>
+  {% endif %}
+</div>

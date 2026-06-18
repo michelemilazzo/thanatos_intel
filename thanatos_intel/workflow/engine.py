@@ -41,6 +41,8 @@ def setup_from_blueprint(case):
             "mode": s.mode,
             "action_type": s.action_type,
             "client_visible": s.client_visible,
+            "service_code": s.get("service_code"),
+            "price": s.get("price") or 0,
             "status": "Pending",
         })
 

@@ -222,6 +222,51 @@
    "description": "0-100"
   },
   {
+   "fieldname": "sb_engagement",
+   "fieldtype": "Section Break",
+   "label": "Incarico (Mandato)"
+  },
+  {
+   "fieldname": "engagement_accepted",
+   "fieldtype": "Check",
+   "label": "Incarico accettato",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engagement_accepted_on",
+   "fieldtype": "Datetime",
+   "label": "Accettato il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engagement_accepted_ip",
+   "fieldtype": "Data",
+   "label": "IP accettazione",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engagement_perfected_on",
+   "fieldtype": "Datetime",
+   "label": "Perfezionato (pagamento) il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_engagement",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "engagement_pdf",
+   "fieldtype": "Attach",
+   "label": "PDF incarico",
+   "read_only": 1
+  },
+  {
+   "fieldname": "engagement_html",
+   "fieldtype": "Long Text",
+   "label": "Testo incarico",
+   "hidden": 1
+  },
+  {
    "fieldname": "wf_section",
    "fieldtype": "Section Break",
    "label": "Workflow pratica",

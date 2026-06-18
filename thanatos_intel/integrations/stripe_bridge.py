@@ -268,6 +268,61 @@ def create_onetime_checkout(client_name: str, service_code: str) -> dict:
     return {"id": session.id, "url": session.url}
 
 
+@frappe.whitelist()
+def create_case_step_checkout(case_name, seq=None):
+    """Pagamento dello step corrente (o `seq`) di una pratica: prezzo preso dallo
+    step del workflow (campo price). Prepagato via Stripe Checkout one-time; per i
+    clienti a credito si addebita a bonifico mensile e si avanza subito."""
+    from thanatos_intel.permissions import is_full_access, visible_case_names
+    if not is_full_access(frappe.session.user) and case_name not in (visible_case_names(frappe.session.user) or []):
+        frappe.throw(_("Accesso negato."), frappe.PermissionError)
+    case = frappe.get_doc("Investigation Case", case_name)
+    step = None
+    for st in sorted(case.get("case_steps") or [], key=lambda x: x.seq):
+        if (st.action_type or "") == "pay" and st.status in ("Awaiting Client", "In Progress", "Pending"):
+            if seq is None or st.seq == int(seq):
+                step = st
+                break
+    if not step:
+        frappe.throw(_("Nessuno step di pagamento da saldare su questa pratica."))
+
+    amount = float(step.get("price") or 0)
+    if amount <= 0 and step.get("service_code"):
+        cat, amount = _catalog_price(step.service_code, case.client)
+    if amount <= 0:
+        frappe.throw(_("Step di pagamento senza prezzo configurato."))
+
+    label = "Thanatos · %s (%s)" % (step.step_label, case.name)
+    ue = frappe.get_doc({"doctype": "Usage Event", "client": case.client, "case": case.name,
+                         "service": step.get("service_code") or None, "status": "Pending",
+                         "quantity": 1, "unit_price": amount, "total": amount, "currency": "EUR"})
+    ue.insert(ignore_permissions=True)
+
+    if case.client and _is_credit_client(case.client):
+        from thanatos_intel.billing.credits import spend_credit
+        spend_credit(case.client, amount, "Usage Event", ue.name, label)
+        ue.db_set("status", "Invoiced", commit=True)
+        from thanatos_intel.workflow import engagement
+        engagement.on_step_paid(case.name, seq=step.seq, payment_ref="credit:%s" % ue.name)
+        return {"credit": True, "message": _("Step «{0}» addebitato a bonifico mensile.").format(step.step_label)}
+
+    stripe = _get_stripe()
+    customer_id = get_or_create_stripe_customer(case.client)
+    cents = int(round(amount * 100))
+    session = stripe.checkout.Session.create(
+        mode="payment", customer=customer_id,
+        line_items=[{"price_data": {"currency": "eur", "unit_amount": cents,
+                     "product_data": {"name": label}}, "quantity": 1}],
+        success_url=_success_url(), cancel_url=_cancel_url(),
+        payment_intent_data={"metadata": {"thanatos_usage_event": ue.name, "thanatos_case": case.name}},
+        metadata={"thanatos_usage_event": ue.name, "thanatos_case": case.name,
+                  "thanatos_step_seq": str(step.seq)},
+        billing_address_collection="required", locale="it",
+    )
+    ue.db_set("stripe_session_id", session.id, commit=True)
+    return {"id": session.id, "url": session.url}
+
+
 def _fulfil_onetime(ue_name, session):
     """Webhook: pagamento one-time completato → Usage Event Paid + Sales Invoice."""
     if not frappe.db.exists("Usage Event", ue_name):
@@ -286,6 +341,14 @@ def _fulfil_onetime(ue_name, session):
         invoice_pay_per_use_purchase(ue.client, ue.service, stripe_payment_intent=pi, amount=ue.total)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "onetime invoice")
+    if ue.get("case"):
+        try:
+            from thanatos_intel.workflow import engagement
+            seq = (session.get("metadata") or {}).get("thanatos_step_seq") if isinstance(session, dict) \
+                else getattr(session, "metadata", {}).get("thanatos_step_seq")
+            engagement.on_step_paid(ue.case, seq=seq, payment_ref=pi)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "case step fulfilment")
     return {"ok": True, "usage_event": ue_name, "status": "Paid"}
 
 
