@@ -166,6 +166,20 @@ def _resolve_customer_names() -> tuple[str, str]:
 	return buyer, company
 
 
+
+def _ai_monthly_cost(month_start, markup):
+	"""Aggrega AI Usage Log del mese → (billable, real_cost, log_count)."""
+	from frappe.utils import get_last_day
+	first = str(month_start)
+	last = str(get_last_day(month_start))
+	result = frappe.db.sql(
+		"SELECT COALESCE(SUM(real_cost), 0), COUNT(*) FROM "tabAI Usage Log""		" WHERE usage_date BETWEEN %s AND %s",
+		(first, last))
+	real_total = float(result[0][0] or 0)
+	count = int(result[0][1] or 0)
+	ai_markup = float(frappe.conf.get("ai_markup") or markup)
+	return round(real_total * ai_markup, 4), real_total, count
+
 @frappe.whitelist()
 def emit_monthly_proforma_on_erp(for_month: str | None = None) -> dict:
 	"""Genera Quotation (Pro-Forma) su ERP con linee = tutti gli Infrastructure
@@ -188,7 +202,9 @@ def emit_monthly_proforma_on_erp(for_month: str | None = None) -> dict:
 		fields=["name", "cost_code", "provider", "monthly_cost", "currency",
 		        "erp_item_code", "description"],
 	)
-	if not costs:
+	_markup = float(frappe.conf.get("infra_markup") or 3.0)
+	_ai_billable, _ai_real, _ai_log_count = _ai_monthly_cost(month_start, _markup)
+	if not costs and _ai_billable <= 0:
 		return {"skipped": "no_costs"}
 
 	buyer, company = _resolve_customer_names()
@@ -209,7 +225,6 @@ def emit_monthly_proforma_on_erp(for_month: str | None = None) -> dict:
 		return {"already_exists": existing["data"][0]["name"],
 		        "month": month_label}
 
-	_markup = float(frappe.conf.get("infra_markup") or 3.0)
 	items = []
 	total = 0.0
 	for c in costs:
@@ -232,6 +247,26 @@ def emit_monthly_proforma_on_erp(for_month: str | None = None) -> dict:
 			"description": f"{c.provider} · {c.cost_code} · {month_label}",
 		})
 		total += amt
+
+	# AI Usage line item
+	if _ai_billable > 0:
+		_ai_item = "AI-USAGE"
+		if _erp_get(f"/api/resource/Item/{_ai_item}").get("error"):
+			_erp_post("/api/resource/Item", {
+				"item_code": _ai_item,
+				"item_name": "AI Usage (Thanatos)",
+				"item_group": "Services",
+				"stock_uom": "Nos",
+				"is_stock_item": 0,
+				"is_service_item": 1,
+			})
+		items.append({
+			"item_code": _ai_item,
+			"qty": 1,
+			"rate": _ai_billable,
+			"description": f"AI Usage Thanatos {month_label} — {_ai_log_count} log, costo reale MMOS €{_ai_real:.4f}",
+		})
+		total += _ai_billable
 
 	# Deduzione quota infra gia trattenuta per-transazione (cap 20% netto) nelle RD del mese
 	try:
