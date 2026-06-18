@@ -467,6 +467,41 @@ table{min-width:520px}
       if(d.message&&d.message.ok){ location.reload(); }
       else { ai.disabled=false; ai.textContent=o; alert('AI: '+((d.message&&d.message.error)||'non disponibile')); }
     });
+    const tokBtn=document.getElementById('tok-discover');
+    if(tokBtn) tokBtn.addEventListener('click',async()=>{
+      tokBtn.disabled=true; const o=tokBtn.textContent; tokBtn.textContent='…';
+      const fd=new FormData(); fd.append('case_name',CASE);
+      const d=await post('thanatos_intel.osint.token_discovery.discover_case_tokens',fd);
+      tokBtn.disabled=false; tokBtn.textContent=o;
+      const box=document.getElementById('tok-list');
+      const m=d.message; if(!m){box.innerHTML='<span style="color:var(--grey);font-size:12px">Errore.</span>';return;}
+      if(!m.tokens.length){box.innerHTML='<span style="color:var(--grey);font-size:12px">Nessun token trovato sui wallet.</span>';return;}
+      const unit=m.unit_price||0;
+      let rows=m.tokens.map(t=>{
+        const bal=(t.balance!=null)?Number(t.balance).toLocaleString():'';
+        return `<label style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #1A2035;font-size:12px">
+          <input type="checkbox" class="tok-chk" data-key="${t.key}">
+          <span style="min-width:70px;color:#E8E9F0"><b>${t.symbol||'?'}</b></span>
+          <span style="color:var(--grey);flex:1;font-family:monospace;font-size:10px">${t.contract||''}</span>
+          <span style="color:var(--grey)">${bal}</span>
+          <span style="color:#6A9FD8;text-transform:uppercase;font-size:9px">${t.chain}</span>
+        </label>`;}).join('');
+      box.innerHTML=rows+`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <span style="font-size:12px;color:var(--grey)">Prezzo per token: <b style="color:#E8E9F0">${unit.toFixed(2)} €</b> · Totale: <b id="tok-total" style="color:var(--gold)">0.00 €</b></span>
+        <button id="tok-pay" disabled style="background:var(--gold);color:#0A0E1A;border:0;padding:7px 16px;border-radius:4px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;opacity:.5">Paga e verifica ›</button></div>`;
+      const chks=[...box.querySelectorAll('.tok-chk')], pay=box.querySelector('#tok-pay'), tot=box.querySelector('#tok-total');
+      function upd(){const n=chks.filter(c=>c.checked).length; tot.textContent=(n*unit).toFixed(2)+' €'; pay.disabled=(n===0||unit<=0); pay.style.opacity=pay.disabled?.5:1;}
+      chks.forEach(c=>c.addEventListener('change',upd));
+      pay.addEventListener('click',async()=>{
+        const keys=chks.filter(c=>c.checked).map(c=>c.dataset.key);
+        pay.disabled=true; pay.textContent='…';
+        const f=new FormData(); f.append('case_name',CASE); f.append('keys',JSON.stringify(keys));
+        const r=await post('thanatos_intel.integrations.stripe_bridge.create_token_verification_checkout',f);
+        if(r.message&&r.message.url){location.href=r.message.url;}
+        else if(r.message&&r.message.credit){alert(r.message.message);location.reload();}
+        else{alert('Errore: '+(r._server_messages||''));pay.disabled=false;pay.textContent='Paga e verifica ›';}
+      });
+    });
     const mi=document.getElementById('msgin'), ms=document.getElementById('msgsend');
     if(ms) ms.addEventListener('click',async()=>{
       const t=(mi.value||'').trim(); if(!t) return;
@@ -478,6 +513,16 @@ table{min-width:520px}
   })();
   </script>
 
+  {% if has_wallets %}
+  <div id="token-verify-panel" style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:20px 22px;margin-bottom:28px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="color:var(--gold);font-family:Georgia,serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">Verifica Token Presenti</span>
+      <button id="tok-discover" style="background:transparent;color:#6A9FD8;border:1px solid #2a3550;padding:5px 12px;border-radius:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">Scopri token</button>
+    </div>
+    <div style="font-size:12px;color:var(--grey);margin-bottom:10px">Elenco dei token presenti sui wallet della pratica. Seleziona quali verificare: ogni token ha un costo.</div>
+    <div id="tok-list"></div>
+  </div>
+  {% endif %}
   <div class="footer-note">
     Accesso tracciato · Catena di custodia Legea 329/2003 · SHA-256
   </div>

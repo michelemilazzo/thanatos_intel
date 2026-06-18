@@ -267,6 +267,13 @@
    "hidden": 1
   },
   {
+   "fieldname": "token_selection_json",
+   "fieldtype": "Long Text",
+   "label": "Selezione token (pending)",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "wf_section",
    "fieldtype": "Section Break",
    "label": "Workflow pratica",

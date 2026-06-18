@@ -119,6 +119,10 @@ def get_context(context):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "case page case_documents")
 
+    context.has_wallets = any(
+        (ce.entity_type or "") == "Wallet" or
+        frappe.db.get_value("Investigation Entity", ce.entity, "entity_type") == "Wallet"
+        for ce in (case.get("case_entities") or []))
     context.title = f"{case.case_number or case.name} — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context

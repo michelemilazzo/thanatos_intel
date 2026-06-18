@@ -323,6 +323,63 @@ def create_case_step_checkout(case_name, seq=None):
     return {"id": session.id, "url": session.url}
 
 
+@frappe.whitelist()
+def create_token_verification_checkout(case_name, keys):
+    """Pagamento della verifica dei token selezionati (N token x prezzo unitario del
+    blueprint). Salva la selezione sul caso e, al pagamento, esegue la verifica."""
+    import json as _json
+    from thanatos_intel.permissions import is_full_access, visible_case_names
+    if not is_full_access(frappe.session.user) and case_name not in (visible_case_names(frappe.session.user) or []):
+        frappe.throw(_("Accesso negato."), frappe.PermissionError)
+    if isinstance(keys, str):
+        keys = _json.loads(keys)
+    keys = set(keys or [])
+    if not keys:
+        frappe.throw(_("Nessun token selezionato."))
+
+    from thanatos_intel.osint import token_discovery as td
+    case = frappe.get_doc("Investigation Case", case_name)
+    avail = td.discover_case_tokens(case_name)["tokens"]
+    selected = [t for t in avail if t["key"] in keys]
+    if not selected:
+        frappe.throw(_("I token selezionati non sono più disponibili."))
+
+    unit = float(frappe.db.get_value("Service Blueprint", case.get("blueprint"), "token_unit_price") or 0) \
+        if case.get("blueprint") else 0
+    amount = unit * len(selected)
+    if amount <= 0:
+        frappe.throw(_("Prezzo per token non configurato."))
+
+    case.db_set("token_selection_json", _json.dumps(selected), update_modified=False)
+    ue = frappe.get_doc({"doctype": "Usage Event", "client": case.client, "case": case.name,
+                         "status": "Pending", "quantity": len(selected), "unit_price": unit,
+                         "total": amount, "currency": "EUR"})
+    ue.insert(ignore_permissions=True)
+
+    if case.client and _is_credit_client(case.client):
+        from thanatos_intel.billing.credits import spend_credit
+        spend_credit(case.client, amount, "Usage Event", ue.name, "Verifica %d token (%s)" % (len(selected), case.name))
+        ue.db_set("status", "Invoiced", commit=True)
+        td.verify_tokens(case.name)
+        return {"credit": True, "message": _("Verifica di {0} token addebitata a bonifico mensile.").format(len(selected))}
+
+    stripe = _get_stripe()
+    customer_id = get_or_create_stripe_customer(case.client)
+    cents = int(round(amount * 100))
+    session = stripe.checkout.Session.create(
+        mode="payment", customer=customer_id,
+        line_items=[{"price_data": {"currency": "eur", "unit_amount": int(round(unit * 100)),
+                     "product_data": {"name": "Thanatos · Verifica token (%s)" % case.name}},
+                     "quantity": len(selected)}],
+        success_url=_success_url(), cancel_url=_cancel_url(),
+        payment_intent_data={"metadata": {"thanatos_usage_event": ue.name, "thanatos_case": case.name}},
+        metadata={"thanatos_usage_event": ue.name, "thanatos_case": case.name, "thanatos_token_verify": "1"},
+        billing_address_collection="required", locale="it",
+    )
+    ue.db_set("stripe_session_id", session.id, commit=True)
+    return {"id": session.id, "url": session.url}
+
+
 def _fulfil_onetime(ue_name, session):
     """Webhook: pagamento one-time completato → Usage Event Paid + Sales Invoice."""
     if not frappe.db.exists("Usage Event", ue_name):
@@ -342,13 +399,16 @@ def _fulfil_onetime(ue_name, session):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "onetime invoice")
     if ue.get("case"):
+        meta = (session.get("metadata") or {}) if isinstance(session, dict) else (getattr(session, "metadata", {}) or {})
         try:
-            from thanatos_intel.workflow import engagement
-            seq = (session.get("metadata") or {}).get("thanatos_step_seq") if isinstance(session, dict) \
-                else getattr(session, "metadata", {}).get("thanatos_step_seq")
-            engagement.on_step_paid(ue.case, seq=seq, payment_ref=pi)
+            if meta.get("thanatos_token_verify"):
+                from thanatos_intel.osint import token_discovery as td
+                td.verify_tokens(ue.case)
+            else:
+                from thanatos_intel.workflow import engagement
+                engagement.on_step_paid(ue.case, seq=meta.get("thanatos_step_seq"), payment_ref=pi)
         except Exception:
-            frappe.log_error(frappe.get_traceback(), "case step fulfilment")
+            frappe.log_error(frappe.get_traceback(), "case fulfilment")
     return {"ok": True, "usage_event": ue_name, "status": "Paid"}
 
 
