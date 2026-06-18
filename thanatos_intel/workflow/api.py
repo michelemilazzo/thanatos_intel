@@ -3,11 +3,54 @@
 Tutti i metodi sono whitelisted e applicano i confini: il cliente vede/agisce
 solo sulle proprie pratiche; gli operatori (is_full_access) su tutte.
 """
+import re
+
 import frappe
 from frappe import _
 from thanatos_intel.workflow import engine, notify
 
 _PK_MAP = {"Indagine Investigativa": "Investigation", "OSINT Lookup": "OSINT"}
+
+
+_WALLET_RE = re.compile(
+    r"\b("
+    r"0x[a-fA-F0-9]{40}"                 # EVM/ETH
+    r"|T[1-9A-HJ-NP-Za-km-z]{33}"        # TRON
+    r"|bc1[ac-hj-np-z02-9]{11,71}"       # BTC bech32
+    r"|[13][1-9A-HJ-NP-Za-km-z]{25,34}"  # BTC legacy
+    r")\b"
+)
+
+
+def _extract_wallets(text):
+    """Indirizzi crypto presenti nel testo (subject/obiettivo), dedotti dal formato."""
+    if not text:
+        return []
+    seen, out = set(), []
+    for m in _WALLET_RE.findall(text):
+        if m not in seen:
+            seen.add(m)
+            out.append(m)
+    return out
+
+
+def _link_wallets_to_case(case, addresses):
+    """Crea (se servono) le Investigation Entity di tipo Wallet e le collega al
+    caso come soggetti, cosi' attribuzione Arkham e monitoraggio h24 partono subito."""
+    existing = {ce.entity for ce in (case.get("case_entities") or [])}
+    for addr in addresses:
+        if not frappe.db.exists("Investigation Entity", addr):
+            frappe.get_doc({
+                "doctype": "Investigation Entity",
+                "primary_identifier": addr,
+                "entity_type": "Wallet",
+                "status": "Active",
+            }).insert(ignore_permissions=True)
+        if addr not in existing:
+            case.append("case_entities", {
+                "entity": addr, "entity_type": "Wallet", "role_in_case": "Subject",
+            })
+            existing.add(addr)
 
 
 def _client_for_user(user=None):
@@ -90,6 +133,8 @@ def open_practice(blueprint, case_title, subject=None, objective=None, jurisdict
         "summary": (subject or "")[:140],
         "description": "".join(desc_parts),
     })
+    _link_wallets_to_case(case, _extract_wallets(" ".join(filter(None, [subject, objective]))))
+
     case.flags.ignore_mandatory = True
     case.insert(ignore_permissions=True)
 
