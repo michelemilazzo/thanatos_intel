@@ -165,26 +165,29 @@ def fetch_source(name: str) -> dict:
 		raw_content = entry.get("content", [{}])[0].get("value") if entry.get("content") else entry.get("summary", "")
 		ext_pub = _parse_datetime(entry.get("published") or entry.get("updated"))
 
-		if src.ai_summarize:
-			excerpt, content = _ai_rewrite(title, raw_content, src.language or "it")
-		else:
-			plain = _strip_html(raw_content)
-			excerpt = plain[:280] + ("…" if len(plain) > 280 else "")
-			content = raw_content or f"<p>{plain}</p>"
+		# arricchimento: testo completo leggibile + traduzione lingua sito + angolo Thanatos
+		from thanatos_intel.news.enrich import enrich as _enrich
+		en = _enrich(title, raw_content, url, lang="it", source_lang=(src.language or "auto"))
+		title_it = en["title"] or title
+		excerpt = en["excerpt"]
+		content = en["body_html"]
 
-		image_url = _entry_image(entry, raw_content, content)
+		image_url = _entry_image(entry, raw_content, raw_content)
 		if not image_url:
 			image_url = _og_image(url)
 
 		try:
 			doc = frappe.get_doc({
 				"doctype": "News Article",
-				"title": title,
-				"slug": _unique_slug(_slugify(title), fp),
+				"title": title_it,
+				"slug": _unique_slug(_slugify(title_it), fp),
 				"category": category,
 				"excerpt": excerpt,
 				"content": content,
-				"language": src.language or "it",
+				"thanatos_angle": en["thanatos_angle"],
+				"cta_label": en["cta_label"],
+				"cta_url": en["cta_url"],
+				"language": "it",
 				"country_focus": src.country_focus or "",
 				"source_type": "RSS Ingestion",
 				"source": src.name,
