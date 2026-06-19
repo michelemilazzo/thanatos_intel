@@ -57,16 +57,4 @@ class NewsArticle(WebsiteGenerator):
 		                         fields=["title", "slug", "excerpt", "published_at", "featured_image"],
 		                         order_by="published_at desc", limit=3)
 		context.related = related
-		from thanatos_intel.news import i18n
-		vl = i18n.view_lang(); i18n.set_lang_cookie(vl)
-		context.view_lang = vl
-		context.no_cache = 1
-		if vl != "it":
-			self.title = i18n.localize(self.title, vl, fmt="text")
-			self.excerpt = i18n.localize(self.excerpt, vl, fmt="text")
-			self.content = i18n.localize(self.content, vl, fmt="html")
-			if self.get("meta_title"): self.meta_title = i18n.localize(self.meta_title, vl, fmt="text")
-			if self.get("meta_description"): self.meta_description = i18n.localize(self.meta_description, vl, fmt="text")
-			for r in related:
-				if r.get("title"): r["title"] = i18n.localize(r["title"], vl, fmt="text")
 		return context

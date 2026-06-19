@@ -41,3 +41,52 @@ def tune_cache(response=None, request=None, **kwargs):
     except Exception:
         pass
     return response
+
+
+# ---- traduzione globale del sito (IT canonico, EN/altro on-render) ----
+
+_NO_STORE_TR = "private, no-store, max-age=0"
+
+
+def translate_response(response=None, request=None, **kwargs):
+    """after_request: traduce l'HTML della pagina nella lingua scelta (cookie
+    site_lang o ?lang). Esclude desk/api/asset/portal. Fail-safe."""
+    try:
+        if response is None or getattr(response, "status_code", 200) != 200:
+            return response
+        ctype = (response.headers.get("Content-Type") or "")
+        if "text/html" not in ctype:
+            return response
+        path = ""
+        try:
+            path = (request.path if request is not None else frappe.local.request.path) or ""
+        except Exception:
+            pass
+        if path.startswith(("/api", "/assets", "/app", "/private", "/files", "/socket")):
+            return response
+
+        from thanatos_intel import site_i18n
+        lang = site_i18n.current_lang()
+        # persiste la scelta lingua nel cookie
+        chosen = frappe.form_dict.get("lang") if getattr(frappe.local, "form_dict", None) else None
+        if chosen and chosen in (("it",) + tuple(site_i18n.SUPPORTED)):
+            try:
+                response.set_cookie("site_lang", chosen, max_age=180 * 86400, samesite="Lax")
+            except Exception:
+                pass
+        if lang == "it":
+            return response
+        html = response.get_data(as_text=True)
+        out = site_i18n.translate_html(html, lang)
+        if out and out != html:
+            response.set_data(out.encode("utf-8"))
+            response.headers["Cache-Control"] = _NO_STORE_TR
+            rh = getattr(frappe.local, "response_headers", None)
+            if rh is not None:
+                rh["Cache-Control"] = _NO_STORE_TR
+    except Exception:
+        try:
+            frappe.log_error(frappe.get_traceback(), "translate_response")
+        except Exception:
+            pass
+    return response

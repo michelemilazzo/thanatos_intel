@@ -51,13 +51,8 @@ def get_context(context):
 				fields=["category_name", "category_slug"], order_by="display_order")
 		except Exception:
 			pass
-	from thanatos_intel.news import i18n
-	vl = i18n.view_lang(); i18n.set_lang_cookie(vl)
-	context.view_lang = vl
-	if vl != "it":
-		context.no_cache = 1
-	if vl != "it" and context.articles:
-		i18n.localize_articles(context.articles, vl)
+	from thanatos_intel.site_i18n import current_lang
+	context.view_lang = current_lang()
 	context.parents = [{"label": "Home", "route": "/"}]
 	try:
 		from thanatos_intel.news.stats import newsroom_stats

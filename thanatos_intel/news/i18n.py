@@ -13,7 +13,7 @@ def view_lang():
     l = frappe.form_dict.get("lang")
     if not l and getattr(frappe.local, "request", None):
         try:
-            l = frappe.request.cookies.get("news_lang")
+            l = frappe.request.cookies.get("site_lang")
         except Exception:
             l = None
     l = (l or "it").lower()[:2]
