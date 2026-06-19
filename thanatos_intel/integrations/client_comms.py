@@ -58,7 +58,7 @@ def _send(case_name, template, ctx_doc=None):
     subj = frappe.render_template(tpl.subject or "", ctx)
     body = frappe.render_template(tpl.response_html or tpl.response or "", ctx)
     frappe.sendmail(
-        recipients=[email], sender=_sender('info'),
+        recipients=[email], sender=_sender('noreply'), reply_to=_sender('info'),
         subject=subj,
         message=email_render.render(body, title=subj, preheader=subj),
         reference_doctype="Investigation Case", reference_name=case_name,
