@@ -25,6 +25,30 @@ def after_migrate():
     _setup_pipeline()
     _seed_workflow()
     _register_kyc_provider()
+    _ensure_client_custom_fields()
+
+
+def _ensure_client_custom_fields():
+    """Aggiunge custom fields su Investigation Client (idempotente)."""
+    fields = [
+        {
+            "fieldname": "preferred_language",
+            "label": "Preferred Language",
+            "fieldtype": "Select",
+            "options": "Italian\nEnglish",
+            "default": "Italian",
+            "insert_after": "phone",
+        },
+    ]
+    for f in fields:
+        if not frappe.db.exists("Custom Field", {"dt": "Investigation Client", "fieldname": f["fieldname"]}):
+            cf = frappe.get_doc({
+                "doctype": "Custom Field",
+                "dt": "Investigation Client",
+                **f,
+            })
+            cf.insert(ignore_permissions=True)
+    frappe.db.commit()
 
 
 def _register_kyc_provider():

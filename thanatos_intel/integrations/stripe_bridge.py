@@ -231,10 +231,13 @@ def _catalog_price(service_code, client_name):
                               ["service_name", "price", "currency"], as_dict=True)
     if not cat:
         frappe.throw(_("Servizio non disponibile."))
-    ctype = frappe.db.get_value("Investigation Client", client_name, "client_type") or "Individual"
+    ctype, sub_plan = frappe.db.get_value(
+        "Investigation Client", client_name, ["client_type", "subscription_plan"]) or ("Individual", "")
+    ctype = ctype or "Individual"
+    is_enterprise = (sub_plan or "") == "Enterprise"
     try:
         from thanatos_intel.portal_system.doctype.service_catalog.service_catalog import ServiceCatalog
-        price = float(ServiceCatalog.get_price(service_code, ctype))
+        price = float(ServiceCatalog.get_price(service_code, ctype, is_enterprise=is_enterprise))
     except Exception:
         price = float(cat.price or 0)
     return cat, price
@@ -252,16 +255,17 @@ def create_onetime_checkout(client_name: str, service_code: str) -> dict:
                          "status": "Pending", "quantity": 1, "unit_price": price, "total": price,
                          "currency": cat.currency or "EUR"})
     ue.insert(ignore_permissions=True)
+    actual_price = float(ue.total or price)
 
     if _is_credit_client(client_name):
         from thanatos_intel.billing.credits import spend_credit
-        spend_credit(client_name, price, "Usage Event", ue.name, "Acquisto servizio %s" % service_code)
+        spend_credit(client_name, actual_price, "Usage Event", ue.name, "Acquisto servizio %s" % service_code)
         ue.db_set("status", "Invoiced", commit=True)
         return {"credit": True, "message": _("Servizio {0} attivato — fatturato a bonifico mensile.").format(cat.service_name)}
 
     stripe = _get_stripe()
     customer_id = get_or_create_stripe_customer(client_name)
-    cents = int(round(price * 100))
+    cents = int(round(actual_price * 100))
     session = stripe.checkout.Session.create(
         mode="payment", customer=customer_id,
         line_items=[{"price_data": {"currency": (cat.currency or "eur").lower(), "unit_amount": cents,

@@ -137,9 +137,11 @@ def open_practice(blueprint, case_title, subject=None, objective=None, jurisdict
 
     case.flags.ignore_mandatory = True
     case.insert(ignore_permissions=True)
+    frappe.db.commit()
 
     ok, missing = engine.identity_satisfied(case)
     state = engine.start(case.name)
+    frappe.db.commit()
     return {"case": case.name, "identity_ok": ok, "identity_missing": missing,
             "state": state, "url": f"/portal/case/{case.name}"}
 

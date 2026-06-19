@@ -176,13 +176,16 @@ scheduler_events={
           'thanatos_intel.thanatos_ddd.opensanctions_sync.daily_refresh',
           'thanatos_intel.integrations.blacklist_ingest.daily_sanctions_sync',
           'thanatos_intel.workflow.vault.expire_vault_items',
-          'thanatos_intel.billing.ai_digest.daily_ai_digest'],
+          'thanatos_intel.billing.ai_digest.daily_ai_digest',
+          'thanatos_intel.notifications.client_alerts.daily_vault_expiry_check',
+          'thanatos_intel.notifications.client_alerts.check_kyc_onboarding_consistency'],
  'daily_long':[],
  'weekly':[],
  'weekly_long':[],
  'monthly':['thanatos_intel.billing.cost_invoicing.scheduled_monthly_cost_invoicing',
             'thanatos_intel.billing.erp_sync.scheduled_monthly_invoice_on_erp',
-            'thanatos_intel.billing.credit_settlement.run_monthly_credit_settlement'],
+            'thanatos_intel.billing.credit_settlement.run_monthly_credit_settlement',
+            'thanatos_intel.notifications.client_alerts.monthly_data_verification_request'],
  'monthly_long':[]
 }
 website_route_rules=[
