@@ -8,6 +8,7 @@ auth_hooks=["thanatos_intel.thanatos_ddd.auth_patch.allow_thanatos_guest_paths"]
 # servito. Persistente in thanatos_intel, regge anche se cambia l'hash della temp dir.
 website_redirects=[
 	{"source": r"tmp/.*/inter.css", "target": "/assets/frappe/css/fonts/inter/inter.css"},
+	{"source": r"/me", "target": "/account"},
 ]
 app_title='Thanatos Intel'
 app_version='0.1.0'
