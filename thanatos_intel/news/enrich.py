@@ -8,6 +8,27 @@ import requests
 
 UA = {"User-Agent": "Mozilla/5.0 thanatos-news"}
 
+# Protezione nomi propri/acronimi/codici prima della traduzione (libretranslate
+# tende a tradurre/mangiare i nomi). Placeholder con private-use unicode che il
+# traduttore lascia intatto.
+_KEEP_RX = re.compile(r"\b([A-Z][a-z]+(?:[A-Z]\w*)+|[A-Z]{2,}[0-9]*|[A-Za-z]+[0-9]+[A-Za-z0-9]*|[A-Z][A-Za-z]+/[A-Z][A-Za-z]+)\b")
+
+def _protect(text):
+    keep = {}
+    def repl(m):
+        tok = m.group(0)
+        if tok.lower() in ("the","raas","edr"):  # acronimi minuscoli gestiti a parte
+            pass
+        k = "\ue000%d\ue001" % len(keep)
+        keep[k] = tok
+        return k
+    return _KEEP_RX.sub(repl, text or ""), keep
+
+def _restore(text, keep):
+    for k, v in (keep or {}).items():
+        text = text.replace(k, v)
+    return text
+
 # tema -> (regex, label CTA, url CTA, paragrafo "Analisi Thanatos")
 THEMES = [
     (r"breach|leak|data breach|hack|ransomware|malware|spyware|exploit|cyber|violazione dati|attacco|vulnerabil",
@@ -67,11 +88,13 @@ def _lt(text, target, source="auto"):
     if not text:
         return text
     base = frappe.conf.get("libretranslate_url") or "http://10.10.0.4:5000"
+    masked, keep = _protect(text)
     try:
         r = requests.post(base.rstrip("/") + "/translate", timeout=20,
-                          json={"q": text[:4500], "source": source, "target": target, "format": "text"})
+                          json={"q": masked[:4500], "source": source, "target": target, "format": "text"})
         if r.ok:
-            return (r.json() or {}).get("translatedText") or text
+            out = (r.json() or {}).get("translatedText") or masked
+            return _restore(out, keep)
     except Exception:
         pass
     return text
