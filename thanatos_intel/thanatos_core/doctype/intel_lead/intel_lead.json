@@ -149,6 +149,31 @@
       "read_only": 1
     },
     {
+      "fieldname": "last_message_at",
+      "fieldtype": "Datetime",
+      "label": "Ultimo messaggio il",
+      "read_only": 1
+    },
+    {
+      "fieldname": "sb_chat",
+      "fieldtype": "Section Break",
+      "label": "Conversazione WhatsApp",
+      "depends_on": "eval:doc.source_type=='WhatsApp'"
+    },
+    {
+      "fieldname": "chat_html",
+      "fieldtype": "HTML",
+      "label": "Chat",
+      "depends_on": "eval:doc.source_type=='WhatsApp'"
+    },
+    {
+      "fieldname": "messages",
+      "fieldtype": "Table",
+      "label": "Messaggi",
+      "options": "Intel Lead Message",
+      "hidden": 1
+    },
+    {
       "fieldname": "sb_notes",
       "fieldtype": "Section Break",
       "label": "Note operatore"

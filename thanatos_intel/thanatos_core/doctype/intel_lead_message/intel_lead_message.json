@@ -1,0 +1,56 @@
+{
+  "doctype": "DocType",
+  "name": "Intel Lead Message",
+  "module": "Thanatos Core",
+  "istable": 1,
+  "fields": [
+    {
+      "fieldname": "direction",
+      "fieldtype": "Select",
+      "label": "Direzione",
+      "options": "Inbound\nOutbound",
+      "default": "Inbound",
+      "in_list_view": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "sent_at",
+      "fieldtype": "Datetime",
+      "label": "Ora",
+      "in_list_view": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "content",
+      "fieldtype": "Long Text",
+      "label": "Messaggio",
+      "in_list_view": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Stato",
+      "options": "Inviato\nConsegnato\nLetto\nFallito",
+      "default": "Inviato",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "sent_by",
+      "fieldtype": "Link",
+      "label": "Inviato da",
+      "options": "User"
+    },
+    {
+      "fieldname": "wa_message_id",
+      "fieldtype": "Data",
+      "label": "ID messaggio WA"
+    },
+    {
+      "fieldname": "media_url",
+      "fieldtype": "Data",
+      "label": "URL media"
+    }
+  ],
+  "permissions": []
+}

@@ -14,7 +14,6 @@ Configurazione site_config.json (fallback globale):
   whatsapp_ingest_token   — token globale quando number_id non specificato
 """
 import frappe
-from frappe.utils import now_datetime
 
 
 def _load_number(number_id: str) -> dict | None:
@@ -46,23 +45,15 @@ def _check_token(token: str, wa_number: dict | None) -> bool:
 
 def _create_lead(source_id: str, source_name: str, content: str,
                  media_url: str = "", wa_number: dict | None = None) -> str:
-    doc = frappe.get_doc({
-        "doctype": "Intel Lead",
-        "received_at": now_datetime(),
-        "source_type": "WhatsApp",
-        "source_identifier": source_id,
-        "source_name": source_name or "",
-        "content": content or "(nessun testo)",
-        "media_url": media_url or "",
-        "status": "Nuovo",
-        "priority": (wa_number or {}).get("default_priority") or "Media",
-        "tags": (wa_number or {}).get("default_tags") or "",
-        "assigned_to": (wa_number or {}).get("auto_assign_to") or "",
-        "whatsapp_number": (wa_number or {}).get("phone_number") or "",
-    })
-    doc.insert(ignore_permissions=True)
-    frappe.db.commit()
-    return doc.name
+    from thanatos_intel.thanatos_core.doctype.intel_lead.intel_lead import find_or_create_lead
+    return find_or_create_lead(
+        source_identifier=source_id,
+        source_name=source_name,
+        content=content,
+        source_type="WhatsApp",
+        media_url=media_url,
+        wa_number=wa_number,
+    )
 
 
 def _parse_twilio(data: dict) -> list[dict]:
@@ -166,6 +157,11 @@ def webhook():
                     wa_number = rec
         messages = _parse_twilio(data)
 
+    # Gestisce status update (Meta: statuses array invece di messages)
+    if "json" in (req.content_type or "") and not messages:
+        _handle_status_updates(data)
+        return {"ok": True, "type": "status_update"}
+
     created = []
     for m in messages:
         if not m["content"] and not m["media_url"]:
@@ -180,3 +176,25 @@ def webhook():
         created.append(name)
 
     return {"created": created, "count": len(created)}
+
+
+def _handle_status_updates(data: dict):
+    """Aggiorna stato (consegnato/letto) dei messaggi outbound."""
+    for entry in data.get("entry", []):
+        for change in entry.get("changes", []):
+            for st in change.get("value", {}).get("statuses", []):
+                wa_msg_id = st.get("id")
+                new_status = {"sent": "Inviato", "delivered": "Consegnato",
+                              "read": "Letto", "failed": "Fallito"}.get(st.get("status"), "")
+                if not wa_msg_id or not new_status:
+                    continue
+                # Cerca nella child table
+                row = frappe.db.get_value(
+                    "Intel Lead Message",
+                    {"wa_message_id": wa_msg_id},
+                    ["name", "parent"],
+                    as_dict=True,
+                )
+                if row:
+                    frappe.db.set_value("Intel Lead Message", row.name, "status", new_status)
+    frappe.db.commit()
