@@ -1,30 +1,61 @@
-{% extends 'templates/web.html' %}
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}Stato pratica visto — Thanatos Intel{% endblock %}
+{% block head_include %}
+<style>body, body .page_content, body .container { background:#0A0E1A !important; max-width:100% !important; }</style>
+{% endblock %}
 {% block page_content %}
-<div class='container py-5'>
-  <h1>Visa Case Status</h1>
-  {% if message %}<div class='alert alert-warning'>{{ message }}</div>{% endif %}
-  {% if case_order %}<p><strong>Payment Status:</strong> {{ case_order.payment_status }}</p>{% endif %}
+{{ thanatos_header() }}
+<style>
+.vc{max-width:760px;margin:0 auto;padding:44px 22px 80px;color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif}
+.vc h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#C8A96E;margin:0 0 18px;letter-spacing:.5px}
+.vc h3{font-family:Georgia,serif;font-weight:400;font-size:17px;color:#fff;margin:26px 0 12px;padding-bottom:8px;border-bottom:1px solid rgba(200,169,110,.15)}
+.vc .alert{background:rgba(200,169,110,.1);border:1px solid rgba(200,169,110,.4);border-radius:8px;padding:14px 16px;color:#E8E9F0;font-size:14px}
+.vc .panel{background:#111729;border:1px solid #1F2742;border-radius:10px;padding:18px 20px;margin-bottom:8px}
+.vc .row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #1F2742;font-size:14px}
+.vc .row:last-child{border-bottom:none}.vc .row .k{color:#7A8294}.vc .row .v{color:#E8E9F0}
+.vc .bar{height:8px;border-radius:999px;background:#1F2742;overflow:hidden;margin-top:6px}
+.vc .bar > i{display:block;height:100%;background:#C8A96E}
+.vc ul{list-style:none;padding:0;margin:0}
+.vc li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1F2742;font-size:14px;color:#E8E9F0}
+.vc li:last-child{border-bottom:none}
+.vc .chk{width:18px;height:18px;border-radius:4px;border:1px solid #1F2742;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 18px}
+.vc .chk.on{background:#C8A96E;color:#0A0E1A;border-color:#C8A96E}
+.vc .tag{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#7A8294;border:1px solid #1F2742;border-radius:999px;padding:2px 8px;margin-left:auto}
+</style>
+<div class="vc">
+  <h1>Stato pratica visto</h1>
+  {% if message %}<div class="alert">{{ message }}</div>{% endif %}
+  {% if case_order %}
+  <div class="panel">
+    <div class="row"><span class="k">Stato pagamento</span><span class="v">{{ case_order.payment_status }}</span></div>
+    {% if visa_case %}
+    <div class="row"><span class="k">Studente</span><span class="v">{{ visa_case.student_full_name }}</span></div>
+    <div class="row"><span class="k">Completamento</span><span class="v">{{ visa_case.completion_percent or 0 }}%</span></div>
+    <div class="bar"><i style="width:{{ visa_case.completion_percent or 0 }}%"></i></div>
+    {% endif %}
+  </div>
+  {% endif %}
   {% if visa_case %}
-    <p><strong>Student:</strong> {{ visa_case.student_full_name }}</p>
-    <p><strong>Completion:</strong> {{ visa_case.completion_percent or 0 }}%</p>
-    <h3>Origin Country Checklist</h3>
+    <h3>Checklist paese di origine</h3>
     <ul>
       {% for item in visa_case.origin_country_checklist %}
-        <li>{% if item.completed %}[x]{% else %}[ ]{% endif %} {{ item.check_item }}</li>
+        <li><span class="chk {{ 'on' if item.completed }}">{{ '✓' if item.completed else '' }}</span> {{ item.check_item }}</li>
       {% endfor %}
     </ul>
-    <h3>Destination / Agency Checklist</h3>
+    <h3>Checklist destinazione / agenzia</h3>
     <ul>
       {% for item in visa_case.destination_country_checklist %}
-        <li>{% if item.completed %}[x]{% else %}[ ]{% endif %} {{ item.check_item }}</li>
+        <li><span class="chk {{ 'on' if item.completed }}">{{ '✓' if item.completed else '' }}</span> {{ item.check_item }}</li>
       {% endfor %}
     </ul>
-    <h3>Requested Documents</h3>
+    <h3>Documenti richiesti</h3>
     <ul>
       {% for doc in document_requests %}
-        <li>{{ doc.document_name }} - {{ doc.status }}{% if doc.uploaded_file %} - uploaded{% endif %}</li>
+        <li><span class="chk {{ 'on' if doc.uploaded_file }}">{{ '✓' if doc.uploaded_file else '' }}</span> {{ doc.document_name }} <span class="tag">{{ doc.status }}{% if doc.uploaded_file %} · caricato{% endif %}</span></li>
       {% endfor %}
     </ul>
   {% endif %}
 </div>
+{{ thanatos_footer() }}
 {% endblock %}
