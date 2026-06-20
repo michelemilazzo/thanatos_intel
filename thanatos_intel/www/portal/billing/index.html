@@ -119,6 +119,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
       {{ current_sub.amount }} {{ current_sub.currency }} / mese
       {% if current_sub.current_period_end %} · rinnovo {{ frappe.utils.format_datetime(current_sub.current_period_end, 'dd/MM/yyyy') }}{% endif %}
     </div>
+    <div style="margin-top:12px">
+      <button class="btn" onclick="openBillingPortal()">Gestisci carta / abbonamento →</button>
+    </div>
   </div>
   {% endif %}
 
@@ -232,6 +235,26 @@ async function checkoutAddon(serviceCode) {
       window.location = j.message.url;
     } else if (j.message && j.message.credit) {
       alert(j.message.message); location.reload();
+    } else {
+      alert("Errore: " + (j._error_message || j.exc || JSON.stringify(j)));
+    }
+  } catch (e) {
+    alert("Errore: " + e.message);
+  }
+}
+
+async function openBillingPortal() {
+  if (!CLIENT) { alert("Cliente non collegato"); return; }
+  try {
+    const r = await fetch("/api/method/thanatos_intel.integrations.stripe_bridge.create_billing_portal_session", {
+      method: "POST",
+      credentials: "include",
+      headers: {"Content-Type": "application/x-www-form-urlencoded", "X-Frappe-CSRF-Token": CSRF},
+      body: new URLSearchParams({client_name: CLIENT}).toString(),
+    });
+    const j = await r.json();
+    if (j.message && j.message.url) {
+      window.location = j.message.url;
     } else {
       alert("Errore: " + (j._error_message || j.exc || JSON.stringify(j)));
     }
