@@ -9,6 +9,8 @@ auth_hooks=["thanatos_intel.thanatos_ddd.auth_patch.allow_thanatos_guest_paths"]
 website_redirects=[
 	{"source": r"tmp/.*/inter.css", "target": "/assets/frappe/css/fonts/inter/inter.css"},
 	{"source": r"/me", "target": "/account"},
+	{"source": r"/update-profile", "target": "/modifica-profilo"},
+	{"source": r"/sicurezza", "target": "/sicurezza-account"},
 ]
 app_title='Thanatos Intel'
 app_version='0.1.0'

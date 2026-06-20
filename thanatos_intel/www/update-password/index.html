@@ -1,0 +1,142 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Reimposta password — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<style>
+body, body .page_content, body .container { background:#0A0E1A !important; max-width:100% !important; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header('account') }}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2742;}
+.acc{background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:60vh}
+.acc-wrap{max-width:480px;margin:0 auto;padding:56px 22px 48px}
+.acc .back{display:inline-block;color:var(--grey);text-decoration:none;font-size:12px;letter-spacing:1px;margin-bottom:18px}
+.acc .back:hover{color:var(--gold)}
+.acc h1{font-family:Georgia,serif;font-weight:400;font-size:32px;color:var(--gold);margin:0 0 6px;letter-spacing:1px}
+.acc .sub{color:var(--grey);font-size:13px;margin:0 0 28px}
+.acc-card{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:26px 24px}
+.fld{margin-bottom:18px;position:relative}
+.fld label{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);margin-bottom:7px}
+.fld input{width:100%;box-sizing:border-box;background:#0A0E1A;border:1px solid var(--border);border-radius:6px;color:#E8E9F0;font-size:14px;padding:11px 13px;outline:none;transition:border-color .15s}
+.fld input:focus{border-color:var(--gold)}
+.fld .toggle{position:absolute;right:12px;top:34px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);cursor:pointer}
+.fld .toggle:hover{color:var(--gold)}
+.hint{font-size:12px;color:var(--grey);margin:-8px 0 16px}
+.hint.err{color:#d05a5a}
+.btn-save{margin-top:6px;width:100%;background:var(--gold);color:#0A0E1A;border:none;border-radius:6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;padding:13px;cursor:pointer;transition:background .15s}
+.btn-save:hover{background:#B8975A}
+.btn-save:disabled{opacity:.5;cursor:not-allowed}
+.msg{margin-top:14px;font-size:13px;min-height:18px}
+.msg.ok{color:#5fb573}.msg.err{color:#d05a5a}
+</style>
+<div class="acc">
+  <div class="acc-wrap">
+    <a class="back" href="/account">‹ Il mio account</a>
+    <h1>Reimposta password</h1>
+    <p class="sub">Scegli una nuova password sicura per accedere al tuo account.</p>
+    <div class="acc-card">
+      <form id="pwd-form" autocomplete="off">
+        <div class="fld" id="old-wrap">
+          <label>Password attuale</label>
+          <input id="old_password" type="password" autocomplete="current-password">
+          <span class="toggle" data-for="old_password">Mostra</span>
+        </div>
+        <div class="fld">
+          <label>Nuova password</label>
+          <input id="new_password" type="password" autocomplete="new-password">
+          <span class="toggle" data-for="new_password">Mostra</span>
+        </div>
+        <div class="hint" id="strength"></div>
+        <div class="fld">
+          <label>Conferma nuova password</label>
+          <input id="confirm_password" type="password" autocomplete="new-password">
+          <span class="toggle" data-for="confirm_password">Mostra</span>
+        </div>
+        <div class="hint err" id="mismatch" style="display:none">Le password non coincidono.</div>
+        <button type="submit" class="btn-save" id="save-btn" disabled>Conferma</button>
+        <div class="msg" id="msg"></div>
+      </form>
+    </div>
+  </div>
+</div>
+{{ thanatos_footer() }}
+<script>
+frappe.ready(function(){
+  const key = {{ key | tojson }};
+  const oldWrap=document.getElementById('old-wrap');
+  const oldP=document.getElementById('old_password');
+  const newP=document.getElementById('new_password');
+  const conf=document.getElementById('confirm_password');
+  const btn=document.getElementById('save-btn');
+  const msg=document.getElementById('msg');
+  const mismatch=document.getElementById('mismatch');
+  const strength=document.getElementById('strength');
+
+  if(key){ oldWrap.style.display='none'; }
+
+  document.querySelectorAll('.toggle').forEach(function(t){
+    t.addEventListener('click',function(){
+      const inp=document.getElementById(t.dataset.for);
+      if(inp.type==='password'){inp.type='text';t.textContent='Nascondi';}
+      else{inp.type='password';t.textContent='Mostra';}
+    });
+  });
+
+  let strengthTimer=null;
+  function checkStrength(){
+    if(!newP.value){strength.textContent='';return;}
+    clearTimeout(strengthTimer);
+    strengthTimer=setTimeout(function(){
+      frappe.call({
+        method:'frappe.core.doctype.user.user.test_password_strength',
+        args:{key:key||'',old_password:oldP.value,new_password:newP.value},
+        callback:function(r){
+          const m=r.message;
+          if(!m||!m.feedback){strength.textContent='';return;}
+          if(m.feedback.password_policy_validation_passed){
+            strength.className='hint';strength.textContent='Password valida 👍';
+          }else{
+            const sug=(m.feedback.suggestions&&m.feedback.suggestions.length)?m.feedback.suggestions.join(' '):(m.feedback.warning||'Scegli una password più robusta.');
+            strength.className='hint err';strength.textContent=sug;
+          }
+        }
+      });
+    },250);
+  }
+
+  function validate(){
+    const haveOld = key ? true : !!oldP.value;
+    const match = newP.value && conf.value && newP.value===conf.value;
+    mismatch.style.display=(conf.value && newP.value!==conf.value)?'block':'none';
+    btn.disabled=!(haveOld && match);
+  }
+
+  [oldP,newP,conf].forEach(function(i){i&&i.addEventListener('input',validate);});
+  newP.addEventListener('input',checkStrength);
+
+  document.getElementById('pwd-form').addEventListener('submit',function(e){
+    e.preventDefault();
+    if(newP.value!==conf.value){mismatch.style.display='block';return;}
+    btn.disabled=true; msg.className='msg'; msg.textContent='Aggiornamento…';
+    frappe.call({
+      type:'POST',
+      method:'frappe.core.doctype.user.user.update_password',
+      args:{key:key||'',old_password:oldP.value,new_password:newP.value,confirm_password:conf.value,logout_all_sessions:1},
+      statusCode:{
+        401:function(){msg.className='msg err';msg.textContent='La password attuale non è corretta.';btn.disabled=false;},
+        410:function(){msg.className='msg err';msg.textContent='Il link di reimpostazione non è valido o è scaduto.';btn.disabled=false;},
+        200:function(r){
+          msg.className='msg ok';msg.textContent='Password aggiornata. Reindirizzamento…';
+          setTimeout(function(){window.location.href=(r.message||'/account');},1500);
+        }
+      }
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}Sicurezza — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+<style>
+body, body .page_content, body .container { background:#0A0E1A !important; max-width:100% !important; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header('account') }}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2742;}
+.acc{background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:60vh}
+.acc-wrap{max-width:560px;margin:0 auto;padding:56px 22px 48px}
+.acc .back{display:inline-block;color:var(--grey);text-decoration:none;font-size:12px;letter-spacing:1px;margin-bottom:18px}
+.acc .back:hover{color:var(--gold)}
+.acc h1{font-family:Georgia,serif;font-weight:400;font-size:32px;color:var(--gold);margin:0 0 6px;letter-spacing:1px}
+.acc .sub{color:var(--grey);font-size:13px;margin:0 0 28px}
+.acc-card{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:26px 24px}
+.acc-card h2{font-family:Georgia,serif;font-weight:400;font-size:20px;color:#E8E9F0;margin:0 0 10px}
+.acc-card p{color:var(--grey);font-size:13px;line-height:1.6;margin:0 0 16px}
+.status{font-size:13px;margin:0 0 18px}
+.status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.status b{color:#E8E9F0}
+.btn-2fa{width:100%;border-radius:6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;padding:13px;cursor:pointer;transition:all .15s}
+.btn-2fa.on{background:var(--gold);color:#0A0E1A;border:none}
+.btn-2fa.on:hover{background:#B8975A}
+.btn-2fa.off{background:transparent;color:#d05a5a;border:1px solid rgba(208,90,90,.5)}
+.btn-2fa.off:hover{background:rgba(208,90,90,.1)}
+.btn-2fa:disabled{opacity:.6;cursor:not-allowed}
+.msg{margin-top:14px;font-size:13px;min-height:18px}
+.msg.ok{color:#5fb573}.msg.err{color:#d05a5a}
+.note{font-size:12px;color:var(--grey);margin-top:16px;line-height:1.6}
+</style>
+<div class="acc">
+  <div class="acc-wrap">
+    <a class="back" href="/account">‹ Il mio account</a>
+    <h1>Sicurezza</h1>
+    <p class="sub">Account: <b style="color:#E8E9F0">{{ user }}</b></p>
+    <div class="acc-card">
+      <h2>Autenticazione a due fattori (2FA)</h2>
+      <p>Aggiunge un secondo livello di sicurezza all'accesso tramite un'app
+         authenticator (Google Authenticator, Authy, ecc.). È facoltativa.</p>
+      <p class="status">Stato attuale:
+        <span class="dot" id="dot" style="background:{{ '#5fb573' if enabled else '#7A8294' }}"></span>
+        <b id="status_label">{{ 'Attiva' if enabled else 'Non attiva' }}</b>
+      </p>
+      <button type="button" id="toggle_btn" class="btn-2fa {{ 'off' if enabled else 'on' }}">
+        {{ 'Disattiva 2FA' if enabled else 'Attiva 2FA' }}
+      </button>
+      <div class="msg" id="result"></div>
+      <p class="note">Dopo l'attivazione, al <b>prossimo accesso</b> il sistema mostrerà un QR
+         da scansionare con l'app authenticator; da quel momento all'accesso sarà richiesto
+         il codice a 6 cifre.</p>
+    </div>
+  </div>
+</div>
+{{ thanatos_footer() }}
+<script>
+frappe.ready(function(){
+  let enabled = {{ enabled | tojson }};
+  const btn=document.getElementById('toggle_btn');
+  const label=document.getElementById('status_label');
+  const dot=document.getElementById('dot');
+  const result=document.getElementById('result');
+  btn.addEventListener('click',function(){
+    const target=enabled?0:1;
+    btn.disabled=true; result.className='msg'; result.textContent='…';
+    frappe.call({
+      method:'mmos_brand.two_factor.set_two_factor',
+      args:{enable:target},
+      callback:function(r){
+        enabled=!!(r.message&&r.message.enabled);
+        label.textContent=enabled?'Attiva':'Non attiva';
+        dot.style.background=enabled?'#5fb573':'#7A8294';
+        btn.textContent=enabled?'Disattiva 2FA':'Attiva 2FA';
+        btn.className='btn-2fa '+(enabled?'off':'on');
+        result.className='msg ok';
+        result.textContent=enabled?"2FA attivata. Al prossimo accesso configura l'app authenticator.":'2FA disattivata.';
+        btn.disabled=false;
+      },
+      error:function(){result.className='msg err';result.textContent='Operazione non riuscita.';btn.disabled=false;}
+    });
+  });
+});
+</script>
+{% endblock %}
