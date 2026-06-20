@@ -178,7 +178,8 @@ def _ai_monthly_cost(month_start, markup):
 	first = str(month_start)
 	last = str(get_last_day(month_start))
 	result = frappe.db.sql(
-		"SELECT COALESCE(SUM(real_cost), 0), COUNT(*) FROM "tabAI Usage Log""		" WHERE usage_date BETWEEN %s AND %s",
+		"SELECT COALESCE(SUM(real_cost), 0), COUNT(*) FROM `tabAI Usage Log`"
+		" WHERE usage_date BETWEEN %s AND %s",
 		(first, last))
 	real_total = float(result[0][0] or 0)
 	count = int(result[0][1] or 0)

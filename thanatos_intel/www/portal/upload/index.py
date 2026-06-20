@@ -68,7 +68,6 @@ def _guess_type(filename: str) -> str:
     return "File"
 
 
-@frappe.whitelist(methods=["POST"])
 _MAX_FILE_MB = 50
 _ALLOWED_EXT = {
     ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic",
@@ -91,6 +90,7 @@ def _validate_file(filename: str, content: bytes):
                      frappe.ValidationError)
 
 
+@frappe.whitelist(methods=["POST"])
 def client_upload(case: str = ""):
     """Allega i file caricati dal cliente a una sua pratica."""
     if frappe.session.user == "Guest":
