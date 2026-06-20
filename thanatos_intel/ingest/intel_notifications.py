@@ -5,6 +5,7 @@ from frappe.utils import get_url
 
 def notify_new_lead(lead_name: str, assigned_to: str, source_name: str,
                     source_identifier: str, preview: str = ""):
+    _emit_centralino(lead_name, "new_lead", source_name or source_identifier, preview)
     if not assigned_to:
         return
     _notify(
@@ -18,6 +19,7 @@ def notify_new_lead(lead_name: str, assigned_to: str, source_name: str,
 
 def notify_new_message_in_thread(lead_name: str, assigned_to: str,
                                   source_name: str, preview: str = ""):
+    _emit_centralino(lead_name, "new_message", source_name, preview)
     if not assigned_to:
         return
     _notify(
@@ -53,6 +55,18 @@ def notify_transferred(lead_name: str, new_assignee: str, transferred_by: str):
         lead_name=lead_name,
         indicator="purple",
     )
+
+
+def _emit_centralino(lead_name: str, event_type: str, source_name: str = "", preview: str = ""):
+    try:
+        frappe.publish_realtime(
+            "centralino_update",
+            {"lead": lead_name, "type": event_type,
+             "source_name": source_name, "preview": preview[:80]},
+            after_commit=True,
+        )
+    except Exception:
+        pass
 
 
 def _notify(user: str, title: str, message: str, lead_name: str, indicator: str = "blue"):

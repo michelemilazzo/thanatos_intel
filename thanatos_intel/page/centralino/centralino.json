@@ -1,0 +1,12 @@
+{
+  "doctype": "Page",
+  "name": "centralino",
+  "title": "Centralino",
+  "module": "Thanatos Core",
+  "system_page": 0,
+  "roles": [
+    {"role": "Investigator"},
+    {"role": "Investigation Manager"},
+    {"role": "System Manager"}
+  ]
+}

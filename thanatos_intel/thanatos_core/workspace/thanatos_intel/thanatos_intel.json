@@ -476,8 +476,17 @@
    "label": "Bacheca Intel",
    "hidden": 0,
    "is_query_report": 0,
-   "link_count": 3,
+   "link_count": 4,
    "link_type": "DocType",
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "label": "Centralino WhatsApp",
+   "link_type": "Page",
+   "link_to": "centralino",
+   "hidden": 0,
+   "is_query_report": 0,
    "onboard": 0
   },
   {
