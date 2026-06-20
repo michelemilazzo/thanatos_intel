@@ -1,0 +1,191 @@
+{
+  "doctype": "DocType",
+  "name": "Intelligence Contact",
+  "module": "Thanatos Core",
+  "autoname": "format:IC-{#####}",
+  "naming_rule": "Expression",
+  "title_field": "full_name",
+  "search_fields": "full_name,alias,phone,email,whatsapp,id_number",
+  "sort_field": "full_name",
+  "sort_order": "ASC",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "sb_identity",
+      "fieldtype": "Section Break",
+      "label": "Identità"
+    },
+    {
+      "fieldname": "full_name",
+      "fieldtype": "Data",
+      "label": "Nome completo",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "alias",
+      "fieldtype": "Data",
+      "label": "Alias / Soprannome",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "contact_type",
+      "fieldtype": "Select",
+      "label": "Tipo",
+      "options": "Persona\nAzienda\nOrganizzazione\nSconosciuto",
+      "default": "Persona",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "cb_identity",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "nationality",
+      "fieldtype": "Data",
+      "label": "Nazionalità"
+    },
+    {
+      "fieldname": "country",
+      "fieldtype": "Data",
+      "label": "Paese"
+    },
+    {
+      "fieldname": "id_type",
+      "fieldtype": "Select",
+      "label": "Tipo documento",
+      "options": "\nCarta d'identità\nPassaporto\nPatente\nCodice Fiscale\nP.IVA\nAlbo\nAltro"
+    },
+    {
+      "fieldname": "id_number",
+      "fieldtype": "Data",
+      "label": "Numero documento"
+    },
+    {
+      "fieldname": "sb_contacts",
+      "fieldtype": "Section Break",
+      "label": "Recapiti"
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Telefono",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "whatsapp",
+      "fieldtype": "Data",
+      "label": "WhatsApp"
+    },
+    {
+      "fieldname": "telegram",
+      "fieldtype": "Data",
+      "label": "Telegram (@handle)"
+    },
+    {
+      "fieldname": "cb_contacts",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email",
+      "options": "Email",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "address",
+      "fieldtype": "Small Text",
+      "label": "Indirizzo"
+    },
+    {
+      "fieldname": "social_profiles",
+      "fieldtype": "Small Text",
+      "label": "Profili social (uno per riga: piattaforma: @handle)"
+    },
+    {
+      "fieldname": "sb_risk",
+      "fieldtype": "Section Break",
+      "label": "Profilo di rischio"
+    },
+    {
+      "fieldname": "risk_level",
+      "fieldtype": "Select",
+      "label": "Livello rischio",
+      "options": "Basso\nMedio\nAlto\nCritico",
+      "default": "Basso",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "risk_tags",
+      "fieldtype": "Data",
+      "label": "Tag rischio (es: frode, riciclaggio, sanzioni)"
+    },
+    {
+      "fieldname": "cb_risk",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "source",
+      "fieldtype": "Data",
+      "label": "Origine contatto"
+    },
+    {
+      "fieldname": "linked_intel_lead",
+      "fieldtype": "Link",
+      "label": "Intel Lead origine",
+      "options": "Intel Lead"
+    },
+    {
+      "fieldname": "linked_entity",
+      "fieldtype": "Link",
+      "label": "Entità OSINT collegata",
+      "options": "Investigation Entity"
+    },
+    {
+      "fieldname": "sb_cases",
+      "fieldtype": "Section Break",
+      "label": "Pratiche collegate"
+    },
+    {
+      "fieldname": "linked_cases",
+      "fieldtype": "Table",
+      "label": "Pratiche",
+      "options": "Intelligence Contact Case"
+    },
+    {
+      "fieldname": "sb_notes",
+      "fieldtype": "Section Break",
+      "label": "Note operative"
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Text Editor",
+      "label": "Note"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1,
+      "email": 1,
+      "share": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "report": 1,
+      "print": 1
+    }
+  ]
+}

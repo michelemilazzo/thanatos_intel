@@ -1,0 +1,28 @@
+{
+  "doctype": "DocType",
+  "name": "Intelligence Contact Case",
+  "module": "Thanatos Core",
+  "istable": 1,
+  "fields": [
+    {
+      "fieldname": "investigation_case",
+      "fieldtype": "Link",
+      "label": "Pratica",
+      "options": "Investigation Case",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "role_in_case",
+      "fieldtype": "Data",
+      "label": "Ruolo nella pratica",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Note"
+    }
+  ],
+  "permissions": []
+}

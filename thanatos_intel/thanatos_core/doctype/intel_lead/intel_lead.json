@@ -1,0 +1,176 @@
+{
+  "doctype": "DocType",
+  "name": "Intel Lead",
+  "module": "Thanatos Core",
+  "autoname": "format:IT-{YYYY}-{#####}",
+  "naming_rule": "Expression",
+  "title_field": "source_name",
+  "search_fields": "source_type,source_name,source_identifier,status,content",
+  "sort_field": "received_at",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "sb_source",
+      "fieldtype": "Section Break",
+      "label": "Sorgente"
+    },
+    {
+      "fieldname": "received_at",
+      "fieldtype": "Datetime",
+      "label": "Ricevuto il",
+      "reqd": 1,
+      "default": "now",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "source_type",
+      "fieldtype": "Select",
+      "label": "Canale",
+      "options": "WhatsApp\nTelegram\nEmail\nTelefono\nWeb\nOSINT Feed\nSegnalazione\nManuale",
+      "default": "Manuale",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "cb_source",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "source_identifier",
+      "fieldtype": "Data",
+      "label": "Mittente (tel/email/username)",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "source_name",
+      "fieldtype": "Data",
+      "label": "Nome mittente"
+    },
+    {
+      "fieldname": "linked_contact",
+      "fieldtype": "Link",
+      "label": "Contatto rubrica",
+      "options": "Intelligence Contact"
+    },
+    {
+      "fieldname": "sb_content",
+      "fieldtype": "Section Break",
+      "label": "Contenuto"
+    },
+    {
+      "fieldname": "content",
+      "fieldtype": "Long Text",
+      "label": "Messaggio / Contenuto",
+      "reqd": 1
+    },
+    {
+      "fieldname": "language",
+      "fieldtype": "Data",
+      "label": "Lingua rilevata"
+    },
+    {
+      "fieldname": "media_url",
+      "fieldtype": "Data",
+      "label": "URL media allegato"
+    },
+    {
+      "fieldname": "sb_evaluation",
+      "fieldtype": "Section Break",
+      "label": "Valutazione"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Stato",
+      "options": "Nuovo\nIn Valutazione\nPromosso a Caso\nArchiviato",
+      "default": "Nuovo",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "priority",
+      "fieldtype": "Select",
+      "label": "Priorità",
+      "options": "Bassa\nMedia\nAlta\nCritica",
+      "default": "Media",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "intel_score",
+      "fieldtype": "Int",
+      "label": "Punteggio intel (1-10)"
+    },
+    {
+      "fieldname": "cb_evaluation",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "assigned_to",
+      "fieldtype": "Link",
+      "label": "Assegnato a",
+      "options": "User",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "tags",
+      "fieldtype": "Data",
+      "label": "Tag (virgola separati)"
+    },
+    {
+      "fieldname": "linked_case",
+      "fieldtype": "Link",
+      "label": "Pratica collegata",
+      "options": "Investigation Case",
+      "read_only": 1
+    },
+    {
+      "fieldname": "promoted_at",
+      "fieldtype": "Datetime",
+      "label": "Promosso il",
+      "read_only": 1
+    },
+    {
+      "fieldname": "promoted_by",
+      "fieldtype": "Link",
+      "label": "Promosso da",
+      "options": "User",
+      "read_only": 1
+    },
+    {
+      "fieldname": "sb_notes",
+      "fieldtype": "Section Break",
+      "label": "Note operatore"
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Text Editor",
+      "label": "Note"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1,
+      "email": 1,
+      "share": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "report": 1
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "doctype": "DocType",
+  "name": "Investigation Appointment",
+  "module": "Thanatos Core",
+  "autoname": "format:APP-{YYYY}-{#####}",
+  "naming_rule": "Expression",
+  "title_field": "title",
+  "search_fields": "title,appointment_type,assigned_to,linked_case",
+  "sort_field": "appointment_date",
+  "sort_order": "ASC",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "label": "Titolo",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "appointment_type",
+      "fieldtype": "Select",
+      "label": "Tipo",
+      "options": "Riunione\nColloquio Cliente\nScadenza\nUdienza\nSopralluogo\nConsegna Report\nFormazione\nAltro",
+      "default": "Riunione",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Stato",
+      "options": "Pianificato\nConfermato\nCompletato\nAnnullato",
+      "default": "Pianificato",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "sb_when",
+      "fieldtype": "Section Break",
+      "label": "Quando"
+    },
+    {
+      "fieldname": "appointment_date",
+      "fieldtype": "Date",
+      "label": "Data",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "appointment_time",
+      "fieldtype": "Time",
+      "label": "Ora inizio"
+    },
+    {
+      "fieldname": "all_day",
+      "fieldtype": "Check",
+      "label": "Tutto il giorno"
+    },
+    {
+      "fieldname": "cb_when",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "end_date",
+      "fieldtype": "Date",
+      "label": "Data fine"
+    },
+    {
+      "fieldname": "end_time",
+      "fieldtype": "Time",
+      "label": "Ora fine"
+    },
+    {
+      "fieldname": "location",
+      "fieldtype": "Data",
+      "label": "Luogo / Link meet"
+    },
+    {
+      "fieldname": "sb_links",
+      "fieldtype": "Section Break",
+      "label": "Collegamenti"
+    },
+    {
+      "fieldname": "assigned_to",
+      "fieldtype": "Link",
+      "label": "Responsabile",
+      "options": "User",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "linked_case",
+      "fieldtype": "Link",
+      "label": "Pratica",
+      "options": "Investigation Case",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "cb_links",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "linked_client",
+      "fieldtype": "Link",
+      "label": "Cliente",
+      "options": "Investigation Client"
+    },
+    {
+      "fieldname": "linked_contact",
+      "fieldtype": "Link",
+      "label": "Contatto rubrica",
+      "options": "Intelligence Contact"
+    },
+    {
+      "fieldname": "reminder_minutes",
+      "fieldtype": "Int",
+      "label": "Promemoria (minuti prima)",
+      "default": 30
+    },
+    {
+      "fieldname": "reminder_sent",
+      "fieldtype": "Check",
+      "label": "Promemoria inviato",
+      "read_only": 1
+    },
+    {
+      "fieldname": "sb_desc",
+      "fieldtype": "Section Break",
+      "label": "Dettagli"
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Text Editor",
+      "label": "Descrizione / Agenda"
+    },
+    {
+      "fieldname": "outcome_notes",
+      "fieldtype": "Text Editor",
+      "label": "Esito / Verbale"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1,
+      "email": 1,
+      "share": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "report": 1,
+      "print": 1
+    },
+    {
+      "role": "Lawyer",
+      "read": 1,
+      "write": 1,
+      "create": 1
+    }
+  ]
+}

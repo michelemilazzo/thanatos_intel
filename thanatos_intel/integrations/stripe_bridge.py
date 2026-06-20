@@ -484,6 +484,43 @@ def cancel_subscription(stripe_subscription_id: str, at_period_end: bool = True)
 
 
 @frappe.whitelist()
+def create_billing_portal_session(client_name: str | None = None) -> dict:
+    """Crea una Stripe Billing Portal Session per il cliente.
+    Il cliente viene reindirizzato al portale Stripe per gestire:
+    - metodo di pagamento (carta)
+    - cambio piano
+    - cancellazione abbonamento
+    - storico fatture Stripe
+    """
+    if frappe.session.user == "Guest":
+        frappe.throw("Authentication required", frappe.PermissionError)
+
+    from thanatos_intel.workflow.api import _client_for_user, _is_operator
+    if not client_name:
+        cl = _client_for_user(frappe.session.user)
+        client_name = cl.name if cl else None
+    if not client_name:
+        frappe.throw("Cliente non trovato")
+    if not _is_operator(frappe.session.user):
+        # Verifica che il cliente loggato corrisponda
+        actual = frappe.db.get_value("Investigation Client",
+                                     {"platform_user": frappe.session.user}, "name")
+        if actual != client_name:
+            frappe.throw("Accesso negato", frappe.PermissionError)
+
+    stripe_id = frappe.db.get_value("Investigation Client", client_name, "stripe_customer_id")
+    if not stripe_id:
+        frappe.throw("Nessun account Stripe associato a questo cliente")
+
+    stripe = _get_stripe()
+    session = stripe.billing_portal.Session.create(
+        customer=stripe_id,
+        return_url=frappe.utils.get_url("/portal/billing"),
+    )
+    return {"url": session.url}
+
+
+@frappe.whitelist()
 def sync_subscription(stripe_subscription_id: str) -> dict:
     """Forza re-sync di una sub da Stripe → DocType Thanatos."""
     stripe = _get_stripe()

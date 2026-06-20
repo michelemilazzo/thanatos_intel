@@ -472,6 +472,42 @@
    "type": "Link"
   },
   {
+   "type": "Card Break",
+   "label": "Bacheca Intel",
+   "hidden": 0,
+   "is_query_report": 0,
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "label": "Intel Lead",
+   "link_type": "DocType",
+   "link_to": "Intel Lead",
+   "hidden": 0,
+   "is_query_report": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "label": "Intelligence Contact",
+   "link_type": "DocType",
+   "link_to": "Intelligence Contact",
+   "hidden": 0,
+   "is_query_report": 0,
+   "onboard": 0
+  },
+  {
+   "type": "Link",
+   "label": "Investigation Appointment",
+   "link_type": "DocType",
+   "link_to": "Investigation Appointment",
+   "hidden": 0,
+   "is_query_report": 0,
+   "onboard": 0
+  },
+  {
    "hidden": 0,
    "is_query_report": 0,
    "label": "Newsroom",
@@ -525,7 +561,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Drive \u2014 Cartelle Casi",
+   "label": "Drive — Cartelle Casi",
    "link_count": 0,
    "link_to": "/drive",
    "link_type": "URL",
@@ -545,7 +581,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "CRM \u2014 Leads",
+   "label": "CRM — Leads",
    "link_count": 0,
    "link_to": "/crm/leads",
    "link_type": "URL",
@@ -555,7 +591,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Helpdesk \u2014 Ticket",
+   "label": "Helpdesk — Ticket",
    "link_count": 0,
    "link_to": "/support",
    "link_type": "URL",
@@ -707,7 +743,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Attivit\u00e0 sul campo",
+   "label": "Attività sul campo",
    "link_count": 0,
    "link_to": "Field Activity",
    "link_type": "DocType",
