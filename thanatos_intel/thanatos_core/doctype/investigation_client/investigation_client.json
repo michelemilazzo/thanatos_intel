@@ -142,7 +142,7 @@
   {
    "fieldname": "service_credit",
    "fieldtype": "Currency",
-   "label": "Credito servizi (€)",
+   "label": "Credito servizi (\u20ac)",
    "read_only": 1,
    "description": "Bonus segnalazioni spendibile sui servizi"
   },
@@ -304,6 +304,19 @@
    "fieldtype": "Float",
    "label": "Markup AI (override)",
    "description": "Se vuoto usa infra_markup globale"
+  },
+  {
+   "fieldname": "my_referral_code",
+   "fieldtype": "Data",
+   "label": "My Referral Code",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "referred_by",
+   "fieldtype": "Link",
+   "label": "Referred By",
+   "options": "Investigation Client"
   }
  ],
  "permissions": [
@@ -331,5 +344,60 @@
    "role": "Investigator",
    "read": 1
   }
+ ],
+ "field_order": [
+  "sb_main",
+  "client_name",
+  "client_type",
+  "email",
+  "phone",
+  "cb_main",
+  "country",
+  "vat_number",
+  "preferred_language",
+  "address",
+  "sb_link",
+  "platform_user",
+  "erp_customer_id",
+  "cb_link",
+  "subscription_plan",
+  "subscription_status",
+  "stripe_customer_id",
+  "subscription_started_at",
+  "subscription_renews_at",
+  "sb_stats",
+  "total_cases",
+  "cb_stats",
+  "total_spent",
+  "service_credit",
+  "sb_payment",
+  "payment_method",
+  "credit_granted",
+  "cb_payment",
+  "credit_terms",
+  "credit_limit",
+  "active_addons",
+  "sb_onboarding",
+  "onboarding_status",
+  "kyc_status",
+  "kyb_status",
+  "cb_onb",
+  "payment_method_added",
+  "stripe_payment_method",
+  "onboarding_started_at",
+  "onboarding_completed_at",
+  "sb_attribution",
+  "attribution_source",
+  "sales_partner",
+  "cb_attribution",
+  "referral_code",
+  "acquired_at",
+  "sb_ai",
+  "ai_monthly_budget",
+  "ai_included_amount",
+  "cb_ai",
+  "ai_markup",
+  "my_referral_code",
+  "referred_by"
  ]
 }

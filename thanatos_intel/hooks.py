@@ -90,6 +90,9 @@ fixtures=[
 ]
 
 doc_events={
+ 'Credit Ledger': {
+   'after_insert': 'thanatos_intel.referral.on_credit_spent',
+ },
  'File': {
    'after_insert': 'thanatos_intel.reporting.case_reports.on_file_after_insert',
  },

@@ -1,0 +1,50 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:RINV-{YYYY}-{#####}",
+ "creation": "2026-06-20 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "referrer_client",
+  "referrer_user",
+  "invitee_name",
+  "invitee_email",
+  "cb_1",
+  "referral_code",
+  "channel",
+  "status",
+  "registered_client",
+  "sent_at",
+  "sb_notes",
+  "notes"
+ ],
+ "fields": [
+  {"fieldname": "referrer_client", "fieldtype": "Link", "label": "Referrer Client", "options": "Investigation Client", "in_list_view": 1, "reqd": 1},
+  {"fieldname": "referrer_user", "fieldtype": "Data", "label": "Referrer User"},
+  {"fieldname": "invitee_name", "fieldtype": "Data", "label": "Invitee Name", "in_list_view": 1},
+  {"fieldname": "invitee_email", "fieldtype": "Data", "label": "Invitee Email", "options": "Email", "in_list_view": 1},
+  {"fieldname": "cb_1", "fieldtype": "Column Break"},
+  {"fieldname": "referral_code", "fieldtype": "Data", "label": "Referral Code"},
+  {"fieldname": "channel", "fieldtype": "Select", "label": "Channel", "options": "Link\nEmail\nQR", "default": "Link"},
+  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Sent\nRegistered\nConverted\nExpired", "default": "Sent", "in_list_view": 1},
+  {"fieldname": "registered_client", "fieldtype": "Link", "label": "Registered Client", "options": "Investigation Client"},
+  {"fieldname": "sent_at", "fieldtype": "Datetime", "label": "Sent At"},
+  {"fieldname": "sb_notes", "fieldtype": "Section Break"},
+  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"}
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-20 00:00:00",
+ "module": "Billing",
+ "name": "Referral Invite",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+  {"create": 1, "read": 1, "write": 1, "role": "Investigation Manager"}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

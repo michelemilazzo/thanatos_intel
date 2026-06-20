@@ -90,6 +90,11 @@ def register_client(full_name, email, password, phone=None,
 
         client = frappe.get_doc(client_data)
         client.insert(ignore_permissions=True)
+        try:
+            from thanatos_intel import referral
+            referral.record_registration(client.name, ref)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "referral record_registration failed")
         if extra_info:
             client.add_comment("Comment", text=extra_info[:500])
         frappe.db.commit()

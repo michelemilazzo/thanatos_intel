@@ -1,0 +1,166 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+{% block title %}{{ title }}{% endblock %}
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2842;--ok:#6aa66a;}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:840px;margin:0 auto;padding:40px 24px 60px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 8px}
+.lead{color:var(--grey);font-size:13px;margin:0 0 26px;line-height:1.6;max-width:620px}
+.lead b{color:#E8E9F0}
+.section-title{font-family:Georgia,serif;font-size:16px;color:#fff;letter-spacing:2px;text-transform:uppercase;margin:30px 0 14px;padding-bottom:8px;border-bottom:1px solid rgba(200,169,110,.15)}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:22px}
+.share{display:flex;gap:22px;flex-wrap:wrap;align-items:center}
+.share .qr{width:132px;height:132px;border-radius:8px;background:#fff;padding:8px;flex:0 0 auto}
+.share .qr img{width:100%;height:100%;display:block}
+.share .col{flex:1;min-width:240px}
+.lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey);margin-bottom:6px}
+.linkbox{display:flex;gap:8px}
+.linkbox input{flex:1;background:#0A0E1A;border:1px solid var(--border);border-radius:6px;color:#E8E9F0;font-size:13px;padding:10px 12px}
+.btn{background:var(--gold);color:#0A0E1A;border:none;border-radius:6px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;padding:10px 16px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#B8975A}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(200,169,110,.4)}
+.btn.ghost:hover{background:rgba(200,169,110,.1)}
+.code{font-family:ui-monospace,monospace;color:var(--gold);font-size:15px;letter-spacing:1px;margin-top:14px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+@media(max-width:600px){.cards{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px 20px}
+.card .v{font-family:Georgia,serif;font-size:30px;color:var(--gold);line-height:1}
+.card .l{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;margin-top:8px}
+.frm{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+.frm input{flex:1;min-width:160px;background:#0A0E1A;border:1px solid var(--border);border-radius:6px;color:#E8E9F0;font-size:13px;padding:10px 12px}
+.msg{margin-top:10px;font-size:13px;min-height:16px}.msg.ok{color:var(--ok)}.msg.err{color:#d05a5a}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey);padding:8px 10px;border-bottom:1px solid var(--border)}
+td{padding:10px;border-bottom:1px solid var(--border);color:#E8E9F0}
+.tag{font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:var(--grey)}
+.empty{color:var(--grey);font-size:13px;padding:14px 0}
+.lvl{display:inline-block;font-size:10px;color:var(--gold);border:1px solid rgba(200,169,110,.4);border-radius:4px;padding:1px 6px;margin-left:6px}
+</style>
+{% endblock %}
+{% block content %}
+{{ thanatos_header('account') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> › Invita</div>
+  <h1>Invita e guadagna</h1>
+  {% if is_collaborator %}
+  <p class="lead">Condividi il tuo link personale. Per ogni persona che si registra e usa i servizi Thanatos guadagni una <b>commissione</b> sul suo fatturato (livello&nbsp;1) e una quota ridotta su chi viene invitato da loro (livello&nbsp;2).</p>
+  {% else %}
+  <p class="lead">Invita amici o clienti con il tuo link personale: quando si registrano e usano i servizi, ricevi <b>credito servizi</b> spendibile sul portale. Vuoi guadagnare commissioni in denaro? <a href="/diventa-collaboratore" style="color:var(--gold)">Diventa collaboratore</a>.</p>
+  {% endif %}
+
+  <div class="panel share">
+    {% if qr %}<div class="qr"><img src="{{ qr }}" alt="QR referral"></div>{% endif %}
+    <div class="col">
+      <div class="lbl">Il tuo link di invito</div>
+      <div class="linkbox">
+        <input id="reflink" type="text" readonly value="{{ link }}">
+        <button class="btn" id="copybtn" type="button">Copia</button>
+      </div>
+      <div class="code">Codice: {{ code }}</div>
+    </div>
+  </div>
+
+  <div class="section-title">Invita via email</div>
+  <div class="panel">
+    <div class="frm">
+      <input id="inv_name" type="text" placeholder="Nome (opzionale)">
+      <input id="inv_email" type="email" placeholder="email@esempio.com">
+      <button class="btn" id="sendbtn" type="button">Invia invito</button>
+    </div>
+    <div class="msg" id="inv_msg"></div>
+  </div>
+
+  <div class="section-title">{{ 'I tuoi guadagni' if is_collaborator else 'Il tuo credito da referral' }}</div>
+  <div class="cards">
+    <div class="card"><div class="v">{{ "%.2f"|format(earned) }}€</div><div class="l">{{ 'Maturato' if is_collaborator else 'Credito ottenuto' }}</div></div>
+    <div class="card"><div class="v">{{ "%.2f"|format(pending) }}€</div><div class="l">In attesa</div></div>
+    <div class="card"><div class="v">{{ "%.2f"|format(paid) }}€</div><div class="l">{{ 'Gia pagato' if is_collaborator else 'Accreditato' }}</div></div>
+  </div>
+
+  <div class="section-title">Il tuo albero · Livello 1 ({{ l1|length }})</div>
+  <div class="panel" style="padding:0">
+    {% if l1 %}
+    <table>
+      <thead><tr><th>Persona</th><th>Registrato</th><th>Stato</th><th>Sotto-invitati</th></tr></thead>
+      <tbody>
+      {% for n in l1 %}
+        <tr>
+          <td>{{ n.client_name }}</td>
+          <td>{{ frappe.utils.format_date(n.creation) }}</td>
+          <td><span class="tag">{{ n.subscription_status or 'Registrato' }}</span></td>
+          <td>{{ n.sub_count }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty" style="padding:16px 20px">Nessun invito registrato ancora. Condividi il tuo link per iniziare.</div>
+    {% endif %}
+  </div>
+
+  {% if l2 %}
+  <div class="section-title">Livello 2 ({{ l2|length }})</div>
+  <div class="panel" style="padding:0">
+    <table>
+      <thead><tr><th>Persona</th><th>Tramite</th><th>Registrato</th></tr></thead>
+      <tbody>
+      {% for n in l2 %}
+        <tr><td>{{ n.client_name }}</td><td>{{ n.via }}</td><td>{{ frappe.utils.format_date(n.creation) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if invites %}
+  <div class="section-title">Inviti in sospeso ({{ invites|length }})</div>
+  <div class="panel" style="padding:0">
+    <table>
+      <thead><tr><th>Invitato</th><th>Email</th><th>Canale</th><th>Inviato</th></tr></thead>
+      <tbody>
+      {% for i in invites %}
+        <tr><td>{{ i.invitee_name or '—' }}</td><td>{{ i.invitee_email or '—' }}</td><td><span class="tag">{{ i.channel }}</span></td><td>{{ frappe.utils.format_date(i.sent_at) }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+<script>
+(function(){
+  frappe.csrf_token = "{{ csrf_token }}";
+  var link = document.getElementById('reflink');
+  document.getElementById('copybtn').addEventListener('click', function(){
+    link.select();
+    navigator.clipboard && navigator.clipboard.writeText(link.value);
+    var b=this; var o=b.textContent; b.textContent='Copiato'; setTimeout(function(){b.textContent=o;},1500);
+  });
+  var sb=document.getElementById('sendbtn'), msg=document.getElementById('inv_msg');
+  sb.addEventListener('click', function(){
+    var email=document.getElementById('inv_email').value.trim();
+    var name=document.getElementById('inv_name').value.trim();
+    if(!email){ msg.className='msg err'; msg.textContent='Inserisci una email.'; return; }
+    sb.disabled=true; msg.className='msg'; msg.textContent='Invio in corso…';
+    frappe.call({
+      method:'thanatos_intel.referral.create_invite',
+      args:{invitee_name:name, invitee_email:email, channel:'Email', send_email:1},
+      callback:function(r){
+        sb.disabled=false;
+        if(r.message && r.message.ok){
+          msg.className='msg ok';
+          msg.textContent = r.message.email_sent ? 'Invito inviato a '+email : 'Invito registrato (email non inviata). Condividi il link manualmente.';
+          document.getElementById('inv_email').value=''; document.getElementById('inv_name').value='';
+          setTimeout(function(){location.reload();}, 1400);
+        } else { msg.className='msg err'; msg.textContent='Operazione non riuscita.'; }
+      },
+      error:function(){ sb.disabled=false; msg.className='msg err'; msg.textContent='Operazione non riuscita.'; }
+    });
+  });
+})();
+</script>
+{% endblock %}
