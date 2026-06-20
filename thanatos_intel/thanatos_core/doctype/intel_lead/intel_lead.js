@@ -6,6 +6,16 @@ frappe.ui.form.on("Intel Lead", {
             if (frm.doc.source_type === "WhatsApp") {
                 frm.add_custom_button(__("Rispondi su WhatsApp"), () => openReplyDialog(frm));
             }
+            frm.add_custom_button(__("Registra Chiamata"), () => {
+                window.thanatos && window.thanatos.logCall({
+                    linked_intel_lead: frm.doc.name,
+                    linked_case: frm.doc.linked_case || "",
+                    linked_contact: frm.doc.linked_contact || "",
+                    caller_name: frm.doc.source_name || "",
+                    caller_number: frm.doc.source_identifier || "",
+                    onSuccess() { frm.reload_doc(); },
+                });
+            }, __("Azioni"));
 
             frm.add_custom_button(__("Riassegna"), () => openReassignDialog(frm), __("Azioni"));
 

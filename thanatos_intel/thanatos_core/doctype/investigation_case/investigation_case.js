@@ -13,6 +13,16 @@ frappe.ui.form.on('Investigation Case', {
 
         thanatos_set_monitor_operators(frm);
 
+        if (!frm.is_new()) {
+            frm.add_custom_button(__("Registra Chiamata"), () => {
+                window.thanatos && window.thanatos.logCall({
+                    linked_case: frm.doc.name,
+                    linked_client: frm.doc.client || "",
+                    onSuccess() { frm.reload_doc(); },
+                });
+            }, __("Azioni"));
+        }
+
         if (!frm.is_new() && frm.doc.drive_folder) {
             frm.add_custom_button(__('Apri Drive'), () => {
                 window.open('/drive?entity=' + frm.doc.drive_folder, '_blank');

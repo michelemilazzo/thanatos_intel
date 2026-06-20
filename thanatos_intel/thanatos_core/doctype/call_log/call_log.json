@@ -1,0 +1,161 @@
+{
+  "doctype": "DocType",
+  "name": "Call Log",
+  "module": "Thanatos Core",
+  "autoname": "format:CALL-{YYYY}-{#####}",
+  "naming_rule": "Expression",
+  "title_field": "caller_name",
+  "search_fields": "caller_name,caller_number,linked_case,linked_client",
+  "sort_field": "called_at",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "called_at",
+      "fieldtype": "Datetime",
+      "label": "Data/ora chiamata",
+      "reqd": 1,
+      "default": "now",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "direction",
+      "fieldtype": "Select",
+      "label": "Direzione",
+      "options": "Entrante\nUscente",
+      "default": "Entrante",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "outcome",
+      "fieldtype": "Select",
+      "label": "Esito",
+      "options": "Risposta\nNon risposto\nOccupato\nMessaggio vocale\nRichiamato\nAnnullato",
+      "default": "Risposta",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "handled_by",
+      "fieldtype": "Link",
+      "label": "Gestita da",
+      "options": "User",
+      "default": "__user",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "sb_caller",
+      "fieldtype": "Section Break",
+      "label": "Interlocutore"
+    },
+    {
+      "fieldname": "caller_name",
+      "fieldtype": "Data",
+      "label": "Nome",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "caller_number",
+      "fieldtype": "Data",
+      "label": "Numero"
+    },
+    {
+      "fieldname": "cb_caller",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "linked_contact",
+      "fieldtype": "Link",
+      "label": "Contatto rubrica",
+      "options": "Intelligence Contact"
+    },
+    {
+      "fieldname": "linked_client",
+      "fieldtype": "Link",
+      "label": "Cliente",
+      "options": "Investigation Client"
+    },
+    {
+      "fieldname": "sb_duration",
+      "fieldtype": "Section Break",
+      "label": "Durata & Registrazione"
+    },
+    {
+      "fieldname": "duration_minutes",
+      "fieldtype": "Int",
+      "label": "Durata (minuti)"
+    },
+    {
+      "fieldname": "duration_seconds",
+      "fieldtype": "Int",
+      "label": "Secondi"
+    },
+    {
+      "fieldname": "cb_duration",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "recording_url",
+      "fieldtype": "Data",
+      "label": "URL registrazione (opzionale)"
+    },
+    {
+      "fieldname": "sb_links",
+      "fieldtype": "Section Break",
+      "label": "Collegamenti"
+    },
+    {
+      "fieldname": "linked_case",
+      "fieldtype": "Link",
+      "label": "Pratica",
+      "options": "Investigation Case",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "linked_intel_lead",
+      "fieldtype": "Link",
+      "label": "Intel Lead",
+      "options": "Intel Lead"
+    },
+    {
+      "fieldname": "linked_appointment",
+      "fieldtype": "Link",
+      "label": "Appuntamento",
+      "options": "Investigation Appointment"
+    },
+    {
+      "fieldname": "sb_content",
+      "fieldtype": "Section Break",
+      "label": "Contenuto"
+    },
+    {
+      "fieldname": "summary",
+      "fieldtype": "Text Editor",
+      "label": "Riassunto chiamata"
+    },
+    {
+      "fieldname": "action_items",
+      "fieldtype": "Text Editor",
+      "label": "Azioni da fare (follow-up)"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1, "write": 1, "create": 1, "delete": 1,
+      "report": 1, "export": 1, "print": 1, "email": 1, "share": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1, "write": 1, "create": 1, "report": 1, "print": 1
+    },
+    {
+      "role": "Lawyer",
+      "read": 1, "write": 1, "create": 1
+    }
+  ]
+}
