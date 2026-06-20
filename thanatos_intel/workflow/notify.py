@@ -111,6 +111,35 @@ def _whatsapp_client(case_name, event):
         return False
 
 
+def _email_operator(case_name, subject, message, from_user=None):
+    """Notifica email all'investigatore/manager assegnato al caso.
+    Fallback a admin@thanatos.agency se non c'è assegnatario."""
+    try:
+        assignee = frappe.db.get_value("Investigation Case", case_name, "assigned_to")
+        if assignee:
+            op_email = frappe.db.get_value("User", assignee, "email") or assignee
+        else:
+            op_email = "admin@thanatos.agency"
+        case_url = f"{frappe.utils.get_url()}/app/investigation-case/{case_name}"
+        body = (
+            f"<p>Messaggio ricevuto per la pratica "
+            f"<a href='{case_url}'>{case_name}</a>:</p>"
+            f"<blockquote style='border-left:3px solid #C8A96E;margin:8px 0;padding:8px 16px;"
+            f"color:#444;background:#fafafa'>{message}</blockquote>"
+            + (f"<p style='font-size:12px;color:#777'>Da: {from_user}</p>" if from_user else "")
+        )
+        frappe.sendmail(
+            recipients=[op_email], subject=subject,
+            message=body,
+            reference_doctype="Investigation Case", reference_name=case_name,
+            now=False,
+        )
+        return True
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "workflow.notify.email_operator")
+        return False
+
+
 def channels(case_name, message, subject=None, event=None, client_visible=True, action_type=None):
     """Invia sui canali esterni (no scrittura sul caso): email con link
     azionabile + whatsapp + telegram (vedi telegram_channel)."""

@@ -202,13 +202,23 @@ def board(case_name):
 
 @frappe.whitelist()
 def client_act(case_name, seq):
-    """Il cliente completa la propria azione corrente (firma/pagamento/upload).
-
-    F2: registra il completamento e avanza. L'aggancio reale a MMOS Sign/Stripe/
-    upload sara' agganciato in F2.x/F4 sostituendo questo completamento manuale."""
+    """Il cliente completa la propria azione corrente (firma/pagamento/upload)."""
     if not _can_see_case(case_name):
         frappe.throw(_("Accesso negato."), frappe.PermissionError)
-    return engine.complete_step(case_name, int(seq), note="Completato dal cliente")
+    result = engine.complete_step(case_name, int(seq), note="Completato dal cliente")
+    try:
+        step_label = frappe.db.get_value("Case Step",
+            {"parent": case_name, "seq": int(seq)}, "step_title") or f"Step {seq}"
+        notify._email_operator(
+            case_name,
+            subject=f"[Thanatos] Cliente ha completato: {step_label}",
+            message=f"Il cliente ha completato lo step <strong>{step_label}</strong> "
+                    f"nella pratica {case_name}.",
+            from_user=frappe.session.user,
+        )
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "client_act notify")
+    return result
 
 
 @frappe.whitelist()
@@ -227,13 +237,15 @@ def complete_gate(case_name, seq, note=None):
 
 @frappe.whitelist()
 def post_message(case_name, message):
-    """Messaggio in bacheca (feed del caso). Cliente e operatori scrivono qui."""
+    """Messaggio in bacheca (feed del caso). Cliente e operatori scrivono qui.
+    Notifica bidirezionale: client → operatore, operatore → client."""
     if not _can_see_case(case_name):
         frappe.throw(_("Accesso negato."), frappe.PermissionError)
     message = (message or "").strip()
     if not message:
         frappe.throw(_("Messaggio vuoto."))
-    who = "Operatore" if _is_operator() else "Cliente"
+    is_op = _is_operator()
+    who = "Operatore" if is_op else "Cliente"
     case = frappe.get_doc("Investigation Case", case_name)
     case.append("case_activities", {
         "activity_date": frappe.utils.now_datetime(),
@@ -242,6 +254,31 @@ def post_message(case_name, message):
         "operator": frappe.session.user,
     })
     case.save(ignore_permissions=True)
+
+    # Notifica la controparte
+    try:
+        case_label = case.case_title or case_name
+        if is_op:
+            # Operatore → notifica cliente
+            notify.channels(
+                case_name,
+                message=f"Hai un nuovo messaggio nella pratica <strong>{case_label}</strong>:<br><br>"
+                        f"<em>{message[:300]}</em>",
+                subject=f"Nuovo messaggio — {case_label}",
+                action_type="ai_question",
+            )
+        else:
+            # Cliente → notifica operatore
+            notify._email_operator(
+                case_name,
+                subject=f"[Thanatos] Messaggio cliente — {case_label}",
+                message=f"Messaggio dal cliente nella pratica "
+                        f"<strong>{case_label}</strong>:<br><br><em>{message[:300]}</em>",
+                from_user=frappe.session.user,
+            )
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "post_message notify")
+
     return {"ok": True}
 
 
