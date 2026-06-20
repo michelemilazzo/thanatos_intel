@@ -116,6 +116,14 @@
 .px-right a:hover{border-color:#C8A96E;color:#C8A96E;}
 .px-right .logout{color:#5B6276;}
 .px-right .logout:hover{color:#E8E9F0;border-color:#333;}
+.px-bell{position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border:1px solid #1F2742;border-radius:3px;color:#A4A9BC;
+  text-decoration:none;transition:all .15s;font-size:15px;}
+.px-bell:hover{border-color:#C8A96E;color:#C8A96E;}
+.px-bell-badge{position:absolute;top:-5px;right:-5px;background:#C8A96E;color:#0A0E1A;
+  border-radius:999px;font-size:9px;font-weight:700;min-width:16px;height:16px;
+  display:none;align-items:center;justify-content:center;padding:0 3px;letter-spacing:0;}
+.px-bell-badge.show{display:inline-flex;}
 @media(max-width:900px){
   .px-brand span{display:none;}
   .px-links a{font-size:10px;padding:14px 8px;letter-spacing:1px;}
@@ -142,7 +150,7 @@
       <a href="/portal#cases" class="{{ 'act' if active=='cases' else '' }}">Casi</a>
       {% if _is_client %}
       <a href="/portal#docs" class="{{ 'act' if active=='docs' else '' }}">Documenti</a>
-      <a href="/portal#billing" class="{{ 'act' if active=='billing' else '' }}">Fatture</a>
+      <a href="/portal/invoices" class="{{ 'act' if active=='billing' else '' }}">Fatture</a>
       <a href="/support" class="{{ 'act' if active=='support' else '' }}">Supporto</a>
       {% endif %}
       {% if _is_op %}
@@ -160,6 +168,11 @@
       {% endif %}
     </div>
     <div class="px-right">
+      {% if _is_client %}
+      <a href="/portal" class="px-bell" id="px-bell-link" title="Azioni in attesa">
+        🔔<span class="px-bell-badge" id="px-bell-badge"></span>
+      </a>
+      {% endif %}
       <a href="/account" class="{{ 'act' if active=='account' else '' }}">Account</a>
       <a href="/" target="_blank" rel="noopener" title="Apri il sito in una nuova finestra">Sito &#8599;</a>
       <a href="/sicurezza" class="{{ 'act' if active=='security' else '' }}">Sicurezza</a>
@@ -168,6 +181,19 @@
     </div>
   </div>
 </nav>
+{% if _is_client %}
+<script>
+(function(){
+  fetch('/api/method/thanatos_intel.thanatos_portal.api.notifications.portal_action_count',
+    {credentials:'include'})
+    .then(r=>r.json()).then(d=>{
+      var n=(d.message||{}).count||0;
+      var b=document.getElementById('px-bell-badge');
+      if(b&&n>0){b.textContent=n>99?'99+':n;b.classList.add('show');}
+    }).catch(()=>{});
+})();
+</script>
+{% endif %}
 {%- endmacro %}
 
 {% macro thanatos_footer() -%}

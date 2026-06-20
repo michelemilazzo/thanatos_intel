@@ -44,6 +44,15 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "min_plan",
+   "fieldtype": "Select",
+   "label": "Piano minimo",
+   "options": "Free\nPay-per-use\nBasic\nProfessional\nLegal\nEnterprise",
+   "default": "Free",
+   "description": "Piano di abbonamento minimo richiesto per aprire questa pratica.",
+   "in_list_view": 0
+  },
+  {
    "fieldname": "is_active",
    "fieldtype": "Check",
    "label": "Attivo",

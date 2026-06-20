@@ -627,7 +627,17 @@ def handle_event(event: dict) -> dict:
     if etype == "invoice.payment_failed":
         sub_id = obj.get("subscription")
         if sub_id:
-            return sync_subscription(sub_id)
+            sync_subscription(sub_id)
+        _notify_payment_failed(obj)
+        return {"ok": True, "event": "invoice.payment_failed"}
+
+    if etype == "charge.dispute.created":
+        _handle_dispute(obj)
+        return {"ok": True, "event": "charge.dispute.created"}
+
+    if etype == "charge.refunded":
+        _handle_refund(obj)
+        return {"ok": True, "event": "charge.refunded"}
 
     if etype.startswith("setup_intent."):
         # SetupIntent: cliente sta salvando un metodo di pagamento (no charge).
@@ -667,3 +677,112 @@ def handle_event(event: dict) -> dict:
                 "status": status, "client_linked": client_name}
 
     return {"ignored": etype}
+
+
+def _notify_payment_failed(invoice_obj):
+    """Notifica il cliente e lo staff quando un pagamento fallisce."""
+    customer_id = invoice_obj.get("customer")
+    attempt = invoice_obj.get("attempt_count", 1)
+    amount = invoice_obj.get("amount_due", 0) / 100.0
+    currency = (invoice_obj.get("currency") or "eur").upper()
+    client_name = frappe.db.get_value("Investigation Client", {"stripe_customer_id": customer_id}, "name")
+    client_email = frappe.db.get_value("Investigation Client", client_name, "email") if client_name else None
+    client_display = frappe.db.get_value("Investigation Client", client_name, "client_name") if client_name else customer_id
+
+    from thanatos_intel.integrations.email_render import render
+    portal_url = frappe.utils.get_url("/portal/billing")
+
+    if client_email:
+        body = (
+            f"<p>Gentile {client_display},</p>"
+            f"<p>il pagamento di <strong>{amount:.2f} {currency}</strong> per la tua sottoscrizione Thanatos Intel "
+            f"non è andato a buon fine (tentativo {attempt}).</p>"
+            f"<p>Per evitare l'interruzione del servizio, aggiorna il tuo metodo di pagamento "
+            f"dal <a href='{portal_url}'>portale clienti</a>.</p>"
+            f"<p>Hai bisogno di assistenza? Rispondi a questa email o contattaci a "
+            f"<a href='mailto:admin@thanatos.agency'>admin@thanatos.agency</a>.</p>"
+        )
+        frappe.sendmail(
+            recipients=[client_email],
+            sender="admin@thanatos.agency",
+            subject=f"[Thanatos Intel] Pagamento fallito — azione richiesta",
+            message=render(body, title="Pagamento fallito", preheader="Pagamento non riuscito"),
+        )
+
+    frappe.sendmail(
+        recipients=["admin@thanatos.agency"],
+        sender="admin@thanatos.agency",
+        subject=f"[Thanatos] Pagamento fallito — {client_display} — {amount:.2f} {currency}",
+        message=(f"Tentativo {attempt} fallito per {client_display} ({customer_id}). "
+                 f"Importo: {amount:.2f} {currency}. Stripe invoice: {invoice_obj.get('id')}"),
+    )
+
+
+def _handle_dispute(charge_obj):
+    """Registra una disputa (chargeback) e avvisa lo staff immediatamente."""
+    dispute_id = charge_obj.get("id")
+    charge_id = charge_obj.get("charge") or charge_obj.get("id")
+    amount = (charge_obj.get("amount") or 0) / 100.0
+    currency = (charge_obj.get("currency") or "eur").upper()
+    reason = charge_obj.get("reason") or "unknown"
+    customer_id = charge_obj.get("customer") or charge_obj.get("balance_transaction", {})
+    client_name = None
+    if customer_id and isinstance(customer_id, str) and customer_id.startswith("cus_"):
+        client_name = frappe.db.get_value("Investigation Client", {"stripe_customer_id": customer_id}, "name")
+
+    try:
+        frappe.get_doc({
+            "doctype": "Diplomatic Audit Log",
+            "event_type": "stripe.charge.dispute.created",
+            "subject": client_name or "unknown",
+            "new_value": f"DISPUTE {dispute_id}",
+            "reason": frappe.as_json({
+                "dispute_id": dispute_id,
+                "charge_id": charge_id,
+                "amount": amount,
+                "currency": currency,
+                "reason": reason,
+                "client": client_name,
+            })[:500],
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "dispute audit log")
+
+    client_display = client_name or customer_id or "sconosciuto"
+    frappe.sendmail(
+        recipients=["admin@thanatos.agency"],
+        sender="admin@thanatos.agency",
+        subject=f"[URGENTE] Chargeback aperto — {client_display} — {amount:.2f} {currency}",
+        message=(
+            f"<p><strong>⚠️ Disputa Stripe aperta</strong></p>"
+            f"<p>Cliente: {client_display}<br>"
+            f"Importo: {amount:.2f} {currency}<br>"
+            f"Motivo: {reason}<br>"
+            f"Dispute ID: {dispute_id}<br>"
+            f"Charge ID: {charge_id}</p>"
+            f"<p>Accedi alla <a href='https://dashboard.stripe.com/disputes/{dispute_id}'>dashboard Stripe</a> "
+            f"per rispondere entro i termini.</p>"
+        ),
+    )
+
+
+def _handle_refund(charge_obj):
+    """Aggiorna Usage Event se rimborsato e logga."""
+    charge_id = charge_obj.get("id")
+    refunds = charge_obj.get("refunds", {})
+    refund_data = (refunds.get("data") or []) if isinstance(refunds, dict) else []
+    refund_amount = sum((r.get("amount") or 0) for r in refund_data) / 100.0
+    currency = (charge_obj.get("currency") or "eur").upper()
+
+    pi = charge_obj.get("payment_intent")
+    if pi:
+        ue_name = frappe.db.get_value("Usage Event", {"stripe_payment_intent": pi}, "name")
+        if ue_name:
+            frappe.db.set_value("Usage Event", ue_name, "status", "Refunded")
+            frappe.db.commit()
+
+    frappe.log_error(
+        f"Rimborso: {refund_amount:.2f} {currency} su charge {charge_id} / PI {pi}",
+        "stripe.charge.refunded"
+    )

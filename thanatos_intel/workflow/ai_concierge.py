@@ -51,6 +51,16 @@ def suggest_next(case_name):
     if not text:
         return {"ok": False, "error": "AI non disponibile al momento."}
 
+    try:
+        usage = (resp or {}).get("usage") or {}
+        if usage.get("tokens_in") or usage.get("tokens_out"):
+            from thanatos_intel.billing.ai_meter import record_usage
+            record_usage(client=case.client, model=(resp or {}).get("model", "default"),
+                         tokens_in=usage.get("tokens_in", 0), tokens_out=usage.get("tokens_out", 0),
+                         reference=case.name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ai_concierge meter")
+
     case.append("case_activities", {
         "activity_date": now_datetime(), "activity_type": "Report",
         "description": ("🤖 AI: " + text)[:500], "operator": frappe.session.user})

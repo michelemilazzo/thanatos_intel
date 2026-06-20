@@ -1,0 +1,136 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, portal_nav %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2842}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:960px;margin:0 auto;padding:28px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+.hero{padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#FFF;margin:0 0 6px}
+.hero p{margin:0;color:var(--grey);font-size:13px}
+.section-title{font-family:Georgia,serif;font-size:14px;color:#fff;letter-spacing:2px;
+  text-transform:uppercase;margin:32px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--gold-soft)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);
+  padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid #0f1525}
+tbody tr:hover{background:#0D1424}
+tbody td{padding:12px 12px;color:#E8E9F0;vertical-align:middle}
+.amt{font-variant-numeric:tabular-nums;font-weight:500}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;letter-spacing:1px;
+  text-transform:uppercase;font-weight:600;background:var(--gold-soft);color:var(--gold);
+  border:1px solid var(--gold-soft)}
+.badge-paid{background:rgba(76,175,80,.12);color:#4caf50;border-color:rgba(76,175,80,.3)}
+.action-link{color:var(--gold);text-decoration:none;font-size:11px;letter-spacing:1px;
+  text-transform:uppercase;border:1px solid var(--gold-soft);padding:4px 10px;border-radius:2px;
+  margin-right:6px;display:inline-block}
+.action-link:hover{background:var(--gold);color:var(--dark)}
+.empty{text-align:center;padding:48px 24px;color:var(--grey);font-size:13px}
+@media(max-width:640px){
+  table,thead,tbody,tr,th,td{display:block}
+  thead{display:none}
+  tbody td:before{content:attr(data-label);display:block;font-size:10px;color:var(--gold);
+    letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+  tbody td{padding:8px 12px;border:none}
+  tbody tr{border:1px solid var(--border);border-radius:4px;margin-bottom:8px;padding:4px 0}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header(None) }}
+{{ portal_nav('billing') }}
+
+<div class="shell">
+  <div class="crumb"><a href="/portal">← Portale</a> · Fatture</div>
+
+  <div class="hero">
+    <h1>Fatture & pagamenti</h1>
+    <p>Storico completo dei pagamenti e link per scaricare le fatture in formato PDF.</p>
+  </div>
+
+  {% if not has_client %}
+  <div class="empty">Profilo cliente non trovato. Contatta l'amministratore.</div>
+
+  {% else %}
+
+  {# ── Fatture Stripe ─────────────────────────────────────────────── #}
+  <div class="section-title">Abbonamenti e fatture Stripe</div>
+  {% if invoices %}
+  <table>
+    <thead>
+      <tr>
+        <th>N° fattura</th>
+        <th>Data</th>
+        <th>Importo</th>
+        <th>Stato</th>
+        <th>Download</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for inv in invoices %}
+    <tr>
+      <td data-label="N° fattura">{{ inv.number }}</td>
+      <td data-label="Data">{{ frappe.utils.format_datetime(frappe.utils.get_datetime(inv.date), 'dd/MM/yyyy') if inv.date else '—' }}</td>
+      <td data-label="Importo" class="amt">{{ "%.2f"|format(inv.amount|float) }} {{ inv.currency }}</td>
+      <td data-label="Stato"><span class="badge badge-paid">{{ inv.status }}</span></td>
+      <td data-label="Download">
+        {% if inv.hosted_url %}<a class="action-link" href="{{ inv.hosted_url }}" target="_blank" rel="noopener">Visualizza</a>{% endif %}
+        {% if inv.pdf_url %}<a class="action-link" href="{{ inv.pdf_url }}" target="_blank" rel="noopener">PDF</a>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty" style="padding:24px">Nessuna fattura Stripe trovata.</div>
+  {% endif %}
+
+  {# ── Usage Events ───────────────────────────────────────────────── #}
+  <div class="section-title">Servizi singoli acquistati</div>
+  {% if usage_events %}
+  <table>
+    <thead>
+      <tr>
+        <th>Servizio</th>
+        <th>Pratica</th>
+        <th>Qtà</th>
+        <th>Importo</th>
+        <th>Stato</th>
+        <th>Data</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for ue in usage_events %}
+    <tr>
+      <td data-label="Servizio">{{ ue.service or '—' }}</td>
+      <td data-label="Pratica">{% if ue.case %}<a href="/portal/case/{{ ue.case }}" style="color:var(--gold);text-decoration:none">{{ ue.case }}</a>{% else %}—{% endif %}</td>
+      <td data-label="Qtà">{{ ue.quantity or 1 }}</td>
+      <td data-label="Importo" class="amt">{{ "%.2f"|format(ue.total|float) }} {{ ue.currency or 'EUR' }}</td>
+      <td data-label="Stato"><span class="badge badge-paid">{{ ue.status }}</span></td>
+      <td data-label="Data">{{ frappe.utils.format_datetime(ue.paid_at or ue.creation, 'dd/MM/yyyy') }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty" style="padding:24px">Nessun servizio acquistato.</div>
+  {% endif %}
+
+  <p style="margin-top:28px;font-size:12px;color:var(--grey)">
+    Per richiedere una copia in formato fattura elettronica o per chiarimenti sui pagamenti,
+    contatta <a href="mailto:admin@thanatos.agency" style="color:var(--gold)">admin@thanatos.agency</a>.
+  </p>
+
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

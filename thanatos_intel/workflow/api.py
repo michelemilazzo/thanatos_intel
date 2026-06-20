@@ -106,6 +106,16 @@ def open_practice(blueprint, case_title, subject=None, objective=None, jurisdict
         frappe.throw(_("Nessun profilo cliente associato all'utente."))
     bp = frappe.get_doc("Service Blueprint", blueprint)
 
+    # Gate piano: verifica che il piano del cliente soddisfi il minimo del blueprint
+    if cl:
+        _PLAN_RANK = {"Free": 0, "Pay-per-use": 1, "Basic": 2, "Professional": 3, "Legal": 4, "Enterprise": 5}
+        client_plan = frappe.db.get_value("Investigation Client", cl.name, "subscription_plan") or "Free"
+        min_plan = bp.get("min_plan") or "Free"
+        if _PLAN_RANK.get(client_plan, 0) < _PLAN_RANK.get(min_plan, 0):
+            return {"needs_plan": min_plan, "billing_url": "/portal/billing",
+                    "message": _("Questo servizio richiede il piano {0}. "
+                                 "Aggiorna il tuo abbonamento.").format(min_plan)}
+
     # Gate identità: se il cliente non soddisfa il tier richiesto, rimanda al Vault
     tier = bp.get("identity_tier") or "Base"
     if cl and tier != "Base":
