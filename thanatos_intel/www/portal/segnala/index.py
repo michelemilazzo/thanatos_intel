@@ -54,9 +54,25 @@ def get_context(context):
     return context
 
 
+def _check_report_rate_limit(client: str):
+    from frappe.utils import add_to_date, now_datetime
+    now = now_datetime()
+    hourly = frappe.db.count("Blacklist Report",
+                             {"reporter": client, "creation": (">", add_to_date(now, hours=-1))})
+    if hourly >= 5:
+        frappe.throw(_("Limite di 5 segnalazioni per ora raggiunto. Riprova tra poco."),
+                     frappe.ValidationError)
+    daily = frappe.db.count("Blacklist Report",
+                            {"reporter": client, "creation": (">", add_to_date(now, days=-1))})
+    if daily >= 20:
+        frappe.throw(_("Limite giornaliero di 20 segnalazioni raggiunto."),
+                     frappe.ValidationError)
+
+
 @frappe.whitelist(methods=["POST"])
 def submit_report(entry_type, entry_value, reason, evidence=None):
     client = _my_client()
+    _check_report_rate_limit(client)
     entry_value = (entry_value or "").strip()
     if not entry_value or not (reason or "").strip():
         frappe.throw(_("Valore e motivo sono obbligatori."))

@@ -1,0 +1,136 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, portal_nav %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2842;--danger:#e05252}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:760px;margin:0 auto;padding:28px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+.hero{padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#FFF;margin:0 0 6px}
+.hero p{margin:0;color:var(--grey);font-size:13px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px}
+.card h2{font-family:Georgia,serif;font-size:16px;font-weight:400;color:#fff;margin:0 0 8px}
+.card p{margin:0 0 16px;color:var(--grey);font-size:13px;line-height:1.6}
+.btn{display:inline-block;padding:10px 22px;border-radius:6px;font-size:13px;font-weight:600;
+  cursor:pointer;border:none;letter-spacing:.5px;transition:opacity .15s}
+.btn-gold{background:var(--gold);color:#0A0E1A}
+.btn-gold:hover{opacity:.85}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn-danger:hover{background:rgba(224,82,82,.1)}
+.msg{display:none;margin-top:12px;padding:10px 14px;border-radius:6px;font-size:12px}
+.msg.ok{background:rgba(72,200,120,.12);border:1px solid rgba(72,200,120,.3);color:#48c878;display:block}
+.msg.err{background:rgba(224,82,82,.12);border:1px solid rgba(224,82,82,.3);color:var(--danger);display:block}
+.warn-box{background:rgba(224,82,82,.07);border:1px solid rgba(224,82,82,.25);border-radius:8px;
+  padding:14px 16px;margin-bottom:16px;font-size:12px;color:#e8a0a0;line-height:1.5}
+.already-badge{background:rgba(224,82,82,.15);border:1px solid rgba(224,82,82,.3);
+  border-radius:6px;padding:10px 14px;font-size:12px;color:var(--danger)}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header() }}
+{{ portal_nav('privacy') }}
+
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> › Privacy &amp; GDPR</div>
+
+  <div class="hero">
+    <h1>Privacy &amp; GDPR</h1>
+    <p>Gestisci i tuoi dati personali ai sensi del Regolamento UE 2016/679 (GDPR).</p>
+  </div>
+
+  {% if not client %}
+  <div class="card">
+    <p>Nessun profilo cliente collegato a questo account.</p>
+  </div>
+  {% else %}
+
+  {# --- Export dati --- #}
+  <div class="card">
+    <h2>Esporta i tuoi dati (Art. 20 GDPR)</h2>
+    <p>Ricevi via email un archivio JSON con tutti i tuoi dati: profilo, pratiche, pagamenti e segnalazioni.</p>
+    <button class="btn btn-gold" onclick="exportData()">Richiedi export dati</button>
+    <div class="msg" id="msg-export"></div>
+  </div>
+
+  {# --- Cancellazione account --- #}
+  <div class="card">
+    <h2>Cancellazione account (Art. 17 GDPR)</h2>
+    <p>Richiedi la cancellazione permanente del tuo account e di tutti i dati associati. Un operatore verificherà la richiesta entro 30 giorni.</p>
+
+    {% if deletion_pending %}
+    <div class="already-badge">
+      Richiesta di cancellazione già inviata. Riceverai una conferma entro 30 giorni.
+    </div>
+    {% else %}
+    <div class="warn-box">
+      <strong>Attenzione:</strong> questa azione è irreversibile. Pratiche in corso, cronologia pagamenti e segnalazioni verranno eliminati definitivamente.
+    </div>
+    <button class="btn btn-danger" onclick="confirmDelete()">Richiedi cancellazione account</button>
+    <div class="msg" id="msg-delete"></div>
+    {% endif %}
+  </div>
+
+  {# --- Info contatto --- #}
+  <div class="card">
+    <h2>Contatti Privacy</h2>
+    <p>Per qualsiasi domanda sui tuoi dati o per esercitare altri diritti GDPR (accesso, rettifica, opposizione al trattamento):<br>
+    <a href="mailto:privacy@thanatos.agency" style="color:var(--gold)">privacy@thanatos.agency</a></p>
+  </div>
+
+  {% endif %}
+</div>
+
+{{ thanatos_footer() }}
+
+<script>
+function exportData(){
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Invio in corso…';
+  const msg = document.getElementById('msg-export');
+  fetch('/api/method/thanatos_intel.www.portal.privacy.index.request_data_export', {
+    method:'POST',
+    headers:{'X-Frappe-CSRF-Token': frappe.csrf_token || '{{ frappe.session.get("csrf_token","") }}',
+             'Content-Type':'application/json'},
+    body:'{}'
+  }).then(r=>r.json()).then(d=>{
+    if(d.message && d.message.ok){
+      msg.className='msg ok'; msg.textContent='Export inviato a '+d.message.email;
+    } else {
+      msg.className='msg err'; msg.textContent=(d.exc_type||'Errore')+(d.message||'');
+    }
+  }).catch(()=>{msg.className='msg err';msg.textContent='Errore di rete.'})
+  .finally(()=>{btn.disabled=false;btn.textContent='Richiedi export dati'});
+}
+
+function confirmDelete(){
+  if(!confirm('Sei sicuro di voler cancellare il tuo account? Questa azione è irreversibile.')) return;
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Invio richiesta…';
+  const msg = document.getElementById('msg-delete');
+  fetch('/api/method/thanatos_intel.www.portal.privacy.index.request_account_deletion', {
+    method:'POST',
+    headers:{'X-Frappe-CSRF-Token': frappe.csrf_token || '{{ frappe.session.get("csrf_token","") }}',
+             'Content-Type':'application/json'},
+    body:'{}'
+  }).then(r=>r.json()).then(d=>{
+    if(d.message && d.message.ok){
+      msg.className='msg ok'; msg.textContent='Richiesta ricevuta. Procederemo entro 30 giorni.';
+      setTimeout(()=>location.reload(), 2000);
+    } else {
+      msg.className='msg err'; msg.textContent=(d.exc_type||'Errore');
+      btn.disabled=false; btn.textContent='Richiedi cancellazione account';
+    }
+  }).catch(()=>{msg.className='msg err';msg.textContent='Errore di rete.';btn.disabled=false;
+    btn.textContent='Richiedi cancellazione account'});
+}
+</script>
+{% endblock %}

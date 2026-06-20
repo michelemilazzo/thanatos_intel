@@ -85,6 +85,12 @@
    "label": "ERP Customer ID"
   },
   {
+   "fieldname": "deletion_requested_at",
+   "fieldtype": "Datetime",
+   "label": "Cancellazione richiesta il",
+   "read_only": 1
+  },
+  {
    "fieldname": "cb_link",
    "fieldtype": "Column Break"
   },
