@@ -49,6 +49,13 @@
       "label": "Nome mittente"
     },
     {
+      "fieldname": "whatsapp_number",
+      "fieldtype": "Link",
+      "label": "Numero WA destinatario",
+      "options": "WhatsApp Number",
+      "depends_on": "eval:doc.source_type=='WhatsApp'"
+    },
+    {
       "fieldname": "linked_contact",
       "fieldtype": "Link",
       "label": "Contatto rubrica",

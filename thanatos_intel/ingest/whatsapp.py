@@ -1,30 +1,51 @@
 """Ingest messaggi WhatsApp → Intel Lead.
 
-Supporta:
-- Twilio WhatsApp webhook (POST form-encoded)
-- Meta/WhatsApp Cloud API webhook (POST JSON)
+Supporta multi-numero tramite DocType WhatsApp Number.
+Ogni numero ha il proprio token e configurazione provider.
 
-Configurazione site_config.json:
-  whatsapp_ingest_token   — token segreto di validazione (obbligatorio)
-  whatsapp_provider       — "twilio" | "meta" (default: auto-detect)
-
-Endpoint webhook da configurare sul provider:
+Webhook URL (da impostare su Twilio/Meta):
   https://thanatos.onekeyco.com/api/method/thanatos_intel.ingest.whatsapp.webhook
+  ?number_id=+39123456789&token=IL-TUO-TOKEN
+
+  oppure (fallback globale):
+  ?token=IL-TUO-TOKEN-GLOBALE  (usa whatsapp_ingest_token in site_config)
+
+Configurazione site_config.json (fallback globale):
+  whatsapp_ingest_token   — token globale quando number_id non specificato
 """
 import frappe
 from frappe.utils import now_datetime
 
 
-def _check_token(token: str) -> bool:
-    expected = frappe.conf.get("whatsapp_ingest_token")
-    if not expected:
-        frappe.log_error("whatsapp_ingest_token non configurato in site_config", "WhatsApp Ingest")
-        return False
-    return token == expected
+def _load_number(number_id: str) -> dict | None:
+    """Carica config WhatsApp Number da DB."""
+    if not number_id:
+        return None
+    rec = frappe.db.get_value(
+        "WhatsApp Number",
+        number_id,
+        ["display_name", "phone_number", "provider", "webhook_token",
+         "auto_assign_to", "default_priority", "default_tags", "is_active"],
+        as_dict=True,
+    )
+    return rec if rec and rec.is_active else None
+
+
+def _check_token(token: str, wa_number: dict | None) -> bool:
+    """Valida il token: prima controlla il numero specifico, poi il token globale."""
+    if wa_number:
+        expected = frappe.utils.password.get_decrypted_password(
+            "WhatsApp Number", wa_number.phone_number, "webhook_token"
+        ) if wa_number.webhook_token else None
+        if expected:
+            return token == expected
+    # fallback globale
+    global_token = frappe.conf.get("whatsapp_ingest_token")
+    return bool(global_token and token == global_token)
 
 
 def _create_lead(source_id: str, source_name: str, content: str,
-                 media_url: str = "", provider: str = "WhatsApp") -> str:
+                 media_url: str = "", wa_number: dict | None = None) -> str:
     doc = frappe.get_doc({
         "doctype": "Intel Lead",
         "received_at": now_datetime(),
@@ -34,7 +55,10 @@ def _create_lead(source_id: str, source_name: str, content: str,
         "content": content or "(nessun testo)",
         "media_url": media_url or "",
         "status": "Nuovo",
-        "priority": "Media",
+        "priority": (wa_number or {}).get("default_priority") or "Media",
+        "tags": (wa_number or {}).get("default_tags") or "",
+        "assigned_to": (wa_number or {}).get("auto_assign_to") or "",
+        "whatsapp_number": (wa_number or {}).get("phone_number") or "",
     })
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
@@ -42,7 +66,6 @@ def _create_lead(source_id: str, source_name: str, content: str,
 
 
 def _parse_twilio(data: dict) -> list[dict]:
-    """Estrae messaggio(i) da payload Twilio WhatsApp."""
     from_number = data.get("From", "").replace("whatsapp:", "")
     profile_name = data.get("ProfileName", "")
     body = data.get("Body", "")
@@ -52,7 +75,6 @@ def _parse_twilio(data: dict) -> list[dict]:
 
 
 def _parse_meta(data: dict) -> list[dict]:
-    """Estrae messaggio(i) da payload Meta Cloud API."""
     results = []
     for entry in data.get("entry", []):
         for change in entry.get("changes", []):
@@ -82,37 +104,66 @@ def _parse_meta(data: dict) -> list[dict]:
 
 @frappe.whitelist(allow_guest=True)
 def webhook():
-    """Endpoint webhook generico — auto-detect Twilio vs Meta."""
+    """Endpoint webhook multi-numero — auto-detect Twilio vs Meta."""
     req = frappe.request
+    args = req.args
 
-    # Validazione token
-    token = (
-        req.args.get("token")
-        or req.form.get("token", "")
-        if req.content_type and "form" in req.content_type
-        else req.args.get("token", "")
-    )
-    if not _check_token(token):
-        frappe.response["http_status_code"] = 403
-        return {"error": "unauthorized"}
+    number_id = args.get("number_id", "").strip()
+    token = args.get("token", "").strip()
 
-    # Meta usa GET per la verifica iniziale del webhook (challenge)
+    # Carica numero specifico se fornito
+    wa_number = _load_number(number_id) if number_id else None
+
+    # Verifica challenge Meta (GET)
     if req.method == "GET":
-        challenge = req.args.get("hub.challenge")
-        verify = req.args.get("hub.verify_token", "")
-        if _check_token(verify) and challenge:
+        challenge = args.get("hub.challenge")
+        verify = args.get("hub.verify_token", "")
+        if _check_token(verify, wa_number) and challenge:
             frappe.response["type"] = "page"
             frappe.response["page_content"] = challenge
             return
         frappe.response["http_status_code"] = 403
         return {"error": "invalid verify_token"}
 
+    if not _check_token(token, wa_number):
+        frappe.response["http_status_code"] = 403
+        return {"error": "unauthorized"}
+
     content_type = req.content_type or ""
     if "json" in content_type:
-        data = frappe.request.json or {}
+        data = req.json or {}
+        # Auto-detect numero Meta dal phone_number_id nel payload
+        if not wa_number:
+            for entry in data.get("entry", []):
+                for change in entry.get("changes", []):
+                    pid = change.get("value", {}).get("metadata", {}).get("phone_number_id")
+                    if pid:
+                        rec = frappe.db.get_value(
+                            "WhatsApp Number", {"meta_phone_number_id": pid, "is_active": 1},
+                            ["display_name", "phone_number", "provider", "webhook_token",
+                             "auto_assign_to", "default_priority", "default_tags", "is_active"],
+                            as_dict=True,
+                        )
+                        if rec:
+                            wa_number = rec
+                        break
+                if wa_number:
+                    break
         messages = _parse_meta(data)
     else:
         data = req.form.to_dict()
+        # Auto-detect numero Twilio dal To field
+        if not wa_number:
+            to_field = data.get("To", "").replace("whatsapp:", "")
+            if to_field:
+                rec = frappe.db.get_value(
+                    "WhatsApp Number", {"phone_number": to_field, "is_active": 1},
+                    ["display_name", "phone_number", "provider", "webhook_token",
+                     "auto_assign_to", "default_priority", "default_tags", "is_active"],
+                    as_dict=True,
+                )
+                if rec:
+                    wa_number = rec
         messages = _parse_twilio(data)
 
     created = []
@@ -124,6 +175,7 @@ def webhook():
             source_name=m["source_name"],
             content=m["content"],
             media_url=m["media_url"],
+            wa_number=wa_number,
         )
         created.append(name)
 

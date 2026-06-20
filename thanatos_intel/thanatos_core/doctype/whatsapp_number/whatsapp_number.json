@@ -1,0 +1,144 @@
+{
+  "doctype": "DocType",
+  "name": "WhatsApp Number",
+  "module": "Thanatos Core",
+  "autoname": "field:phone_number",
+  "naming_rule": "By fieldname",
+  "title_field": "display_name",
+  "search_fields": "display_name,phone_number",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "display_name",
+      "fieldtype": "Data",
+      "label": "Nome numero (es: Thanatos Principale)",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "phone_number",
+      "fieldtype": "Data",
+      "label": "Numero WhatsApp (con prefisso, es: +39…)",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Attivo",
+      "default": "1",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "provider",
+      "fieldtype": "Select",
+      "label": "Provider",
+      "options": "Twilio\nMeta Cloud API\nManuale",
+      "default": "Meta Cloud API",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "webhook_token",
+      "fieldtype": "Password",
+      "label": "Token webhook (per validazione firma)"
+    },
+    {
+      "fieldname": "sb_twilio",
+      "fieldtype": "Section Break",
+      "label": "Twilio",
+      "depends_on": "eval:doc.provider=='Twilio'"
+    },
+    {
+      "fieldname": "twilio_account_sid",
+      "fieldtype": "Data",
+      "label": "Account SID",
+      "depends_on": "eval:doc.provider=='Twilio'"
+    },
+    {
+      "fieldname": "twilio_auth_token",
+      "fieldtype": "Password",
+      "label": "Auth Token Twilio",
+      "depends_on": "eval:doc.provider=='Twilio'"
+    },
+    {
+      "fieldname": "sb_meta",
+      "fieldtype": "Section Break",
+      "label": "Meta Cloud API",
+      "depends_on": "eval:doc.provider=='Meta Cloud API'"
+    },
+    {
+      "fieldname": "meta_phone_number_id",
+      "fieldtype": "Data",
+      "label": "Phone Number ID (Meta)",
+      "depends_on": "eval:doc.provider=='Meta Cloud API'"
+    },
+    {
+      "fieldname": "meta_access_token",
+      "fieldtype": "Password",
+      "label": "Access Token Meta",
+      "depends_on": "eval:doc.provider=='Meta Cloud API'"
+    },
+    {
+      "fieldname": "sb_routing",
+      "fieldtype": "Section Break",
+      "label": "Routing & Defaults"
+    },
+    {
+      "fieldname": "auto_assign_to",
+      "fieldtype": "Link",
+      "label": "Assegna lead a",
+      "options": "User"
+    },
+    {
+      "fieldname": "default_priority",
+      "fieldtype": "Select",
+      "label": "Priorità default",
+      "options": "Bassa\nMedia\nAlta\nCritica",
+      "default": "Media"
+    },
+    {
+      "fieldname": "default_tags",
+      "fieldtype": "Data",
+      "label": "Tag default (virgola separati)"
+    },
+    {
+      "fieldname": "default_notes",
+      "fieldtype": "Small Text",
+      "label": "Note auto (prepese al contenuto)"
+    },
+    {
+      "fieldname": "sb_qr",
+      "fieldtype": "Section Break",
+      "label": "QR Code & Link"
+    },
+    {
+      "fieldname": "wa_link_text",
+      "fieldtype": "Data",
+      "label": "Testo pre-compilato nel messaggio WA (opzionale)"
+    },
+    {
+      "fieldname": "qr_preview",
+      "fieldtype": "HTML",
+      "label": "QR Preview"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1
+    },
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ]
+}
