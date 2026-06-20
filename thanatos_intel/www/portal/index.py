@@ -157,32 +157,72 @@ def _client_documents(cases):
 
 
 def _client_billing(user):
-    """Proforme (Quotation) e fatture (Sales Invoice) del cliente."""
+    """Billing reale dal cliente: Usage Events (paid/pending) + abbonamento Stripe."""
     out = {"proformas": [], "invoices": [], "proforma_open": 0, "invoice_unpaid": 0}
-    customer = frappe.db.get_value("Investigation Client", {"platform_user": user}, "erp_customer_id")
-    if not customer:
+    client_name = frappe.db.get_value("Investigation Client", {"platform_user": user}, "name")
+    if not client_name:
         return out
+
+    # Usage Events pagati → mostrali come "fatture"
     try:
-        out["proformas"] = frappe.get_all(
-            "Quotation",
-            filters={"party_name": customer, "quotation_to": "Customer"},
-            fields=["name", "transaction_date", "grand_total", "currency", "status"],
-            order_by="transaction_date desc", limit=8) or []
-        out["proforma_open"] = sum(1 for q in out["proformas"]
-                                   if (q.get("status") or "") in ("Draft", "Open", "Submitted"))
+        paid_ues = frappe.get_all("Usage Event",
+            filters={"client": client_name, "status": ["in", ["Paid", "Invoiced"]]},
+            fields=["name", "service", "total", "currency", "paid_at", "creation"],
+            order_by="creation desc", limit=8)
+        for ue in paid_ues:
+            out["invoices"].append({
+                "name": ue.name,
+                "posting_date": ue.paid_at or ue.creation,
+                "grand_total": float(ue.total or 0),
+                "outstanding_amount": 0,
+                "currency": ue.currency or "EUR",
+                "status": "Paid",
+                "_label": ue.service or "Servizio",
+            })
     except Exception:
         pass
+
+    # Abbonamento attivo → mostra come riga separata
     try:
-        out["invoices"] = frappe.get_all(
-            "Sales Invoice",
-            filters={"customer": customer},
-            fields=["name", "posting_date", "grand_total", "outstanding_amount",
-                    "currency", "status"],
-            order_by="posting_date desc", limit=8) or []
-        out["invoice_unpaid"] = sum(1 for i in out["invoices"]
-                                    if (i.get("outstanding_amount") or 0) > 0)
+        subs = frappe.get_all("Stripe Subscription",
+            filters={"investigation_client": client_name,
+                     "status": ["in", ["active", "trialing"]]},
+            fields=["name", "subscription_plan", "amount", "currency",
+                    "current_period_end", "status"],
+            limit=1)
+        for s in subs:
+            out["invoices"].append({
+                "name": s.name,
+                "posting_date": s.current_period_end,
+                "grand_total": float(s.amount or 0),
+                "outstanding_amount": 0,
+                "currency": (s.currency or "EUR").upper(),
+                "status": s.status,
+                "_label": f"Abbonamento {s.subscription_plan or ''}",
+            })
     except Exception:
         pass
+
+    # Usage Events pending → "da saldare" (proformas)
+    try:
+        pending_ues = frappe.get_all("Usage Event",
+            filters={"client": client_name, "status": "Pending"},
+            fields=["name", "service", "total", "currency", "creation"],
+            order_by="creation desc", limit=5)
+        for ue in pending_ues:
+            out["proformas"].append({
+                "name": ue.name,
+                "transaction_date": ue.creation,
+                "grand_total": float(ue.total or 0),
+                "currency": ue.currency or "EUR",
+                "status": "Pending",
+                "_label": ue.service or "Servizio",
+            })
+        out["proforma_open"] = len(out["proformas"])
+        out["invoice_unpaid"] = len(out["proformas"])
+    except Exception:
+        pass
+
     return out
 
 

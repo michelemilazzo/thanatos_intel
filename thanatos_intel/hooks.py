@@ -130,6 +130,7 @@ doc_events={
                     'thanatos_intel.billing.case_billing.on_case_created',
                     'thanatos_intel.integrations.client_comms.auto_thankyou',
                     'thanatos_intel.workflow.lifecycle.on_case_after_insert'],
+   'on_update': 'thanatos_intel.integrations.client_comms.on_case_status_changed',
    'validate': 'thanatos_intel.connect_onboarding.sync_assignment_connect_accounts',
  },
  'Agency Mandate': {

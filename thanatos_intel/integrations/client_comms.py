@@ -103,3 +103,62 @@ def auto_report_ready(doc, method=None):
         _send(_case_of(doc), "Thanatos - Report pronto", doc)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "auto_report_ready")
+
+
+# Mappa status → etichetta leggibile per il cliente
+_STATUS_LABEL = {
+    "Open": "Aperto",
+    "In Progress": "In lavorazione",
+    "Under Review": "In revisione",
+    "Awaiting Client": "In attesa di informazioni da parte tua",
+    "Completed": "Completato",
+    "Closed": "Chiuso",
+    "Cancelled": "Annullato",
+}
+
+# Statuses che non devono innescare una notifica client (troppo tecnici)
+_SILENT_STATUSES = {"Draft", "Pending", "Archived"}
+
+
+def on_case_status_changed(doc, method=None):
+    """Investigation Case on_update: invia email al cliente se lo status è cambiato."""
+    try:
+        if not doc.has_value_changed("status"):
+            return
+        new_status = doc.status or ""
+        if new_status in _SILENT_STATUSES:
+            return
+
+        email, client_name = _client_email(doc.name)
+        if not email:
+            return
+
+        label = _STATUS_LABEL.get(new_status, new_status)
+        case_url = f"https://thanatos.onekeyco.com/portal/case?name={doc.name}"
+
+        # Prova prima con template DB, poi fallback hardcoded
+        tpl_name = "Thanatos - Stato aggiornato"
+        if frappe.db.exists("Email Template", tpl_name):
+            _send(doc.name, tpl_name, doc)
+            return
+
+        # Fallback: email branded inline
+        from thanatos_intel.integrations import email_render
+        subject = f"Aggiornamento pratica {doc.case_number or doc.name}"
+        body = (
+            f"<p>Ciao {client_name},</p>"
+            f"<p>Lo stato della tua pratica <strong>{doc.case_title or doc.name}</strong> "
+            f"è stato aggiornato a: <strong>{label}</strong>.</p>"
+            + (f"<p style='color:#666;font-size:13px'>{doc.status_notes}</p>"
+               if getattr(doc, "status_notes", None) else "")
+            + f"<p><a href='{case_url}' style='color:#C8A96E'>Visualizza la pratica →</a></p>"
+        )
+        frappe.sendmail(
+            recipients=[email], sender=_sender("info"),
+            subject=subject,
+            message=email_render.render(body, title=subject, preheader=f"Pratica: {label}"),
+            reference_doctype="Investigation Case", reference_name=doc.name,
+            now=False,
+        )
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "on_case_status_changed")

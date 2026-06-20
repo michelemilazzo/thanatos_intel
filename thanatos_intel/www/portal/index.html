@@ -343,19 +343,19 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
       <div class="activity">
         {% for i in invoices %}
         <div class="row">
-          <div><span class="badge">Fattura</span>{{ i.name }}</div>
+          <div><span class="badge">{{ i._label or i.name }}</span></div>
           <div class="when">
             {{ "%.2f"|format(i.grand_total or 0) }} {{ i.currency or 'EUR' }}
             <span style="margin-left:6px;color:{{ '#d05a5a' if (i.outstanding_amount or 0) > 0 else '#6aa66a' }}">
-              {{ 'da saldare' if (i.outstanding_amount or 0) > 0 else 'pagata' }}</span>
+              {{ 'da saldare' if (i.outstanding_amount or 0) > 0 else 'pagato' }}</span>
           </div>
         </div>
         {% endfor %}
         {% for q in proformas %}
         <div class="row">
-          <div><span class="badge">Proforma</span>{{ q.name }}</div>
+          <div><span class="badge" style="background:rgba(208,90,90,.15);color:#d05a5a;border-color:rgba(208,90,90,.3)">Da saldare</span>{{ q._label or q.name }}</div>
           <div class="when">{{ "%.2f"|format(q.grand_total or 0) }} {{ q.currency or 'EUR' }}
-            <span style="margin-left:6px;color:var(--grey)">{{ q.status }}</span></div>
+            <span style="margin-left:6px;color:#d05a5a">in attesa pagamento</span></div>
         </div>
         {% endfor %}
       </div>
