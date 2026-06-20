@@ -15,10 +15,12 @@ from frappe.utils import flt, now_datetime, get_url
 
 # default % (override in site_config thanatos)
 DEF = {
-	"referral_l1_pct": 10.0,        # collaboratore, livello 1
-	"referral_l2_pct": 3.0,         # collaboratore, livello 2
-	"referral_client_l1_pct": 5.0,  # cliente, livello 1 (credito)
-	"referral_client_l2_pct": 0.0,  # cliente, livello 2 (credito)
+	"welcome_bonus_eur": 25.0,         # credito a ogni nuovo iscritto
+	"referral_signup_bonus_eur": 10.0, # credito a chi ha segnalato (registrazione)
+	"referral_l1_pct": 10.0,           # collaboratore, % su spesa, livello 1
+	"referral_l2_pct": 3.0,            # collaboratore, % su spesa, livello 2
+	"referral_client_l1_pct": 0.0,     # cliente: reward = flat alla registrazione
+	"referral_client_l2_pct": 0.0,
 }
 
 
@@ -100,7 +102,23 @@ def record_registration(new_client, code):
 		if inv:
 			frappe.db.set_value("Referral Invite", inv,
 				{"status": "Registered", "registered_client": new_client})
+	_grant_signup_bonuses(new_client, ref)
 	return ref
+
+
+def _grant_signup_bonuses(new_client, ref):
+	"""25E di benvenuto al nuovo iscritto + 10E al referrer (una-tantum, idempotente)."""
+	from thanatos_intel.billing.credits import grant_credit
+	welcome = _pct("welcome_bonus_eur")
+	rn = "%s:welcome" % new_client
+	if welcome > 0 and not _ref_exists(rn):
+		grant_credit(new_client, welcome, "Investigation Client", rn, "Bonus di benvenuto")
+	if ref and ref != new_client:
+		rb = _pct("referral_signup_bonus_eur")
+		rn2 = "%s:referrer" % new_client
+		if rb > 0 and not _ref_exists(rn2):
+			child = frappe.db.get_value("Investigation Client", new_client, "client_name") or new_client
+			grant_credit(ref, rb, "Investigation Client", rn2, "Bonus segnalazione: %s" % child)
 
 
 # ---------------- ricompensa su spesa (Credit Ledger "Spent") ----------------
@@ -195,7 +213,7 @@ def my_tree(user=None):
 		rows = frappe.get_all("Credit Ledger",
 			filters={"party_type": "Client", "party": c, "kind": "Earned"},
 			fields=["amount", "reference_name"])
-		earned = sum(flt(x.amount) for x in rows if (x.reference_name or "").endswith((":L1", ":L2")))
+		earned = sum(flt(x.amount) for x in rows if (x.reference_name or "").endswith((":L1", ":L2", ":referrer")))
 		pending, paid = 0, earned
 	return {"code": code, "link": referral_link(user), "l1": l1, "l2": l2,
 		"invites": invites, "earned": flt(earned), "pending": flt(pending),
