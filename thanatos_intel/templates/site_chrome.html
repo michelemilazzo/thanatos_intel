@@ -155,6 +155,9 @@
       {% endif %}
       <div class="sep"></div>
       <a href="/portal/guide" class="{{ 'act' if active=='guide' else '' }}">Guida</a>
+      {% if _is_client %}
+      <a href="/portal/legacy" class="{{ 'act' if active=='legacy' else '' }}">Legacy</a>
+      {% endif %}
     </div>
     <div class="px-right">
       <a href="/sicurezza" class="{{ 'act' if active=='security' else '' }}">Sicurezza</a>

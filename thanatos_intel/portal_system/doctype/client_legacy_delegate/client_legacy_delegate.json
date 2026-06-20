@@ -1,0 +1,190 @@
+{
+ "doctype": "DocType",
+ "name": "Client Legacy Delegate",
+ "module": "Portal System",
+ "track_changes": 1,
+ "autoname": "hash",
+ "fields": [
+  {
+   "fieldname": "client",
+   "fieldtype": "Link",
+   "label": "Investigation Client",
+   "options": "Investigation Client",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nRequested\nReviewing\nGranted\nRevoked\nExpired",
+   "default": "Active",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sb_delegate",
+   "fieldtype": "Section Break",
+   "label": "Delegato"
+  },
+  {
+   "fieldname": "delegate_name",
+   "fieldtype": "Data",
+   "label": "Nome delegato",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "delegate_email",
+   "fieldtype": "Data",
+   "label": "Email delegato",
+   "options": "Email",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "relationship",
+   "fieldtype": "Select",
+   "label": "Relazione",
+   "options": "Avvocato\nFamiliare\nConiuge / Partner\nSocio\nEsecutore testamentario\nAltro"
+  },
+  {
+   "fieldname": "delegate_phone",
+   "fieldtype": "Data",
+   "label": "Telefono delegato"
+  },
+  {
+   "fieldname": "sb_access",
+   "fieldtype": "Section Break",
+   "label": "Accesso"
+  },
+  {
+   "fieldname": "waiting_hours",
+   "fieldtype": "Int",
+   "label": "Attesa prima dell'accesso (ore)",
+   "default": 72,
+   "description": "Ore di verifica prima di attivare l'accesso"
+  },
+  {
+   "fieldname": "access_days",
+   "fieldtype": "Int",
+   "label": "Durata accesso (giorni)",
+   "default": 30
+  },
+  {
+   "fieldname": "cb3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "invite_token",
+   "fieldtype": "Data",
+   "label": "Token invito",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "access_token",
+   "fieldtype": "Data",
+   "label": "Token accesso",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "sb_timeline",
+   "fieldtype": "Section Break",
+   "label": "Timeline"
+  },
+  {
+   "fieldname": "invite_sent_at",
+   "fieldtype": "Datetime",
+   "label": "Invito inviato il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "requested_at",
+   "fieldtype": "Datetime",
+   "label": "Richiesta accesso il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "granted_at",
+   "fieldtype": "Datetime",
+   "label": "Accesso concesso il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "access_expires_at",
+   "fieldtype": "Datetime",
+   "label": "Accesso scade il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_docs",
+   "fieldtype": "Section Break",
+   "label": "Documentazione fornita dal delegato"
+  },
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Select",
+   "label": "Tipo documento",
+   "options": "\nCertificato di morte\nProcura notarile\nSentenza di interdizione\nAltro"
+  },
+  {
+   "fieldname": "document_file",
+   "fieldtype": "Attach",
+   "label": "Documento allegato"
+  },
+  {
+   "fieldname": "cb5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "delegate_notes",
+   "fieldtype": "Text",
+   "label": "Note del delegato"
+  },
+  {
+   "fieldname": "sb_staff",
+   "fieldtype": "Section Break",
+   "label": "Note staff",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "staff_notes",
+   "fieldtype": "Text",
+   "label": "Note interne staff"
+  },
+  {
+   "fieldname": "reviewed_by",
+   "fieldtype": "Link",
+   "label": "Revisore",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Investigation Manager",
+   "read": 1, "write": 1, "create": 1, "delete": 1,
+   "report": 1, "export": 1, "print": 1, "email": 1
+  },
+  {
+   "role": "Investigator",
+   "read": 1, "write": 1
+  }
+ ]
+}

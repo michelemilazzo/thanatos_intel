@@ -1,0 +1,115 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2842}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:960px;margin:0 auto;padding:28px 24px 80px}
+.logo{text-align:center;padding:20px 0 28px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.logo h2{font-family:Georgia,serif;color:var(--gold);font-weight:400;letter-spacing:3px;
+  text-transform:uppercase;font-size:14px;margin:0 0 4px}
+.logo .sub{font-size:12px;color:var(--grey)}
+
+.banner{background:rgba(200,169,110,.06);border:1px solid var(--gold-soft);border-radius:4px;
+  padding:14px 18px;margin-bottom:24px;font-size:12px;color:#C8C9D8;display:flex;
+  align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.banner strong{color:var(--gold)}
+
+.section-title{font-family:Georgia,serif;font-size:16px;color:#fff;letter-spacing:2px;
+  text-transform:uppercase;margin:32px 0 16px;padding-bottom:10px;border-bottom:1px solid var(--gold-soft)}
+
+.case-row{background:var(--panel);border:1px solid var(--border);border-radius:4px;
+  padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.case-row .case-title{flex:1;font-size:14px;color:#FFF}
+.case-row .case-meta{font-size:11px;color:var(--grey);margin-top:3px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;letter-spacing:1px;
+  text-transform:uppercase;background:var(--gold-soft);color:var(--gold);border:1px solid var(--gold-soft)}
+
+.vault-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.vault-item{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:14px 16px}
+.vault-item .vtype{font-size:10px;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase}
+.vault-item .vlabel{font-size:13px;color:#FFF;margin-top:4px}
+.vault-item .vexp{font-size:11px;color:var(--grey);margin-top:4px}
+
+.readonly-bar{background:#1c1020;border-bottom:1px solid #3a1f3a;padding:8px 16px;
+  font-size:11px;color:#c084fc;letter-spacing:1px;text-align:center;position:sticky;top:0;z-index:100}
+.empty{text-align:center;padding:36px;color:var(--grey);font-size:13px}
+.err-card{background:var(--panel);border:1px solid var(--border);border-radius:4px;
+  padding:40px 32px;text-align:center;max-width:500px;margin:60px auto}
+.err-card h2{font-family:Georgia,serif;font-weight:400;color:#FFF;margin:0 0 12px}
+.err-card p{color:var(--grey);font-size:13px}
+</style>
+{% endblock %}
+
+{% block content %}
+{% if data %}
+<div class="readonly-bar">SOLA LETTURA · Accesso Legacy Digitale · Scade {{ frappe.utils.format_datetime(data.access_expires_at, 'dd/MM/yyyy') if data.access_expires_at else '' }}</div>
+{% endif %}
+{{ thanatos_header(None) }}
+
+<div class="shell">
+  {% if error %}
+  <div class="err-card">
+    <h2>Accesso non disponibile</h2>
+    <p>{{ error }}</p>
+    <p>Contatta Thanatos Intel per assistenza: <a href="mailto:cases@thanatos.agency" style="color:var(--gold)">cases@thanatos.agency</a></p>
+  </div>
+
+  {% else %}
+  <div class="logo">
+    <h2>Legacy Digitale · Fascicolo</h2>
+    <div class="sub">Accesso in sola lettura concesso a {{ data.delegate_name }}</div>
+  </div>
+
+  <div class="banner">
+    <div>
+      Stai visualizzando il fascicolo di <strong>{{ data.client_display }}</strong> come delegato di successione.
+      I contenuti sono in <strong>sola lettura</strong>.
+    </div>
+    <div>Scade: <strong>{{ frappe.utils.format_datetime(data.access_expires_at, 'dd/MM/yyyy HH:mm') if data.access_expires_at else '—' }}</strong></div>
+  </div>
+
+  <div class="section-title">Pratiche · {{ data.cases|length }}</div>
+  {% if data.cases %}
+    {% for c in data.cases %}
+    <div class="case-row">
+      <div style="flex:1">
+        <div class="case-title">{{ c.title or c.name }}</div>
+        <div class="case-meta">
+          {{ c.case_type or '—' }} ·
+          Aperta il {{ frappe.utils.format_datetime(c.creation, 'dd/MM/yyyy') }}
+          {% if c.modified %} · Aggiornata {{ frappe.utils.format_datetime(c.modified, 'dd/MM/yyyy') }}{% endif %}
+        </div>
+      </div>
+      <span class="badge">{{ c.status }}</span>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty">Nessuna pratica trovata.</div>
+  {% endif %}
+
+  <div class="section-title">Archivio documenti · {{ data.vault_items|length }}</div>
+  {% if data.vault_items %}
+  <div class="vault-grid">
+    {% for v in data.vault_items %}
+    <div class="vault-item">
+      <div class="vtype">{{ v.item_type or 'Documento' }}</div>
+      <div class="vlabel">{{ v.label or '—' }}</div>
+      {% if v.expires_at %}<div class="vexp">Scade {{ frappe.utils.format_datetime(v.expires_at, 'dd/MM/yyyy') }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">Nessun documento in archivio.</div>
+  {% endif %}
+
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

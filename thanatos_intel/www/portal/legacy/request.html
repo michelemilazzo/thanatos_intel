@@ -1,0 +1,196 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2842;--red:#e05252}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:620px;margin:60px auto;padding:0 24px 80px}
+.logo{text-align:center;margin-bottom:36px}
+.logo h2{font-family:Georgia,serif;color:var(--gold);font-weight:400;letter-spacing:3px;
+  text-transform:uppercase;font-size:16px;margin:0}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:36px}
+.card h1{font-family:Georgia,serif;font-weight:400;font-size:26px;color:#FFF;margin:0 0 8px}
+.card .sub{color:var(--grey);font-size:13px;margin-bottom:28px;line-height:1.7}
+.card .client-badge{display:inline-block;background:var(--gold-soft);border:1px solid var(--gold);
+  color:var(--gold);padding:6px 14px;border-radius:2px;font-size:12px;letter-spacing:1px;margin-bottom:24px}
+
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+label{font-size:11px;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase}
+select,textarea{background:#0D1221;border:1px solid var(--border);color:#E8E9F0;
+  padding:10px 12px;font-size:13px;border-radius:2px;font-family:inherit;width:100%}
+select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+textarea{resize:vertical;min-height:100px}
+
+.upload-zone{border:2px dashed var(--border);border-radius:4px;padding:24px;text-align:center;
+  cursor:pointer;transition:border-color .2s;margin-bottom:18px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--gold);background:rgba(200,169,110,.04)}
+.upload-zone p{color:var(--grey);font-size:13px;margin:0}
+.upload-zone .fname{color:var(--gold);margin-top:6px;font-size:12px}
+input[type=file]{display:none}
+
+.btn{display:block;width:100%;padding:14px;text-align:center;background:var(--gold);
+  color:var(--dark);border:none;font-size:12px;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;font-family:inherit;border-radius:2px;margin-top:8px}
+.btn:hover{background:#B8975A}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+
+.alert{padding:14px 18px;border-radius:4px;margin-bottom:20px;font-size:13px}
+.alert-err{background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);color:var(--red)}
+.alert-ok{background:rgba(76,175,80,.1);border:1px solid rgba(76,175,80,.3);color:#4caf50}
+.alert-warn{background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.2);color:#ffc107}
+.note{font-size:11px;color:#5B6276;text-align:center;margin-top:16px;line-height:1.7}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header(None) }}
+<div class="shell">
+  <div class="logo"><h2>Thanatos Intel · Legacy Digitale</h2></div>
+
+  {% if error %}
+  <div class="card">
+    <div class="alert alert-err">{{ error }}</div>
+    <p style="color:var(--grey);font-size:13px">Questo link potrebbe essere scaduto o revocato.
+       Contatta direttamente Thanatos Intel per assistenza.</p>
+  </div>
+
+  {% elif already_requested %}
+  <div class="card">
+    <h1>Richiesta già inviata</h1>
+    <div class="client-badge">{{ delegate_info.client_display }}</div>
+    <div class="sub">
+      La tua richiesta di accesso per il fascicolo di <strong>{{ delegate_info.client_display }}</strong>
+      è già stata ricevuta.<br>
+      Riceverai una notifica via email quando l'accesso sarà attivato.
+    </div>
+    <div class="alert alert-warn">
+      Stato attuale: <strong>{{ delegate_info.status }}</strong>.
+      Il team Thanatos sta verificando la documentazione.
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <h1>Richiesta accesso Legacy</h1>
+    <div class="client-badge">{{ delegate_info.client_display }}</div>
+    <div class="sub">
+      Sei stato designato come delegato di fiducia da <strong>{{ delegate_info.client_display }}</strong>.
+      Per accedere ai fascicoli, carica la documentazione che giustifica la richiesta.
+      L'accesso sarà attivato dopo <strong>{{ delegate_info.waiting_hours }} ore</strong> di verifica.
+    </div>
+
+    <div id="flash"></div>
+
+    <div class="form-group">
+      <label>Tipo di documento *</label>
+      <select id="doc_type">
+        <option value="">— seleziona —</option>
+        <option>Certificato di morte</option>
+        <option>Procura notarile</option>
+        <option>Sentenza di interdizione</option>
+        <option>Altro</option>
+      </select>
+    </div>
+
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <p>Clicca per allegare il documento<br><small>(PDF, JPG, PNG — max 10MB)</small></p>
+      <div class="fname" id="fname"></div>
+    </div>
+    <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="onFile(this)">
+
+    <div class="form-group">
+      <label>Note aggiuntive (opzionale)</label>
+      <textarea id="notes" placeholder="Descrivi brevemente la situazione e la tua relazione con il cliente..."></textarea>
+    </div>
+
+    <button class="btn" id="submit-btn" onclick="submitRequest()">Invia richiesta di accesso →</button>
+    <div class="note">
+      Il team Thanatos Intel verificherà la documentazione.<br>
+      L'accesso verrà attivato automaticamente dopo {{ delegate_info.waiting_hours }} ore se non ci sono obiezioni.
+    </div>
+  </div>
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+
+<script>
+const TOKEN = {{ token|tojson }};
+let uploadedFile = null;
+
+const zone = document.getElementById('upload-zone');
+if (zone) {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+}
+
+function onFile(input) { if (input.files[0]) handleFile(input.files[0]); }
+
+function handleFile(f) {
+  if (f.size > 10 * 1024 * 1024) { showFlash('File troppo grande (max 10MB).', 'err'); return; }
+  uploadedFile = f;
+  document.getElementById('fname').textContent = f.name;
+}
+
+function showFlash(msg, type='ok') {
+  const el = document.getElementById('flash');
+  el.innerHTML = msg;
+  el.className = 'alert alert-' + (type === 'err' ? 'err' : 'ok');
+}
+
+async function submitRequest() {
+  const doc_type = document.getElementById('doc_type').value;
+  if (!doc_type) { showFlash('Seleziona il tipo di documento.', 'err'); return; }
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Invio in corso…';
+
+  let file_url = '';
+  if (uploadedFile) {
+    const fd = new FormData();
+    fd.append('file', uploadedFile);
+    fd.append('is_private', '1');
+    fd.append('doctype', 'Client Legacy Delegate');
+    const up = await fetch('/api/method/upload_file', {
+      method: 'POST', credentials: 'include',
+      headers: {'X-Frappe-CSRF-Token': '{{ csrf_token }}'},
+      body: fd,
+    });
+    const uj = await up.json();
+    if (uj.message && uj.message.file_url) {
+      file_url = uj.message.file_url;
+    }
+  }
+
+  const r = await fetch('/api/method/thanatos_intel.legacy_access.submit_request', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': '{{ csrf_token }}'},
+    body: new URLSearchParams({
+      token: TOKEN,
+      document_type: doc_type,
+      delegate_notes: document.getElementById('notes').value,
+      document_file: file_url,
+    }).toString(),
+  });
+  const j = await r.json();
+  if (j.message && j.message.ok) {
+    document.querySelector('.card').innerHTML = `
+      <h1 style="color:#4caf50">Richiesta inviata</h1>
+      <div class="alert alert-ok">Documentazione ricevuta. Riceverai una email quando l'accesso sarà attivato.</div>
+      <p style="color:var(--grey);font-size:13px">Il team Thanatos Intel verificherà la documentazione fornita.
+      L'accesso ai fascicoli sarà attivato automaticamente dopo il periodo di verifica.</p>`;
+  } else {
+    showFlash(j._error_message || 'Errore. Riprova.', 'err');
+    btn.disabled = false; btn.textContent = 'Invia richiesta di accesso →';
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,248 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, portal_nav %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--navy:#0D1B3E;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;--border:#1F2842;--red:#e05252}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:900px;margin:0 auto;padding:28px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+.hero{padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#FFF;margin:0 0 6px}
+.hero p{margin:0;color:var(--grey);font-size:13px;max-width:620px;line-height:1.7}
+
+.info-box{background:rgba(200,169,110,.06);border:1px solid var(--gold-soft);border-radius:4px;
+  padding:16px 20px;margin-bottom:28px;font-size:13px;color:#C8C9D8;line-height:1.7}
+.info-box strong{color:var(--gold)}
+
+.section-title{font-family:Georgia,serif;font-size:16px;color:#fff;letter-spacing:2px;
+  text-transform:uppercase;margin:32px 0 16px;padding-bottom:10px;border-bottom:1px solid var(--gold-soft)}
+
+/* add-delegate form */
+.form-card{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:24px;margin-bottom:28px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:640px){.form-row{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:6px}
+label{font-size:11px;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase}
+input,select,textarea{background:#0D1221;border:1px solid var(--border);color:#E8E9F0;
+  padding:10px 12px;font-size:13px;border-radius:2px;font-family:inherit;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+select option{background:#0D1221}
+textarea{resize:vertical;min-height:80px}
+
+.btn{display:inline-block;padding:11px 24px;border:1px solid var(--gold);color:var(--gold);
+  background:transparent;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;font-family:inherit;text-decoration:none}
+.btn:hover{background:var(--gold);color:var(--dark)}
+.btn.solid{background:var(--gold);color:var(--dark)}
+.btn.solid:hover{background:#B8975A}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:var(--red);color:#fff}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+
+/* delegates list */
+.delegate-card{background:var(--panel);border:1px solid var(--border);border-radius:4px;
+  padding:18px 20px;margin-bottom:12px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.delegate-card .d-info{flex:1;min-width:200px}
+.delegate-card .d-name{font-size:15px;color:#FFF;font-weight:500}
+.delegate-card .d-email{font-size:12px;color:var(--grey);margin-top:2px}
+.delegate-card .d-rel{font-size:11px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;letter-spacing:1px;
+  text-transform:uppercase;font-weight:600}
+.badge-active{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.3)}
+.badge-requested{background:rgba(255,193,7,.12);color:#ffc107;border:1px solid rgba(255,193,7,.3)}
+.badge-reviewing{background:rgba(33,150,243,.12);color:#64b5f6;border:1px solid rgba(33,150,243,.3)}
+.badge-granted{background:rgba(200,169,110,.15);color:var(--gold);border:1px solid var(--gold-soft)}
+.badge-expired{background:rgba(122,130,148,.1);color:var(--grey);border:1px solid #2a3050}
+
+.timeline{font-size:11px;color:var(--grey);margin-top:8px;display:flex;gap:16px;flex-wrap:wrap}
+.timeline span{display:flex;align-items:center;gap:4px}
+.timeline .dot{width:6px;height:6px;border-radius:50%;background:var(--border)}
+.timeline .dot.done{background:var(--gold)}
+
+.empty{text-align:center;padding:48px 24px;color:var(--grey);font-size:13px}
+.empty .ic{font-size:36px;margin-bottom:12px}
+
+.flash{padding:12px 16px;border-radius:4px;margin-bottom:20px;font-size:13px;display:none}
+.flash.ok{background:rgba(76,175,80,.12);border:1px solid rgba(76,175,80,.3);color:#4caf50}
+.flash.err{background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);color:var(--red)}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('legacy') }}
+{{ portal_nav('legacy') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal">← Portal</a> · Legacy Digitale</div>
+
+  <div class="hero">
+    <h1>Legacy Digitale</h1>
+    <p>Designa una persona di fiducia che potrà accedere ai tuoi fascicoli e documenti Thanatos
+       in caso di decesso o incapacità. Il delegato riceverà un link riservato e dovrà caricare
+       la documentazione necessaria prima che l'accesso venga attivato.</p>
+  </div>
+
+  {% if not has_client %}
+  <div class="info-box">Profilo cliente non trovato. Contatta l'amministratore per completare l'onboarding.</div>
+  {% else %}
+
+  <div class="info-box">
+    <strong>Come funziona</strong><br>
+    1. Inserisci i dati del tuo delegato — riceverà un'email con un link riservato da conservare.<br>
+    2. Quando necessario, il delegato usa quel link per caricare la documentazione (es. certificato di morte).<br>
+    3. Dopo <strong>72 ore</strong> di verifica, l'accesso in sola lettura viene attivato.<br>
+    4. Puoi revocare il delegato in qualsiasi momento.
+  </div>
+
+  <div id="flash" class="flash"></div>
+
+  <div class="section-title">Aggiungi delegato</div>
+  <div class="form-card">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nome completo del delegato *</label>
+        <input type="text" id="f_name" placeholder="Mario Rossi" required>
+      </div>
+      <div class="form-group">
+        <label>Email del delegato *</label>
+        <input type="email" id="f_email" placeholder="mario.rossi@example.com" required>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Relazione</label>
+        <select id="f_rel">
+          <option value="">— seleziona —</option>
+          <option>Avvocato</option>
+          <option>Familiare</option>
+          <option>Coniuge / Partner</option>
+          <option>Socio</option>
+          <option>Esecutore testamentario</option>
+          <option>Altro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Telefono (opzionale)</label>
+        <input type="tel" id="f_phone" placeholder="+40 700 000 000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Ore di attesa prima dell'accesso</label>
+        <select id="f_hours">
+          <option value="24">24 ore</option>
+          <option value="48">48 ore</option>
+          <option value="72" selected>72 ore (consigliato)</option>
+          <option value="168">7 giorni</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Durata dell'accesso (giorni)</label>
+        <select id="f_days">
+          <option value="14">14 giorni</option>
+          <option value="30" selected>30 giorni</option>
+          <option value="60">60 giorni</option>
+          <option value="90">90 giorni</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn solid" onclick="addDelegate()">Designa delegato →</button>
+  </div>
+
+  <div class="section-title">Delegati designati</div>
+
+  <div id="delegates-list">
+  {% if delegates %}
+    {% for d in delegates %}
+    <div class="delegate-card" id="dc-{{ d.name }}">
+      <div class="d-info">
+        <div class="d-name">{{ d.delegate_name }}</div>
+        <div class="d-email">{{ d.delegate_email }}</div>
+        {% if d.relationship %}<div class="d-rel">{{ d.relationship }}</div>{% endif %}
+        <div class="timeline">
+          <span><span class="dot done"></span>Designato {{ frappe.utils.format_datetime(d.invite_sent_at, 'dd/MM/yy') if d.invite_sent_at else '—' }}</span>
+          {% if d.requested_at %}<span><span class="dot done"></span>Richiesto {{ frappe.utils.format_datetime(d.requested_at, 'dd/MM/yy') }}</span>{% endif %}
+          {% if d.granted_at %}<span><span class="dot done"></span>Accesso {{ frappe.utils.format_datetime(d.granted_at, 'dd/MM/yy') }}{% if d.access_expires_at %} (scade {{ frappe.utils.format_datetime(d.access_expires_at, 'dd/MM/yy') }}){% endif %}</span>{% endif %}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <span class="badge badge-{{ d.status|lower }}">{{ d.status }}</span>
+        <button class="btn danger" onclick="revoke('{{ d.name }}', '{{ d.delegate_name|e }}')">Revoca</button>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty" id="empty-msg">
+      <div class="ic">🔏</div>
+      Nessun delegato designato. Aggiungi una persona di fiducia qui sopra.
+    </div>
+  {% endif %}
+  </div>
+
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+
+<script>
+const CSRF = "{{ csrf_token }}";
+
+async function api(method, data) {
+  const r = await fetch('/api/method/' + method, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': CSRF},
+    body: new URLSearchParams(data).toString(),
+  });
+  return r.json();
+}
+
+function flash(msg, type='ok') {
+  const el = document.getElementById('flash');
+  el.textContent = msg;
+  el.className = 'flash ' + type;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+async function addDelegate() {
+  const name = document.getElementById('f_name').value.trim();
+  const email = document.getElementById('f_email').value.trim();
+  if (!name || !email) { flash('Nome e email obbligatori.', 'err'); return; }
+  const j = await api('thanatos_intel.legacy_access.add_delegate', {
+    delegate_name: name,
+    delegate_email: email,
+    relationship: document.getElementById('f_rel').value,
+    delegate_phone: document.getElementById('f_phone').value,
+    waiting_hours: document.getElementById('f_hours').value,
+    access_days: document.getElementById('f_days').value,
+  });
+  if (j.message && j.message.name) {
+    flash('Delegato aggiunto. Email di invito inviata a ' + email + '.', 'ok');
+    document.getElementById('f_name').value = '';
+    document.getElementById('f_email').value = '';
+    document.getElementById('empty-msg') && (document.getElementById('empty-msg').style.display = 'none');
+    location.reload();
+  } else {
+    flash(j._error_message || 'Errore durante l\'aggiunta.', 'err');
+  }
+}
+
+async function revoke(id, name) {
+  if (!confirm('Revocare il delegato "' + name + '"? Il link di invio non sarà più valido.')) return;
+  const j = await api('thanatos_intel.legacy_access.revoke_delegate', {delegate_name_id: id});
+  if (j.message && j.message.ok) {
+    const el = document.getElementById('dc-' + id);
+    if (el) el.remove();
+    flash('Delegato revocato.', 'ok');
+  } else {
+    flash(j._error_message || 'Errore durante la revoca.', 'err');
+  }
+}
+</script>
+{% endblock %}
