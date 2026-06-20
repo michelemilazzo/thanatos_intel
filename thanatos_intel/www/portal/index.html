@@ -251,8 +251,11 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     <a class="qa" href="#documenti">
       <div class="ic">▤</div><div><div class="t">Documenti</div><div class="s">Report e file</div></div>
     </a>
+    <a class="qa" href="/portal/invoices">
+      <div class="ic">€</div><div><div class="t">Fatture</div><div class="s">Storico pagamenti Stripe</div></div>
+    </a>
     <a class="qa" href="/portal/billing">
-      <div class="ic">€</div><div><div class="t">Fatture & Proforme</div><div class="s">Pagamenti e piano</div></div>
+      <div class="ic">⬆</div><div><div class="t">Piano &amp; Add-on</div><div class="s">Abbonamento e servizi extra</div></div>
     </a>
     <a class="qa" href="/portal/upload">
       <div class="ic">⇪</div><div><div class="t">Carica documento</div><div class="s">Invia file alla tua pratica</div></div>
@@ -288,9 +291,11 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 
   <div class="two-col">
     <div id="pratiche">
-      <h2 class="section-title">{% if is_client %}Le tue pratiche{% else %}Casi recenti{% endif %} <small>{{ cases|length }} totali</small></h2>
+      <h2 class="section-title">{% if is_client %}Le tue pratiche{% else %}Casi recenti{% endif %} <small>{{ cases|length }} totali</small>
+        {% if cases|length > 4 %}<input id="case-filter" placeholder="Cerca…" style="margin-left:12px;background:var(--bg);color:#E8E9F0;border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-size:11px;font-family:inherit;width:130px" oninput="filterCases(this.value)">{% endif %}
+      </h2>
       {% if cases %}
-      <div class="case-grid">
+      <div class="case-grid" id="case-grid">
         {% for c in cases[:9] %}
         <a class="case" href="/portal/case/{{ c.name }}">
           <div class="nr">{{ c.case_number or c.name }}</div>
@@ -382,4 +387,15 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 
 </div>
 {{ thanatos_footer() }}
+<script>
+function filterCases(q){
+  const grid=document.getElementById('case-grid');
+  if(!grid)return;
+  const term=(q||'').toLowerCase();
+  grid.querySelectorAll('a.case').forEach(el=>{
+    const txt=(el.textContent||'').toLowerCase();
+    el.style.display=(!term||txt.includes(term))?'':'none';
+  });
+}
+</script>
 {% endblock %}
