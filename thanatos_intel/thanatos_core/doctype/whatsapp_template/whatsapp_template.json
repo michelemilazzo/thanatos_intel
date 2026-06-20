@@ -1,0 +1,94 @@
+{
+  "doctype": "DocType",
+  "name": "WhatsApp Template",
+  "module": "Thanatos Core",
+  "autoname": "field:template_name",
+  "naming_rule": "By fieldname",
+  "title_field": "template_name",
+  "search_fields": "template_name,category,meta_template_name",
+  "track_changes": 0,
+  "fields": [
+    {
+      "fieldname": "template_name",
+      "fieldtype": "Data",
+      "label": "Nome template",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "category",
+      "fieldtype": "Select",
+      "label": "Categoria",
+      "options": "Utility\nMarketing\nAuthentication\nRisposta rapida",
+      "default": "Utility",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Attivo",
+      "default": "1",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "language",
+      "fieldtype": "Data",
+      "label": "Lingua (es: it, en)",
+      "default": "it"
+    },
+    {
+      "fieldname": "meta_template_name",
+      "fieldtype": "Data",
+      "label": "Nome approvato su Meta (esatto)",
+      "description": "Obbligatorio solo per template da inviare fuori dalla finestra 24h"
+    },
+    {
+      "fieldname": "sb_content",
+      "fieldtype": "Section Break",
+      "label": "Contenuto"
+    },
+    {
+      "fieldname": "header_text",
+      "fieldtype": "Data",
+      "label": "Header (opzionale)"
+    },
+    {
+      "fieldname": "body_text",
+      "fieldtype": "Text",
+      "label": "Corpo messaggio",
+      "reqd": 1,
+      "description": "Usa {{nome}}, {{numero_pratica}}, {{data}} come variabili sostituite automaticamente"
+    },
+    {
+      "fieldname": "footer_text",
+      "fieldtype": "Data",
+      "label": "Footer (opzionale)"
+    },
+    {
+      "fieldname": "sb_preview",
+      "fieldtype": "Section Break",
+      "label": "Anteprima"
+    },
+    {
+      "fieldname": "preview_html",
+      "fieldtype": "HTML",
+      "label": "Anteprima"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1
+    }
+  ]
+}

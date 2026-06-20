@@ -106,3 +106,34 @@ def _send_via_twilio(wa_doc, to_number: str, text: str) -> dict:
     if resp.status_code in (200, 201) and data.get("sid"):
         return {"ok": True, "message_id": data["sid"]}
     return {"ok": False, "error": data.get("message", str(data))}
+
+
+@frappe.whitelist()
+def reassign_lead(lead_name: str, new_user: str, note: str = "") -> dict:
+    lead = frappe.get_doc("Intel Lead", lead_name)
+    old_user = lead.assigned_to
+
+    lead.db_set("assigned_to", new_user, notify=True)
+    frappe.db.commit()
+
+    # Notifica operatore ricevente
+    try:
+        from thanatos_intel.ingest.intel_notifications import notify_transferred
+        notify_transferred(lead_name, new_user, frappe.session.user)
+    except Exception:
+        pass
+
+    # Aggiungi nota interna se fornita
+    if note:
+        lead.reload()
+        lead.append("messages", {
+            "direction": "Outbound",
+            "sent_at": now_datetime(),
+            "content": f"[Trasferito da {frappe.session.user} a {new_user}] {note}",
+            "status": "Inviato",
+            "sent_by": frappe.session.user,
+        })
+        lead.save(ignore_permissions=True)
+        frappe.db.commit()
+
+    return {"ok": True, "old": old_user, "new": new_user}

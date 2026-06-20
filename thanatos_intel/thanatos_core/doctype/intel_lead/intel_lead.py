@@ -72,12 +72,19 @@ def find_or_create_lead(source_identifier: str, source_name: str, content: str,
             "media_url": media_url or "",
         })
         doc.db_set("last_message_at", now_datetime(), notify=False)
-        # Aggiorna content con l'ultimo messaggio
         doc.db_set("content", content or doc.content, notify=False)
         if source_name and not doc.source_name:
             doc.db_set("source_name", source_name, notify=False)
         doc.save(ignore_permissions=True)
         frappe.db.commit()
+        # Notifica real-time operatore assegnato
+        if doc.assigned_to:
+            try:
+                from thanatos_intel.ingest.intel_notifications import notify_new_message_in_thread
+                notify_new_message_in_thread(existing, doc.assigned_to,
+                                             source_name or source_identifier, content or "")
+            except Exception:
+                pass
         return existing
 
     # Nuovo lead
@@ -105,4 +112,12 @@ def find_or_create_lead(source_identifier: str, source_name: str, content: str,
     })
     doc.insert(ignore_permissions=True)
     frappe.db.commit()
+    # Notifica operatore assegnato per nuovo lead
+    assigned = (wa_number or {}).get("auto_assign_to") or ""
+    if assigned:
+        try:
+            from thanatos_intel.ingest.intel_notifications import notify_new_lead
+            notify_new_lead(doc.name, assigned, source_name or "", source_identifier, content or "")
+        except Exception:
+            pass
     return doc.name
