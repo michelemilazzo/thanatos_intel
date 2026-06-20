@@ -12,6 +12,7 @@ import frappe
 
 # piano ISP (name) -> codice Service Catalog (fonte unica del prezzo)
 PLAN_SVC = {
+    "Free": "SVC-AB-000",
     "Basic": "SVC-AB-001",
     "Professional": "SVC-AB-002",
     "Legal": "SVC-AB-003",

@@ -11,7 +11,7 @@ from frappe import _
 
 from thanatos_intel.integrations import stripe_bridge
 
-PLAN_NAMES = {"Basic", "Professional", "Legal", "Enterprise"}
+PLAN_NAMES = {"Free", "Basic", "Professional", "Legal", "Enterprise"}
 
 
 def _my_client():

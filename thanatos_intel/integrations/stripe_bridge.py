@@ -134,10 +134,24 @@ def activate_addon_on_credit(client_name: str, service_code: str) -> dict:
     return {"credit": True, "message": _("Add-on {0} attivato — fatturazione a bonifico mensile.").format(name)}
 
 
+def activate_free_plan(client_name: str) -> dict:
+    """Piano Free: attivazione diretta senza carta né bonifico."""
+    frappe.db.set_value("Investigation Client", client_name, {
+        "subscription_plan": "Free",
+        "subscription_status": "Active",
+        "subscription_started_at": now_datetime(),
+    }, update_modified=False)
+    frappe.db.commit()
+    return {"credit": True, "message": _("Piano Free attivato. Puoi inserire segnalazioni blacklist gratuitamente. "
+                                         "Tutti gli altri servizi sono disponibili a pagamento per ogni singola richiesta.")}
+
+
 @frappe.whitelist()
 def create_checkout_session(client_name: str, plan_name: str, trial_days: int = 0) -> dict:
     """Crea Stripe Checkout Session per attivare un subscription plan.
-    Cliente a credito: nessuna carta, attivazione a bonifico mensile."""
+    Piano Free: attivazione diretta. Cliente a credito: nessuna carta, bonifico mensile."""
+    if plan_name == "Free":
+        return activate_free_plan(client_name)
     if _is_credit_client(client_name):
         return activate_plan_on_credit(client_name, plan_name)
     stripe = _get_stripe()

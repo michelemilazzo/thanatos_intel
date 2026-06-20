@@ -127,8 +127,21 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     <div class="plan {% if current_sub and current_sub.subscription_plan == p.name %}highlight{% endif %}">
       <div class="lvl">{{ p.plan_level }}</div>
       <h3>{{ p.plan_name }}</h3>
+      {% if p.name == 'Free' %}
+      <div class="price">Gratis<small> · pay-per-use</small></div>
+      {% else %}
       <div class="price">€{{ "%.0f"|format(p.monthly_price) }}<small> / mese</small></div>
+      {% endif %}
 
+      {% if p.name == 'Free' %}
+      <ul>
+        <li>✓ Segnalazione blacklist <b>gratuita</b></li>
+        <li>Tutti gli altri servizi a pagamento per singola richiesta</li>
+        <li>Accesso al portale clienti</li>
+        <li>{{ p.max_users or 1 }} utente</li>
+        <li>{{ p.support_level }}</li>
+      </ul>
+      {% else %}
       <ul>
         <li>{{ p.included_verifications or '∞' }} verifiche / mese</li>
         <li>{{ p.included_analyses or '∞' }} analisi / mese</li>
@@ -136,13 +149,14 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
         <li>{{ p.max_users or 1 }} utenti</li>
         <li>{{ p.support_level }}</li>
       </ul>
+      {% endif %}
 
       <div class="cta">
-        {% if (current_sub and current_sub.subscription_plan == p.name) or (is_credit and client and client.subscription_plan == p.name and client.subscription_status == 'Active') %}
+        {% if (current_sub and current_sub.subscription_plan == p.name) or (is_credit and client and client.subscription_plan == p.name and client.subscription_status == 'Active') or (client and client.subscription_plan == p.name and p.name == 'Free') %}
         <button class="btn" disabled>✓ Piano attuale</button>
         {% else %}
-        <button class="btn solid" {% if not client or (not stripe_configured and not is_credit) %}disabled{% endif %}
-                onclick="checkout('{{ p.name|e }}')">Attiva →</button>
+        <button class="btn solid" {% if not client %}disabled{% endif %}
+                onclick="checkout('{{ p.name|e }}')">{% if p.name == 'Free' %}Attiva gratis →{% else %}Attiva →{% endif %}</button>
         {% endif %}
       </div>
     </div>

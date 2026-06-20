@@ -23,7 +23,7 @@
    "fieldname": "plan_level",
    "fieldtype": "Select",
    "label": "Plan Level",
-   "options": "Basic\nProfessional\nLegal\nEnterprise",
+   "options": "Free\nBasic\nProfessional\nLegal\nEnterprise",
    "reqd": 1,
    "in_list_view": 1,
    "in_standard_filter": 1
