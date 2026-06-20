@@ -69,6 +69,28 @@ def _guess_type(filename: str) -> str:
 
 
 @frappe.whitelist(methods=["POST"])
+_MAX_FILE_MB = 50
+_ALLOWED_EXT = {
+    ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic",
+    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".txt", ".csv", ".zip", ".7z", ".tar", ".gz",
+    ".mp4", ".mov", ".avi", ".mkv", ".mp3", ".wav",
+    ".eml", ".msg",
+}
+
+
+def _validate_file(filename: str, content: bytes):
+    import os
+    ext = os.path.splitext(filename or "")[1].lower()
+    if ext not in _ALLOWED_EXT:
+        frappe.throw(_(f"Tipo file non consentito: {ext}. Formati accettati: PDF, immagini, Office, ZIP, video."),
+                     frappe.ValidationError)
+    size_mb = len(content) / (1024 * 1024)
+    if size_mb > _MAX_FILE_MB:
+        frappe.throw(_(f"File troppo grande: {size_mb:.1f} MB. Limite: {_MAX_FILE_MB} MB."),
+                     frappe.ValidationError)
+
+
 def client_upload(case: str = ""):
     """Allega i file caricati dal cliente a una sua pratica."""
     if frappe.session.user == "Guest":
@@ -92,6 +114,7 @@ def client_upload(case: str = ""):
     for f in files:
         try:
             content = f.read()
+            _validate_file(f.filename, content)
             sha = _sha256(content)
             file_doc = frappe.get_doc({
                 "doctype": "File",
@@ -128,4 +151,22 @@ def client_upload(case: str = ""):
             errors.append({"name": f.filename, "error": str(e)[:200]})
 
     frappe.db.commit()
+
+    if uploaded:
+        try:
+            from thanatos_intel.workflow.notify import _email_operator
+            names_list = ", ".join(u["name"] for u in uploaded[:5])
+            _email_operator(
+                case,
+                subject=f"[Thanatos] Cliente ha caricato {len(uploaded)} file — {case}",
+                message=(
+                    f"Il cliente ha caricato <strong>{len(uploaded)}</strong> file "
+                    f"nella pratica <strong>{case}</strong>:<br>"
+                    f"<ul style='margin:8px 0'>{''.join('<li>'+u['name']+'</li>' for u in uploaded[:10])}</ul>"
+                ),
+                from_user=user,
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "client_upload notify operator")
+
     return {"case": case, "uploaded": uploaded, "errors": errors, "count": len(uploaded)}
