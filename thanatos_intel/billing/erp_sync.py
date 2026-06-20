@@ -446,6 +446,196 @@ def scheduled_monthly_invoice_on_erp():
 		                 "erp_sync monthly proforma")
 
 
+# ---------- client stripe invoice → ERP Sales Invoice ----------
+
+def _erp_ensure_client_customer(client_name: str) -> str | None:
+	"""Trova o crea il Customer su ERPNext per un Investigation Client.
+	Usa erp_customer_id come cache. Ritorna il nome Customer su ERP."""
+	if not _erp_headers():
+		return None
+
+	cached = frappe.db.get_value("Investigation Client", client_name, "erp_customer_id")
+	if cached:
+		got = _erp_get(f"/api/resource/Customer/{cached}")
+		if got.get("data"):
+			return cached
+
+	client = frappe.get_doc("Investigation Client", client_name)
+	customer_name = client.client_name or client_name
+
+	existing = _erp_get("/api/resource/Customer",
+	                    params={"filters": json.dumps([["customer_name", "=", customer_name]]),
+	                            "limit": 1})
+	if existing.get("data"):
+		erp_name = existing["data"][0]["name"]
+		frappe.db.set_value("Investigation Client", client_name, "erp_customer_id", erp_name,
+		                    update_modified=False)
+		frappe.db.commit()
+		return erp_name
+
+	ctype = "Individual" if (client.client_type or "Individual") == "Individual" else "Company"
+	r = _erp_post("/api/resource/Customer", {
+		"customer_name": customer_name,
+		"customer_type": ctype,
+		"customer_group": "All Customer Groups",
+		"territory": client.country or "All Territories",
+		"email_id": client.email or "",
+		"mobile_no": client.phone or "",
+		"tax_id": client.vat_number or "",
+	})
+	if r.get("error"):
+		frappe.log_error(f"ERP Customer create fail {client_name}: {r}", "erp_sync_client")
+		return None
+	erp_name = (r.get("data") or {}).get("name")
+	if erp_name:
+		frappe.db.set_value("Investigation Client", client_name, "erp_customer_id", erp_name,
+		                    update_modified=False)
+		frappe.db.commit()
+	return erp_name
+
+
+def _erp_seller_company() -> str:
+	return (frappe.conf.get("erpnext_seller_company")
+	        or frappe.conf.get("erpnext_mmos_company")
+	        or "Michele Milazzo")
+
+
+def _ensure_thanatos_item(item_code: str, item_name: str):
+	"""Crea l'Item su ERP se non esiste."""
+	if not _erp_get(f"/api/resource/Item/{item_code}").get("error"):
+		return
+	_erp_post("/api/resource/Item", {
+		"item_code": item_code,
+		"item_name": item_name,
+		"item_group": "Services",
+		"stock_uom": "Nos",
+		"is_stock_item": 0,
+		"is_service_item": 1,
+	})
+
+
+@frappe.whitelist()
+def sync_client_stripe_invoice_to_erp(stripe_invoice: dict) -> dict:
+	"""Dopo stripe invoice.paid: crea Sales Invoice su ERPNext per il cliente.
+	Idempotente: se già esiste (po_no = stripe invoice id) skippa.
+
+	La Sales Invoice usa come Company il seller configurato (erpnext_seller_company,
+	default 'Michele Milazzo') e come Customer l'Investigation Client trovato via
+	stripe_customer_id.
+	"""
+	if not _erp_headers():
+		return {"skipped": "no_credentials"}
+
+	stripe_inv_id = stripe_invoice.get("id") if isinstance(stripe_invoice, dict) else getattr(stripe_invoice, "id", None)
+	if not stripe_inv_id:
+		return {"skipped": "no_invoice_id"}
+
+	existing = _erp_get("/api/resource/Sales Invoice",
+	                    params={"filters": json.dumps([["po_no", "=", stripe_inv_id]]),
+	                            "limit": 1})
+	if existing.get("data"):
+		return {"already_exists": existing["data"][0]["name"]}
+
+	customer_id = stripe_invoice.get("customer") if isinstance(stripe_invoice, dict) else getattr(stripe_invoice, "customer", None)
+	client_name = frappe.db.get_value("Investigation Client",
+	                                  {"stripe_customer_id": customer_id}, "name")
+	if not client_name:
+		return {"skipped": "client_not_found", "stripe_customer": customer_id}
+
+	erp_customer = _erp_ensure_client_customer(client_name)
+	if not erp_customer:
+		return {"error": "customer_create_failed", "client": client_name}
+
+	# Righe da Stripe invoice lines
+	stripe_lines = ((stripe_invoice.get("lines") or {}).get("data") or []) if isinstance(stripe_invoice, dict) else []
+	items = []
+	for line in stripe_lines:
+		desc = line.get("description") or "Thanatos Intel — Abbonamento"
+		amt = (line.get("amount") or 0) / 100.0
+		if amt == 0:
+			continue
+		item_code = "THANATOS-SUB"
+		_ensure_thanatos_item(item_code, "Thanatos Intel — Abbonamento")
+		items.append({"item_code": item_code, "qty": 1, "rate": amt,
+		              "description": desc[:140]})
+
+	if not items:
+		total = ((stripe_invoice.get("amount_paid") or 0) / 100.0 if isinstance(stripe_invoice, dict)
+		         else getattr(stripe_invoice, "amount_paid", 0) / 100.0)
+		if total <= 0:
+			return {"skipped": "zero_amount"}
+		item_code = "THANATOS-SUB"
+		_ensure_thanatos_item(item_code, "Thanatos Intel — Abbonamento")
+		items.append({"item_code": item_code, "qty": 1, "rate": total,
+		              "description": f"Stripe Invoice {stripe_inv_id}"})
+
+	currency = ((stripe_invoice.get("currency") or "eur").upper() if isinstance(stripe_invoice, dict)
+	            else getattr(stripe_invoice, "currency", "eur").upper())
+	hosted_url = (stripe_invoice.get("hosted_invoice_url") or "") if isinstance(stripe_invoice, dict) else ""
+
+	payload = {
+		"customer": erp_customer,
+		"company": _erp_seller_company(),
+		"posting_date": str(frappe.utils.today()),
+		"due_date": str(frappe.utils.today()),
+		"po_no": stripe_inv_id,
+		"currency": currency,
+		"remarks": f"Stripe Invoice {stripe_inv_id}" + (f" — {hosted_url}" if hosted_url else ""),
+		"items": items,
+		"is_pos": 0,
+	}
+
+	r = _erp_post("/api/resource/Sales Invoice", payload)
+	if r.get("error"):
+		frappe.log_error(f"ERP Sales Invoice create fail: {r}", "erp_sync_client")
+		return {"error": "create_failed", "details": r}
+
+	inv_name = (r.get("data") or {}).get("name")
+	if inv_name:
+		try:
+			_erp_post("/api/method/frappe.client.submit",
+			          {"doc": json.dumps({"doctype": "Sales Invoice", "name": inv_name})})
+		except Exception:
+			pass
+
+	frappe.log_error(f"ERP Sales Invoice created: {inv_name} for {client_name}", "erp_sync_client_ok")
+	return {"invoice": inv_name, "client": client_name,
+	        "stripe_invoice": stripe_inv_id, "erp_customer": erp_customer}
+
+
+@frappe.whitelist()
+def invite_accountant_to_erp(email: str, full_name: str) -> dict:
+	"""Crea un utente ERPNext con ruolo 'Accounts User' per il commercialista.
+	Può essere chiamato dall'admin Thanatos per dare accesso in sola lettura contabile.
+	L'utente riceve un'email di invito dal sito ERP."""
+	if not _erp_headers():
+		return {"skipped": "no_credentials"}
+
+	# Check se l'utente esiste già su ERP
+	existing = _erp_get(f"/api/resource/User/{email}")
+	if existing.get("data"):
+		return {"already_exists": email, "erp_url": _erp_endpoint() + "/app/user/" + email}
+
+	r = _erp_post("/api/resource/User", {
+		"email": email,
+		"full_name": full_name,
+		"send_welcome_email": 1,
+		"enabled": 1,
+		"roles": [
+			{"role": "Accounts User"},
+			{"role": "Report User"},
+		],
+	})
+	if r.get("error"):
+		frappe.log_error(f"ERP User create fail {email}: {r}", "erp_invite_accountant")
+		return {"error": "create_failed", "details": r}
+
+	name = (r.get("data") or {}).get("name")
+	return {"created": name, "email": email,
+	        "erp_url": _erp_endpoint() + "/app",
+	        "note": "L'utente riceve un'email di invito da erp.onekeyco.com"}
+
+
 def on_infrastructure_cost_save(doc, method=None):
 	"""Hook doc_events: appena Infrastructure Cost viene salvato,
 	pusha l'Item su ERP (best-effort)."""

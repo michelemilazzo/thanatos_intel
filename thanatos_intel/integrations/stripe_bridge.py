@@ -614,6 +614,12 @@ def handle_event(event: dict) -> dict:
                 after_payment(ue_name)
             except Exception:
                 frappe.log_error(frappe.get_traceback(), "after_payment failed")
+        # Sync fattura cliente su ERPNext (best-effort)
+        try:
+            from thanatos_intel.billing.erp_sync import sync_client_stripe_invoice_to_erp
+            sync_client_stripe_invoice_to_erp(obj)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "erp_sync client invoice failed")
         try:
             from thanatos_intel.billing.revenue_engine import create_distribution_from_stripe_invoice
             inv_id = obj.get("id")

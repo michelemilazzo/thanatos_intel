@@ -37,6 +37,59 @@ def get_context(context):
 	context.attributed_total = round(attributed, 2)
 	context.est_commission = round(est, 2)
 
+	# fatture/pagamenti dei clienti referral (Usage Events + Stripe Subscription)
+	invoices = []
+	payouts = []
+	if code and clients:
+		client_names = [c.name for c in clients if c.get("name")]
+		if not client_names:
+			client_names = frappe.get_all("Investigation Client",
+			                              filters={"referral_code": code}, pluck="name")
+		if client_names:
+			# Usage Events pagati
+			ues = frappe.get_all("Usage Event",
+			    filters={"client": ["in", client_names], "status": ["in", ["Paid", "Invoiced"]]},
+			    fields=["client", "service", "total", "currency", "paid_at", "creation"],
+			    order_by="creation desc", limit=30)
+			for ue in ues:
+				client_display = frappe.db.get_value("Investigation Client", ue.client, "client_name") or ue.client
+				invoices.append({
+				    "client": client_display,
+				    "description": ue.service or "Servizio",
+				    "amount": float(ue.total or 0),
+				    "currency": ue.currency or "EUR",
+				    "date": ue.paid_at or ue.creation,
+				    "type": "pay-per-use",
+				})
+			# Abbonamenti da Stripe Subscription
+			subs = frappe.get_all("Stripe Subscription",
+			    filters={"investigation_client": ["in", client_names],
+			             "status": ["in", ["active", "trialing"]]},
+			    fields=["investigation_client", "subscription_plan", "amount",
+			            "currency", "current_period_end", "status"])
+			for s in subs:
+				client_display = frappe.db.get_value("Investigation Client",
+				    s.investigation_client, "client_name") or s.investigation_client
+				invoices.append({
+				    "client": client_display,
+				    "description": f"Abbonamento {s.subscription_plan or ''}",
+				    "amount": float(s.amount or 0),
+				    "currency": (s.currency or "EUR").upper(),
+				    "date": s.current_period_end,
+				    "type": "subscription",
+				})
+			# Party Payouts (commissioni già liquidate)
+			if aff:
+				payouts = frappe.get_all("Party Payout",
+				    filters={"party_name": aff.applicant_name,
+				             "status": ["in", ["Approved", "Paid"]]},
+				    fields=["name", "amount", "currency", "status", "creation"],
+				    order_by="creation desc", limit=10)
+	context.billing_invoices = sorted(invoices, key=lambda x: str(x.get("date") or ""), reverse=True)[:20]
+	context.payouts = payouts
+	context.total_billed = round(sum(i["amount"] for i in invoices), 2)
+	context.erp_url = frappe.conf.get("erpnext_endpoint") or "https://erp.onekeyco.com"
+
 	# catalogo
 	svcs = frappe.get_all("Service Catalog", filters={"is_active": 1},
 		fields=["name", "service_name", "category", "price", "currency"], order_by="category, price")
