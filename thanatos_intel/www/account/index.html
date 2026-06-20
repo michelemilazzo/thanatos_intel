@@ -9,6 +9,13 @@ body, body .page_content, body .container { background:#0A0E1A !important; max-w
 </style>
 {% endblock %}
 
+{% macro kyc_badge(status) -%}
+{%- set s = status or 'Not Started' -%}
+{%- set color = '#5fb573' if s == 'Passed' else ('#d05a5a' if s == 'Failed' else ('#C8A96E' if s in ['In Progress','Pending Review'] else '#7A8294')) -%}
+{%- set label = {'Not Required':'Non richiesto','Not Started':'Da iniziare','In Progress':'In corso','Pending Review':'In revisione','Passed':'Verificato','Failed':'Non superato'}.get(s, s) -%}
+<span class="badge" style="color:{{ color }};border-color:{{ color }}33;background:{{ color }}1a">{{ label }}</span>
+{%- endmacro %}
+
 {% block page_content %}
 {{ thanatos_header('account') }}
 <style>
@@ -29,11 +36,55 @@ body, body .page_content, body .container { background:#0A0E1A !important; max-w
 .acc-arr{color:var(--grey);font-size:16px}
 .acc-logout{display:inline-block;margin-top:22px;color:#d05a5a;text-decoration:none;font-size:12px;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(208,90,90,.4);border-radius:6px;padding:9px 16px}
 .acc-logout:hover{background:rgba(208,90,90,.1)}
+/* compliance card */
+.idcard{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:22px 22px 8px;margin-bottom:18px}
+.idcard h2{font-family:Georgia,serif;font-weight:400;font-size:18px;color:#fff;margin:0 0 16px;letter-spacing:.5px}
+.idrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)}
+.idrow:last-of-type{border-bottom:none}
+.idrow .k{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey)}
+.idrow .v{font-size:13px;color:#E8E9F0;display:flex;align-items:center;gap:10px}
+.badge{display:inline-block;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:999px;border:1px solid}
+.id-cta{display:inline-block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);text-decoration:none;border:1px solid rgba(200,169,110,.4);border-radius:6px;padding:6px 12px}
+.id-cta:hover{background:rgba(200,169,110,.1)}
+.idactions{padding:14px 0 6px;display:flex;gap:10px;flex-wrap:wrap}
 </style>
 <div class="acc">
   <div class="acc-wrap">
     <h1>Il mio account</h1>
     <p class="who">Accesso come <b>{{ full_name }}</b> · {{ user_email }}</p>
+
+    {% if client %}
+    <div class="idcard">
+      <h2>Identità e compliance</h2>
+      <div class="idrow">
+        <span class="k">Tipo cliente</span>
+        <span class="v">{{ {'Individual':'Privato','Company':'Società','Law Firm':'Studio legale','Accounting Firm':'Studio commercialista','Other':'Altro'}.get(client.client_type, client.client_type or '—') }}</span>
+      </div>
+      {% if is_company and client.vat_number %}
+      <div class="idrow">
+        <span class="k">Partita IVA</span>
+        <span class="v">{{ client.vat_number }}</span>
+      </div>
+      {% endif %}
+      <div class="idrow">
+        <span class="k">Verifica identità (KYC)</span>
+        <span class="v">
+          {{ kyc_badge(client.kyc_status) }}
+          {% if client.kyc_status not in ['Passed','Not Required'] %}<a class="id-cta" href="/onboarding/kyc">Completa</a>{% endif %}
+        </span>
+      </div>
+      {% if is_company %}
+      <div class="idrow">
+        <span class="k">Verifica aziendale (KYB)</span>
+        <span class="v">
+          {{ kyc_badge(client.kyb_status) }}
+          {% if client.kyb_status not in ['Passed','Not Required'] %}<a class="id-cta" href="/onboarding/kyb">Completa</a>{% endif %}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <div class="acc-list">
       <a class="acc-item" href="/portal">
         <span class="acc-ic">▣</span>
