@@ -29,7 +29,27 @@
 .tx-cta:hover{background:#C8A96E;color:#0A0E1A;}
 .tx-cta.solid{background:#C8A96E;color:#0A0E1A;}
 .tx-cta.solid:hover{background:#B8975A;}
-@media(max-width:780px){.tx-links a{padding:6px 8px;font-size:10px;letter-spacing:1.5px;}.tx-brand .wm{display:none;}}
+.tx-hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;
+  width:36px;height:36px;background:none;border:1px solid #1F2742;border-radius:3px;
+  cursor:pointer;padding:7px 8px;flex-shrink:0;}
+.tx-hamburger span{display:block;height:2px;background:#A4A9BC;border-radius:1px;transition:all .2s;}
+.tx-hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.tx-hamburger.open span:nth-child(2){opacity:0;}
+.tx-hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+@media(max-width:780px){
+  .tx-brand .wm{display:none;}
+  .tx-hamburger{display:flex;}
+  .tx-links{
+    display:none;flex-direction:column;position:absolute;top:100%;left:0;right:0;
+    background:rgba(10,14,26,.97);border-bottom:1px solid #1F2742;
+    padding:12px 16px;gap:4px;z-index:100;
+  }
+  .tx-links.open{display:flex;}
+  .tx-links a{padding:10px 12px;font-size:11px;letter-spacing:1.5px;border-bottom:none;border-radius:4px;}
+  .tx-links a:hover{background:#111729;}
+  .tx-cta{margin-left:0;}
+  .tx-nav-inner{position:relative;}
+}
 .tx-user{position:relative;display:inline-block;margin-left:8px;}
 .tx-user>.tx-cta{margin-left:0;cursor:pointer;}
 .tx-cta.tx-prof{display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;}
@@ -48,7 +68,10 @@
       <img src="/assets/thanatos_intel/images/thanatos-icon-192.png" alt=""/>
       <span class="wm">THANATOS<small>INTELLIGENCE</small></span>
     </a>
-    <div class="tx-links">
+    <button class="tx-hamburger" id="txHamburger" aria-label="Menu" onclick="(function(){var b=document.getElementById('txHamburger'),m=document.getElementById('txLinks');b.classList.toggle('open');m.classList.toggle('open');})()">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="tx-links" id="txLinks">
       <a href="/" class="{% if active=='home' %}act{% endif %}">Home</a>
       <a href="/soluzioni" class="{% if active=='soluzioni' %}act{% endif %}">Soluzioni</a>
       <a href="/servizi" class="{% if active=='servizi' %}act{% endif %}">Servizi</a>
