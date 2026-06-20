@@ -128,6 +128,152 @@ def monthly_data_verification_request():
             frappe.log_error(frappe.get_traceback(), f"data_verify_notify {cl.name}")
 
 
+def daily_pending_payment_reminder():
+    """Ricorda ai clienti i Usage Events Pending da più di 7 giorni."""
+    cutoff_7 = add_days(today(), -7)
+    cutoff_30 = add_days(today(), -30)
+
+    # Clienti con almeno un evento pending vecchio ≥7 giorni e < 30 (già avvisati a 7)
+    rows = frappe.db.sql("""
+        SELECT ue.client, ic.email, ic.client_name,
+               COUNT(ue.name) AS n_pending,
+               SUM(ue.total) AS total_due,
+               MAX(ue.currency) AS currency
+        FROM `tabUsage Event` ue
+        JOIN `tabInvestigation Client` ic ON ic.name = ue.client
+        WHERE ue.status = 'Pending'
+          AND DATE(ue.creation) <= %s
+          AND DATE(ue.creation) > %s
+          AND ic.email IS NOT NULL AND ic.email != ''
+        GROUP BY ue.client, ic.email, ic.client_name
+    """, (cutoff_7, cutoff_30), as_dict=True)
+
+    billing_url = f"{_base_url()}/portal/invoices"
+    for r in rows:
+        try:
+            total_str = f"{float(r.total_due or 0):.2f} {r.currency or 'EUR'}"
+            body_it = (
+                f"<p>Gentile {r.client_name},</p>"
+                f"<p>Hai <strong>{r.n_pending} servizi</strong> in attesa di pagamento "
+                f"per un totale di <strong>{total_str}</strong>.</p>"
+                f"<p><a href='{billing_url}' style='background:#C8A96E;color:#0A0E1A;"
+                f"padding:10px 20px;border-radius:4px;text-decoration:none;"
+                f"display:inline-block;font-weight:bold'>Vai alle fatture →</a></p>"
+            )
+            body_en = (
+                f"<p>Dear {r.client_name},</p>"
+                f"<p>You have <strong>{r.n_pending} service(s)</strong> awaiting payment "
+                f"totalling <strong>{total_str}</strong>.</p>"
+                f"<p><a href='{billing_url}' style='background:#C8A96E;color:#0A0E1A;"
+                f"padding:10px 20px;border-radius:4px;text-decoration:none;"
+                f"display:inline-block;font-weight:bold'>View invoices →</a></p>"
+            )
+            _send_bilingual(
+                to_email=r.email,
+                subject_it=f"Pagamenti in sospeso ({total_str}) — Thanatos Intel",
+                subject_en=f"Pending payment ({total_str}) — Thanatos Intel",
+                body_it=body_it, body_en=body_en,
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(),
+                             f"pending_payment_reminder {r.client}")
+
+
+def daily_operator_digest():
+    """Digest giornaliero per operatori: casi aperti con step in attesa di azione."""
+    open_cases = frappe.db.sql("""
+        SELECT ic.name, ic.case_number, ic.case_title, ic.status,
+               ic.assigned_to, ic.priority,
+               COUNT(cs.name) AS pending_steps
+        FROM `tabInvestigation Case` ic
+        LEFT JOIN `tabCase Step` cs ON cs.parent = ic.name
+            AND cs.status IN ('In Progress', 'Awaiting Client', 'current')
+        WHERE ic.status NOT IN ('Closed', 'Cancelled', 'Completed', 'Archived')
+        GROUP BY ic.name, ic.case_number, ic.case_title, ic.status,
+                 ic.assigned_to, ic.priority
+        ORDER BY ic.priority DESC, ic.creation ASC
+        LIMIT 50
+    """, as_dict=True)
+
+    if not open_cases:
+        return
+
+    # Raggruppa per operatore assegnato
+    by_op = {}
+    unassigned = []
+    for c in open_cases:
+        op = c.assigned_to
+        if op:
+            by_op.setdefault(op, []).append(c)
+        else:
+            unassigned.append(c)
+
+    def _case_rows(cases):
+        rows = ""
+        for c in cases:
+            rows += (
+                f"<tr>"
+                f"<td style='padding:6px 10px;border-bottom:1px solid #eee'>"
+                f"<a href='{frappe.utils.get_url()}/app/investigation-case/{c.name}'>"
+                f"{c.case_number or c.name}</a></td>"
+                f"<td style='padding:6px 10px;border-bottom:1px solid #eee'>"
+                f"{c.case_title or '—'}</td>"
+                f"<td style='padding:6px 10px;border-bottom:1px solid #eee'>"
+                f"{c.status}</td>"
+                f"<td style='padding:6px 10px;border-bottom:1px solid #eee;text-align:center'>"
+                f"{c.pending_steps or 0}</td>"
+                f"</tr>"
+            )
+        return rows
+
+    def _table(cases):
+        return (
+            "<table style='width:100%;border-collapse:collapse;font-size:13px'>"
+            "<thead><tr style='background:#f0f0f0'>"
+            "<th style='padding:6px 10px;text-align:left'>Caso</th>"
+            "<th style='padding:6px 10px;text-align:left'>Titolo</th>"
+            "<th style='padding:6px 10px;text-align:left'>Stato</th>"
+            "<th style='padding:6px 10px;text-align:center'>Step pendenti</th>"
+            f"</tr></thead><tbody>{_case_rows(cases)}</tbody></table>"
+        )
+
+    # Invia digest personale a ogni operatore
+    for op_email, cases in by_op.items():
+        try:
+            name = frappe.db.get_value("User", op_email, "full_name") or op_email
+            frappe.sendmail(
+                recipients=[op_email],
+                subject=f"[Thanatos] Digest giornaliero — {len(cases)} casi assegnati",
+                message=(
+                    f"<div style='font-family:sans-serif;max-width:700px'>"
+                    f"<p>Ciao {name}, ecco i tuoi casi aperti:</p>"
+                    f"{_table(cases)}"
+                    f"<p style='color:#888;font-size:12px;margin-top:20px'>"
+                    f"<a href='{frappe.utils.get_url()}/portal/ops'>Centro Operativo →</a></p>"
+                    f"</div>"
+                ),
+                delayed=True,
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"operator_digest {op_email}")
+
+    # Digest admin per casi non assegnati
+    if unassigned:
+        try:
+            frappe.sendmail(
+                recipients=["admin@thanatos.agency"],
+                subject=f"[Thanatos] {len(unassigned)} casi senza assegnatario",
+                message=(
+                    f"<div style='font-family:sans-serif;max-width:700px'>"
+                    f"<p>I seguenti casi sono aperti ma senza investigatore assegnato:</p>"
+                    f"{_table(unassigned)}</div>"
+                ),
+                delayed=True,
+            )
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "operator_digest_unassigned")
+
+
 def check_kyc_onboarding_consistency():
     """Notifica interna per clienti con KYC=Passed ma onboarding non completato."""
     COMPLETED = ("Active", "Completed", "Active - No Card")
