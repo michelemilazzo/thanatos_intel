@@ -141,6 +141,65 @@
       "fieldname": "action_items",
       "fieldtype": "Text Editor",
       "label": "Azioni da fare (follow-up)"
+    },
+    {
+      "fieldname": "sb_transcript",
+      "fieldtype": "Section Break",
+      "label": "Trascrizione"
+    },
+    {
+      "fieldname": "audio_file",
+      "fieldtype": "Attach",
+      "label": "File audio (mp3/mp4/wav/m4a/ogg)"
+    },
+    {
+      "fieldname": "transcription_status",
+      "fieldtype": "Select",
+      "label": "Stato trascrizione",
+      "options": "Non elaborato\nIn elaborazione\nCompletato\nErrore",
+      "default": "Non elaborato",
+      "read_only": 1,
+      "in_list_view": 0
+    },
+    {
+      "fieldname": "transcription_job_id",
+      "fieldtype": "Data",
+      "label": "Job ID trascrizione",
+      "read_only": 1,
+      "hidden": 1
+    },
+    {
+      "fieldname": "speaker_a_label",
+      "fieldtype": "Data",
+      "label": "Speaker A = ",
+      "default": "Operatore",
+      "depends_on": "eval:doc.transcription_status=='Completato'"
+    },
+    {
+      "fieldname": "speaker_b_label",
+      "fieldtype": "Data",
+      "label": "Speaker B = ",
+      "depends_on": "eval:doc.transcription_status=='Completato'"
+    },
+    {
+      "fieldname": "transcript_html",
+      "fieldtype": "HTML",
+      "label": "Trascrizione con voci",
+      "depends_on": "eval:doc.transcription_status=='Completato'"
+    },
+    {
+      "fieldname": "transcript_raw",
+      "fieldtype": "Long Text",
+      "label": "Trascrizione grezza (JSON)",
+      "hidden": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "transcript_text",
+      "fieldtype": "Text Editor",
+      "label": "Testo completo trascrizione",
+      "read_only": 1,
+      "depends_on": "eval:doc.transcription_status=='Completato'"
     }
   ],
   "permissions": [
