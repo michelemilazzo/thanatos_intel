@@ -60,7 +60,8 @@ frappe.pages['thanatos-ai-architect'].on_page_load = function (wrapper) {
 			h += '<div class="ar-sec">⚠️ Ci manca (capacità da acquisire) — prima cerchiamo su Frappe</div><div class="ar-card ar-gaps">';
 			p.capability_gaps.forEach(g => {
 				h += `<div class="ar-gap"><div><b>${esc(g.need)}</b> → app Frappe: <b class="ar-app">${esc(g.suggested_frappe_app || '—')}</b></div>
-					<div class="ar-gap-n">${esc(g.note || '')}</div></div>`;
+					<div class="ar-gap-n">${esc(g.note || '')}</div>
+					<button class="btn btn-xs btn-default ar-acq" data-need="${esc(g.need)}" data-app="${esc(g.suggested_frappe_app || '')}">⚙ Proponi acquisizione</button></div>`;
 			});
 			h += '</div>';
 		}
@@ -83,6 +84,13 @@ frappe.pages['thanatos-ai-architect'].on_page_load = function (wrapper) {
 		$w.find('#ar-out').html(h);
 		$w.find('#ar-create').on('click', createCase);
 		$w.find('#ar-copy').on('click', () => { frappe.utils.copy_to_clipboard(JSON.stringify(PLAN, null, 2)); });
+		$w.find('.ar-acq').on('click', function () {
+			const need = $(this).data('need'), app = $(this).data('app');
+			const $b = $(this); $b.prop('disabled', true).text('Genero piano…');
+			frappe.call('thanatos_intel.ai.capability.propose_acquisition', { need: need, suggested_app: app, requested_client: CLIENT })
+				.then(r => { const m = r.message || {}; if (m.ok) { frappe.show_alert({ message: 'Proposta creata: ' + m.name, indicator: 'green' }); frappe.set_route('Form', 'Capability Acquisition', m.name); } else { $b.prop('disabled', false).text('⚙ Proponi acquisizione'); } })
+				.catch(() => $b.prop('disabled', false).text('⚙ Proponi acquisizione'));
+		});
 	}
 
 	function createCase() {

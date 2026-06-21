@@ -49,7 +49,8 @@ def _nav_links():
         pass
     # gruppo Compliance/ISMS (doctype del modulo Thanatos Compliance)
     comp = [("Policy & SOP", "Compliance Policy"), ("Risk Register", "Risk Register Item"),
-            ("Registro Trattamenti (ROPA)", "ROPA Entry")]
+            ("Registro Trattamenti (ROPA)", "ROPA Entry"),
+            ("Acquisizione capacità", "Capability Acquisition")]
     items = [{"label": l, "to": d, "kind": "DocType"} for l, d in comp if frappe.db.exists("DocType", d)]
     if items:
         nav.append({"title": "Compliance / ISMS (ISO)", "items": items})

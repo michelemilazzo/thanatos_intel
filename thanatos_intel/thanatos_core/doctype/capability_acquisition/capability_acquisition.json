@@ -1,0 +1,172 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "CAP-.#####",
+ "creation": "2026-06-22 01:44:27.514739",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "need",
+  "status",
+  "suggested_app",
+  "app_source",
+  "priority",
+  "cb1",
+  "requested_client",
+  "source_case",
+  "approver",
+  "approved_on",
+  "sb1",
+  "install_plan",
+  "integration_plan",
+  "marketing_copy",
+  "client_email",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "need",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Capacit\u00e0 richiesta",
+   "reqd": 1
+  },
+  {
+   "default": "Proposta",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stato",
+   "options": "Proposta\nApprovata\nIn Installazione\nIntegrata\nAnnunciata\nScartata"
+  },
+  {
+   "fieldname": "suggested_app",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "App Frappe suggerita"
+  },
+  {
+   "fieldname": "app_source",
+   "fieldtype": "Data",
+   "label": "Fonte / repo"
+  },
+  {
+   "default": "Media",
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priorit\u00e0",
+   "options": "Bassa\nMedia\nAlta"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "requested_client",
+   "fieldtype": "Link",
+   "label": "Cliente richiedente",
+   "options": "Investigation Client"
+  },
+  {
+   "fieldname": "source_case",
+   "fieldtype": "Link",
+   "label": "Caso d'origine",
+   "options": "Investigation Case"
+  },
+  {
+   "fieldname": "approver",
+   "fieldtype": "Link",
+   "label": "Approvata da",
+   "options": "User"
+  },
+  {
+   "fieldname": "approved_on",
+   "fieldtype": "Datetime",
+   "label": "Approvata il"
+  },
+  {
+   "fieldname": "sb1",
+   "fieldtype": "Section Break",
+   "label": "Piano (generato dall'AI, da approvare)"
+  },
+  {
+   "fieldname": "install_plan",
+   "fieldtype": "Text",
+   "label": "Piano installazione"
+  },
+  {
+   "fieldname": "integration_plan",
+   "fieldtype": "Text",
+   "label": "Piano integrazione con Thanatos Intel"
+  },
+  {
+   "fieldname": "marketing_copy",
+   "fieldtype": "Text",
+   "label": "Testo marketing (annuncio servizio)"
+  },
+  {
+   "fieldname": "client_email",
+   "fieldtype": "Text",
+   "label": "Email al cliente / mailing"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Note"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 01:44:27.514739",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "Capability Acquisition",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Investigation Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "suggested_app,status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "need",
+ "track_changes": 1
+}
