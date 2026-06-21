@@ -440,6 +440,76 @@ ${replyBox}`);
         frappe.realtime.on("centralino_update", (data) => {
             this._handleUpdate(data);
         });
+        frappe.realtime.on("centralino_incoming_call", (data) => {
+            this._showIncomingCall(data);
+        });
+    }
+
+    // ── Chiamate WhatsApp (softphone WebRTC) ────────────────────────────────────
+
+    _showIncomingCall(data) {
+        $("#ctlno-callbar").remove();
+        const bar = $(`
+<div id="ctlno-callbar" class="ctlno-callbar">
+  <span class="ctlno-call-ring">📞 Chiamata WhatsApp in arrivo da <b>${frappe.utils.escape_html(data.from || "")}</b></span>
+  <button class="ctlno-call-answer" id="ctlno-answer">Rispondi</button>
+  <button class="ctlno-call-hangup" id="ctlno-decline">Ignora</button>
+</div>`);
+        $(this.wrapper).find(".ctlno-root").prepend(bar);
+        $("#ctlno-answer").on("click", () => this._answerCall(data.call_id));
+        $("#ctlno-decline").on("click", () => $("#ctlno-callbar").remove());
+    }
+
+    async _answerCall(callId) {
+        try {
+            $("#ctlno-callbar .ctlno-call-ring").html("⏳ Connessione audio…");
+            const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+            this._activeCallPc = pc;
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(t => pc.addTrack(t, stream));
+            pc.ontrack = (e) => {
+                let audio = document.getElementById("ctlno-remote-audio");
+                if (!audio) {
+                    audio = document.createElement("audio");
+                    audio.id = "ctlno-remote-audio"; audio.autoplay = true;
+                    document.body.appendChild(audio);
+                }
+                audio.srcObject = e.streams[0];
+            };
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            // attende ICE gathering completo (sdp con candidati)
+            await new Promise(res => {
+                if (pc.iceGatheringState === "complete") return res();
+                const check = () => { if (pc.iceGatheringState === "complete") { pc.removeEventListener("icegatheringstatechange", check); res(); } };
+                pc.addEventListener("icegatheringstatechange", check);
+                setTimeout(res, 2000);
+            });
+            frappe.call({
+                method: "thanatos_intel.api.wa_calling.operator_join",
+                args: { call_id: callId, sdp: pc.localDescription.sdp },
+                callback: async (r) => {
+                    if (r.message?.ok && r.message.sdp) {
+                        await pc.setRemoteDescription({ type: "answer", sdp: r.message.sdp });
+                        $("#ctlno-callbar .ctlno-call-ring").html("🟢 In chiamata con " + callId.slice(0, 10));
+                        $("#ctlno-answer").remove();
+                        $("#ctlno-decline").text("Riaggancia").off("click").on("click", () => this._hangupCall());
+                    } else {
+                        $("#ctlno-callbar .ctlno-call-ring").html("❌ Chiamata non più attiva");
+                        this._hangupCall();
+                    }
+                },
+            });
+        } catch (e) {
+            frappe.msgprint(__("Microfono non disponibile o permesso negato: ") + e.message);
+            $("#ctlno-callbar").remove();
+        }
+    }
+
+    _hangupCall() {
+        if (this._activeCallPc) { try { this._activeCallPc.close(); } catch (e) {} this._activeCallPc = null; }
+        $("#ctlno-remote-audio").remove();
+        $("#ctlno-callbar").remove();
     }
 
     _handleUpdate(data) {
@@ -732,6 +802,14 @@ ${replyBox}`);
 }
 .ctlno-send-btn:hover { background: #B8975A; }
 .ctlno-send-btn:disabled { background: #3a3a3a; cursor: not-allowed; }
+
+/* ─── Call bar (chiamata WhatsApp in arrivo) ───────────────────────── */
+.ctlno-callbar { display:flex; align-items:center; gap:12px; padding:10px 16px;
+  background:linear-gradient(90deg,#0d3320,#0a2418); border-bottom:1px solid #1d5638; flex-shrink:0; }
+.ctlno-call-ring { color:#4CAF50; font-size:13px; flex:1; animation:ctlnoPulse 1.4s infinite; }
+@keyframes ctlnoPulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+.ctlno-call-answer { background:#4CAF50; color:#fff; border:none; border-radius:5px; padding:7px 18px; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:1px; }
+.ctlno-call-hangup { background:none; color:#E06C6C; border:1px solid #E06C6C; border-radius:5px; padding:7px 14px; font-size:12px; cursor:pointer; letter-spacing:1px; }
 `;
         document.head.appendChild(style);
     }

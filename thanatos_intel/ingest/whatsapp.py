@@ -228,41 +228,50 @@ def _has_call_events(data: dict) -> bool:
 
 
 def _handle_call_events(data: dict, wa_number: dict | None):
-    """Riceve gli eventi chiamata WhatsApp → crea Call Log + notifica operatore.
-
-    NB: l'audio della chiamata richiede un media server WebRTC (non gestito qui).
-    Questo handler registra l'evento (chiamata persa/ricevuta) per tracciabilità.
-    """
+    """Eventi chiamata WhatsApp. Su 'connect' inoltra l'SDP al media server (aiortc)
+    che accetta la chiamata, registra l'audio e a fine chiamata crea il Call Log
+    con trascrizione+voci. Notifica l'operatore (chiamata in arrivo)."""
     from thanatos_intel.ingest.intel_notifications import _notify
     for entry in data.get("entry", []):
+        pnid = entry.get("changes", [{}])[0].get("value", {}).get(
+            "metadata", {}).get("phone_number_id", "")
         for change in entry.get("changes", []):
-            for call in change.get("value", {}).get("calls", []):
+            val = change.get("value", {})
+            pnid = val.get("metadata", {}).get("phone_number_id", pnid)
+            for call in val.get("calls", []):
                 frm = call.get("from", "")
-                status = call.get("event", "") or call.get("status", "")
+                event = call.get("event", "") or call.get("status", "")
                 call_id = call.get("id", "")
-                contact = frappe.db.get_value(
-                    "Intelligence Contact", {"phone": frm}, "name") or \
-                    frappe.db.get_value("Intelligence Contact", {"whatsapp": frm}, "name")
-                try:
-                    doc = frappe.get_doc({
-                        "doctype": "Call Log",
-                        "called_at": frappe.utils.now_datetime(),
-                        "direction": "Entrante",
-                        "outcome": "Risposta" if status in ("connect", "connected", "accepted") else "Non risposto",
-                        "caller_number": frm,
-                        "linked_contact": contact,
-                        "summary": f"Chiamata WhatsApp ({status}) · id {call_id}",
-                    }).insert(ignore_permissions=True)
-                    frappe.db.commit()
-                except Exception:
-                    frappe.log_error(frappe.get_traceback(), "WA call event")
+                session = call.get("session", {}) or {}
+                sdp = session.get("sdp", "")
+
+                # CONNECT con SDP → accetta sul media server (audio live + registrazione)
+                if event == "connect" and sdp and pnid:
+                    try:
+                        from thanatos_intel.api.wa_calling import forward_incoming_call
+                        res = forward_incoming_call(call_id, pnid, frm, sdp, wa_number)
+                        frappe.log_error(frappe.as_json(res)[:500], "WA call accept")
+                    except Exception:
+                        frappe.log_error(frappe.get_traceback(), "WA call forward")
+                    # notifica operatore: chiamata in arrivo (può unirsi dal Centralino)
+                    assignee = (wa_number.auto_assign_to if wa_number else None) or "Administrator"
+                    try:
+                        frappe.publish_realtime("centralino_incoming_call",
+                                                {"call_id": call_id, "from": frm}, after_commit=False)
+                        _notify(assignee, "📞 Chiamata WhatsApp in arrivo",
+                                f"Chiamata da {frm} — rispondi dal Centralino", None, "blue")
+                    except Exception:
+                        pass
                     continue
-                assignee = (wa_number.auto_assign_to if wa_number else None) or "Administrator"
-                try:
-                    _notify(assignee, "📞 Chiamata WhatsApp",
-                            f"Chiamata da {frm} ({status})", doc.name, "blue")
-                except Exception:
-                    pass
+
+                # terminate/reject → chiudi sessione media + log
+                if event in ("terminate", "reject"):
+                    try:
+                        import requests
+                        requests.post(f"{frappe.conf.get('wa_calling_url','http://10.10.0.4:18093')}/terminate",
+                                      json={"call_id": call_id}, timeout=10)
+                    except Exception:
+                        pass
 
 
 _MONITOR_FIELDS = {
