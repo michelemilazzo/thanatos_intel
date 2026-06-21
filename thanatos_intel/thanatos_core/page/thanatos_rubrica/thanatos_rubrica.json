@@ -1,0 +1,47 @@
+{
+ "content": null,
+ "creation": "2026-06-21 22:54:43.553025",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-06-21 22:54:43.553025",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "thanatos-rubrica",
+ "owner": "Administrator",
+ "page_name": "thanatos-rubrica",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Investigation Manager"
+  },
+  {
+   "role": "Investigator"
+  },
+  {
+   "role": "Thanatos Investigator"
+  },
+  {
+   "role": "Thanatos Supervisor"
+  },
+  {
+   "role": "Thanatos Director"
+  },
+  {
+   "role": "Thanatos Analyst"
+  },
+  {
+   "role": "Analyst"
+  },
+  {
+   "role": "Thanatos Intake Officer"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Rubrica Clienti"
+}
