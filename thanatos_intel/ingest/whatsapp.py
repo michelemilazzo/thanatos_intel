@@ -175,6 +175,11 @@ def webhook():
         _handle_call_events(data, wa_number)
         return {"ok": True, "type": "call_event"}
 
+    # Gestisce eventi di monitoraggio account (template/qualità/account/alert)
+    if "json" in (req.content_type or "") and _has_account_events(data):
+        _handle_account_events(data)
+        return {"ok": True, "type": "account_event"}
+
     # Gestisce status update (Meta: statuses array invece di messages)
     if "json" in (req.content_type or "") and not messages:
         _handle_status_updates(data)
@@ -258,6 +263,80 @@ def _handle_call_events(data: dict, wa_number: dict | None):
                             f"Chiamata da {frm} ({status})", doc.name, "blue")
                 except Exception:
                     pass
+
+
+_MONITOR_FIELDS = {
+    "message_template_status_update", "phone_number_quality_update",
+    "account_update", "account_alerts", "account_review_update",
+    "business_capability_update",
+}
+
+
+def _has_account_events(data: dict) -> bool:
+    for entry in data.get("entry", []):
+        for change in entry.get("changes", []):
+            if change.get("field") in _MONITOR_FIELDS:
+                return True
+    return False
+
+
+def _monitor_recipients() -> list[str]:
+    """Utenti da avvisare per eventi di monitoraggio account."""
+    users = frappe.db.sql_list(
+        """SELECT DISTINCT u.name FROM `tabUser` u
+           JOIN `tabHas Role` r ON r.parent = u.name
+           WHERE r.role IN ('Investigation Manager','System Manager')
+             AND u.enabled = 1 AND u.name NOT IN ('Guest','Administrator')""")
+    return users or ["Administrator"]
+
+
+def _handle_account_events(data: dict):
+    """Notifica gli admin per eventi di salute account (template, qualità numero, restrizioni)."""
+    from thanatos_intel.ingest.intel_notifications import _notify
+    recipients = _monitor_recipients()
+
+    for entry in data.get("entry", []):
+        for change in entry.get("changes", []):
+            field = change.get("field")
+            if field not in _MONITOR_FIELDS:
+                continue
+            v = change.get("value", {})
+            title, msg, indicator = _format_account_event(field, v)
+            if not title:
+                continue
+            for user in recipients:
+                try:
+                    _notify(user, title, msg, None, indicator)
+                except Exception:
+                    pass
+            frappe.log_error(f"{field}: {frappe.as_json(v)[:1500]}", f"WA monitor {field}")
+    frappe.db.commit()
+
+
+def _format_account_event(field: str, v: dict) -> tuple:
+    ev = v.get("event", "")
+    if field == "message_template_status_update":
+        name = v.get("message_template_name", "")
+        if ev == "APPROVED":
+            return ("✅ Template approvato", f"Il template '{name}' è stato approvato da Meta.", "green")
+        if ev in ("REJECTED", "DISABLED", "PAUSED"):
+            reason = v.get("reason", "")
+            return (f"⛔ Template {ev.lower()}", f"Template '{name}': {ev}. {reason}", "red")
+        return (f"ℹ️ Template aggiornato", f"Template '{name}': {ev}", "blue")
+    if field == "phone_number_quality_update":
+        if ev in ("FLAGGED", "DOWNGRADE"):
+            return ("⚠️ Qualità numero in calo",
+                    f"La qualità del numero WhatsApp è scesa ({ev}, limite {v.get('current_limit','')}). Rischio limitazioni.", "red")
+        return ("📈 Qualità numero aggiornata", f"Stato qualità numero: {ev} (limite {v.get('current_limit','')})", "blue")
+    if field in ("account_update", "account_review_update"):
+        return ("🔔 Aggiornamento account WhatsApp", f"Evento account: {ev or v}", "orange")
+    if field == "account_alerts":
+        sev = v.get("alert_severity", "")
+        desc = v.get("alert_description", v.get("alert_type", ""))
+        return (f"🚨 Avviso account WhatsApp ({sev})", desc or "Avviso da Meta sull'account.", "red")
+    if field == "business_capability_update":
+        return ("📊 Limiti account aggiornati", f"Capacità/limiti cambiati: {v}", "blue")
+    return (None, None, None)
 
 
 def _handle_status_updates(data: dict):
