@@ -125,6 +125,9 @@ def _kw_hit(kw, text):
 	return bool(pat.search(text))
 
 
+GENERAL_CATEGORY = "generale-cronaca"
+
+
 CATEGORY_KEYWORDS = {
 	"frodi-truffe": ["frode", "frodi", "truffa", "truffe", "raggiro", "raggir", "phishing",
 		"scam", "fraud", "ponzi", "piramidale", "riciclagg", "money launder", "estafa",
@@ -215,8 +218,10 @@ def fetch_source(name: str) -> dict:
 		raw_content = entry.get("content", [{}])[0].get("value") if entry.get("content") else entry.get("summary", "")
 		ext_pub = _parse_datetime(entry.get("published") or entry.get("updated"))
 
-		# pertinenza + categoria dal CONTENUTO; scarta cronaca non attinente
+		# categoria dal CONTENUTO; la cronaca non attinente va in "generale-cronaca"
 		category, _rel = _categorize(title + " " + _strip_html(raw_content or ""))
+		if not category:
+			category = GENERAL_CATEGORY if frappe.db.exists("News Category", GENERAL_CATEGORY) else _category_for(src)
 		if not category:
 			continue
 

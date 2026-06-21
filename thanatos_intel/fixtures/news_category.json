@@ -102,5 +102,18 @@
   "is_active": 1,
   "modified": "2026-06-13 00:28:07.500404",
   "name": "attivita-thanatos"
+ },
+ {
+  "category_name": "Generale & Cronaca",
+  "category_slug": "generale-cronaca",
+  "color": "#7A8294",
+  "description": "Cronaca e attualità generale, non specifica dei servizi Thanatos.",
+  "display_order": 99,
+  "docstatus": "",
+  "doctype": "News Category",
+  "icon": "fa-newspaper-o",
+  "is_active": 1,
+  "modified": "",
+  "name": "generale-cronaca"
  }
 ]

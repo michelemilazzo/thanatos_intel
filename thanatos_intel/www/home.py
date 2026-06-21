@@ -16,7 +16,7 @@ def get_context(context):
 	)
 	context.latest = _safe_get_all(
 		"News Article",
-		filters={"published": 1},
+		filters={"published": 1, "category": ["!=", "generale-cronaca"]},
 		fields=["title", "slug", "excerpt", "featured_image", "category",
 		        "published_at", "reading_time_min", "source_name_label"],
 		order_by="published_at desc",

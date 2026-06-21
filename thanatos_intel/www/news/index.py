@@ -20,6 +20,8 @@ def get_context(context):
 	filters = {"published": 1}
 	if cat:
 		filters["category"] = cat
+	else:
+		filters["category"] = ["!=", "generale-cronaca"]
 	or_filters = None
 	if q:
 		or_filters = [["title", "like", f"%{q}%"], ["excerpt", "like", f"%{q}%"],
