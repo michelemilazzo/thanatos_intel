@@ -188,10 +188,11 @@
     <button class="px-burger" id="pxBurger" aria-label="Menu" onclick="(function(){var n=document.getElementById('pxNav'),b=document.getElementById('pxBurger');n.classList.toggle('open');b.classList.toggle('open');})()"><span></span><span></span><span></span></button>
     <div class="px-links">
       <a href="/portal" class="{{ 'act' if active=='home' else '' }}">Dashboard</a>
-      <a href="/portal#cases" class="{{ 'act' if active=='cases' else '' }}">Casi</a>
+      <a href="/portal#cases" class="{{ 'act' if active=='cases' else '' }}">I miei casi</a>
       {% if _is_client %}
       <a href="/portal#docs" class="{{ 'act' if active=='docs' else '' }}">Documenti</a>
       <a href="/portal/invoices" class="{{ 'act' if active=='billing' else '' }}">Fatture</a>
+      <a href="/servizi">Servizi</a>
       <a href="/support" class="{{ 'act' if active=='support' else '' }}">Supporto</a>
       <a href="/portal/invita" class="{{ 'act' if active=='invita' else '' }}">Invita</a>
       <a href="/portal/privacy" class="{{ 'act' if active=='privacy' else '' }}">Privacy</a>
