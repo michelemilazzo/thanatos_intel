@@ -97,7 +97,10 @@ doc_events={
    'after_insert': 'thanatos_intel.referral.on_credit_spent',
  },
  'File': {
-   'after_insert': 'thanatos_intel.reporting.case_reports.on_file_after_insert',
+   'after_insert': [
+     'thanatos_intel.reporting.case_reports.on_file_after_insert',
+     'thanatos_intel.storage.offload_file_to_box',
+   ],
  },
  'HD Ticket': {
    'after_insert': 'thanatos_intel.integrations.helpdesk_bridge.on_ticket_created',
