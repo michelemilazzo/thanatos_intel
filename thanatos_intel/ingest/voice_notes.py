@@ -55,7 +55,21 @@ def download_meta_media(media_id: str, access_token: str) -> tuple[bytes, str]:
     return binr.content, mime
 
 
-def _transcribe(content: bytes, api_key: str) -> str:
+def _transcribe_whisper(content: bytes) -> str:
+    """Trascrizione via Whisper locale su ai-core (gratis, privacy-preserving)."""
+    import requests
+
+    url = frappe.conf.get("whisper_url", "http://10.10.0.4:18092")
+    r = requests.post(
+        f"{url}/transcribe",
+        files={"audio": ("voice.ogg", content)},
+        timeout=180,
+    )
+    r.raise_for_status()
+    return (r.json().get("text") or "").strip()
+
+
+def _transcribe_assemblyai(content: bytes, api_key: str) -> str:
     import requests
     import time
 
@@ -90,6 +104,18 @@ def _transcribe(content: bytes, api_key: str) -> str:
     raise TimeoutError("Timeout trascrizione nota vocale")
 
 
+def _transcribe(content: bytes) -> str:
+    """Trascrive: priorità Whisper locale, fallback AssemblyAI se configurato."""
+    try:
+        return _transcribe_whisper(content)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "whisper locale fallito")
+        api_key = frappe.conf.get("assemblyai_api_key")
+        if api_key:
+            return _transcribe_assemblyai(content, api_key)
+        raise
+
+
 def process_voice_note(lead_name: str, media_id: str, wa_phone: str | None = None):
     """Background job: scarica, allega e trascrive la nota vocale."""
     try:
@@ -110,12 +136,10 @@ def process_voice_note(lead_name: str, media_id: str, wa_phone: str | None = Non
         }).insert(ignore_permissions=True)
 
         text = ""
-        api_key = frappe.conf.get("assemblyai_api_key")
-        if api_key:
-            try:
-                text = _transcribe(content, api_key)
-            except Exception:
-                frappe.log_error(frappe.get_traceback(), f"voice transcribe {lead_name}")
+        try:
+            text = _transcribe(content)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"voice transcribe {lead_name}")
 
         label = f"🎤 {text}" if text else "🎤 [nota vocale ricevuta — trascrizione non disponibile]"
 
