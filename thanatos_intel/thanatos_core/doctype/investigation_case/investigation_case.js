@@ -312,3 +312,110 @@ frappe.ui.form.on('Case Assignment', {
     assignee_email(frm) { thanatos_set_monitor_operators(frm); },
     case_assignments_remove(frm) { thanatos_set_monitor_operators(frm); }
 });
+
+
+// ── Percorso guidato passo-passo (wizard sul Blueprint) ──────────────────────
+frappe.ui.form.on('Investigation Case', {
+	refresh(frm) {
+		if (frm.is_new()) return;
+		tcw_inject_css();
+		frm.dashboard.add_section(
+			'<div class="tcw-guide" id="tcw-guide"><div class="tcw-mut">Carico percorso guidato…</div></div>',
+			__('Percorso guidato'));
+		tcw_load(frm, frm.dashboard.wrapper.find('#tcw-guide'));
+	},
+});
+
+function tcw_load(frm, $c) {
+	frappe.call('thanatos_intel.workflow.api.board', { case_name: frm.doc.name })
+		.then(r => tcw_render(frm, $c, r.message || {}))
+		.catch(() => $c.html('<div class="tcw-mut">Percorso non disponibile.</div>'));
+}
+
+function tcw_render(frm, $c, b) {
+	const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+
+	if (!b.has_workflow) {
+		if (frm.doc.blueprint) {
+			$c.html('<div class="tcw-row"><span class="tcw-mut">Percorso non ancora avviato.</span> </div>');
+			$('<button class="btn btn-xs btn-primary">▶ Avvia percorso guidato</button>')
+				.appendTo($c.find('.tcw-row')).on('click', () => {
+					frappe.call('thanatos_intel.workflow.engine.start', { case_name: frm.doc.name })
+						.then(() => { frappe.show_alert({ message: 'Percorso avviato', indicator: 'green' }); frm.reload_doc(); });
+				});
+		} else {
+			$c.html('<div class="tcw-mut">Nessun Blueprint impostato. Scegli un <b>Blueprint</b> per attivare il percorso guidato passo-passo.</div>');
+		}
+		return;
+	}
+
+	let h = `<div class="tcw-prog">
+		<div class="tcw-bar"><div class="tcw-bar-f" style="width:${b.pct || 0}%"></div></div>
+		<span class="tcw-pct">${b.done}/${b.total} · ${b.pct || 0}%</span>
+		<button class="btn btn-xs btn-default tcw-ai">🤖 Cosa faccio ora?</button></div>`;
+	h += '<div class="tcw-steps">';
+	(b.steps || []).forEach(s => {
+		const ic = s.status === 'done' ? '✓' : (s.status === 'current' ? '▶' : '○');
+		const actor = s.actor === 'client' ? 'Cliente' : 'Operatore';
+		h += `<div class="tcw-step tcw-${s.status}">
+			<span class="tcw-ic">${ic}</span>
+			<span class="tcw-lbl">${esc(s.label)}</span>
+			<span class="tcw-chip">${actor}</span>
+			${s.mode === 'GATE' ? '<span class="tcw-chip tcw-gate">GATE</span>' : ''}
+			${s.status === 'current' ? tcw_action_btn(s) : ''}</div>`;
+	});
+	h += '</div><div class="tcw-aiout" style="display:none"></div>';
+	$c.html(h);
+
+	$c.find('[data-complete]').on('click', function () {
+		const seq = $(this).data('complete');
+		frappe.prompt([{ fieldtype: 'Small Text', label: 'Nota (opzionale)', fieldname: 'note' }], (v) => {
+			frappe.call('thanatos_intel.workflow.api.complete_gate',
+				{ case_name: frm.doc.name, seq: seq, note: v.note || '' })
+				.then(() => { frappe.show_alert({ message: 'Step completato', indicator: 'green' }); frm.reload_doc(); });
+		}, 'Completa step', 'Conferma');
+	});
+
+	$c.find('.tcw-ai').on('click', function () {
+		const $o = $c.find('.tcw-aiout').show().html('<div class="tcw-mut">🤖 Sto pensando…</div>');
+		frappe.call('thanatos_intel.workflow.ai_concierge.suggest_next', { case_name: frm.doc.name })
+			.then(r => {
+				const m = r.message || {};
+				$o.html(m.ok
+					? '<div class="tcw-ai-card">🤖 ' + esc(m.suggestion).replace(/\n/g, '<br>') + '</div>'
+					: '<div class="tcw-mut">' + esc(m.error || 'AI non disponibile al momento.') + '</div>');
+			})
+			.catch(() => $o.html('<div class="tcw-mut">AI non disponibile.</div>'));
+	});
+}
+
+function tcw_action_btn(s) {
+	if (s.actor === 'client') return '<span class="tcw-wait">⏳ In attesa del cliente</span>';
+	return `<button class="btn btn-xs btn-primary" data-complete="${s.seq}">✓ Completa</button>`;
+}
+
+function tcw_inject_css() {
+	if (document.getElementById('tcw-css')) return;
+	const css = `
+	.tcw-guide{padding:4px 2px}
+	.tcw-mut{color:var(--text-muted);font-size:13px;padding:4px 2px}
+	.tcw-row{display:flex;align-items:center;gap:10px;padding:4px 2px}
+	.tcw-prog{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+	.tcw-bar{flex:1;height:8px;background:var(--bg-color);border-radius:4px;overflow:hidden;border:1px solid var(--border-color)}
+	.tcw-bar-f{height:100%;background:#C8A96E;transition:width .3s}
+	.tcw-pct{font-size:12px;color:var(--text-muted);white-space:nowrap}
+	.tcw-steps{display:flex;flex-direction:column;gap:4px}
+	.tcw-step{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border-color);border-radius:6px;background:var(--card-bg)}
+	.tcw-step.tcw-current{border-color:#C8A96E;box-shadow:inset 3px 0 0 #C8A96E;background:var(--bg-color)}
+	.tcw-step.tcw-done{opacity:.6}
+	.tcw-ic{width:20px;text-align:center;font-weight:700;color:#C8A96E}
+	.tcw-done .tcw-ic{color:#29CD42}
+	.tcw-lbl{flex:1;font-size:13px;color:var(--text-color)}
+	.tcw-chip{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border:1px solid var(--border-color);padding:2px 7px;border-radius:10px;white-space:nowrap}
+	.tcw-gate{color:#ECAD4B;border-color:#ECAD4B}
+	.tcw-wait{font-size:11px;color:#ECAD4B;white-space:nowrap}
+	.tcw-aiout{margin-top:10px}
+	.tcw-ai-card{background:var(--card-bg);border:1px solid #C8A96E;border-radius:8px;padding:12px;font-size:13px;color:var(--text-color);line-height:1.5}
+	`;
+	$('<style id="tcw-css">').text(css).appendTo(document.head);
+}
