@@ -1,0 +1,35 @@
+{
+ "content": null,
+ "creation": "2026-06-22 01:49:08.016314",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-06-22 01:49:08.016314",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "thanatos-dossier",
+ "owner": "Administrator",
+ "page_name": "thanatos-dossier",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Investigation Manager"
+  },
+  {
+   "role": "Investigator"
+  },
+  {
+   "role": "Thanatos Director"
+  },
+  {
+   "role": "Thanatos Supervisor"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Dossier & Bacheca"
+}
