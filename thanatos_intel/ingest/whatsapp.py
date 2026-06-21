@@ -81,15 +81,21 @@ def _parse_meta(data: dict) -> list[dict]:
                     or f"[{msg.get('type', 'media')}]"
                 )
                 media_url = ""
+                media_type = ""
+                media_id = ""
                 for mtype in ("image", "video", "audio", "document"):
                     if mtype in msg:
-                        media_url = msg[mtype].get("link", "") or msg[mtype].get("id", "")
+                        media_type = mtype
+                        media_id = msg[mtype].get("id", "")
+                        media_url = msg[mtype].get("link", "") or media_id
                         break
                 results.append({
                     "source_id": wa_id,
                     "source_name": contacts.get(wa_id, ""),
                     "content": content,
                     "media_url": media_url,
+                    "media_type": media_type,
+                    "media_id": media_id,
                 })
     return results
 
@@ -173,6 +179,17 @@ def webhook():
             wa_number=wa_number,
         )
         created.append(name)
+
+        # Nota vocale → scarica + trascrivi in background
+        if m.get("media_type") == "audio" and m.get("media_id"):
+            frappe.enqueue(
+                "thanatos_intel.ingest.voice_notes.process_voice_note",
+                queue="long",
+                timeout=600,
+                lead_name=name,
+                media_id=m["media_id"],
+                wa_phone=(wa_number.phone_number if wa_number else None),
+            )
 
     return {"created": created, "count": len(created)}
 
