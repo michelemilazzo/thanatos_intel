@@ -1,0 +1,39 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{%- block title -%}Pagina non trovata — Thanatos Intel{%- endblock -%}
+
+{% block head_include %}
+<style>body, body .page_content, body .container { background:#0A0E1A !important; max-width:100% !important; }</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header() }}
+<style>
+.nf{min-height:56vh;display:flex;align-items:center;justify-content:center;background:#0A0E1A;
+  color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;text-align:center;padding:60px 22px}
+.nf-in{max-width:520px}
+.nf .code{font-family:Georgia,serif;font-size:96px;line-height:1;color:#C8A96E;letter-spacing:4px;margin:0}
+.nf h1{font-family:Georgia,serif;font-weight:400;font-size:24px;color:#fff;margin:14px 0 8px;letter-spacing:.5px}
+.nf p{color:#7A8294;font-size:14px;line-height:1.6;margin:0 0 28px}
+.nf .acts{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.nf a{display:inline-block;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  padding:12px 22px;border-radius:6px;transition:all .15s}
+.nf a.solid{background:#C8A96E;color:#0A0E1A;font-weight:700}
+.nf a.solid:hover{background:#B8975A}
+.nf a.ghost{border:1px solid rgba(200,169,110,.45);color:#C8A96E}
+.nf a.ghost:hover{background:rgba(200,169,110,.1)}
+</style>
+<div class="nf">
+  <div class="nf-in">
+    <p class="code">404</p>
+    <h1>Pagina non trovata</h1>
+    <p>La pagina che cerchi non esiste o è stata spostata. Torna alla home oppure accedi alla tua area riservata.</p>
+    <div class="acts">
+      <a class="solid" href="/">Torna alla home</a>
+      <a class="ghost" href="/portal">Area clienti</a>
+    </div>
+  </div>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}
