@@ -1,0 +1,99 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
+
+{% block title %}Informativa sulla Privacy — Thanatos Investigazioni{% endblock %}
+
+{% block head_include %}
+{{ seo_head(
+   title='Informativa sulla Privacy — Thanatos Investigazioni',
+   description='Informativa sul trattamento dei dati personali ai sensi del Regolamento UE 2016/679 (GDPR) e della Legge rumena 190/2018. Titolare: Thanatos Investigazioni S.R.L.',
+   path='/privacy') }}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body.thanatos-legal, body.thanatos-legal .page_content, body.thanatos-legal .container,
+body.thanatos-legal main { background:#0A0E1A !important; color:#C7CCDA; max-width:100% !important; }
+.lg-wrap{max-width:860px;margin:0 auto;padding:56px 24px 40px;}
+.lg-kicker{color:#C8A96E;font-family:Georgia,serif;letter-spacing:4px;text-transform:uppercase;font-size:11px;}
+.lg-h1{font-family:'Cinzel Decorative',Georgia,serif;font-size:34px;line-height:1.15;margin:10px 0 6px;color:#fff;}
+.lg-upd{color:#5B6276;font-size:12px;letter-spacing:1px;margin-bottom:30px;}
+.lg-wrap h2{font-family:Georgia,serif;color:#C8A96E;font-size:18px;letter-spacing:1px;margin:36px 0 12px;
+  border-bottom:1px solid #1F2742;padding-bottom:8px;}
+.lg-wrap h3{color:#E0C58A;font-family:Georgia,serif;font-size:15px;margin:22px 0 8px;}
+.lg-wrap p, .lg-wrap li{font-size:14.5px;line-height:1.75;color:#B8BECF;}
+.lg-wrap ul{padding-left:22px;margin:8px 0;}
+.lg-wrap li{margin:5px 0;}
+.lg-wrap a{color:#C8A96E;text-decoration:none;}
+.lg-wrap a:hover{text-decoration:underline;}
+.lg-box{background:#111729;border:1px solid #1F2742;border-radius:10px;padding:18px 22px;margin:16px 0;}
+.lg-box p{margin:4px 0;}
+.lg-tab{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;}
+.lg-tab th,.lg-tab td{border:1px solid #1F2742;padding:9px 12px;text-align:left;vertical-align:top;}
+.lg-tab th{background:#111729;color:#E0C58A;font-family:Georgia,serif;font-weight:400;}
+.lg-tab td{color:#A4A9BC;}
+@media(max-width:780px){.lg-h1{font-size:26px;}.lg-tab{font-size:12px;}}
+</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header('') }}
+<div class="lg-wrap">
+  <div class="lg-kicker">Protezione dei dati personali</div>
+  <h1 class="lg-h1">Informativa sulla Privacy</h1>
+  <div class="lg-upd">Ultimo aggiornamento: {{ updated }} · Regolamento (UE) 2016/679 (GDPR) · Legea 190/2018 (Romania)</div>
+
+  <p>La presente informativa descrive le modalità di trattamento dei dati personali degli utenti che consultano il sito <strong>thanatos.agency</strong>, utilizzano i servizi di Thanatos Investigazioni o comunicano con noi attraverso i canali messi a disposizione, inclusa la messaggistica WhatsApp.</p>
+
+  <h2>1. Titolare del trattamento</h2>
+  <div class="lg-box">
+    <p><strong>Thanatos Investigazioni S.R.L.</strong></p>
+    <p>Sede: Constanța, Romania</p>
+    <p>Codice fiscale (CUI): RO 46901022</p>
+    <p>Contatto privacy: <a href="mailto:privacy@thanatos.agency">privacy@thanatos.agency</a></p>
+  </div>
+  <p>La Società opera quale detective particular autorizzato ai sensi della <strong>Legge rumena n. 329/2003</strong> e tratta i dati nel rispetto del GDPR e della Legge rumena n. 190/2018.</p>
+
+  <h2>2. Categorie di dati trattati</h2>
+  <ul>
+    <li><strong>Dati di contatto e identificativi</strong>: nome, cognome, email, numero di telefono, ragione sociale.</li>
+    <li><strong>Dati di navigazione</strong>: indirizzo IP, log di accesso, identificativi tecnici (vedi <a href="/cookie">Cookie Policy</a>).</li>
+    <li><strong>Contenuti delle comunicazioni</strong>: messaggi inviati via web, email o WhatsApp e relativi metadati.</li>
+    <li><strong>Dati conferiti per l'incarico</strong>: informazioni necessarie all'esecuzione dei servizi investigativi e di due diligence richiesti.</li>
+  </ul>
+
+  <h2>3. Finalità e basi giuridiche</h2>
+  <table class="lg-tab">
+    <tr><th>Finalità</th><th>Base giuridica (art. 6 GDPR)</th></tr>
+    <tr><td>Riscontro a richieste e gestione delle comunicazioni (incluso WhatsApp)</td><td>Lett. b) misure precontrattuali / Lett. f) legittimo interesse</td></tr>
+    <tr><td>Erogazione dei servizi investigativi e di intelligence</td><td>Lett. b) esecuzione del contratto · Legea 329/2003</td></tr>
+    <tr><td>Adempimenti fiscali, contabili e di legge</td><td>Lett. c) obbligo legale</td></tr>
+    <tr><td>Sicurezza del sito e prevenzione abusi/frodi</td><td>Lett. f) legittimo interesse</td></tr>
+    <tr><td>Invio di comunicazioni informative (ove richiesto)</td><td>Lett. a) consenso</td></tr>
+  </table>
+
+  <h2>4. Messaggistica WhatsApp</h2>
+  <p>Quando l'utente ci contatta tramite WhatsApp, i contenuti e i metadati dei messaggi (numero del mittente, nome profilo, testo, eventuali allegati) sono trattati per dare riscontro alla richiesta e gestire la relazione. Il servizio di trasporto dei messaggi è fornito da <strong>Meta Platforms Ireland Ltd.</strong> secondo la propria informativa. Thanatos Investigazioni non utilizza tali dati per finalità di marketing senza specifico consenso e non li cede a terzi non autorizzati.</p>
+
+  <h2>5. Destinatari dei dati</h2>
+  <p>I dati possono essere comunicati a: collaboratori e personale autorizzato; fornitori che agiscono come responsabili del trattamento (hosting, posta elettronica, infrastruttura cloud, messaggistica); autorità competenti ove previsto dalla legge; agenzie partner cui un incarico sia eventualmente trasferito, nel rispetto della giurisdizione applicabile. I dati non sono oggetto di diffusione.</p>
+
+  <h2>6. Trasferimenti extra-UE</h2>
+  <p>Ove un fornitore tratti dati al di fuori dello Spazio Economico Europeo, il trasferimento avviene sulla base di decisioni di adeguatezza o di Clausole Contrattuali Standard approvate dalla Commissione Europea.</p>
+
+  <h2>7. Periodo di conservazione</h2>
+  <ul>
+    <li>Dati di contatto e comunicazioni: per il tempo necessario a gestire la richiesta e, in caso di rapporto, per la durata dello stesso.</li>
+    <li>Documentazione di incarico e prove: secondo i termini di legge applicabili all'attività investigativa e agli obblighi fiscali.</li>
+    <li>Log tecnici: di norma non oltre 12 mesi, salvo esigenze di sicurezza o obblighi di legge.</li>
+  </ul>
+
+  <h2>8. Diritti dell'interessato</h2>
+  <p>L'interessato può esercitare in qualsiasi momento i diritti di accesso, rettifica, cancellazione, limitazione, opposizione e portabilità (artt. 15-22 GDPR), nonché revocare il consenso ove prestato, scrivendo a <a href="mailto:privacy@thanatos.agency">privacy@thanatos.agency</a>.</p>
+  <p>È inoltre possibile proporre reclamo all'Autorità rumena per la protezione dei dati — <strong>ANSPDCP</strong> (Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal), <a href="https://www.dataprotection.ro" target="_blank" rel="noopener">www.dataprotection.ro</a> — o all'autorità di controllo del proprio Stato di residenza.</p>
+
+  <h2>9. Modifiche all'informativa</h2>
+  <p>La presente informativa può essere aggiornata. La versione vigente è sempre pubblicata su questa pagina con la relativa data di aggiornamento.</p>
+
+  <p style="margin-top:30px;font-size:12.5px;color:#5B6276;">Per i termini d'uso dei servizi consulta i <a href="/termini">Termini e Condizioni</a>. Per i cookie consulta la <a href="/cookie">Cookie Policy</a>.</p>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

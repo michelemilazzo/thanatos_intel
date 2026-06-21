@@ -1,0 +1,67 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
+
+{% block title %}Cookie Policy — Thanatos Investigazioni{% endblock %}
+
+{% block head_include %}
+{{ seo_head(
+   title='Cookie Policy — Thanatos Investigazioni',
+   description='Informativa sui cookie e tecnologie analoghe utilizzati dal sito thanatos.agency, ai sensi del GDPR e della normativa applicabile.',
+   path='/cookie') }}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body.thanatos-legal, body.thanatos-legal .page_content, body.thanatos-legal .container,
+body.thanatos-legal main { background:#0A0E1A !important; color:#C7CCDA; max-width:100% !important; }
+.lg-wrap{max-width:860px;margin:0 auto;padding:56px 24px 40px;}
+.lg-kicker{color:#C8A96E;font-family:Georgia,serif;letter-spacing:4px;text-transform:uppercase;font-size:11px;}
+.lg-h1{font-family:'Cinzel Decorative',Georgia,serif;font-size:34px;line-height:1.15;margin:10px 0 6px;color:#fff;}
+.lg-upd{color:#5B6276;font-size:12px;letter-spacing:1px;margin-bottom:30px;}
+.lg-wrap h2{font-family:Georgia,serif;color:#C8A96E;font-size:18px;letter-spacing:1px;margin:36px 0 12px;
+  border-bottom:1px solid #1F2742;padding-bottom:8px;}
+.lg-wrap p, .lg-wrap li{font-size:14.5px;line-height:1.75;color:#B8BECF;}
+.lg-wrap ul{padding-left:22px;margin:8px 0;}
+.lg-wrap li{margin:5px 0;}
+.lg-wrap a{color:#C8A96E;text-decoration:none;}
+.lg-wrap a:hover{text-decoration:underline;}
+.lg-tab{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px;}
+.lg-tab th,.lg-tab td{border:1px solid #1F2742;padding:9px 12px;text-align:left;vertical-align:top;}
+.lg-tab th{background:#111729;color:#E0C58A;font-family:Georgia,serif;font-weight:400;}
+.lg-tab td{color:#A4A9BC;}
+@media(max-width:780px){.lg-h1{font-size:26px;}.lg-tab{font-size:12px;}}
+</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header('') }}
+<div class="lg-wrap">
+  <div class="lg-kicker">Cookie e tecnologie analoghe</div>
+  <h1 class="lg-h1">Cookie Policy</h1>
+  <div class="lg-upd">Ultimo aggiornamento: {{ updated }}</div>
+
+  <p>Il presente documento illustra l'uso dei cookie e delle tecnologie analoghe sul sito <strong>thanatos.agency</strong>, gestito da Thanatos Investigazioni S.R.L. (CUI RO 46901022). Per il trattamento dei dati personali si rinvia all'<a href="/privacy">Informativa sulla Privacy</a>.</p>
+
+  <h2>1. Cosa sono i cookie</h2>
+  <p>I cookie sono piccoli file di testo che i siti visitati inviano al dispositivo dell'utente, dove vengono memorizzati per essere ritrasmessi agli stessi siti alla visita successiva. Tecnologie analoghe (es. local storage) svolgono funzioni simili.</p>
+
+  <h2>2. Tipologie di cookie utilizzati</h2>
+  <table class="lg-tab">
+    <tr><th>Categoria</th><th>Finalità</th><th>Consenso</th></tr>
+    <tr><td>Tecnici / necessari</td><td>Funzionamento del sito, sessione, sicurezza, preferenza lingua</td><td>Non richiesto</td></tr>
+    <tr><td>Funzionali</td><td>Memorizzazione di preferenze dell'utente per migliorare l'esperienza</td><td>Facoltativo</td></tr>
+    <tr><td>Analitici</td><td>Statistiche aggregate sull'uso del sito (ove attivati, in forma anonimizzata)</td><td>Richiesto se non anonimizzati</td></tr>
+  </table>
+  <p>Il sito utilizza prevalentemente cookie tecnici necessari alla navigazione. Eventuali cookie analitici o di terze parti sono attivati solo previa idonea informativa e, ove richiesto, raccolta del consenso.</p>
+
+  <h2>3. Cookie di terze parti</h2>
+  <p>Alcune funzionalità possono comportare l'impostazione di cookie da parte di terzi (es. font, contenuti embed, infrastruttura CDN). Tali soggetti operano in qualità di titolari autonomi secondo le rispettive informative.</p>
+
+  <h2>4. Gestione delle preferenze</h2>
+  <p>L'utente può gestire o disabilitare i cookie tramite le impostazioni del proprio browser. La disabilitazione dei cookie tecnici può compromettere il corretto funzionamento del sito. Le guide dei principali browser sono disponibili nelle rispettive pagine di supporto (Chrome, Firefox, Safari, Edge).</p>
+
+  <h2>5. Aggiornamenti</h2>
+  <p>La presente Cookie Policy può essere aggiornata. La versione vigente è sempre pubblicata su questa pagina.</p>
+
+  <p style="margin-top:30px;font-size:12.5px;color:#5B6276;">Per i diritti sui dati personali e i contatti del Titolare consulta l'<a href="/privacy">Informativa sulla Privacy</a>.</p>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
+
+{% block title %}Termini e Condizioni — Thanatos Investigazioni{% endblock %}
+
+{% block head_include %}
+{{ seo_head(
+   title='Termini e Condizioni — Thanatos Investigazioni',
+   description='Termini e condizioni d\'uso del sito e dei servizi di Thanatos Investigazioni S.R.L., detective particular autorizzato ai sensi della Legge 329/2003.',
+   path='/termini') }}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body.thanatos-legal, body.thanatos-legal .page_content, body.thanatos-legal .container,
+body.thanatos-legal main { background:#0A0E1A !important; color:#C7CCDA; max-width:100% !important; }
+.lg-wrap{max-width:860px;margin:0 auto;padding:56px 24px 40px;}
+.lg-kicker{color:#C8A96E;font-family:Georgia,serif;letter-spacing:4px;text-transform:uppercase;font-size:11px;}
+.lg-h1{font-family:'Cinzel Decorative',Georgia,serif;font-size:34px;line-height:1.15;margin:10px 0 6px;color:#fff;}
+.lg-upd{color:#5B6276;font-size:12px;letter-spacing:1px;margin-bottom:30px;}
+.lg-wrap h2{font-family:Georgia,serif;color:#C8A96E;font-size:18px;letter-spacing:1px;margin:36px 0 12px;
+  border-bottom:1px solid #1F2742;padding-bottom:8px;}
+.lg-wrap p, .lg-wrap li{font-size:14.5px;line-height:1.75;color:#B8BECF;}
+.lg-wrap ul{padding-left:22px;margin:8px 0;}
+.lg-wrap li{margin:5px 0;}
+.lg-wrap a{color:#C8A96E;text-decoration:none;}
+.lg-wrap a:hover{text-decoration:underline;}
+.lg-box{background:#111729;border:1px solid #1F2742;border-radius:10px;padding:18px 22px;margin:16px 0;}
+.lg-box p{margin:4px 0;}
+@media(max-width:780px){.lg-h1{font-size:26px;}}
+</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header('') }}
+<div class="lg-wrap">
+  <div class="lg-kicker">Condizioni d'uso</div>
+  <h1 class="lg-h1">Termini e Condizioni</h1>
+  <div class="lg-upd">Ultimo aggiornamento: {{ updated }}</div>
+
+  <p>L'accesso e l'utilizzo del sito <strong>thanatos.agency</strong> e dei servizi di Thanatos Investigazioni implicano l'accettazione dei presenti Termini e Condizioni. Si invita a leggerli con attenzione.</p>
+
+  <h2>1. Identità del fornitore</h2>
+  <div class="lg-box">
+    <p><strong>Thanatos Investigazioni S.R.L.</strong> · Constanța, Romania · CUI RO 46901022</p>
+    <p>Detective particular autorizzato ai sensi della Legge rumena n. 329/2003.</p>
+    <p>Contatto: <a href="mailto:info@thanatos.agency">info@thanatos.agency</a></p>
+  </div>
+
+  <h2>2. Oggetto dei servizi</h2>
+  <p>Thanatos Investigazioni fornisce servizi di intelligence investigativa, antifrode, due diligence, OSINT, cyber e corporate intelligence rivolti a professionisti e aziende. I servizi sono erogati nel rispetto della normativa applicabile e nei limiti di liceità previsti dalla legge.</p>
+
+  <h2>3. Uso lecito e finalità consentite</h2>
+  <p>L'utente si impegna a utilizzare i servizi esclusivamente per finalità lecite e legittime. È vietato richiedere o impiegare le informazioni per scopi discriminatori, persecutori, di stalking o comunque contrari alla legge. Thanatos Investigazioni si riserva di rifiutare o sospendere qualsiasi incarico privo di un interesse legittimo e tutelabile.</p>
+
+  <h2>4. Conferimento dell'incarico</h2>
+  <p>I rapporti contrattuali tra il cliente e Thanatos Investigazioni sono regolati da contratto/mandato specifico, che definisce oggetto, perimetro, corrispettivo, tempi e modalità di consegna. I prezzi indicati sul sito hanno valore informativo e possono variare in funzione della complessità dell'incarico.</p>
+
+  <h2>5. Proprietà intellettuale</h2>
+  <p>I contenuti del sito (testi, grafica, marchi, loghi, software) sono di proprietà di Thanatos Investigazioni o dei rispettivi titolari e sono protetti dalla normativa vigente. Ne è vietata la riproduzione non autorizzata.</p>
+
+  <h2>6. Limitazione di responsabilità</h2>
+  <p>I contenuti informativi pubblicati sul sito (incluse le notizie) sono forniti a titolo divulgativo e non costituiscono consulenza professionale. Thanatos Investigazioni non risponde dell'uso improprio delle informazioni da parte dell'utente né di interruzioni del servizio dovute a cause non imputabili alla Società.</p>
+
+  <h2>7. Protezione dei dati</h2>
+  <p>Il trattamento dei dati personali è disciplinato dall'<a href="/privacy">Informativa sulla Privacy</a> e dalla <a href="/cookie">Cookie Policy</a>, parte integrante dei presenti Termini.</p>
+
+  <h2>8. Legge applicabile e foro</h2>
+  <p>I presenti Termini sono regolati dalla legge rumena. Per le controversie è competente il foro della sede della Società, salvo diversa disposizione inderogabile di legge a tutela del consumatore. Qualora un incarico sia trasferito a un'agenzia partner in altro territorio, a quell'incarico si applica la giurisdizione del territorio interessato.</p>
+
+  <h2>9. Modifiche</h2>
+  <p>Thanatos Investigazioni può aggiornare i presenti Termini. La versione vigente è quella pubblicata su questa pagina.</p>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}
