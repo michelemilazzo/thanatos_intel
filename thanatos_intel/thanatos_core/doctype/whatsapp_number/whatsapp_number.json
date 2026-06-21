@@ -41,7 +41,8 @@
     {
       "fieldname": "webhook_token",
       "fieldtype": "Password",
-      "label": "Token webhook (per validazione firma)"
+      "label": "Token webhook (per validazione firma)",
+      "length": 1000
     },
     {
       "fieldname": "sb_twilio",
@@ -59,6 +60,7 @@
       "fieldname": "twilio_auth_token",
       "fieldtype": "Password",
       "label": "Auth Token Twilio",
+      "length": 1000,
       "depends_on": "eval:doc.provider=='Twilio'"
     },
     {
@@ -77,6 +79,7 @@
       "fieldname": "meta_access_token",
       "fieldtype": "Password",
       "label": "Access Token Meta",
+      "length": 1000,
       "depends_on": "eval:doc.provider=='Meta Cloud API'"
     },
     {
