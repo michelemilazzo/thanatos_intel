@@ -65,7 +65,8 @@ def _transcribe_whisper_local(doc):
     r = requests.post(
         f"{url}/transcribe",
         files={"audio": ("call.ogg", content)},
-        data={"diarize": "true", "num_speakers": 2},
+        data={"diarize": "true", "num_speakers": 2,
+              "language": frappe.conf.get("call_transcription_language", "it")},
         timeout=900,
     )
     r.raise_for_status()
