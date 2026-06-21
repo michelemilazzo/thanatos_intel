@@ -107,14 +107,12 @@ def webhook():
 
     # Verifica challenge Meta (GET)
     if req.method == "GET":
+        from werkzeug.wrappers import Response
         challenge = args.get("hub.challenge")
         verify = args.get("hub.verify_token", "")
         if _check_token(verify, wa_number) and challenge:
-            frappe.response["type"] = "page"
-            frappe.response["page_content"] = challenge
-            return
-        frappe.response["http_status_code"] = 403
-        return {"error": "invalid verify_token"}
+            return Response(challenge, status=200, content_type="text/plain")
+        return Response("invalid verify_token", status=403, content_type="text/plain")
 
     if not _check_token(token, wa_number):
         frappe.response["http_status_code"] = 403
