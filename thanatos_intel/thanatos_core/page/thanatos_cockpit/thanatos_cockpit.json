@@ -9,6 +9,11 @@
  "roles": [
   {"role": "System Manager"},
   {"role": "Investigation Manager"},
-  {"role": "Investigator"}
+  {"role": "Investigator"},
+  {"role": "Thanatos Investigator"},
+  {"role": "Thanatos Supervisor"},
+  {"role": "Thanatos Director"},
+  {"role": "Thanatos Analyst"},
+  {"role": "Analyst"}
  ]
 }
