@@ -15,7 +15,8 @@ from frappe.utils import now_datetime
 
 
 def _provider():
-    return frappe.conf.get("transcription_provider", "assemblyai")
+    # default Whisper locale (gratis, privacy). assemblyai per diarizzazione voci.
+    return frappe.conf.get("transcription_provider", "whisper")
 
 
 # ─── Entry point (chiamato via enqueue) ──────────────────────────────────────
@@ -31,11 +32,53 @@ def transcribe_call_log(call_log_name: str):
     try:
         if provider == "openai":
             _transcribe_openai(doc)
-        else:
+        elif provider == "assemblyai":
             _transcribe_assemblyai(doc)
+        else:
+            _transcribe_whisper_local(doc)
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), f"transcribe_call_log {call_log_name}")
         _set_error(doc, str(e)[:500])
+
+
+# ─── Whisper locale (ai-core, gratis, no diarizzazione) ──────────────────────
+
+def _audio_bytes(doc) -> bytes:
+    """Restituisce i bytes del file audio del Call Log."""
+    import requests
+    file_url = doc.audio_file
+    if file_url and file_url.startswith("/"):
+        from frappe.utils.file_manager import get_file
+        _fname, content = get_file(file_url)
+        return content
+    r = requests.get(file_url, timeout=60)
+    r.raise_for_status()
+    return r.content
+
+
+def _transcribe_whisper_local(doc):
+    import requests
+
+    url = frappe.conf.get("whisper_url", "http://10.10.0.4:18092")
+    content = _audio_bytes(doc)
+    r = requests.post(f"{url}/transcribe", files={"audio": ("call.ogg", content)}, timeout=600)
+    r.raise_for_status()
+    data = r.json()
+    full_text = (data.get("text") or "").strip()
+    # Whisper non separa le voci: tutti i segmenti come speaker "A"
+    segments = [
+        {"speaker": "A", "start_ms": s.get("start_ms", 0),
+         "end_ms": s.get("end_ms", 0), "text": s.get("text", "")}
+        for s in (data.get("segments") or [])
+    ]
+    if not segments and full_text:
+        segments = [{"speaker": "A", "start_ms": 0, "end_ms": 0, "text": full_text}]
+
+    doc.db_set("transcript_raw", json.dumps(segments))
+    doc.db_set("transcript_text", full_text)
+    doc.db_set("transcription_status", "Completato")
+    frappe.db.commit()
+    _notify_done(doc)
 
 
 # ─── AssemblyAI ──────────────────────────────────────────────────────────────

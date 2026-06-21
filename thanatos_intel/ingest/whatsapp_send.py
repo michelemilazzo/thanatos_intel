@@ -67,7 +67,7 @@ def _send_via_meta(wa_doc, to_number: str, text: str) -> dict:
     to_clean = to_number.lstrip("+").replace(" ", "").replace("-", "")
 
     import requests
-    url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
+    url = f"https://graph.facebook.com/v21.0/{phone_number_id}/messages"
     payload = {
         "messaging_product": "whatsapp",
         "recipient_type": "individual",
@@ -82,6 +82,55 @@ def _send_via_meta(wa_doc, to_number: str, text: str) -> dict:
     if resp.status_code == 200 and data.get("messages"):
         return {"ok": True, "message_id": data["messages"][0].get("id", "")}
     return {"ok": False, "error": data.get("error", {}).get("message", str(data))}
+
+
+@frappe.whitelist()
+def send_template(lead_name: str, template_name: str, language: str = "it",
+                  body_params: str | None = None) -> dict:
+    """Invia un template Meta approvato (per scrivere fuori dalla finestra 24h).
+    body_params: lista JSON di valori per i segnaposto {{1}},{{2}}... del corpo."""
+    import json
+    lead = frappe.get_doc("Intel Lead", lead_name)
+    if lead.source_type != "WhatsApp":
+        frappe.throw(_("Questo lead non è di tipo WhatsApp."))
+    to_number = (lead.source_identifier or "").strip()
+    wa_doc = frappe.get_doc("WhatsApp Number", lead.whatsapp_number)
+    phone_number_id = wa_doc.meta_phone_number_id
+    access_token = get_decrypted_password("WhatsApp Number", wa_doc.name, "meta_access_token")
+    if not phone_number_id or not access_token:
+        frappe.throw(_("Configurazione Meta mancante."))
+
+    template = {"name": template_name, "language": {"code": language}}
+    params = json.loads(body_params) if body_params else []
+    if params:
+        template["components"] = [{
+            "type": "body",
+            "parameters": [{"type": "text", "text": str(p)} for p in params],
+        }]
+
+    import requests
+    resp = requests.post(
+        f"https://graph.facebook.com/v21.0/{phone_number_id}/messages",
+        json={"messaging_product": "whatsapp", "to": to_number.lstrip("+").replace(" ", ""),
+              "type": "template", "template": template},
+        headers={"Authorization": f"Bearer {access_token}"}, timeout=15)
+    data = resp.json()
+    ok = resp.status_code == 200 and data.get("messages")
+    mid = data["messages"][0].get("id", "") if ok else ""
+
+    lead.append("messages", {
+        "direction": "Outbound", "sent_at": now_datetime(),
+        "content": f"[template: {template_name}]",
+        "status": "Inviato" if ok else "Fallito",
+        "sent_by": frappe.session.user, "wa_message_id": mid,
+    })
+    lead.db_set("last_message_at", now_datetime(), notify=False)
+    lead.save(ignore_permissions=True)
+    frappe.db.commit()
+    if not ok:
+        frappe.throw(_("Errore invio template: {0}").format(
+            data.get("error", {}).get("message", str(data))))
+    return {"ok": True, "message_id": mid}
 
 
 def _send_via_twilio(wa_doc, to_number: str, text: str) -> dict:

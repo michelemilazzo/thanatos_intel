@@ -83,11 +83,13 @@ def _parse_meta(data: dict) -> list[dict]:
                 media_url = ""
                 media_type = ""
                 media_id = ""
+                media_filename = ""
                 for mtype in ("image", "video", "audio", "document"):
                     if mtype in msg:
                         media_type = mtype
                         media_id = msg[mtype].get("id", "")
                         media_url = msg[mtype].get("link", "") or media_id
+                        media_filename = msg[mtype].get("filename", "")
                         break
                 results.append({
                     "source_id": wa_id,
@@ -96,6 +98,7 @@ def _parse_meta(data: dict) -> list[dict]:
                     "media_url": media_url,
                     "media_type": media_type,
                     "media_id": media_id,
+                    "media_filename": media_filename,
                 })
     return results
 
@@ -185,16 +188,23 @@ def webhook():
         )
         created.append(name)
 
-        # Nota vocale → scarica + trascrivi in background
-        if m.get("media_type") == "audio" and m.get("media_id"):
-            frappe.enqueue(
-                "thanatos_intel.ingest.voice_notes.process_voice_note",
-                queue="long",
-                timeout=600,
-                lead_name=name,
-                media_id=m["media_id"],
-                wa_phone=(wa_number.phone_number if wa_number else None),
-            )
+        # Media in arrivo → scarica + allega (audio anche trascritto)
+        if m.get("media_id"):
+            _wa_phone = wa_number.phone_number if wa_number else None
+            if m.get("media_type") == "audio":
+                frappe.enqueue(
+                    "thanatos_intel.ingest.voice_notes.process_voice_note",
+                    queue="long", timeout=600,
+                    lead_name=name, media_id=m["media_id"], wa_phone=_wa_phone,
+                )
+            elif m.get("media_type") in ("image", "video", "document"):
+                frappe.enqueue(
+                    "thanatos_intel.ingest.voice_notes.process_media_attachment",
+                    queue="long", timeout=600,
+                    lead_name=name, media_id=m["media_id"],
+                    media_type=m["media_type"], filename=m.get("media_filename", ""),
+                    wa_phone=_wa_phone,
+                )
 
     return {"created": created, "count": len(created)}
 
@@ -218,4 +228,13 @@ def _handle_status_updates(data: dict):
                 )
                 if row:
                     frappe.db.set_value("Intel Lead Message", row.name, "status", new_status)
+                    try:
+                        frappe.publish_realtime(
+                            "centralino_update",
+                            {"lead": row.parent, "type": "status",
+                             "wa_message_id": wa_msg_id, "status": new_status},
+                            after_commit=True,
+                        )
+                    except Exception:
+                        pass
     frappe.db.commit()

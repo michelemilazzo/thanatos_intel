@@ -247,10 +247,11 @@ ${replyBox}`);
         const media = m.media_url
             ? `<div style="margin-top:4px"><a href="${frappe.utils.escape_html(m.media_url)}" target="_blank" style="color:inherit;font-size:10px">📎 media</a></div>` : "";
 
+        const wamid = m.wa_message_id ? `data-wamid="${frappe.utils.escape_html(m.wa_message_id)}"` : "";
         return `
-<div style="display:flex;justify-content:${align};margin:4px 8px">
+<div style="display:flex;justify-content:${align};margin:4px 8px" ${wamid}>
   <div style="max-width:72%;background:${bg};color:${color};border-radius:12px;padding:8px 12px;font-size:13px;line-height:1.5">
-    <div style="font-size:9px;opacity:.55;margin-bottom:3px">${by}${ts} ${status}</div>
+    <div style="font-size:9px;opacity:.55;margin-bottom:3px">${by}${ts} <span class="ctlno-status">${status}</span></div>
     ${frappe.utils.escape_html(m.content || "")}${media}
   </div>
 </div>`;
@@ -443,6 +444,13 @@ ${replyBox}`);
 
     _handleUpdate(data) {
         const { lead, type } = data;
+
+        // Aggiornamento stato consegna/lettura → aggiorna la spunta live
+        if (type === "status" && data.wa_message_id) {
+            const el = document.querySelector(`[data-wamid="${data.wa_message_id}"] .ctlno-status`);
+            if (el) el.textContent = this._statusIcon(data.status);
+            return;
+        }
 
         // Refresh lista conversazioni
         this.loadConversations();

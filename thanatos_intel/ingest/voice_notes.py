@@ -164,3 +164,57 @@ def process_voice_note(lead_name: str, media_id: str, wa_phone: str | None = Non
         frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"process_voice_note {lead_name}")
+
+
+_MEDIA_META = {
+    "image": ("📷", "immagine", {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}, "jpg"),
+    "video": ("🎥", "video", {"video/mp4": "mp4", "video/3gpp": "3gp"}, "mp4"),
+    "document": ("📄", "documento", {"application/pdf": "pdf"}, "bin"),
+}
+
+
+def process_media_attachment(lead_name: str, media_id: str, media_type: str,
+                             filename: str = "", wa_phone: str | None = None):
+    """Background job: scarica e allega un media (immagine/video/documento) all'Intel Lead."""
+    try:
+        token, _ = _resolve_token(wa_phone)
+        content, mime = download_meta_media(media_id, token)
+
+        icon, word, ext_map, default_ext = _MEDIA_META.get(
+            media_type, ("📎", "allegato", {}, "bin"))
+        ext = ext_map.get(mime.split(";")[0], default_ext)
+        fname = filename or f"wa-{media_type}-{media_id[:12]}.{ext}"
+
+        file_doc = frappe.get_doc({
+            "doctype": "File",
+            "file_name": fname,
+            "attached_to_doctype": "Intel Lead",
+            "attached_to_name": lead_name,
+            "is_private": 1,
+            "content": content,
+        }).insert(ignore_permissions=True)
+
+        label = f"{icon} {fname}" if filename else f"{icon} [{word}]"
+
+        msg = frappe.db.sql(
+            """SELECT name, content FROM `tabIntel Lead Message`
+               WHERE parent=%s AND direction='Inbound'
+               ORDER BY sent_at DESC LIMIT 1""",
+            (lead_name,), as_dict=True,
+        )
+        if msg:
+            # se c'era una didascalia, la conserva
+            cap = (msg[0].content or "").strip()
+            new_content = f"{label}\n{cap}" if cap and not cap.startswith("[") else label
+            frappe.db.set_value("Intel Lead Message", msg[0].name, {
+                "content": new_content,
+                "media_url": file_doc.file_url,
+            })
+
+        cur = frappe.db.get_value("Intel Lead", lead_name, "content") or ""
+        if cur.strip() in (f"[{media_type}]", "[media]", ""):
+            frappe.db.set_value("Intel Lead", lead_name, "content", label)
+
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"process_media_attachment {lead_name}")

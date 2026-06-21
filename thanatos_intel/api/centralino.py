@@ -56,6 +56,7 @@ def get_thread(lead_name):
             "status": m.status,
             "sent_by": m.sent_by,
             "media_url": m.media_url,
+            "wa_message_id": getattr(m, "wa_message_id", ""),
         })
     return {
         "name": doc.name,
