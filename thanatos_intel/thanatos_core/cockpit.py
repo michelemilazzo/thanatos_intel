@@ -1,10 +1,11 @@
 """Dati per il cockpit Thanatos (pagina desk /app/thanatos-cockpit).
 
-Una sola chiamata restituisce KPI, flusso, azioni di oggi, dati grafici.
+Una sola chiamata restituisce: saluto, KPI, agenda/scadenziario, prossimi step
+guidati, inbox Intel (lead), suggerimenti proattivi (Intel), flusso e grafici.
 Ogni metrica è best-effort: un errore su una non rompe il cockpit.
 """
 import frappe
-from frappe.utils import nowdate, add_days, getdate, get_first_day, flt
+from frappe.utils import nowdate, add_days, getdate, get_first_day, flt, now_datetime, get_fullname
 
 
 def _count(dt, filters=None):
@@ -22,31 +23,129 @@ def _sum(dt, field, filters=None):
         return 0
 
 
+def _all(dt, **kw):
+    try:
+        return frappe.get_all(dt, **kw)
+    except Exception:
+        return []
+
+
 @frappe.whitelist()
 def get_cockpit_data():
     today = getdate(nowdate())
     month_start = get_first_day(today)
+    now = now_datetime()
+    horizon = add_days(today, 14)
+    user = frappe.session.user
 
     # ── KPI ──
     kpi = {
-        "casi_aperti": _count("Investigation Case", {"status": "Open"}),
-        "casi_totali": _count("Investigation Case"),
-        "ddd": _count("Diplomatic Eligibility Case"),
+        "casi_aperti": _count("Investigation Case", {"status": ["in", ["Open", "In Progress", "Review"]]}),
+        "lead_nuovi": _count("Intel Lead", {"status": ["in", ["Nuovo", "In Valutazione"]]}),
+        "appuntamenti_oggi": _count("Investigation Appointment",
+                                    {"appointment_date": str(today), "status": ["!=", "Annullato"]}),
         "reperti": _count("Investigation Evidence"),
-        "attivita": _count("Field Activity"),
+        "casi_totali": _count("Investigation Case"),
         "fatturato_mese": _sum("Sales Invoice", "base_grand_total",
                                {"docstatus": 1, "posting_date": [">=", str(month_start)]}),
     }
 
-    # ── Flusso end-to-end (conteggi per fase) ──
-    flow = [
-        {"label": "Clienti", "count": _count("Investigation Client"), "doctype": "Investigation Client"},
-        {"label": "Casi", "count": _count("Investigation Case"), "doctype": "Investigation Case"},
-        {"label": "DDD", "count": _count("Diplomatic Eligibility Case"), "doctype": "Diplomatic Eligibility Case"},
-        {"label": "Reperti", "count": _count("Investigation Evidence"), "doctype": "Investigation Evidence"},
-        {"label": "Report", "count": _count("Investigation Report"), "doctype": "Investigation Report"},
-        {"label": "Fatture", "count": _count("Sales Invoice"), "doctype": "Sales Invoice"},
-    ]
+    # ── Agenda / Scadenziario (prossimi 14 gg): appuntamenti + step con scadenza + chiusure caso ──
+    agenda = []
+    for a in _all("Investigation Appointment",
+                  filters={"appointment_date": ["between", [str(today), str(horizon)]],
+                           "status": ["!=", "Annullato"]},
+                  fields=["name", "title", "appointment_type", "appointment_date",
+                          "appointment_time", "status", "linked_case"],
+                  order_by="appointment_date asc", limit=20):
+        agenda.append({"when": str(a.appointment_date), "time": str(a.appointment_time or "")[:5],
+                       "kind": a.appointment_type or "Appuntamento", "title": a.title or a.name,
+                       "doctype": "Investigation Appointment", "ref": a.name, "icon": "📅"})
+    for s in _all("Case Step Instance",
+                  filters={"parenttype": "Investigation Case",
+                           "status": ["in", ["Pending", "In Progress", "Awaiting Client", "Blocked"]],
+                           "due": ["between", [str(today), str(horizon) + " 23:59:59"]]},
+                  fields=["parent", "step_label", "due", "status"],
+                  order_by="due asc", limit=20):
+        agenda.append({"when": str(s.due)[:10], "time": str(s.due)[11:16],
+                       "kind": "Scadenza step", "title": (s.step_label or "Step") + " — " + s.parent,
+                       "doctype": "Investigation Case", "ref": s.parent, "icon": "⏰"})
+    agenda.sort(key=lambda x: (x["when"], x["time"]))
+    agenda = agenda[:12]
+
+    # ── Prossimi step guidati ("fai questo, carica quello") ──
+    prossimi_step = []
+    for s in _all("Case Step Instance",
+                  filters={"parenttype": "Investigation Case",
+                           "status": ["in", ["Pending", "In Progress", "Awaiting Client", "Blocked"]]},
+                  fields=["parent", "seq", "step_label", "status", "due", "action_type", "assignee"],
+                  order_by="due asc", limit=12):
+        prossimi_step.append({"case": s.parent, "label": s.step_label or ("Step " + str(s.seq or "")),
+                              "status": s.status, "action": s.action_type or "",
+                              "due": str(s.due or "")[:16], "assignee": s.assignee or ""})
+
+    # ── Inbox Intel (lead da triage) ──
+    intel_inbox = []
+    for l in _all("Intel Lead",
+                  filters={"status": ["in", ["Nuovo", "In Valutazione"]]},
+                  fields=["name", "source_type", "source_name", "content", "priority",
+                          "intel_score", "received_at"],
+                  order_by="received_at desc", limit=8):
+        intel_inbox.append({"ref": l.name, "source": l.source_type or "—",
+                            "from": l.source_name or "", "priority": l.priority or "Media",
+                            "score": l.intel_score or 0,
+                            "snippet": (l.content or "")[:110],
+                            "when": str(l.received_at or "")[:16]})
+
+    # ── Suggerimenti proattivi (Intel) — regole v1, base per l'AI ──
+    sugg = []
+    n = _count("Intel Lead", {"status": "Nuovo"})
+    if n:
+        sugg.append({"icon": "🔔", "sev": "info",
+                     "text": f"{n} lead da valutare in arrivo",
+                     "route": ["List", "Intel Lead", {"status": "Nuovo"}]})
+    fermi = _all("Investigation Case",
+                 filters={"status": ["in", ["Open", "In Progress"]],
+                          "modified": ["<", str(add_days(today, -5))]},
+                 fields=["name"], limit=50)
+    if fermi:
+        sugg.append({"icon": "🐌", "sev": "warn",
+                     "text": f"{len(fermi)} casi fermi da oltre 5 giorni",
+                     "route": ["List", "Investigation Case", {"status": "Open"}]})
+    bloccati = _count("Case Step Instance", {"parenttype": "Investigation Case", "status": "Blocked"})
+    if bloccati:
+        sugg.append({"icon": "⛔", "sev": "warn",
+                     "text": f"{bloccati} step bloccati da sbloccare",
+                     "route": ["List", "Investigation Case", {"workflow_active": 1}]})
+    mand = _count("Agency Mandate", {"signed_on": ["is", "not set"]})
+    if mand:
+        sugg.append({"icon": "✍️", "sev": "info",
+                     "text": f"{mand} mandati da firmare",
+                     "route": ["List", "Agency Mandate"]})
+    onb = _count("Investigation Client",
+                 {"onboarding_status": ["in", ["Pending KYC", "Pending KYB", "Under Review"]]})
+    if onb:
+        sugg.append({"icon": "🪪", "sev": "info",
+                     "text": f"{onb} clienti con onboarding da completare",
+                     "route": ["List", "Investigation Client", {"onboarding_status": "Under Review"}]})
+    fail = _count("OSINT Job", {"status": "Failed"})
+    if fail:
+        sugg.append({"icon": "♻️", "sev": "warn",
+                     "text": f"{fail} job OSINT falliti da rilanciare",
+                     "route": ["List", "OSINT Job", {"status": "Failed"}]})
+    if not sugg:
+        sugg.append({"icon": "✅", "sev": "ok", "text": "Tutto sotto controllo. Nessuna azione urgente.", "route": None})
+
+    # ── Casi attivi (sintesi) ──
+    casi_attivi = []
+    for c in _all("Investigation Case",
+                  filters={"status": ["in", ["Open", "In Progress", "Review"]]},
+                  fields=["name", "case_title", "status", "priority", "client",
+                          "payment_status", "current_step_seq", "workflow_active", "modified"],
+                  order_by="modified desc", limit=10):
+        casi_attivi.append({"ref": c.name, "title": c.case_title or c.name, "status": c.status,
+                            "priority": c.priority or "Normal", "client": c.client or "",
+                            "payment": c.payment_status or "", "when": str(c.modified)[:10]})
 
     # ── Casi per stato (grafico) ──
     casi_per_stato = []
@@ -58,52 +157,26 @@ def get_cockpit_data():
     except Exception:
         pass
 
-    # ── Mandati DDD per stato ──
-    mandati = []
-    try:
-        rows = frappe.db.sql(
-            "select coalesce(status,'n/d') s, count(*) n from `tabAgency Mandate` group by s",
-            as_dict=True)
-        mandati = [{"label": r.s, "value": r.n} for r in rows]
-    except Exception:
-        pass
-
-    # ── Azioni di oggi ──
-    azioni = []
-    try:
-        for c in frappe.get_all("Investigation Case", filters={"status": "Open"},
-                                fields=["name", "case_title", "modified"],
-                                order_by="modified desc", limit=6):
-            azioni.append({"type": "Caso aperto", "ref": c.name,
-                           "title": c.case_title or c.name, "doctype": "Investigation Case"})
-    except Exception:
-        pass
-    try:
-        for m in frappe.get_all("Agency Mandate", filters={"signed_on": ["is", "not set"]},
-                                fields=["name", "subject_matter"], limit=4):
-            azioni.append({"type": "Mandato da firmare", "ref": m.name,
-                           "title": m.subject_matter or m.name, "doctype": "Agency Mandate"})
-    except Exception:
-        pass
-
-    # ── Attività recenti sul campo ──
-    attivita_recenti = []
-    try:
-        for a in frappe.get_all("Field Activity",
-                                fields=["name", "activity_type", "activity_title", "start_datetime", "investigation_case"],
-                                order_by="start_datetime desc", limit=6):
-            attivita_recenti.append({"ref": a.name, "type": a.activity_type,
-                                     "title": a.activity_title or a.activity_type,
-                                     "case": a.investigation_case, "when": str(a.start_datetime or "")})
-    except Exception:
-        pass
+    # ── Flusso end-to-end ──
+    flow = [
+        {"label": "Lead", "count": _count("Intel Lead"), "doctype": "Intel Lead"},
+        {"label": "Clienti", "count": _count("Investigation Client"), "doctype": "Investigation Client"},
+        {"label": "Casi", "count": _count("Investigation Case"), "doctype": "Investigation Case"},
+        {"label": "OSINT", "count": _count("OSINT Job"), "doctype": "OSINT Job"},
+        {"label": "Reperti", "count": _count("Investigation Evidence"), "doctype": "Investigation Evidence"},
+        {"label": "Report", "count": _count("Investigation Report"), "doctype": "Investigation Report"},
+        {"label": "Fatture", "count": _count("Sales Invoice"), "doctype": "Sales Invoice"},
+    ]
 
     return {
+        "user": user,
+        "fullname": get_fullname(user),
         "kpi": kpi,
-        "flow": flow,
+        "agenda": agenda,
+        "prossimi_step": prossimi_step,
+        "intel_inbox": intel_inbox,
+        "suggerimenti": sugg,
+        "casi_attivi": casi_attivi,
         "casi_per_stato": casi_per_stato,
-        "mandati": mandati,
-        "azioni": azioni,
-        "attivita_recenti": attivita_recenti,
-        "user": frappe.session.user,
+        "flow": flow,
     }
