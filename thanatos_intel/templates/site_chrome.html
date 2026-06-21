@@ -75,22 +75,22 @@
       <a href="/" class="{% if active=='home' %}act{% endif %}">Home</a>
       <a href="/soluzioni" class="{% if active=='soluzioni' %}act{% endif %}">Soluzioni</a>
       <a href="/servizi" class="{% if active=='servizi' %}act{% endif %}">Servizi</a>
-      <a href="/pricing" class="{% if active=='pricing' %}act{% endif %}">Piani</a>
-      <a href="/news" class="{% if active=='news' %}act{% endif %}">Newsroom</a>
+      <a href="/piani" class="{% if active=='pricing' %}act{% endif %}">Piani</a>
+      <a href="/notizie" class="{% if active=='news' %}act{% endif %}">Newsroom</a>
       <a href="/verifica-blacklist" class="{% if active=='blacklist' %}act{% endif %}">Blacklist</a>
-      <a href="/about" class="{% if active=='about' %}act{% endif %}">Chi siamo</a>
+      <a href="/chi-siamo" class="{% if active=='about' %}act{% endif %}">Chi siamo</a>
       <a href="/collabora" class="{% if active=='collabora' %}act{% endif %}">Collabora</a>
-      <a href="/portal" class="{% if active=='portal' %}act{% endif %}">Portale</a>
+      <a href="/portale" class="{% if active=='portal' %}act{% endif %}">Portale</a>
       {%- set _sl = (frappe.form_dict.get('lang') or (frappe.request.cookies.get('site_lang') if frappe.request else '') or 'it') -%}
       <span style="border:1px solid #1F2742;border-radius:4px;overflow:hidden;display:inline-flex"><a href="?lang=it" title="Italiano" style="padding:5px 9px;text-decoration:none;color:{% if _sl=='en' %}#7A8194{% else %}#C8A96E{% endif %}">IT</a><a href="?lang=en" title="English" style="padding:5px 9px;text-decoration:none;border-left:1px solid #1F2742;color:{% if _sl=='en' %}#C8A96E{% else %}#7A8194{% endif %}">EN</a></span>
       {% if frappe.session.user == 'Guest' %}
       <a class="tx-cta" href="/registrati">Registrati</a>
-      <a class="tx-cta solid" href="/login?redirect-to=/portal">Accedi</a>
+      <a class="tx-cta solid" href="/login?redirect-to=/portale">Accedi</a>
       {% else %}
       {% set _staff = is_full_access() %}
       <div class="tx-user">
         {% set _pu = portal_user() %}
-        <a class="tx-cta solid tx-prof" href="{% if _staff %}/app{% else %}/portal{% endif %}">
+        <a class="tx-cta solid tx-prof" href="{% if _staff %}/app{% else %}/portale{% endif %}">
           <span class="tx-avatar">{% if _pu.image %}<img src="{{ _pu.image }}" alt=""/>{% else %}{{ _pu.initials }}{% endif %}</span>
           <span>{{ _pu.full_name.split(' ')[0] if _pu.full_name else 'Area riservata' }} ▾</span>
         </a>
@@ -101,7 +101,7 @@
           <a href="/drive">Drive</a>
           <a href="/crm">CRM</a>
           {% endif %}
-          <a href="/portal">Portale</a>
+          <a href="/portale">Portale</a>
           <a href="/sicurezza">Sicurezza</a>
           <a href="/logout">Esci</a>
         </div>
@@ -261,9 +261,9 @@
     <div>
       <h5>Piattaforma</h5>
       <a href="/soluzioni">Soluzioni</a>
-      <a href="/pricing">Piani & prezzi</a>
+      <a href="/piani">Piani & prezzi</a>
       <a href="/casi">Casi studio</a>
-      <a href="/news">Newsroom</a>
+      <a href="/notizie">Newsroom</a>
       <a href="https://status.thanatos.agency" target="_blank">Stato dei servizi</a>
     </div>
     <div>

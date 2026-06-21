@@ -12,6 +12,67 @@ import frappe
 import requests
 
 SUPPORTED = {"en", "fr", "es", "de", "pt", "ro"}  # 'it' = canonico, no-op
+
+# --- routing bilingue: slug IT canonico <-> alias EN ----------------------
+# Usato per: (1) dedurre la lingua dall'URL (parte IT=italiano, EN=inglese),
+# (2) riscrivere gli href verso EN quando si rende in inglese, (3) far
+# risolvere entrambi gli slug alla stessa pagina (vedi website_route_rules).
+ROUTE_PAIRS = [
+    ("/piani", "/plans"),
+    ("/notizie", "/news"),
+    ("/chi-siamo", "/about"),
+    ("/soluzioni", "/solutions"),
+    ("/servizi", "/services"),
+    ("/collabora", "/collaborate"),
+    ("/casi", "/cases"),
+    ("/contatti", "/contact"),
+    ("/registrati", "/register"),
+    ("/verifica-blacklist", "/blacklist-check"),
+    ("/verifica-rischio", "/risk-check"),
+    ("/diventa-collaboratore", "/become-a-partner"),
+    ("/termini", "/terms"),
+    ("/portale", "/portal"),
+]
+IT_TO_EN = {it: en for it, en in ROUTE_PAIRS}
+# Lang-neutral: lingua dal cookie, NON forzata dall'URL.
+#  - portale: area riservata, un cliente IT puo' avere /portal come home
+#  - news: gli articoli vivono sotto /news/<slug> (route da DB), un lettore
+#    italiano non deve vederli tradotti in inglese
+_LANG_NEUTRAL = {"/portal", "/portale", "/news", "/notizie"}
+
+
+def _norm_path(p):
+    p = (p or "/").split("?")[0].split("#")[0]
+    if len(p) > 1 and p.endswith("/"):
+        p = p.rstrip("/")
+    return p or "/"
+
+
+def lang_from_path(path):
+    """'it'/'en' se lo slug dell'URL indica la lingua, altrimenti None."""
+    p = _norm_path(path)
+    for it, en in ROUTE_PAIRS:
+        if it in _LANG_NEUTRAL or en in _LANG_NEUTRAL:
+            continue
+        if p == en or p.startswith(en + "/"):
+            return "en"
+        if p == it or p.startswith(it + "/"):
+            return "it"
+    return None
+
+
+def _swap_route(url, mapping):
+    """Rimappa il path iniziale di un href IT->EN, preservando query/hash."""
+    m = re.match(r"^([^?#]*)([?#].*)?$", url or "")
+    path, rest = m.group(1), (m.group(2) or "")
+    for src, dst in mapping.items():
+        if path == src:
+            return dst + rest
+        if path.startswith(src + "/"):
+            return dst + path[len(src):] + rest
+    return url
+
+
 SKIP_TAGS = {"script", "style", "noscript", "code", "pre", "textarea", "kbd", "samp", "svg"}
 ATTRS = ("placeholder", "title", "alt", "aria-label", "content")  # content solo su meta description
 _LETTER = re.compile(r"[A-Za-zÀ-ÿ]")
@@ -19,8 +80,20 @@ _SKIP_STR = re.compile(r"^(?:https?://|mailto:|tel:|[\w.+-]+@[\w.-]+\.\w+|[\W\d\
 
 
 def current_lang():
+    # 1) override esplicito ?lang= (toggle lingua)
     l = frappe.form_dict.get("lang") if getattr(frappe.local, "form_dict", None) else None
-    if not l and getattr(frappe.local, "request", None):
+    if l:
+        l = l.lower()[:2]
+        return l if (l == "it" or l in SUPPORTED) else "it"
+    # 2) lo slug canonico dell'URL determina la lingua (IT vs EN)
+    try:
+        byp = lang_from_path(frappe.local.request.path) if getattr(frappe.local, "request", None) else None
+    except Exception:
+        byp = None
+    if byp:
+        return byp
+    # 3) cookie scelto, default italiano
+    if getattr(frappe.local, "request", None):
         try:
             l = frappe.request.cookies.get("site_lang")
         except Exception:
@@ -112,6 +185,15 @@ def translate_html(html, target):
                 el.tail = new
             elif kind.startswith("@"):
                 el.set(kind[1:], new)
+        if target == "en":
+            for el in tree.iter():
+                for attr in ("href", "action"):
+                    v = el.get(attr)
+                    if not v or "://" in v or v.startswith(("#", "mailto:", "tel:")):
+                        continue
+                    nv = _swap_route(v, IT_TO_EN)
+                    if nv != v:
+                        el.set(attr, nv)
         out = lxml.html.tostring(tree, encoding="unicode", doctype="<!DOCTYPE html>")
         frappe.cache().set_value(key, out, expires_in_sec=86400)
         return out

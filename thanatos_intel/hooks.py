@@ -11,12 +11,6 @@ website_redirects=[
 	{"source": r"/me", "target": "/account"},
 	{"source": r"/update-profile", "target": "/modifica-profilo"},
 	{"source": r"/sicurezza", "target": "/sicurezza-account"},
-	{"source": r"/piani", "target": "/pricing"},
-	{"source": r"/newsroom", "target": "/news"},
-	{"source": r"/blacklist", "target": "/verifica-blacklist"},
-	{"source": r"/chi-siamo", "target": "/about"},
-	{"source": r"/portale", "target": "/portal"},
-	{"source": r"/accedi", "target": "/login"},
 ]
 app_title='Thanatos Intel'
 app_version='0.1.0'
@@ -208,6 +202,24 @@ scheduler_events={
 }
 website_route_rules=[
  {'from_route': '/portal/case/<name>', 'to_route': 'portal/case'},
+ # --- bilingue IT/EN (slug IT canonico + alias EN, stessa pagina) ---
+ {'from_route': '/piani', 'to_route': 'pricing'},
+ {'from_route': '/plans', 'to_route': 'pricing'},
+ {'from_route': '/notizie', 'to_route': 'news'},
+ {'from_route': '/notizie/categoria/<slug>', 'to_route': 'news/categoria'},
+ {'from_route': '/chi-siamo', 'to_route': 'about'},
+ {'from_route': '/portale', 'to_route': 'portal'},
+ {'from_route': '/solutions', 'to_route': 'soluzioni'},
+ {'from_route': '/solutions/<slug>', 'to_route': 'soluzioni'},
+ {'from_route': '/services', 'to_route': 'servizi'},
+ {'from_route': '/collaborate', 'to_route': 'collabora'},
+ {'from_route': '/cases', 'to_route': 'casi'},
+ {'from_route': '/contact', 'to_route': 'contatti'},
+ {'from_route': '/register', 'to_route': 'registrati'},
+ {'from_route': '/blacklist-check', 'to_route': 'verifica-blacklist'},
+ {'from_route': '/risk-check', 'to_route': 'verifica-rischio'},
+ {'from_route': '/become-a-partner', 'to_route': 'diventa-collaboratore'},
+ {'from_route': '/terms', 'to_route': 'termini'},
  {'from_route': '/news/categoria/<slug>', 'to_route': 'news/categoria'},
  {'from_route': '/soluzioni/<slug>', 'to_route': 'soluzioni'},
 ]
