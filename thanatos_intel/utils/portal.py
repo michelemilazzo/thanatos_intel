@@ -1,7 +1,10 @@
 import frappe
 
 PORTAL_ROLES = {"Investigation Client", "Affiliate", "Investigator", "Investigation Manager"}
-DESK_ROLES = {"System Manager", "Investigation Manager"}
+DESK_ROLES = {"System Manager", "Investigation Manager", "Investigator",
+              "Thanatos Investigator", "Thanatos Supervisor", "Thanatos Director",
+              "Thanatos Analyst", "Analyst", "Thanatos Intake Officer",
+              "Thanatos Legal Officer", "Thanatos Compliance Officer"}
 
 
 def get_home_page(user=None):
@@ -10,7 +13,7 @@ def get_home_page(user=None):
         return "home"
     roles = set(frappe.get_roles(user))
     if roles & DESK_ROLES:
-        return "/app/thanatos-intel"
+        return "/app/thanatos-cockpit"
     if roles & PORTAL_ROLES:
         return "/portal"
     return "/portal"

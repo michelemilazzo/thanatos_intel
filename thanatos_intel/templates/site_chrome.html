@@ -85,7 +85,7 @@
       <span style="border:1px solid #1F2742;border-radius:4px;overflow:hidden;display:inline-flex"><a href="?lang=it" title="Italiano" style="padding:5px 9px;text-decoration:none;color:{% if _sl=='en' %}#7A8194{% else %}#C8A96E{% endif %}">IT</a><a href="?lang=en" title="English" style="padding:5px 9px;text-decoration:none;border-left:1px solid #1F2742;color:{% if _sl=='en' %}#C8A96E{% else %}#7A8194{% endif %}">EN</a></span>
       {% if frappe.session.user == 'Guest' %}
       <a class="tx-cta" href="/registrati">Registrati</a>
-      <a class="tx-cta solid" href="/login?redirect-to=/portale">Accedi</a>
+      <a class="tx-cta solid" href="/login">Accedi</a>
       {% else %}
       {% set _staff = is_full_access() %}
       <div class="tx-user">
