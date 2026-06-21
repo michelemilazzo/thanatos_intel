@@ -79,13 +79,37 @@ def register_recording():
     doc.db_set("duration_minutes", duration // 60)
 
     if audio:
+        import os
         content = audio.stream.read()
-        fdoc = frappe.get_doc({
-            "doctype": "File", "file_name": f"wa-call-{call_id[:14]}.ogg",
-            "attached_to_doctype": "Call Log", "attached_to_name": doc.name,
-            "is_private": 1, "content": content,
-        }).insert(ignore_permissions=True)
-        doc.db_set("audio_file", fdoc.file_url)
+        fname = f"wa-call-{call_id[:18]}.ogg"
+        # 1. audio su StorageBox (box autoritativo, non riempie il disco del bench)
+        box_dir = frappe.conf.get("call_recordings_box", "/mnt/thanatos-box/call-recordings")
+        file_url = f"/private/files/{fname}"
+        try:
+            os.makedirs(box_dir, exist_ok=True)
+            box_path = os.path.join(box_dir, fname)
+            with open(box_path, "wb") as f:
+                f.write(content)
+            # 2. symlink nel private/files del sito → StorageBox (Frappe serve seguendo il link)
+            link_path = frappe.get_site_path("private", "files", fname)
+            if os.path.islink(link_path) or os.path.exists(link_path):
+                os.remove(link_path)
+            os.symlink(box_path, link_path)
+            fdoc = frappe.get_doc({
+                "doctype": "File", "file_name": fname, "file_url": file_url,
+                "attached_to_doctype": "Call Log", "attached_to_name": doc.name,
+                "is_private": 1,
+            }).insert(ignore_permissions=True)
+        except Exception:
+            # fallback: salva nel filesystem del bench se il box non è disponibile
+            frappe.log_error(frappe.get_traceback(), "call rec box save")
+            fdoc = frappe.get_doc({
+                "doctype": "File", "file_name": fname,
+                "attached_to_doctype": "Call Log", "attached_to_name": doc.name,
+                "is_private": 1, "content": content,
+            }).insert(ignore_permissions=True)
+            file_url = fdoc.file_url
+        doc.db_set("audio_file", file_url)
         doc.db_set("transcription_status", "In elaborazione")
         frappe.db.commit()
         # trascrizione con diarizzazione (Whisper locale)
