@@ -11,6 +11,12 @@ website_redirects=[
 	{"source": r"/me", "target": "/account"},
 	{"source": r"/update-profile", "target": "/modifica-profilo"},
 	{"source": r"/sicurezza", "target": "/sicurezza-account"},
+	{"source": r"/piani", "target": "/pricing"},
+	{"source": r"/newsroom", "target": "/news"},
+	{"source": r"/blacklist", "target": "/verifica-blacklist"},
+	{"source": r"/chi-siamo", "target": "/about"},
+	{"source": r"/portale", "target": "/portal"},
+	{"source": r"/accedi", "target": "/login"},
 ]
 app_title='Thanatos Intel'
 app_version='0.1.0'
