@@ -1,0 +1,92 @@
+{
+  "doctype": "DocType",
+  "name": "Voiceprint",
+  "module": "Thanatos Core",
+  "autoname": "format:VP-{#####}",
+  "naming_rule": "Expression",
+  "title_field": "label",
+  "search_fields": "label,linked_contact",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "label",
+      "fieldtype": "Data",
+      "label": "Nome voce (es: Mario Rossi / Operatore Michele)",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "person_type",
+      "fieldtype": "Select",
+      "label": "Tipo",
+      "options": "Contatto\nOperatore\nAltro",
+      "default": "Contatto",
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "cb_links",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "linked_contact",
+      "fieldtype": "Link",
+      "label": "Contatto rubrica",
+      "options": "Intelligence Contact",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "linked_user",
+      "fieldtype": "Link",
+      "label": "Operatore",
+      "options": "User"
+    },
+    {
+      "fieldname": "sb_voice",
+      "fieldtype": "Section Break",
+      "label": "Impronta vocale"
+    },
+    {
+      "fieldname": "sample_count",
+      "fieldtype": "Int",
+      "label": "Campioni acquisiti",
+      "default": "1",
+      "read_only": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "source_call",
+      "fieldtype": "Link",
+      "label": "Estratta dalla chiamata",
+      "options": "Call Log"
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Attiva (usa per riconoscimento)",
+      "default": "1"
+    },
+    {
+      "fieldname": "embedding",
+      "fieldtype": "Long Text",
+      "label": "Embedding (JSON)",
+      "hidden": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Small Text",
+      "label": "Note"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1, "write": 1, "create": 1, "report": 1
+    }
+  ]
+}

@@ -19,6 +19,7 @@ frappe.ui.form.on("Call Log", {
 
             if (st === "Completato") {
                 frm.add_custom_button(__("Rigenera vista"), () => refreshTranscript(frm));
+                frm.add_custom_button(__("🎙️ Identifica voci"), () => identifyVoices(frm));
             }
         }
     },
@@ -26,6 +27,70 @@ frappe.ui.form.on("Call Log", {
     speaker_a_label(frm) { refreshTranscript(frm); },
     speaker_b_label(frm) { refreshTranscript(frm); },
 });
+
+function identifyVoices(frm) {
+    frappe.call({
+        method: "get_speakers", doc: frm.doc,
+        callback(r) {
+            const speakers = r.message?.speakers || [];
+            if (!speakers.length) {
+                frappe.msgprint(__("Nessuna impronta vocale disponibile (diarizzazione non eseguita)."));
+                return;
+            }
+            const fields = [];
+            speakers.forEach(s => {
+                fields.push({
+                    fieldtype: "Section Break",
+                    label: __("Voce {0}{1}", [s.speaker, s.label ? ` — attuale: ${s.label}` : ""]),
+                });
+                fields.push({
+                    fieldname: `name_${s.speaker}`, fieldtype: "Data",
+                    label: __("Nome / etichetta"), default: s.label || "",
+                });
+                fields.push({
+                    fieldname: `type_${s.speaker}`, fieldtype: "Select",
+                    label: __("Tipo"), options: "Contatto\nOperatore\nAltro", default: "Contatto",
+                });
+                fields.push({
+                    fieldname: `contact_${s.speaker}`, fieldtype: "Link",
+                    label: __("Contatto rubrica"), options: "Intelligence Contact",
+                    depends_on: `eval:doc.type_${s.speaker}=='Contatto'`,
+                });
+                fields.push({
+                    fieldname: `user_${s.speaker}`, fieldtype: "Link",
+                    label: __("Operatore"), options: "User",
+                    depends_on: `eval:doc.type_${s.speaker}=='Operatore'`,
+                });
+            });
+            const d = new frappe.ui.Dialog({
+                title: __("Identifica le voci (crea impronte)"),
+                fields,
+                primary_action_label: __("Salva impronte"),
+                primary_action(vals) {
+                    const tasks = speakers.filter(s => vals[`name_${s.speaker}`]).map(s =>
+                        new Promise((resolve) => {
+                            frappe.call({
+                                method: "enroll_voice", doc: frm.doc,
+                                args: {
+                                    speaker: s.speaker, label: vals[`name_${s.speaker}`],
+                                    person_type: vals[`type_${s.speaker}`],
+                                    contact: vals[`contact_${s.speaker}`] || null,
+                                    user: vals[`user_${s.speaker}`] || null,
+                                },
+                                callback: () => resolve(),
+                            });
+                        }));
+                    Promise.all(tasks).then(() => {
+                        d.hide();
+                        frappe.show_alert({ message: __("Impronte salvate! Le prossime chiamate riconosceranno queste voci."), indicator: "green" });
+                        frm.reload_doc();
+                    });
+                },
+            });
+            d.show();
+        },
+    });
+}
 
 function startTranscription(frm) {
     if (!frm.doc.audio_file && !frm.doc.recording_url) {

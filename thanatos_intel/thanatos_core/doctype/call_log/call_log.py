@@ -48,3 +48,31 @@ class CallLog(frappe.model.document.Document):
             speaker_b=self.speaker_b_label or "",
         )
         return {"html": html, "status": "Completato"}
+
+    @frappe.whitelist()
+    def get_speakers(self) -> dict:
+        """Voci presenti nella trascrizione + se hanno un'impronta disponibile."""
+        emb = json.loads(self.speaker_embeddings or "{}")
+        labels = {"A": self.speaker_a_label, "B": self.speaker_b_label}
+        out = []
+        for spk in sorted(emb.keys()):
+            out.append({"speaker": spk, "label": labels.get(spk, ""),
+                        "has_embedding": bool(emb.get(spk))})
+        return {"speakers": out}
+
+    @frappe.whitelist()
+    def enroll_voice(self, speaker, label, person_type="Contatto",
+                     contact=None, user=None) -> dict:
+        """Etichetta una voce: salva l'impronta nel DB Voiceprint e applica il nome."""
+        emb = json.loads(self.speaker_embeddings or "{}")
+        vec = emb.get(speaker)
+        if not vec:
+            frappe.throw(frappe._("Nessuna impronta vocale per {0}").format(speaker))
+        from thanatos_intel.thanatos_core.doctype.voiceprint.voiceprint import enroll
+        vp = enroll(label=label, embedding=vec, person_type=person_type,
+                    linked_contact=contact, linked_user=user, source_call=self.name)
+        field = {"A": "speaker_a_label", "B": "speaker_b_label"}.get(speaker)
+        if field:
+            self.db_set(field, label)
+        frappe.db.commit()
+        return {"ok": True, "voiceprint": vp}

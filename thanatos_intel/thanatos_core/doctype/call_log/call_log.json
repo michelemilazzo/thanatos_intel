@@ -195,6 +195,13 @@
       "read_only": 1
     },
     {
+      "fieldname": "speaker_embeddings",
+      "fieldtype": "Long Text",
+      "label": "Impronte vocali (JSON)",
+      "hidden": 1,
+      "read_only": 1
+    },
+    {
       "fieldname": "transcript_text",
       "fieldtype": "Text Editor",
       "label": "Testo completo trascrizione",

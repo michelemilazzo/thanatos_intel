@@ -124,11 +124,35 @@ def _transcribe_whisper_local(doc):
     if not segments and full_text:
         segments = [{"speaker": "A", "start_ms": 0, "end_ms": 0, "text": full_text}]
 
+    spk_embeds = data.get("speaker_embeddings") or {}
+    doc.db_set("speaker_embeddings", json.dumps(spk_embeds))
     doc.db_set("transcript_raw", json.dumps(segments))
     doc.db_set("transcript_text", full_text)
     doc.db_set("transcription_status", "Completato")
     frappe.db.commit()
+
+    # identificazione automatica voci dal DB Voiceprint
+    try:
+        _identify_speakers(doc, spk_embeds)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"identify speakers {doc.name}")
+
     _notify_done(doc)
+
+
+def _identify_speakers(doc, spk_embeds):
+    """Confronta le impronte delle voci col DB Voiceprint e popola speaker_a/b_label."""
+    if not spk_embeds:
+        return
+    from thanatos_intel.thanatos_core.doctype.voiceprint.voiceprint import identify
+    label_field = {"A": "speaker_a_label", "B": "speaker_b_label"}
+    for spk, emb in spk_embeds.items():
+        if not emb:
+            continue
+        label, contact, score = identify(emb)
+        if label and spk in label_field:
+            doc.db_set(label_field[spk], label)
+    frappe.db.commit()
 
 
 # ─── AssemblyAI ──────────────────────────────────────────────────────────────
