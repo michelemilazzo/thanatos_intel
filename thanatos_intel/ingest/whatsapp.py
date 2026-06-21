@@ -170,6 +170,11 @@ def webhook():
                     wa_number = rec
         messages = _parse_twilio(data)
 
+    # Gestisce eventi chiamata WhatsApp (field "calls")
+    if "json" in (req.content_type or "") and _has_call_events(data):
+        _handle_call_events(data, wa_number)
+        return {"ok": True, "type": "call_event"}
+
     # Gestisce status update (Meta: statuses array invece di messages)
     if "json" in (req.content_type or "") and not messages:
         _handle_status_updates(data)
@@ -207,6 +212,52 @@ def webhook():
                 )
 
     return {"created": created, "count": len(created)}
+
+
+def _has_call_events(data: dict) -> bool:
+    for entry in data.get("entry", []):
+        for change in entry.get("changes", []):
+            if change.get("field") == "calls" or change.get("value", {}).get("calls"):
+                return True
+    return False
+
+
+def _handle_call_events(data: dict, wa_number: dict | None):
+    """Riceve gli eventi chiamata WhatsApp → crea Call Log + notifica operatore.
+
+    NB: l'audio della chiamata richiede un media server WebRTC (non gestito qui).
+    Questo handler registra l'evento (chiamata persa/ricevuta) per tracciabilità.
+    """
+    from thanatos_intel.ingest.intel_notifications import _notify
+    for entry in data.get("entry", []):
+        for change in entry.get("changes", []):
+            for call in change.get("value", {}).get("calls", []):
+                frm = call.get("from", "")
+                status = call.get("status", "") or call.get("event", "")
+                call_id = call.get("id", "")
+                contact = frappe.db.get_value(
+                    "Intelligence Contact", {"phone": frm}, "name") or \
+                    frappe.db.get_value("Intelligence Contact", {"whatsapp": frm}, "name")
+                try:
+                    doc = frappe.get_doc({
+                        "doctype": "Call Log",
+                        "called_at": frappe.utils.now_datetime(),
+                        "direction": "Entrante",
+                        "outcome": "Risposta" if status in ("connected", "accepted") else "Non risposto",
+                        "caller_number": frm,
+                        "linked_contact": contact,
+                        "summary": f"Chiamata WhatsApp ({status}) · id {call_id}",
+                    }).insert(ignore_permissions=True)
+                    frappe.db.commit()
+                except Exception:
+                    frappe.log_error(frappe.get_traceback(), "WA call event")
+                    continue
+                assignee = (wa_number.auto_assign_to if wa_number else None) or "Administrator"
+                try:
+                    _notify(assignee, "📞 Chiamata WhatsApp",
+                            f"Chiamata da {frm} ({status})", doc.name, "blue")
+                except Exception:
+                    pass
 
 
 def _handle_status_updates(data: dict):
