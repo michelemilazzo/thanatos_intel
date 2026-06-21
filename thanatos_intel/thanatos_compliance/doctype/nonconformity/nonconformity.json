@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "CAPA-.#####",
+ "creation": "2026-06-22 01:50:42.176169",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "source",
+  "status",
+  "owner_user",
+  "due",
+  "cb1",
+  "iso_clause",
+  "sb1",
+  "description",
+  "root_cause",
+  "correction",
+  "corrective_action",
+  "effectiveness"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Non conformit\u00e0",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Origine",
+   "options": "Audit interno\nIncidente\nReclamo cliente\nRiesame direzione\nProcesso\nAltro"
+  },
+  {
+   "default": "Aperta",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stato",
+   "options": "Aperta\nIn corso\nVerifica efficacia\nChiusa"
+  },
+  {
+   "fieldname": "owner_user",
+   "fieldtype": "Link",
+   "label": "Responsabile",
+   "options": "User"
+  },
+  {
+   "fieldname": "due",
+   "fieldtype": "Date",
+   "label": "Scadenza"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "iso_clause",
+   "fieldtype": "Data",
+   "label": "Clausola"
+  },
+  {
+   "fieldname": "sb1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Descrizione"
+  },
+  {
+   "fieldname": "root_cause",
+   "fieldtype": "Text",
+   "label": "Analisi causa"
+  },
+  {
+   "fieldname": "correction",
+   "fieldtype": "Text",
+   "label": "Correzione (immediata)"
+  },
+  {
+   "fieldname": "corrective_action",
+   "fieldtype": "Text",
+   "label": "Azione correttiva"
+  },
+  {
+   "fieldname": "effectiveness",
+   "fieldtype": "Small Text",
+   "label": "Verifica efficacia"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 01:50:42.176169",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "Nonconformity",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

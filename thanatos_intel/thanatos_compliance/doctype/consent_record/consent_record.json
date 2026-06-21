@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "CONS-.#####",
+ "creation": "2026-06-22 01:50:42.294472",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "data_subject",
+  "email",
+  "purpose",
+  "legal_basis",
+  "cb1",
+  "given_on",
+  "withdrawn_on",
+  "channel",
+  "client",
+  "evidence"
+ ],
+ "fields": [
+  {
+   "fieldname": "data_subject",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Interessato",
+   "reqd": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Email"
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Small Text",
+   "label": "Finalit\u00e0"
+  },
+  {
+   "default": "Consenso",
+   "fieldname": "legal_basis",
+   "fieldtype": "Select",
+   "label": "Base giuridica",
+   "options": "Consenso\nContratto\nObbligo legale\nInteresse legittimo"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "given_on",
+   "fieldtype": "Datetime",
+   "label": "Prestato il"
+  },
+  {
+   "fieldname": "withdrawn_on",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Revocato il"
+  },
+  {
+   "fieldname": "channel",
+   "fieldtype": "Data",
+   "label": "Canale"
+  },
+  {
+   "fieldname": "client",
+   "fieldtype": "Link",
+   "label": "Cliente",
+   "options": "Investigation Client"
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Attach",
+   "label": "Evidenza"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 01:50:42.294472",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "Consent Record",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "data_subject",
+ "track_changes": 1
+}

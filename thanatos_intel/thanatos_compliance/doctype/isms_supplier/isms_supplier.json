@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "TSUP-.#####",
+ "creation": "2026-06-22 01:50:42.511710",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "supplier_name",
+  "service",
+  "criticality",
+  "is_foreign",
+  "cb1",
+  "dpa_signed",
+  "dpa_ref",
+  "security_review_date",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Fornitore",
+   "reqd": 1
+  },
+  {
+   "fieldname": "service",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Servizio"
+  },
+  {
+   "default": "Media",
+   "fieldname": "criticality",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Criticit\u00e0",
+   "options": "Bassa\nMedia\nAlta"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_foreign",
+   "fieldtype": "Check",
+   "label": "Extra-UE"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "dpa_signed",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "DPA firmato"
+  },
+  {
+   "fieldname": "dpa_ref",
+   "fieldtype": "Data",
+   "label": "Rif. DPA"
+  },
+  {
+   "fieldname": "security_review_date",
+   "fieldtype": "Date",
+   "label": "Ultima review sicurezza"
+  },
+  {
+   "default": "Attivo",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Stato",
+   "options": "Attivo\nIn revisione\nCessato"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 01:50:42.511710",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "ISMS Supplier",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "supplier_name",
+ "track_changes": 1
+}

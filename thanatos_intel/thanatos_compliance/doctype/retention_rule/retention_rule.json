@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "RETEN-.#####",
+ "creation": "2026-06-22 01:50:42.399422",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "record_type",
+  "retention_period",
+  "action",
+  "cb1",
+  "legal_basis",
+  "active",
+  "sb1",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "record_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Tipo di dato/record",
+   "reqd": 1
+  },
+  {
+   "fieldname": "retention_period",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Periodo di conservazione"
+  },
+  {
+   "default": "Cancella",
+   "fieldname": "action",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Azione a scadenza",
+   "options": "Cancella\nAnonimizza\nArchivia"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "legal_basis",
+   "fieldtype": "Data",
+   "label": "Base / motivazione"
+  },
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Attiva"
+  },
+  {
+   "fieldname": "sb1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Note"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 01:50:42.399422",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "Retention Rule",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "record_type",
+ "track_changes": 1
+}

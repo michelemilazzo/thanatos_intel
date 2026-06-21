@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "SECINC-.#####",
+ "creation": "2026-06-22 01:50:41.692428",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "detected_on",
+  "severity",
+  "category",
+  "status",
+  "breach_notifiable",
+  "cb1",
+  "reported_by",
+  "affected_assets",
+  "sb1",
+  "description",
+  "containment",
+  "root_cause"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Incidente",
+   "reqd": 1
+  },
+  {
+   "fieldname": "detected_on",
+   "fieldtype": "Datetime",
+   "label": "Rilevato il"
+  },
+  {
+   "default": "Media",
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Gravit\u00e0",
+   "options": "Bassa\nMedia\nAlta\nCritica"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Categoria",
+   "options": "Data Breach\nAccesso non autorizzato\nMalware\nPhishing\nPerdita dispositivo\nDisponibilit\u00e0\nAltro"
+  },
+  {
+   "default": "Aperto",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stato",
+   "options": "Aperto\nIn gestione\nContenuto\nChiuso"
+  },
+  {
+   "default": "0",
+   "fieldname": "breach_notifiable",
+   "fieldtype": "Check",
+   "label": "Notificabile (GDPR 72h)"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reported_by",
+   "fieldtype": "Link",
+   "label": "Segnalato da",
+   "options": "User"
+  },
+  {
+   "fieldname": "affected_assets",
+   "fieldtype": "Small Text",
+   "label": "Asset coinvolti"
+  },
+  {
+   "fieldname": "sb1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text",
+   "label": "Descrizione"
+  },
+  {
+   "fieldname": "containment",
+   "fieldtype": "Text",
+   "label": "Contenimento"
+  },
+  {
+   "fieldname": "root_cause",
+   "fieldtype": "Text",
+   "label": "Causa radice"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 01:50:41.692428",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "Security Incident",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}
