@@ -233,7 +233,7 @@ def _handle_call_events(data: dict, wa_number: dict | None):
         for change in entry.get("changes", []):
             for call in change.get("value", {}).get("calls", []):
                 frm = call.get("from", "")
-                status = call.get("status", "") or call.get("event", "")
+                status = call.get("event", "") or call.get("status", "")
                 call_id = call.get("id", "")
                 contact = frappe.db.get_value(
                     "Intelligence Contact", {"phone": frm}, "name") or \
@@ -243,7 +243,7 @@ def _handle_call_events(data: dict, wa_number: dict | None):
                         "doctype": "Call Log",
                         "called_at": frappe.utils.now_datetime(),
                         "direction": "Entrante",
-                        "outcome": "Risposta" if status in ("connected", "accepted") else "Non risposto",
+                        "outcome": "Risposta" if status in ("connect", "connected", "accepted") else "Non risposto",
                         "caller_number": frm,
                         "linked_contact": contact,
                         "summary": f"Chiamata WhatsApp ({status}) · id {call_id}",
