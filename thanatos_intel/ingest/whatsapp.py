@@ -14,6 +14,7 @@ Configurazione site_config.json (fallback globale):
   whatsapp_ingest_token   — token globale quando number_id non specificato
 """
 import frappe
+from frappe.utils.password import get_decrypted_password
 
 
 def _load_number(number_id: str) -> dict | None:
@@ -33,7 +34,7 @@ def _load_number(number_id: str) -> dict | None:
 def _check_token(token: str, wa_number: dict | None) -> bool:
     """Valida il token: prima controlla il numero specifico, poi il token globale."""
     if wa_number:
-        expected = frappe.utils.password.get_decrypted_password(
+        expected = get_decrypted_password(
             "WhatsApp Number", wa_number.phone_number, "webhook_token"
         ) if wa_number.webhook_token else None
         if expected:

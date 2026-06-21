@@ -6,6 +6,7 @@ Logga ogni messaggio nella child table Intel Lead Message.
 import frappe
 from frappe import _
 from frappe.utils import now_datetime
+from frappe.utils.password import get_decrypted_password
 
 
 @frappe.whitelist()
@@ -57,7 +58,7 @@ def send_reply(lead_name: str, message_text: str) -> dict:
 
 def _send_via_meta(wa_doc, to_number: str, text: str) -> dict:
     phone_number_id = wa_doc.meta_phone_number_id
-    access_token = frappe.utils.password.get_decrypted_password(
+    access_token = get_decrypted_password(
         "WhatsApp Number", wa_doc.name, "meta_access_token"
     )
     if not phone_number_id or not access_token:
@@ -85,7 +86,7 @@ def _send_via_meta(wa_doc, to_number: str, text: str) -> dict:
 
 def _send_via_twilio(wa_doc, to_number: str, text: str) -> dict:
     account_sid = wa_doc.twilio_account_sid
-    auth_token = frappe.utils.password.get_decrypted_password(
+    auth_token = get_decrypted_password(
         "WhatsApp Number", wa_doc.name, "twilio_auth_token"
     )
     from_number = wa_doc.phone_number
