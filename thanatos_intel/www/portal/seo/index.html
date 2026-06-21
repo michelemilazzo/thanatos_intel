@@ -1,0 +1,86 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import portal_nav, thanatos_footer %}
+{% block title %}{{ title }}{% endblock %}
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2742;--ok:#6aa66a;}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:880px;margin:0 auto;padding:36px 24px 70px}
+h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 4px}
+.sub{color:var(--grey);font-size:13px;margin:0 0 24px;max-width:620px;line-height:1.6}
+.box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:20px}
+.box h2{font-family:Georgia,serif;font-weight:400;font-size:16px;color:#fff;letter-spacing:1px;margin:0 0 14px;text-transform:uppercase}
+.frm{display:flex;gap:10px;flex-wrap:wrap}
+.frm input{flex:1;min-width:200px;background:#0A0E1A;border:1px solid var(--border);border-radius:6px;color:#E8E9F0;font-size:14px;padding:11px 13px}
+.frm input:focus{outline:none;border-color:var(--gold)}
+.btn{background:var(--gold);color:#0A0E1A;border:none;border-radius:6px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;padding:11px 18px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#B8975A}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--gold);border:1px solid rgba(200,169,110,.45)}
+.btn.ghost:hover{background:rgba(200,169,110,.1)}
+.msg{font-size:13px;margin-top:10px;min-height:16px}.msg.ok{color:var(--ok)}.msg.err{color:#d05a5a}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:#0A0E1A;border:1px solid var(--border);border-radius:999px;padding:6px 10px 6px 12px;font-size:13px}
+.chip.off{opacity:.45}
+.chip .o{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--grey)}
+.chip .o.news{color:var(--gold)}
+.chip button{background:none;border:none;color:var(--grey);cursor:pointer;font-size:13px;padding:0 2px}
+.chip button:hover{color:#fff}
+.empty{color:var(--grey);font-size:13px}
+.count{color:var(--grey);font-size:12px;margin-left:6px}
+</style>
+{% endblock %}
+{% block content %}
+{{ portal_nav('seo') }}
+<div class="shell">
+  <h1>SEO &amp; parole chiave</h1>
+  <p class="sub">Le parole chiave attive vengono inserite nei meta tag delle pagine pubbliche (e usate per attrarre traffico). Aggiungine di generiche e genera le altre automaticamente dalle news.</p>
+
+  <div class="box">
+    <h2>Aggiungi parola chiave</h2>
+    <div class="frm">
+      <input id="kw" type="text" placeholder="es. due diligence aziendale, recupero crediti, antifrode…">
+      <button class="btn" id="addbtn" type="button">Aggiungi</button>
+      <button class="btn ghost" id="genbtn" type="button">Genera dalle news</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="box">
+    <h2>Parole chiave attive <span class="count">{{ n_active }} attive · {{ keywords|length }} totali</span></h2>
+    <div class="chips" id="chips">
+      {% for k in keywords %}
+      <span class="chip {{ '' if k.is_active else 'off' }}" data-name="{{ k.name }}">
+        <span>{{ k.keyword }}</span>
+        <span class="o {{ 'news' if k.origin=='News' else '' }}">{{ 'news' if k.origin=='News' else 'man' }}</span>
+        <button title="Attiva/disattiva" onclick="tog(this)" data-a="{{ 0 if k.is_active else 1 }}">{{ '◉' if k.is_active else '○' }}</button>
+        <button title="Elimina" onclick="del(this)">✕</button>
+      </span>
+      {% else %}<div class="empty">Nessuna parola chiave. Aggiungine una o genera dalle news.</div>{% endfor %}
+    </div>
+  </div>
+</div>
+{{ thanatos_footer() }}
+<script>
+frappe.ready(function(){
+  frappe.csrf_token = "{{ csrf_token }}";
+  var msg=document.getElementById('msg');
+  function ok(t){msg.className='msg ok';msg.textContent=t;}
+  function err(t){msg.className='msg err';msg.textContent=t;}
+  document.getElementById('addbtn').addEventListener('click',function(){
+    var k=document.getElementById('kw').value.trim(); if(!k){err('Inserisci una parola chiave.');return;}
+    this.disabled=true; var b=this;
+    frappe.call({method:'thanatos_intel.analytics.add_keyword',args:{keyword:k},
+      callback:function(r){b.disabled=false; if(r.message&&r.message.ok){ok('Aggiunta.');setTimeout(function(){location.reload();},700);}else err('Errore.');},
+      error:function(){b.disabled=false;err('Errore.');}});
+  });
+  document.getElementById('genbtn').addEventListener('click',function(){
+    var b=this;b.disabled=true;ok('Generazione dalle news…');
+    frappe.call({method:'thanatos_intel.analytics.extract_from_news',
+      callback:function(r){b.disabled=false; if(r.message&&r.message.ok){ok((r.message.created||0)+' parole chiave generate.');setTimeout(function(){location.reload();},900);}else err('Errore.');},
+      error:function(){b.disabled=false;err('Errore.');}});
+  });
+  window.tog=function(el){var c=el.closest('.chip');frappe.call({method:'thanatos_intel.analytics.toggle_keyword',args:{name:c.dataset.name,active:el.dataset.a},callback:function(){location.reload();}});};
+  window.del=function(el){var c=el.closest('.chip');if(!confirm('Eliminare questa parola chiave?'))return;frappe.call({method:'thanatos_intel.analytics.delete_keyword',args:{name:c.dataset.name},callback:function(){location.reload();}});};
+});
+</script>
+{% endblock %}

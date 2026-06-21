@@ -1,0 +1,30 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-06-21 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["query", "kind", "results_count", "cb", "visitor_id", "user", "ref_path"],
+ "fields": [
+  {"fieldname": "query", "fieldtype": "Data", "label": "Query", "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "kind", "fieldtype": "Select", "label": "Kind", "options": "Site\nBlacklist\nNews\nOSINT", "default": "Site", "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "results_count", "fieldtype": "Int", "label": "Results", "in_list_view": 1},
+  {"fieldname": "cb", "fieldtype": "Column Break"},
+  {"fieldname": "visitor_id", "fieldtype": "Data", "label": "Visitor"},
+  {"fieldname": "user", "fieldtype": "Data", "label": "User"},
+  {"fieldname": "ref_path", "fieldtype": "Data", "label": "Path"}
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-06-21 00:00:00",
+ "module": "Thanatos Core",
+ "name": "Search Log",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+  {"read": 1, "report": 1, "role": "Investigation Manager"}
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 0
+}

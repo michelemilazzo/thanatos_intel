@@ -1,0 +1,84 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import portal_nav, thanatos_footer %}
+{% block title %}{{ title }}{% endblock %}
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2742;}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1080px;margin:0 auto;padding:36px 24px 70px}
+h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 4px}
+.sub{color:var(--grey);font-size:13px;margin:0 0 26px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:30px}
+@media(max-width:780px){.cards{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px}
+.card .v{font-family:Georgia,serif;font-size:30px;color:var(--gold);line-height:1}
+.card .l{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;margin-top:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:780px){.grid2{grid-template-columns:1fr}}
+.box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:22px}
+.box h2{font-family:Georgia,serif;font-weight:400;font-size:16px;color:#fff;letter-spacing:1px;margin:0 0 14px;text-transform:uppercase}
+.row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.row:last-child{border-bottom:none}
+.row .k{flex:1;color:#E8E9F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .n{color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:var(--border);overflow:hidden;flex:0 0 90px}
+.bar > i{display:block;height:100%;background:var(--gold)}
+.tag{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);border:1px solid var(--border);border-radius:999px;padding:1px 7px}
+.spark{display:flex;align-items:flex-end;gap:3px;height:90px;margin-top:6px}
+.spark > i{flex:1;background:var(--gold);opacity:.8;border-radius:2px 2px 0 0;min-height:2px}
+.empty{color:var(--grey);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--grey);padding:7px 8px;border-bottom:1px solid var(--border)}
+td{padding:8px;border-bottom:1px solid var(--border)}
+</style>
+{% endblock %}
+{% block content %}
+{{ portal_nav('stats') }}
+{% set s = s %}
+{% macro barlist(rows, kf, cf) %}
+  {% set mx = (rows|map(attribute=cf)|max) if rows else 1 %}
+  {% for r in rows %}
+  <div class="row"><span class="k">{{ r[kf] or '—' }}</span>
+    <span class="bar"><i style="width:{{ (100 * r[cf] / (mx or 1))|round(0,'floor') }}%"></i></span>
+    <span class="n">{{ r[cf] }}</span></div>
+  {% else %}<div class="empty">Nessun dato.</div>{% endfor %}
+{% endmacro %}
+<div class="shell">
+  <h1>Statistiche</h1>
+  <p class="sub">Traffico del sito e ricerche degli utenti · ultimi 30 giorni</p>
+
+  <div class="cards">
+    <div class="card"><div class="v">{{ s.visitors }}</div><div class="l">Visitatori unici</div></div>
+    <div class="card"><div class="v">{{ s.views }}</div><div class="l">Visite (pagine)</div></div>
+    <div class="card"><div class="v">{{ s.views_today }}</div><div class="l">Visite oggi</div></div>
+    <div class="card"><div class="v">{{ s.searches_total }}</div><div class="l">Ricerche</div></div>
+  </div>
+
+  <div class="box">
+    <h2>Andamento visite</h2>
+    {% if s.by_day %}
+    {% set dmax = (s.by_day|map(attribute='c')|max) %}
+    <div class="spark">{% for d in s.by_day %}<i title="{{ d.d }}: {{ d.c }}" style="height:{{ (100 * d.c / (dmax or 1))|round(0,'floor') }}%"></i>{% endfor %}</div>
+    {% else %}<div class="empty">Nessun dato.</div>{% endif %}
+  </div>
+
+  <div class="grid2">
+    <div class="box"><h2>Da dove arrivano (sorgente)</h2>{{ barlist(s.sources, 's', 'c') }}</div>
+    <div class="box"><h2>Referrer</h2>{{ barlist(s.referrers, 'referrer', 'c') }}</div>
+    <div class="box"><h2>Fuso orario (geo)</h2>{{ barlist(s.geo, 'tz', 'c') }}</div>
+    <div class="box"><h2>Browser</h2>{{ barlist(s.browsers, 'b', 'c') }}</div>
+  </div>
+
+  <div class="box"><h2>Pagine più viste</h2>{{ barlist(s.top_pages, 'path', 'c') }}</div>
+
+  <div class="box">
+    <h2>Parole chiave cercate</h2>
+    {% if s.searches %}
+    <table><thead><tr><th>Query</th><th>Tipo</th><th>Volte</th></tr></thead><tbody>
+    {% for r in s.searches %}<tr><td>{{ r.query }}</td><td><span class="tag">{{ r.kind }}</span></td><td class="n">{{ r.c }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% else %}<div class="empty">Ancora nessuna ricerca registrata. Le ricerche su blacklist e news verranno tracciate qui.</div>{% endif %}
+  </div>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}

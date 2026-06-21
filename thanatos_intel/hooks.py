@@ -254,5 +254,6 @@ jinja={
    'thanatos_intel.utils.jinja_helpers.user_roles',
    'thanatos_intel.utils.jinja_helpers.portal_user',
    'thanatos_intel.utils.seo.gsc_code',
+   'thanatos_intel.analytics.seo_keywords',
  ],
 }

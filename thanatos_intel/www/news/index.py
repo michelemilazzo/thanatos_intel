@@ -44,6 +44,12 @@ def get_context(context):
 	context.has_next = total > page * per
 	context.has_prev = page > 1
 	context.q = q
+	if q:
+		try:
+			from thanatos_intel.analytics import log_search
+			log_search(q, "News", total)
+		except Exception:
+			pass
 	context.cat = cat
 	context.categories = []
 	if _has("News Category"):

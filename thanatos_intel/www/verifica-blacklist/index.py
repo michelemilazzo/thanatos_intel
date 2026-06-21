@@ -42,6 +42,11 @@ def public_check(entry_value, entry_type=None):
         fields=["entry_type", "risk_level", "source", "verified", "occurrences", "last_seen"],
         limit=5,
     )
+    try:
+        from thanatos_intel.analytics import log_search
+        log_search(entry_value, "Blacklist", len(rows))
+    except Exception:
+        pass
     if not rows:
         return {"ok": True, "found": False, "value": entry_value}
     order = {"Critical": 3, "High": 2, "Medium": 1}

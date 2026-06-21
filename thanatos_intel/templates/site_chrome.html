@@ -199,6 +199,8 @@
       {% if _is_op %}
       <div class="sep"></div>
       <a href="/portal/ops" class="{{ 'act' if active=='ops' else '' }}">Centro Operativo</a>
+      <a href="/portal/stats" class="{{ 'act' if active=='stats' else '' }}">Statistiche</a>
+      <a href="/portal/seo" class="{{ 'act' if active=='seo' else '' }}">SEO</a>
       <a href="/drive" class="{{ 'act' if active=='drive' else '' }}">Drive</a>
       <a href="/crm" class="{{ 'act' if active=='crm' else '' }}">CRM</a>
       <a href="/support" class="{{ 'act' if active=='support' else '' }}">Helpdesk</a>
@@ -301,6 +303,7 @@
 <meta name="description" content="{{ description }}"/>
 <meta name="robots" content="index, follow, max-image-preview:large"/>
 <meta name="author" content="Thanatos Investigazioni"/>
+{% set _seokw = seo_keywords() %}{% if _seokw %}<meta name="keywords" content="{{ _seokw|join(', ') }}"/>{% endif %}
 <meta property="og:site_name" content="Thanatos Intel"/>
 <meta property="og:locale" content="it_IT"/>
 <meta property="og:type" content="{{ type }}"/>

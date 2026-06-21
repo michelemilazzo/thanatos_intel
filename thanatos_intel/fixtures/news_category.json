@@ -109,11 +109,11 @@
   "color": "#7A8294",
   "description": "Cronaca e attualità generale, non specifica dei servizi Thanatos.",
   "display_order": 99,
-  "docstatus": "",
+  "docstatus": 0,
   "doctype": "News Category",
   "icon": "fa-newspaper-o",
   "is_active": 1,
-  "modified": "",
+  "modified": "2026-06-21 00:00:00",
   "name": "generale-cronaca"
  }
 ]
