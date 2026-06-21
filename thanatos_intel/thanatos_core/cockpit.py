@@ -180,3 +180,51 @@ def get_cockpit_data():
         "casi_per_stato": casi_per_stato,
         "flow": flow,
     }
+
+
+@frappe.whitelist()
+def ai_brief():
+    """Intel AI: priorita' operative di oggi via gateway MMOS AI. On-demand."""
+    from thanatos_intel.ai.doc_ingest import _gateway
+    from thanatos_intel.workflow.ai_concierge import _resp_text
+    today = getdate(nowdate())
+    open_cases = _all("Investigation Case",
+                      filters={"status": ["in", ["Open", "In Progress", "Review"]]},
+                      fields=["name", "case_title", "priority", "modified", "client"],
+                      order_by="modified asc", limit=40)
+    stalled = [c for c in open_cases if str(c.modified) < str(add_days(today, -5))]
+    leads = _all("Intel Lead", filters={"status": "Nuovo"},
+                 fields=["source_type", "content"], limit=10)
+    appts = _all("Investigation Appointment",
+                 filters={"appointment_date": str(today), "status": ["!=", "Annullato"]},
+                 fields=["title", "appointment_type"], limit=10)
+    blocked = _count("Case Step Instance", {"parenttype": "Investigation Case", "status": "Blocked"})
+    lines = [f"Casi aperti: {len(open_cases)} (fermi 5+ giorni: {len(stalled)}). "
+             f"Lead nuovi: {len(leads)}. Step bloccati: {blocked}. Appuntamenti oggi: {len(appts)}."]
+    if stalled:
+        lines.append("Casi fermi: " + "; ".join((c.case_title or c.name) + f" [{c.priority or 'Normal'}]"
+                                                 for c in stalled[:8]))
+    if leads:
+        lines.append("Lead da valutare: " + "; ".join((l.source_type or "") + ": " + ((l.content or "")[:60])
+                                                       for l in leads[:6]))
+    if appts:
+        lines.append("Oggi in agenda: " + "; ".join((a.title or a.appointment_type or "") for a in appts))
+    msg = "Stato operativo di oggi:\n" + "\n".join(lines) + \
+          "\n\nElenca le 3-5 priorita' della giornata, in ordine."
+    sys = ("Sei Intel, il capo-analista di Thanatos Intel. Dato lo stato operativo, elenca le 3-5 "
+           "priorita' della giornata in italiano, ognuna su una riga come '- <azione concreta> -> <perche'>'. "
+           "Conciso, concreto, niente preamboli.")
+    resp = _gateway(msg, system=sys, task_type="chat")
+    text = _resp_text(resp)
+    if not text:
+        return {"ok": False, "error": "Intel AI non raggiungibile al momento."}
+    try:
+        usage = (resp or {}).get("usage") or {}
+        if usage.get("tokens_in") or usage.get("tokens_out"):
+            from thanatos_intel.billing.ai_meter import record_usage
+            record_usage(client=None, model=(resp or {}).get("model", "default"),
+                         tokens_in=usage.get("tokens_in", 0), tokens_out=usage.get("tokens_out", 0),
+                         reference="cockpit-brief")
+    except Exception:
+        pass
+    return {"ok": True, "text": text}

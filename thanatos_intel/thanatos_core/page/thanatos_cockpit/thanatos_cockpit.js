@@ -56,7 +56,7 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 			h += `<div class="tc-sg tc-sg-${s.sev || 'info'}" data-sg="${i}">
 				<span class="tc-sg-ic">${s.icon || '•'}</span><span>${esc(s.text)}</span></div>`;
 		});
-		h += '</div>';
+		h += '</div><div class="tc-aibrief" id="tc-aibrief"><div class="tc-aibrief-load">\ud83e\udde0 Intel sta analizzando la giornata\u2026</div></div>';
 
 		// KPI
 		h += '<div class="tc-kpis">';
@@ -149,6 +149,21 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		$root.find('.tc-sg').on('click', function () { const r = (d.suggerimenti[$(this).data('sg')] || {}).route; if (r) go.apply(null, r); });
 		$root.find('.tc-row').on('click', function () { const dt = $(this).data('dt'), ref = $(this).data('ref'); if (dt && ref) go('Form', dt, ref); });
 		$root.find('.tc-flow-step').on('click', function () { go('List', $(this).data('dt')); });
+
+		tcBrief($root);
+	}
+
+	function tcBrief($root) {
+		const $b = $root.find('#tc-aibrief');
+		if (!$b.length) return;
+		frappe.call('thanatos_intel.thanatos_core.cockpit.ai_brief')
+			.then(r => {
+				const m = r.message || {};
+				if (m.ok) {
+					$b.html('<div class="tc-section-t">\ud83e\udde0 Intel \u2014 priorit\u00e0 di oggi</div>' + '<div class="tc-aibrief-card">' + frappe.utils.escape_html(m.text).replace(/\n/g, '<br>') + '</div>');
+				} else { $b.html(''); }
+			})
+			.catch(() => $b.html(''));
 	}
 
 	function drawChart(sel, data, colors) {
@@ -206,6 +221,9 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		.tc-flow-step:hover{background:var(--bg-color)}
 		.tc-flow-n{font-size:22px;font-weight:700;color:#C8A96E}.tc-flow-l{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
 		.tc-flow-arrow{color:var(--text-muted);font-size:16px}
+		.tc-aibrief{margin-top:6px}
+		.tc-aibrief-load{color:var(--text-muted);font-size:12px;padding:6px 2px}
+		.tc-aibrief-card{background:var(--card-bg);border:1px solid #C8A96E;border-radius:8px;padding:14px;font-size:13px;line-height:1.6;color:var(--text-color);margin-top:6px}
 		`;
 		$('<style id="tc-css">').text(css).appendTo(document.head);
 	}
