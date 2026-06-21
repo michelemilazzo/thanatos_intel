@@ -128,6 +128,11 @@ def webhook():
     content_type = req.content_type or ""
     if "json" in content_type:
         data = req.json or {}
+        if frappe.conf.get("whatsapp_debug_payload"):
+            try:
+                frappe.log_error(frappe.as_json(data)[:4000], "WA raw payload")
+            except Exception:
+                pass
         # Auto-detect numero Meta dal phone_number_id nel payload
         if not wa_number:
             for entry in data.get("entry", []):
