@@ -11,7 +11,7 @@ frappe.provide('frappe');
 				"Thanatos Intake Officer", "Thanatos Legal Officer", "Thanatos Compliance Officer"];
 			var isOp = roles.some(function (r) { return ops.indexOf(r) >= 0; });
 			var isAdmin = roles.indexOf("System Manager") >= 0 || roles.indexOf("Administrator") >= 0;
-			if (!isOp || isAdmin) return;
+			if (!isOp && !isAdmin) return;
 			var r = (frappe.get_route_str && frappe.get_route_str()) || "";
 			if (!r || r === "Workspaces" || r.indexOf("Workspaces") === 0) {
 				frappe.set_route("thanatos-cockpit");

@@ -139,6 +139,14 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		});
 		h += '</div></div></div>';
 
+		h += '<div class="tc-section-t">\ud83d\udcda Tutti gli strumenti</div><div class="tc-nav">';
+		(d.nav || []).forEach(g => {
+			h += `<div class="tc-nav-g"><div class="tc-nav-h">${esc(g.title)}</div>`;
+			(g.items || []).forEach(it => { h += `<a class="tc-nav-l" data-kind="${esc(it.kind)}" data-to="${esc(it.to)}">${esc(it.label)}</a>`; });
+			h += '</div>';
+		});
+		h += '</div>';
+
 		$root.html(h);
 
 		drawChart('#tc-chart-casi', d.casi_per_stato, ['#449CF0', '#8A909E', '#ECAD4B', '#29CD42', '#d05a5a']);
@@ -149,6 +157,7 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		$root.find('.tc-sg').on('click', function () { const r = (d.suggerimenti[$(this).data('sg')] || {}).route; if (r) go.apply(null, r); });
 		$root.find('.tc-row').on('click', function () { const dt = $(this).data('dt'), ref = $(this).data('ref'); if (dt && ref) go('Form', dt, ref); });
 		$root.find('.tc-flow-step').on('click', function () { go('List', $(this).data('dt')); });
+		$root.find('.tc-nav-l').on('click', function () { const k = $(this).data('kind'), t = String($(this).data('to')); if (k === 'DocType') go('List', t); else if (t.indexOf('http') === 0 || t.indexOf('/') === 0) window.open(t, '_blank'); else go(t); });
 
 		tcBrief($root);
 	}
@@ -224,6 +233,13 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		.tc-aibrief{margin-top:6px}
 		.tc-aibrief-load{color:var(--text-muted);font-size:12px;padding:6px 2px}
 		.tc-aibrief-card{background:var(--card-bg);border:1px solid #C8A96E;border-radius:8px;padding:14px;font-size:13px;line-height:1.6;color:var(--text-color);margin-top:6px}
+		.tc-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+		@media(max-width:1100px){.tc-nav{grid-template-columns:repeat(2,1fr)}}
+		@media(max-width:600px){.tc-nav{grid-template-columns:1fr}}
+		.tc-nav-g{background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;padding:12px}
+		.tc-nav-h{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#C8A96E;font-weight:600;margin-bottom:8px}
+		.tc-nav-l{display:block;padding:5px 6px;font-size:12px;color:var(--text-color);text-decoration:none;border-radius:5px;cursor:pointer}
+		.tc-nav-l:hover{background:var(--bg-color);color:#C8A96E}
 		`;
 		$('<style id="tc-css">').text(css).appendTo(document.head);
 	}

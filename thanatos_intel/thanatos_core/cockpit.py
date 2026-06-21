@@ -30,6 +30,26 @@ def _all(dt, **kw):
         return []
 
 
+def _nav_links():
+    """Tutti i link operativi, presi dal workspace 'Thanatos Intel' (sync auto)."""
+    nav = []
+    try:
+        ws = frappe.get_doc("Workspace", "Thanatos Intel")
+        cur = None
+        for l in ws.links:
+            if l.type == "Card Break":
+                cur = {"title": l.label, "items": []}
+                nav.append(cur)
+            elif l.type == "Link" and not l.get("hidden"):
+                if cur is None:
+                    cur = {"title": "Generale", "items": []}
+                    nav.append(cur)
+                cur["items"].append({"label": l.label, "to": l.link_to, "kind": l.link_type})
+    except Exception:
+        pass
+    return nav
+
+
 @frappe.whitelist()
 def get_cockpit_data():
     today = getdate(nowdate())
@@ -179,6 +199,7 @@ def get_cockpit_data():
         "casi_attivi": casi_attivi,
         "casi_per_stato": casi_per_stato,
         "flow": flow,
+        "nav": _nav_links(),
     }
 
 
