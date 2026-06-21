@@ -59,8 +59,12 @@ def register_recording():
     files = frappe.request.files
     audio = files.get("file") if files else None
 
-    contact = frappe.db.get_value("Intelligence Contact", {"phone": frm}, "name") or \
-        frappe.db.get_value("Intelligence Contact", {"whatsapp": frm}, "name")
+    # trova/crea la scheda contatto (numero + nominativo) e recupera i dati
+    from thanatos_intel.ingest.contacts import ensure_contact_from_wa
+    n = frm if frm.startswith("+") else "+" + frm
+    contact = ensure_contact_from_wa(frm, "", "Chiamata WhatsApp")
+    caller_name = frappe.db.get_value("Intelligence Contact", contact, "full_name") if contact else ""
+    contact_client = frappe.db.get_value("Intelligence Contact", contact, "linked_entity") if contact else None
 
     # Call Log già creato all'arrivo? aggiorna; altrimenti crea
     existing = frappe.db.get_value("Call Log", {"summary": ["like", f"%{call_id}%"]}, "name")
@@ -69,11 +73,18 @@ def register_recording():
     else:
         doc = frappe.get_doc({
             "doctype": "Call Log", "called_at": frappe.utils.now_datetime(),
-            "direction": "Entrante", "caller_number": frm, "linked_contact": contact,
+            "direction": "Entrante", "caller_number": n,
             "summary": f"Chiamata WhatsApp · id {call_id}",
         })
         doc.insert(ignore_permissions=True)
 
+    # popola più campi possibili
+    doc.db_set("caller_number", n)
+    if caller_name:
+        doc.db_set("caller_name", caller_name)
+    if contact:
+        doc.db_set("linked_contact", contact)
+    doc.db_set("handled_by", frappe.session.user if frappe.session.user != "Guest" else "Administrator")
     doc.db_set("outcome", "Risposta" if answered else "Messaggio vocale")
     doc.db_set("duration_seconds", duration % 60)
     doc.db_set("duration_minutes", duration // 60)

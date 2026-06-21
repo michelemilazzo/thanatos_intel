@@ -232,16 +232,26 @@ def _handle_call_events(data: dict, wa_number: dict | None):
     che accetta la chiamata, registra l'audio e a fine chiamata crea il Call Log
     con trascrizione+voci. Notifica l'operatore (chiamata in arrivo)."""
     from thanatos_intel.ingest.intel_notifications import _notify
+    from thanatos_intel.ingest.contacts import ensure_contact_from_wa
     for entry in data.get("entry", []):
         pnid = entry.get("changes", [{}])[0].get("value", {}).get(
             "metadata", {}).get("phone_number_id", "")
         for change in entry.get("changes", []):
             val = change.get("value", {})
             pnid = val.get("metadata", {}).get("phone_number_id", pnid)
+            # nome profilo WhatsApp del chiamante (dai contacts)
+            profiles = {c.get("wa_id", ""): c.get("profile", {}).get("name", "")
+                        for c in val.get("contacts", [])}
             for call in val.get("calls", []):
                 frm = call.get("from", "")
                 event = call.get("event", "") or call.get("status", "")
                 call_id = call.get("id", "")
+                # crea/arricchisce la scheda contatto col nome profilo
+                if event == "connect":
+                    try:
+                        ensure_contact_from_wa(frm, profiles.get(frm, ""), "Chiamata WhatsApp")
+                    except Exception:
+                        frappe.log_error(frappe.get_traceback(), "ensure contact call")
                 session = call.get("session", {}) or {}
                 sdp = session.get("sdp", "")
 

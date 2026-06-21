@@ -39,6 +39,50 @@ def transcribe_call_log(call_log_name: str):
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), f"transcribe_call_log {call_log_name}")
         _set_error(doc, str(e)[:500])
+        return
+    # arricchimento AI: riassunto + azioni dalla trascrizione (best-effort)
+    try:
+        _ai_enrich_call(frappe.get_doc("Call Log", call_log_name))
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"ai_enrich {call_log_name}")
+
+
+def _ai_enrich_call(doc):
+    """Genera riassunto + azioni da fare dalla trascrizione via gateway MMOS AI."""
+    text = (doc.transcript_text or "").strip()
+    if not text or len(text) < 15:
+        return
+    from thanatos_intel.ai.doc_ingest import _gateway, _extract_json
+    system = ("Sei l'assistente di un'agenzia investigativa (Thanatos). "
+              "Analizza la trascrizione di una chiamata telefonica e rispondi SOLO in JSON valido "
+              'con: {"summary": "riassunto conciso in italiano (max 4 frasi)", '
+              '"action_items": ["azione 1", "azione 2"], '
+              '"caller_intent": "motivo della chiamata in poche parole", '
+              '"risk_flags": ["eventuali segnali di rischio/frode, altrimenti []"]}')
+    res = _gateway(message=f"Trascrizione chiamata:\n{text[:6000]}",
+                   system=system, task_type="extract")
+    if not res:
+        return
+    content = res.get("reply") or res.get("message") or res.get("content") or ""
+    parsed = _extract_json(content) or {}
+    summary = (parsed.get("summary") or "").strip()
+    intent = (parsed.get("caller_intent") or "").strip()
+    actions = parsed.get("action_items") or []
+    risks = parsed.get("risk_flags") or []
+
+    if summary or intent:
+        body = ""
+        if intent:
+            body += f"<p><b>Motivo:</b> {frappe.utils.escape_html(intent)}</p>"
+        if summary:
+            body += f"<p>{frappe.utils.escape_html(summary)}</p>"
+        if risks:
+            body += "<p><b>⚠️ Segnali:</b> " + ", ".join(frappe.utils.escape_html(str(r)) for r in risks) + "</p>"
+        doc.db_set("summary", body)
+    if actions:
+        items = "".join(f"<li>{frappe.utils.escape_html(str(a))}</li>" for a in actions)
+        doc.db_set("action_items", f"<ul>{items}</ul>")
+    frappe.db.commit()
 
 
 # ─── Whisper locale (ai-core, gratis, no diarizzazione) ──────────────────────
