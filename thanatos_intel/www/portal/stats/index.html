@@ -79,6 +79,26 @@ td{padding:8px;border-bottom:1px solid var(--border)}
     </tbody></table>
     {% else %}<div class="empty">Ancora nessuna ricerca registrata. Le ricerche su blacklist e news verranno tracciate qui.</div>{% endif %}
   </div>
+
+  <div class="box">
+    <h2>Posizione su Google</h2>
+    {% if not gsc or not gsc.configured %}
+      <div class="empty">Google Search Console non ancora collegato. Una volta connesso vedrai qui, per ogni parola chiave, la <b>posizione media</b> reale su Google, le impression e i clic.</div>
+    {% elif not rankings %}
+      <div class="empty">Search Console collegato ({{ gsc.property }}). Nessun dato ancora: i primi risultati arrivano col prossimo aggiornamento giornaliero (o quando Google ha dati per il sito).</div>
+    {% else %}
+      <div class="cards" style="margin-bottom:18px">
+        <div class="card"><div class="v">{{ rank_summary.avg_position }}</div><div class="l">Posizione media</div></div>
+        <div class="card"><div class="v">{{ rank_summary.top10 }}</div><div class="l">Query in Top 10</div></div>
+        <div class="card"><div class="v">{{ rank_summary.clicks }}</div><div class="l">Clic da Google</div></div>
+        <div class="card"><div class="v">{{ rank_summary.impressions }}</div><div class="l">Impression</div></div>
+      </div>
+      <table><thead><tr><th>Parola chiave</th><th>Posizione</th><th>Impr.</th><th>Clic</th><th>CTR</th></tr></thead><tbody>
+      {% for r in rankings %}<tr><td>{{ r.query }}</td><td class="n">{{ "%.1f"|format(r.position) }}</td><td>{{ r.impressions }}</td><td>{{ r.clicks }}</td><td>{{ "%.1f"|format(r.ctr) }}%</td></tr>{% endfor %}
+      </tbody></table>
+      <p class="sub" style="margin-top:10px">Aggiornato al {{ rank_summary.date }} · fonte Google Search Console (ultimi 28 giorni)</p>
+    {% endif %}
+  </div>
 </div>
 {{ thanatos_footer() }}
 {% endblock %}

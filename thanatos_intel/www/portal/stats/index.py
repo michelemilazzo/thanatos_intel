@@ -13,5 +13,9 @@ def get_context(context):
         raise frappe.Redirect
     context.title = "Statistiche — Thanatos"
     context.s = portal_stats(30)
+    from thanatos_intel import gsc as _gsc
+    context.gsc = _gsc.gsc_status()
+    context.rankings = _gsc.latest_rankings(25)
+    context.rank_summary = _gsc.ranking_summary()
     context.no_cache = 1
     return context

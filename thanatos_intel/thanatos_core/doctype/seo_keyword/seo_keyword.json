@@ -7,7 +7,7 @@
  "field_order": ["keyword", "origin", "is_active", "cb", "weight", "notes"],
  "fields": [
   {"fieldname": "keyword", "fieldtype": "Data", "label": "Keyword", "unique": 1, "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "origin", "fieldtype": "Select", "label": "Origin", "options": "Manual\nNews", "default": "Manual", "in_list_view": 1, "in_standard_filter": 1},
+  {"fieldname": "origin", "fieldtype": "Select", "label": "Origin", "options": "Manual\nNews\nGSC", "default": "Manual", "in_list_view": 1, "in_standard_filter": 1},
   {"fieldname": "is_active", "fieldtype": "Check", "label": "Active", "default": 1, "in_list_view": 1},
   {"fieldname": "cb", "fieldtype": "Column Break"},
   {"fieldname": "weight", "fieldtype": "Int", "label": "Weight", "in_list_view": 1},
