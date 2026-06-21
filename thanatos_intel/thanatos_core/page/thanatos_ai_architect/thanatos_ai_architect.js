@@ -2,6 +2,7 @@ frappe.pages['thanatos-ai-architect'].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper, title: '🤖 Architetto AI del caso', single_column: true,
 	});
+	frappe.thanatos && frappe.thanatos.nav(page, 'architetto');
 	injectCSS();
 	const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
 	let PLAN = null, CLIENT = null;

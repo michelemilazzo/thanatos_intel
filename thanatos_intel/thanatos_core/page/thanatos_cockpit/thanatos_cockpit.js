@@ -4,6 +4,7 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		title: 'Thanatos Intel — Cockpit',
 		single_column: true,
 	});
+	frappe.thanatos && frappe.thanatos.nav(page, 'cockpit');
 	page.set_secondary_action('Aggiorna', () => load());
 	injectCSS();
 	const $root = $('<div class="tc-wrap"><div class="tc-loading">Caricamento cockpit…</div></div>').appendTo(page.body);

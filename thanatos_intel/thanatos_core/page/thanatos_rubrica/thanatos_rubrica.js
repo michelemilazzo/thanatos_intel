@@ -2,6 +2,7 @@ frappe.pages['thanatos-rubrica'].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper, title: 'Rubrica Clienti', single_column: true,
 	});
+	frappe.thanatos && frappe.thanatos.nav(page, 'rubrica');
 	page.set_secondary_action('Nuovo cliente', () => frappe.new_doc('Investigation Client'));
 	page.add_inner_button('Possibili duplicati', showDups);
 	injectCSS();
