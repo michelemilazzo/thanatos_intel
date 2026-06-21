@@ -200,3 +200,29 @@ def translate_html(html, target):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "site_i18n translate_html")
         return html
+
+
+# --- pre-warm cache traduzioni (no cold-start) -----------------------------
+WARM_PATHS = [
+    "/", "/soluzioni", "/servizi", "/piani", "/notizie", "/chi-siamo",
+    "/collabora", "/casi", "/contatti", "/faq", "/verifica-blacklist",
+    "/verifica-rischio", "/pay-per-use", "/registrati", "/termini",
+    "/privacy", "/cookie", "/diventa-collaboratore",
+]
+
+
+def warm_cache(langs=None, paths=None):
+    """Pre-rende le pagine principali nelle lingue secondarie così il primo
+    visitatore non paga la latenza libretranslate. Schedulato hourly.
+    NB: il page-cache e' chiave-su-HTML, non su URL -> scaldando lo slug IT
+    con ?lang=xx si scalda anche l'alias EN (stesso template)."""
+    base = (frappe.conf.get("site_warm_base") or "https://thanatos.onekeyco.com").rstrip("/")
+    langs = langs or ["en"]
+    paths = paths or WARM_PATHS
+    for lang in langs:
+        for p in paths:
+            try:
+                requests.get(base + p, params={"lang": lang}, timeout=30,
+                             headers={"User-Agent": "thanatos-i18n-warm"})
+            except Exception:
+                pass
