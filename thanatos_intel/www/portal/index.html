@@ -305,6 +305,14 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
             {% if c.priority %}<span class="tag">{{ c.priority }}</span>{% endif %}
             <span class="tag {% if c.case_status == 'In Progress' %}active{% endif %}">{{ c.case_status or 'Open' }}</span>
           </div>
+          {% if c.step_total %}
+          <div style="margin:8px 0 2px">
+            <div style="height:6px;background:var(--bg);border:1px solid var(--border);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:{{ c.step_pct }}%;background:#C8A96E"></div></div>
+            <div style="font-size:10px;color:#8A909E;margin-top:4px">{{ c.step_done }}/{{ c.step_total }} step{% if c.current_step %} &middot; {{ c.current_step }}{% endif %}</div>
+          </div>
+          {% if c.awaiting_client %}<div style="font-size:10px;color:#ECAD4B;margin-top:2px">&#9203; In attesa di una tua azione</div>{% endif %}
+          {% endif %}
           <div class="ft">
             {% if is_client %}
             <span>{{ c.report_count }} document{{ 'o' if c.report_count == 1 else 'i' }}</span>

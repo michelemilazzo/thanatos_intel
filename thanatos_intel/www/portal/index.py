@@ -55,6 +55,17 @@ def get_context(context):
                                               {"investigation_case": c["name"]})
         c["report_count"] = frappe.db.count("Investigation Report",
                                             {"investigation_case": c["name"]})
+        _steps = frappe.get_all("Case Step Instance",
+                                filters={"parenttype": "Investigation Case", "parent": c["name"]},
+                                fields=["step_label", "status", "client_visible"], order_by="seq asc")
+        _tot = len(_steps)
+        _done = sum(1 for x in _steps if x.status in ("Done", "Skipped"))
+        _cur = next((x for x in _steps if x.status in ("In Progress", "Awaiting Client")), None)
+        c["step_total"] = _tot
+        c["step_done"] = _done
+        c["step_pct"] = int(_done * 100 / _tot) if _tot else 0
+        c["current_step"] = _cur.step_label if _cur else ""
+        c["awaiting_client"] = 1 if (_cur and _cur.status == "Awaiting Client" and _cur.client_visible) else 0
     context.in_progress = sum(1 for c in cases if (c.get("case_status") or "").lower() in ("in progress","investigation"))
     context.closed = sum(1 for c in cases if (c.get("case_status") or "").lower() == "closed")
     context.evidence_total = sum(c.get("evidence_count") or 0 for c in cases)
