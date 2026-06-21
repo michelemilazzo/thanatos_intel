@@ -61,13 +61,18 @@ def _transcribe_whisper_local(doc):
 
     url = frappe.conf.get("whisper_url", "http://10.10.0.4:18092")
     content = _audio_bytes(doc)
-    r = requests.post(f"{url}/transcribe", files={"audio": ("call.ogg", content)}, timeout=600)
+    # diarizzazione attiva (2 speaker default) per separare le voci della chiamata
+    r = requests.post(
+        f"{url}/transcribe",
+        files={"audio": ("call.ogg", content)},
+        data={"diarize": "true", "num_speakers": 2},
+        timeout=900,
+    )
     r.raise_for_status()
     data = r.json()
     full_text = (data.get("text") or "").strip()
-    # Whisper non separa le voci: tutti i segmenti come speaker "A"
     segments = [
-        {"speaker": "A", "start_ms": s.get("start_ms", 0),
+        {"speaker": s.get("speaker", "A"), "start_ms": s.get("start_ms", 0),
          "end_ms": s.get("end_ms", 0), "text": s.get("text", "")}
         for s in (data.get("segments") or [])
     ]

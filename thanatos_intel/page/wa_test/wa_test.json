@@ -1,0 +1,11 @@
+{
+  "doctype": "Page",
+  "name": "wa-test",
+  "title": "WhatsApp Test",
+  "module": "Thanatos Core",
+  "system_page": 0,
+  "roles": [
+    {"role": "Investigation Manager"},
+    {"role": "System Manager"}
+  ]
+}
