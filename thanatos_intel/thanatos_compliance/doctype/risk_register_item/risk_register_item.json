@@ -1,0 +1,171 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "RREG-.#####",
+ "creation": "2026-06-22 00:48:48.146012",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "asset",
+  "threat",
+  "vulnerability",
+  "cb1",
+  "likelihood",
+  "impact",
+  "risk_level",
+  "iso_control",
+  "sb1",
+  "treatment",
+  "treatment_plan",
+  "owner_user",
+  "due",
+  "status"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Rischio",
+   "reqd": 1
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Asset / Processo"
+  },
+  {
+   "fieldname": "threat",
+   "fieldtype": "Small Text",
+   "label": "Minaccia"
+  },
+  {
+   "fieldname": "vulnerability",
+   "fieldtype": "Small Text",
+   "label": "Vulnerabilit\u00e0"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "3",
+   "fieldname": "likelihood",
+   "fieldtype": "Select",
+   "label": "Probabilit\u00e0 (1-5)",
+   "options": "1\n2\n3\n4\n5"
+  },
+  {
+   "default": "3",
+   "fieldname": "impact",
+   "fieldtype": "Select",
+   "label": "Impatto (1-5)",
+   "options": "1\n2\n3\n4\n5"
+  },
+  {
+   "default": "Medio",
+   "fieldname": "risk_level",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Livello",
+   "options": "Basso\nMedio\nAlto\nCritico"
+  },
+  {
+   "fieldname": "iso_control",
+   "fieldtype": "Data",
+   "label": "Controllo Annex A (27001)"
+  },
+  {
+   "fieldname": "sb1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "Mitigare",
+   "fieldname": "treatment",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Trattamento",
+   "options": "Mitigare\nAccettare\nTrasferire\nEvitare"
+  },
+  {
+   "fieldname": "treatment_plan",
+   "fieldtype": "Small Text",
+   "label": "Piano di trattamento"
+  },
+  {
+   "fieldname": "owner_user",
+   "fieldtype": "Link",
+   "label": "Responsabile",
+   "options": "User"
+  },
+  {
+   "fieldname": "due",
+   "fieldtype": "Date",
+   "label": "Scadenza"
+  },
+  {
+   "default": "Aperto",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stato",
+   "options": "Aperto\nIn trattamento\nMitigato\nAccettato\nChiuso"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 00:48:48.146012",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "Risk Register Item",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "risk_level,status,asset",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

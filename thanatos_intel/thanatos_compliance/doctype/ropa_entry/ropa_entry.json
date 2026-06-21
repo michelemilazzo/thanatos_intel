@@ -1,0 +1,144 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "ROPA-.#####",
+ "creation": "2026-06-22 00:48:48.268840",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "purpose",
+  "legal_basis",
+  "data_categories",
+  "special_categories",
+  "cb1",
+  "data_subjects",
+  "recipients",
+  "transfers_extra_eu",
+  "retention",
+  "security_measures",
+  "controller"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Attivit\u00e0 di trattamento",
+   "reqd": 1
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Small Text",
+   "label": "Finalit\u00e0"
+  },
+  {
+   "fieldname": "legal_basis",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Base giuridica",
+   "options": "Consenso\nContratto\nObbligo legale\nInteresse legittimo\nInteresse vitale\nInteresse pubblico"
+  },
+  {
+   "fieldname": "data_categories",
+   "fieldtype": "Small Text",
+   "label": "Categorie di dati"
+  },
+  {
+   "default": "0",
+   "fieldname": "special_categories",
+   "fieldtype": "Check",
+   "label": "Categorie particolari (art.9)"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "data_subjects",
+   "fieldtype": "Data",
+   "label": "Interessati"
+  },
+  {
+   "fieldname": "recipients",
+   "fieldtype": "Small Text",
+   "label": "Destinatari"
+  },
+  {
+   "default": "0",
+   "fieldname": "transfers_extra_eu",
+   "fieldtype": "Check",
+   "label": "Trasferimenti extra-UE"
+  },
+  {
+   "fieldname": "retention",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Conservazione"
+  },
+  {
+   "fieldname": "security_measures",
+   "fieldtype": "Small Text",
+   "label": "Misure di sicurezza"
+  },
+  {
+   "fieldname": "controller",
+   "fieldtype": "Data",
+   "label": "Titolare"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 00:48:48.268840",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "ROPA Entry",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "legal_basis",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}
