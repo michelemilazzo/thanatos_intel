@@ -33,6 +33,7 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 
 		// Quick-launch verso le app Frappe sottostanti (il cockpit le orchestra)
 		const tiles = [
+			['ð¤', 'Architetto AI', () => go('thanatos-ai-architect')],
 			['＋', 'Nuovo caso', () => frappe.new_doc('Investigation Case')],
 			['📨', 'Lead / WhatsApp', () => go('List', 'Intel Lead')],
 			['🔎', 'OSINT', () => frappe.new_doc('OSINT Job')],
