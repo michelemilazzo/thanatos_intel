@@ -111,6 +111,57 @@ def _category_for(src) -> str | None:
 	return cat
 
 
+# Categorizzazione per CONTENUTO + filtro pertinenza.
+# Chiave = name della News Category (slug). Solo notizie attinenti ai temi Thanatos
+# vengono ingerite; le altre (es. cronaca generica) sono scartate.
+_KW_RE_CACHE = {}
+
+
+def _kw_hit(kw, text):
+	pat = _KW_RE_CACHE.get(kw)
+	if pat is None:
+		pat = re.compile(r"\b" + re.escape(kw) + r"\b")
+		_KW_RE_CACHE[kw] = pat
+	return bool(pat.search(text))
+
+
+CATEGORY_KEYWORDS = {
+	"frodi-truffe": ["frode", "frodi", "truffa", "truffe", "raggiro", "raggir", "phishing",
+		"scam", "fraud", "ponzi", "piramidale", "riciclagg", "money launder", "estafa",
+		"escroquer", "swindle", "financial crime", "reato finanziario", "appropriazione indebita"],
+	"cyber-intelligence": ["cyber", "hacker", "ransomware", "malware", "data breach", "databreach",
+		"violazione dati", "data leak", "attacco informatico", "cybersecurity", "cyber security",
+		"ddos", "exploit", "spyware", "trojan", "credential", "infostealer"],
+	"corporate-due-diligence": ["due diligence", "compliance", "kyc", "kyb", "antiriciclaggio",
+		"aml", "sanzion", "sanction", "titolare effettivo", "beneficial owner", "conformit",
+		"adeguata verifica", "screening", "watchlist"],
+	"sequestri-confische": ["sequestr", "confisc", "seizure", "asset recovery", "beni confiscati",
+		"forfeiture", "congelamento beni", "frozen asset", "recupero crediti", "recupero beni"],
+	"diritto-procedura": ["gdpr", "garante privacy", "data protection", "regolamento ue", "direttiva ue",
+		"court ruling", "procedura penale", "diritto penale", "catena di custodia", "chain of custody",
+		"ammissibilita delle prove", "onere della prova"],
+	"osint-techniques": ["osint", "open source intelligence", "geolocalizzaz", "social media intelligence",
+		"deanonim", "verifica delle fonti", "fact-check", "fact check", "humint", "socmint"],
+	"crypto-investigations": ["crypto", "cripto", "criptovalut", "bitcoin", "ethereum", "wallet crypto",
+		"blockchain", "stablecoin", "cryptocurrency", "exchange crypto", "usdt", "wallet bitcoin"],
+}
+
+
+def _categorize(text: str):
+	"""Ritorna (category_name, score) della categoria piu' pertinente, o (None, 0)."""
+	t = (text or "").lower()
+	if not t:
+		return None, 0
+	best, best_score = None, 0
+	for cat, kws in CATEGORY_KEYWORDS.items():
+		if not frappe.db.exists("News Category", cat):
+			continue
+		score = sum(1 for k in kws if _kw_hit(k, t))
+		if score > best_score:
+			best, best_score = cat, score
+	return best, best_score
+
+
 # ---------- AI rewrite ----------
 
 def _ai_rewrite(title: str, content: str, language: str = "it") -> tuple[str, str]:
@@ -152,7 +203,6 @@ def fetch_source(name: str) -> dict:
 
 	max_n = int(src.max_articles_per_fetch or 20)
 	inserted = 0
-	category = _category_for(src)
 	for entry in parsed.entries[:max_n]:
 		url = entry.get("link") or ""
 		guid = entry.get("id") or entry.get("guid") or url
@@ -164,6 +214,11 @@ def fetch_source(name: str) -> dict:
 			continue
 		raw_content = entry.get("content", [{}])[0].get("value") if entry.get("content") else entry.get("summary", "")
 		ext_pub = _parse_datetime(entry.get("published") or entry.get("updated"))
+
+		# pertinenza + categoria dal CONTENUTO; scarta cronaca non attinente
+		category, _rel = _categorize(title + " " + _strip_html(raw_content or ""))
+		if not category:
+			continue
 
 		# arricchimento: testo completo leggibile + traduzione lingua sito + angolo Thanatos
 		from thanatos_intel.news.enrich import enrich as _enrich
