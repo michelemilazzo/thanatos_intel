@@ -1,3 +1,15 @@
+
+// Polyfill frappe.ready (rimosso in Frappe v16) — backward compat per script vecchi
+if (typeof frappe !== 'undefined' && typeof frappe.ready !== 'function') {
+  frappe.ready = function(cb){
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setTimeout(cb, 0);
+    } else {
+      document.addEventListener('DOMContentLoaded', cb);
+    }
+  };
+}
+
 // Vendored Bootstrap 4.6.2 bundle (jQuery plugins) — garantisce $.fn.dropdown sul desk
 /*!
   * Bootstrap v4.6.2 (https://getbootstrap.com/)
