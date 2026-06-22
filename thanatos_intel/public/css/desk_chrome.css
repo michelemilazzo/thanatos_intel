@@ -76,3 +76,20 @@ a[href*="thanatos-intel"] .icon-container > svg {
   text-decoration: none;
 }
 #thanatos-home-btn svg { color: #b8923f; }
+
+
+
+/* PCU: toolbar bottoni form — evita overflow su Investigation Case e simili */
+.page-actions { overflow-x: auto !important; max-width: 80vw; flex-wrap: nowrap; }
+.page-actions::-webkit-scrollbar { height: 4px; }
+.page-actions::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+.page-actions .btn-group > .btn,
+.page-actions > .btn {
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  white-space: nowrap;
+}
+.page-actions .menu-btn-group .dropdown-menu { min-width: 220px; }
+
+/* PCU floating fab — z-index sotto modali ma sopra altro */
+#pcu-g-fab { z-index: 9999 !important; }
