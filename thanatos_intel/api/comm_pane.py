@@ -735,3 +735,131 @@ admin@thanatos.agency · <a href="https://thanatos.agency">thanatos.agency</a><b
         return {"ok": True, "draft": True, "communication": comm.name,
                 "pdf_count": len(pdf_paths), "sign_links": len(sign_links),
                 "subject": final_subject}
+
+
+# ----------- WEBMAIL: lista conversazioni unificate -----------------------
+@frappe.whitelist()
+def list_conversations(limit: int = 200) -> list:
+    """Lista conversazioni grouped per indirizzo (email/telefono)."""
+    convs = {}
+    # Email Communications
+    rows = frappe.db.sql("""
+        SELECT name, communication_date, sender, recipients, subject, content,
+               sent_or_received, reference_doctype, reference_name, status,
+               communication_medium
+        FROM `tabCommunication`
+        WHERE communication_medium='Email'
+        ORDER BY communication_date DESC
+        LIMIT %s
+    """, (limit,), as_dict=1)
+    for r in rows:
+        addr = (r.sender if r.sent_or_received == "Received" else (r.recipients or "").split(",")[0]).strip()
+        if not addr: continue
+        key = f"email::{addr.lower()}"
+        if key not in convs:
+            convs[key] = {"key": key, "channel": "email", "icon": "📧", "addr": addr, "who": addr,
+                          "count": 0, "unread": 0, "ts": None, "snippet": "", "ref_doctype": r.reference_doctype, "ref_name": r.reference_name}
+        c = convs[key]
+        c["count"] += 1
+        if r.sent_or_received == "Received" and r.status != "Read":
+            c["unread"] += 1
+        if not c["ts"] or str(r.communication_date) > str(c["ts"]):
+            c["ts"] = str(r.communication_date)
+            c["snippet"] = (r.subject or "")[:80]
+    # WhatsApp
+    try:
+        wa_has_ref = frappe.db.has_column("WABA WhatsApp Message", "reference_doctype")
+        rows = frappe.db.sql("""
+            SELECT name, creation, `from`, `to`, type, message_body, status
+            FROM `tabWABA WhatsApp Message`
+            ORDER BY creation DESC LIMIT %s
+        """, (limit,), as_dict=1)
+        for r in rows:
+            addr = (r["from"] if r.type == "Incoming" else r["to"]) or ""
+            if not addr: continue
+            key = f"wa::{addr}"
+            if key not in convs:
+                convs[key] = {"key": key, "channel": "whatsapp", "icon": "💬", "addr": addr, "who": addr,
+                              "count": 0, "unread": 0, "ts": None, "snippet": ""}
+            c = convs[key]
+            c["count"] += 1
+            if r.type == "Incoming" and r.status != "Read":
+                c["unread"] += 1
+            if not c["ts"] or str(r.creation) > str(c["ts"]):
+                c["ts"] = str(r.creation)
+                c["snippet"] = (r.message_body or "")[:80]
+    except Exception:
+        pass
+    # Risolvi who → nome reale via lookup
+    for key, c in convs.items():
+        if c["channel"] == "email":
+            for table, fld_name, fld_addr in (
+                ("Contact", "full_name", "email_id"),
+                ("Customer", "customer_name", "email_id"),
+                ("Applicant Profile", "full_legal_name", "email"),
+            ):
+                nm = frappe.db.get_value(table, {fld_addr: c["addr"]}, fld_name)
+                if nm:
+                    c["who"] = f"{nm}"
+                    break
+    out = sorted(convs.values(), key=lambda x: x["ts"] or "", reverse=True)
+    return out
+
+
+@frappe.whitelist()
+def conversation_thread(key: str) -> dict:
+    """Ritorna tutti i messaggi di una conversazione (email o WA)."""
+    if "::" not in key: return {"info": {}, "messages": []}
+    ch, addr = key.split("::", 1)
+    info = {"addr": addr, "who": addr}
+    msgs = []
+    if ch == "email":
+        rows = frappe.db.sql("""
+            SELECT name, communication_date, sender, recipients, subject, content,
+                   sent_or_received, reference_doctype, reference_name, status
+            FROM `tabCommunication`
+            WHERE communication_medium='Email'
+            AND (LOWER(sender) LIKE %s OR LOWER(recipients) LIKE %s)
+            ORDER BY communication_date ASC LIMIT 500
+        """, (f"%{addr.lower()}%", f"%{addr.lower()}%"), as_dict=1)
+        for r in rows:
+            msgs.append({
+                "channel": "email",
+                "direction": "in" if r.sent_or_received == "Received" else "out",
+                "ts": str(r.communication_date),
+                "subject": r.subject,
+                "text": r.content,
+                "status": r.status,
+            })
+        if msgs:
+            info["ref_doctype"] = rows[-1].reference_doctype
+            info["ref_name"] = rows[-1].reference_name
+    else:
+        try:
+            rows = frappe.db.sql("""
+                SELECT name, creation, `from`, `to`, type, message_body, status
+                FROM `tabWABA WhatsApp Message`
+                WHERE `from`=%s OR `to`=%s
+                ORDER BY creation ASC LIMIT 500
+            """, (addr, addr), as_dict=1)
+            for r in rows:
+                msgs.append({
+                    "channel": "whatsapp",
+                    "direction": "in" if r.type == "Incoming" else "out",
+                    "ts": str(r.creation),
+                    "text": r.message_body,
+                    "status": r.status,
+                })
+        except Exception:
+            pass
+    # Resolve nome
+    for table, fld_name, fld_addr in (
+        ("Contact", "full_name", "email_id"),
+        ("Customer", "customer_name", "email_id"),
+        ("Applicant Profile", "full_legal_name", "email"),
+    ):
+        nm = frappe.db.get_value(table, {fld_addr: addr}, fld_name)
+        if nm:
+            info["who"] = nm
+            break
+    return {"info": info, "messages": msgs}
