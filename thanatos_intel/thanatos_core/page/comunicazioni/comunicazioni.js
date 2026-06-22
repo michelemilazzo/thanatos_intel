@@ -196,7 +196,7 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
           <div class="cc-msg ${m.direction==='out'?'out':''}">
             <div class="head">${m.channel==='email'?'📧':'💬'} ${m.direction==='in'?'← ricevuto':'→ inviato'} · ${m.ts} ${m.status?'· '+m.status:''}</div>
             ${m.subject?`<b>${frappe.utils.escape_html(m.subject)}</b><br>`:''}
-            <div>${m.text||''}</div>
+            <div style="word-wrap:break-word;overflow-wrap:break-word;max-width:100%">${cc_fmt(m.text)}</div>
           </div>`).join(''));
         $('#cc-msgs').scrollTop($('#cc-msgs')[0].scrollHeight);
       });
