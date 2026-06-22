@@ -198,11 +198,14 @@ def webhook():
         )
         created.append(name)
 
-        # Auto-reply se nessun operatore ha ancora risposto
+        # Auto-reply se non ci sono outbound recenti (4h) — evita spam ma re-engage dopo silenzio
         try:
-            has_outbound = frappe.db.count('Intel Lead Message',
-                {'parent': name, 'direction': 'Outbound'})
-            if not has_outbound:
+            from frappe.utils import add_to_date, now_datetime
+            cutoff = add_to_date(now_datetime(), hours=-4)
+            recent_outbound = frappe.db.count('Intel Lead Message', {
+                'parent': name, 'direction': 'Outbound', 'sent_at': ['>=', cutoff]
+            })
+            if not recent_outbound:
                 _send_auto_reply(wa_number, m['source_id'], name, is_new=True)
         except Exception:
             frappe.log_error(frappe.get_traceback(), 'WA auto-reply dispatch')
