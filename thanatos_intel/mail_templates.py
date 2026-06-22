@@ -22,10 +22,24 @@ def _create_draft(from_email: str, to: list, subject: str, html_body: str, cc: l
     from mail.api.mail import create_mail
     # Risolvi "account" (Mail upstream >=0.2: arg obbligatorio)
     import frappe as _f
-    account = _f.db.get_value("User Account", {"email": from_email}, "name") \
-        or _f.db.get_value("Mailbox", {"email": from_email}, "name") \
-        or _f.db.get_value("Mail Account", {"email": from_email}, "name") \
-        or from_email
+    # account in formato 'user:account_id' (Mail upstream >=0.2)
+    # 1) Helper mail nativo (se disponibile)
+    account = None
+    try:
+        from mail.utils.user import get_user_personal_account
+        account = get_user_personal_account(_f.session.user)
+    except Exception:
+        pass
+    # 2) Fallback: cerca User Account → first matching by email
+    if not account:
+        try:
+            ua = _f.db.get_value("User Account", {"email": from_email}, "name")
+            if ua: account = ua
+        except Exception:
+            pass
+    # 3) Fallback finale: <user>:<from_email>
+    if not account:
+        account = f"{_f.session.user}:{from_email}"
     # Normalizza destinatari: create_mail si aspetta list[dict] con chiave 'email'
     def _norm(addrs):
         out = []
