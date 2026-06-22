@@ -510,3 +510,228 @@ def send_email_multilang(doctype: str, name: str, recipients: str, subject: str,
         except Exception as e:
             out["errors"].append({"lang": lang, "error": str(e)})
     return out
+
+
+# ----------- DOSSIER COMPLETO MULTI-LINGUA ----------------------------------
+@frappe.whitelist()
+def send_dossier_email(case_name: str = None, mandate_name: str = None,
+                       recipient: str = None, langs: str = "it,en",
+                       from_email: str = None, send: int = 0) -> dict:
+    """Compone mail dossier con tutti i PDF (mandati + proforme + ddd) in N lingue
+    e crea bozze Communication (send=1 per invio immediato).
+
+    Identifica i doc collegati a partire da case_name (Investigation Case) o
+    direttamente mandate_name (Agency Mandate). Per ognuno genera PDF nelle
+    lingue richieste e li allega alla Communication.
+    """
+    import frappe as _f
+    from thanatos_intel.api.translate import translate_mandate_pdf, translate_proforma_pdf, translate_html, translate as _t
+
+    # Risolvi anchor doc
+    if case_name:
+        anchor_dt, anchor_name = "Investigation Case", case_name
+    elif mandate_name:
+        anchor_dt, anchor_name = "Agency Mandate", mandate_name
+    else:
+        return {"ok": False, "error": "case_name o mandate_name richiesto"}
+
+    # Trova mandati collegati
+    mandates = []
+    proforme = []
+    ddd_cases = set()
+    if case_name:
+        for m in frappe.db.sql("SELECT name FROM `tabAgency Mandate` WHERE investigation_case=%s AND status!='Terminated'", (case_name,), as_dict=1):
+            mandates.append(m.name)
+            md = frappe.get_doc("Agency Mandate", m.name)
+            if md.ddd_case: ddd_cases.add(md.ddd_case)
+    if mandate_name:
+        mandates.append(mandate_name)
+        md = frappe.get_doc("Agency Mandate", mandate_name)
+        if md.ddd_case: ddd_cases.add(md.ddd_case)
+        # Aggiungi mandato gemello
+        if md.paired_mandate: mandates.append(md.paired_mandate)
+
+    for m in mandates:
+        for p in frappe.db.sql("SELECT name FROM `tabDiplomatic Proforma` WHERE mandate=%s AND status!='Void'", (m,), as_dict=1):
+            proforme.append(p.name)
+
+    # Lang list
+    lang_list = [l.strip() for l in langs.split(",") if l.strip()]
+    src_lang = _f.conf.get("mandate_source_lang") or "it"
+
+    # Genera PDF per ogni doc in ogni lingua
+    pdf_paths = []  # [{"label": "Mandato A (IT)", "url": "/private/..."}]
+    for m in mandates:
+        m_doc = frappe.get_doc("Agency Mandate", m)
+        for lang in lang_list:
+            if lang == src_lang:
+                # Cerca ultimo PDF italiano
+                last = frappe.db.sql("""SELECT file_url FROM `tabFile`
+                    WHERE attached_to_doctype='Agency Mandate' AND attached_to_name=%s
+                    AND file_url LIKE %s ORDER BY creation DESC LIMIT 1""",
+                    (m, "%.pdf"))
+                if last: pdf_paths.append({"label": f"Mandato {m} ({lang.upper()})", "url": last[0][0]})
+            else:
+                r = translate_mandate_pdf(m, lang)
+                if r.get("ok"): pdf_paths.append({"label": f"Mandato {m} ({lang.upper()})", "url": r["file_url"]})
+    for p in proforme:
+        for lang in lang_list:
+            if lang == src_lang:
+                last = frappe.db.sql("""SELECT file_url FROM `tabFile`
+                    WHERE attached_to_doctype='Diplomatic Proforma' AND attached_to_name=%s
+                    AND file_url LIKE %s ORDER BY creation DESC LIMIT 1""",
+                    (p, "%.pdf"))
+                if last: pdf_paths.append({"label": f"Proforma {p} ({lang.upper()})", "url": last[0][0]})
+            else:
+                r = translate_proforma_pdf(p, lang)
+                if r.get("ok"): pdf_paths.append({"label": f"Proforma {p} ({lang.upper()})", "url": r["file_url"]})
+
+    # Trova Signature Requests + token per ogni firmatario "esterno" (gestione@petterson)
+    base = frappe.utils.get_url()
+    sign_links = []
+    for m in mandates:
+        for sr in frappe.db.sql("""SELECT name FROM `tabSignature Request`
+            WHERE reference_doctype='Agency Mandate' AND reference_name=%s
+            AND status IN ('Draft','Sent','Partially Signed')""", (m,), as_dict=1):
+            sr_doc = frappe.get_doc("Signature Request", sr.name)
+            # Trova token del primo signer non firmato
+            tok = None
+            sname = None
+            if sr_doc.signing_mode == "Sequential" and sr_doc.signers:
+                for s in sr_doc.signers:
+                    if s.status != "Signed":
+                        tok = s.token; sname = s.signer_name; break
+            else:
+                tok = sr_doc.token; sname = sr_doc.signer_name
+            if tok:
+                sign_links.append({"label": f"Firma {sr.name} ({sname})", "url": f"{base}/sign?token={tok}", "mandate": m})
+    # Anche le SR di accettazione proforma
+    for p in proforme:
+        for sr in frappe.db.sql("""SELECT name FROM `tabSignature Request`
+            WHERE reference_doctype='Diplomatic Proforma' AND reference_name=%s
+            AND status='Draft'""", (p,), as_dict=1):
+            sr_doc = frappe.get_doc("Signature Request", sr.name)
+            tok = sr_doc.token
+            if tok:
+                sign_links.append({"label": f"Accettazione {p}", "url": f"{base}/sign?token={tok}", "mandate": None})
+
+    # HTML IT body
+    pdf_list_html = "".join(f'<li>📎 <b>{x["label"]}</b><br><small><a href="{base}{x["url"]}">{base}{x["url"]}</a></small></li>' for x in pdf_paths)
+    sign_list_html = "".join(f'<li>🖊 <b>{x["label"]}</b><br><a href="{x["url"]}">{x["url"]}</a></li>' for x in sign_links)
+    body_it = f"""
+<p>Gentile Sig. Foglio,</p>
+
+<p>in seguito ai nostri accordi, le inviamo il <b>dossier completo</b> per la pratica
+<b>Due Diligence Diplomatica – Repubblica di Bulgaria</b> a Suo favore, e per il
+<b>mandato quadro Report Africa</b> intestato a Petterson Holding UK Ltd.</p>
+
+<h3>📜 Mandati</h3>
+<ul>
+<li><b>Mandato A — DDD Bulgaria</b> (€ 50.000,00 totali · acconto € 25.000,00 entro 72 ore dalla firma · saldo alla consegna del passaporto diplomatico)</li>
+<li><b>Mandato B — Quadro Report Africa</b> (a consumo secondo listino allegato)</li>
+</ul>
+
+<h3>💶 Articolazione pagamenti DDD Bulgaria</h3>
+<table style="border-collapse:collapse;width:100%">
+<tr style="background:#f5f5f5"><th style="border:1px solid #ddd;padding:6px">Tranche</th><th style="border:1px solid #ddd;padding:6px">Importo</th><th style="border:1px solid #ddd;padding:6px">Scadenza</th><th style="border:1px solid #ddd;padding:6px">Emittente fattura</th></tr>
+<tr><td style="border:1px solid #ddd;padding:6px"><b>Acconto</b></td><td style="border:1px solid #ddd;padding:6px"><b>€ 25.000,00</b></td><td style="border:1px solid #ddd;padding:6px">Entro 72 ore dalla firma</td><td style="border:1px solid #ddd;padding:6px">ARES Investigazioni S.r.l.</td></tr>
+<tr><td style="border:1px solid #ddd;padding:6px">Saldo</td><td style="border:1px solid #ddd;padding:6px">€ 25.000,00</td><td style="border:1px solid #ddd;padding:6px">Alla consegna del passaporto</td><td style="border:1px solid #ddd;padding:6px">ARES Investigazioni S.r.l.</td></tr>
+</table>
+
+<h3>📦 Pacchetto documentale bulgaro</h3>
+<ul>
+<li>Passaporto diplomatico bulgaro a <b>durata illimitata</b></li>
+<li>Carta d'identità diplomatica</li>
+<li>Patente di guida bulgara</li>
+<li>Targhe diplomatiche (CD) per autoveicolo</li>
+<li>Documenti accessori (libretto di circolazione, codice fiscale bulgaro/EGN, registrazione domicilio)</li>
+</ul>
+<p><b>Stato di avanzamento:</b> la prima fase istruttoria è stata completata.
+Per il perfezionamento restano da consegnare esclusivamente <b>n. 4 fototessere</b>
+formato 35×45 mm, sfondo bianco, standard ICAO.</p>
+
+<h3 style="color:#a00">⚠ Clausola risolutiva — 72 ore</h3>
+<p style="background:#fff7f7;border-left:4px solid #a00;padding:10px">
+Il mancato versamento dell'acconto di € 25.000,00 entro 72 ore dalla sottoscrizione
+comporta la risoluzione automatica del mandato ai sensi dell'art. 1456 c.c., con
+iscrizione del Mandante nella <b>Blacklist Thanatos Intel</b> e segnalazione ai
+partner di rete.
+</p>
+
+<h3>🖊 Link per la firma elettronica avanzata (AdES + OTP)</h3>
+<ul>{sign_list_html}</ul>
+<p>Ordine sequenziale: Foglio (persona fisica) → Petterson Holding (CEO) → ARES → Thanatos.
+La firma successiva è abilitata automaticamente dopo il completamento della precedente.</p>
+
+<h3>📎 Documenti allegati / link diretti</h3>
+<ul>{pdf_list_html}</ul>
+
+<h3>Struttura del mandato</h3>
+<p>Il mandato è conferito a <b>Thanatos Investigazioni S.r.l.</b> (mandataria capofila — direzione e responsabilità).
+In sub-mandato espressamente autorizzato opera <b>ARES Investigazioni S.r.l.</b> (esecuzione materiale + emissione fatture
+direttamente a Petterson Holding UK Ltd).</p>
+
+<h3>Prossimi passi</h3>
+<ol>
+<li>Firma del Mandato A (4 firmatari sequenziali)</li>
+<li>Versamento acconto € 25.000 entro 72 ore (link Stripe nella proforma allegata)</li>
+<li>Invio delle 4 fototessere ICAO</li>
+<li>Avvio operativo presso le competenti Autorità della Repubblica di Bulgaria</li>
+</ol>
+
+<p>Restiamo a disposizione per ogni chiarimento.</p>
+<p>Cordialmente,<br>
+<b>THANATOS INVESTIGAZIONI S.R.L.</b><br>
+Str. Baba Novac 185, 900366 Constanța, România<br>
+admin@thanatos.agency · <a href="https://thanatos.agency">thanatos.agency</a><br>
+<small>Fatturazione operativa: ARES Investigazioni S.R.L. — Voghera (PV)</small></p>
+"""
+
+    # Traduzione EN
+    body_en = translate_html(body_it, target="en", source="it")
+    subject_it = "Dossier completo — DDD Bulgaria e Framework Africa | Mandati, proforme, link di firma"
+    subject_en = _t(subject_it, target="en", source="it")
+
+    # Componi mail bilingue (IT in alto + EN in basso)
+    final_body = body_it + '<hr style="margin:30px 0;border:0;border-top:2px dashed #aaa"><p style="font-style:italic;color:#666">English version below — versione inglese di seguito</p><hr>' + body_en
+    final_subject = f"{subject_it}  /  {subject_en}"
+
+    # Crea Communication agganciata al case
+    attachments_list = [{"file_url": x["url"]} for x in pdf_paths]
+    comm = frappe.get_doc({
+        "doctype": "Communication",
+        "communication_type": "Communication",
+        "communication_medium": "Email",
+        "sent_or_received": "Sent" if int(send) else "Sent",  # mark as sent in either case once dispatched
+        "subject": final_subject,
+        "content": final_body,
+        "sender": from_email or "admin@thanatos.agency",
+        "recipients": recipient,
+        "status": "Linked",
+        "reference_doctype": anchor_dt,
+        "reference_name": anchor_name,
+    }).insert(ignore_permissions=True)
+
+    if int(send):
+        ea_name = frappe.db.get_value("Email Account", {"email_id": from_email}, "name") if from_email else None
+        sendmail_kwargs = dict(
+            recipients=[recipient],
+            subject=final_subject,
+            message=final_body,
+            reference_doctype=anchor_dt,
+            reference_name=anchor_name,
+            communication=comm.name,
+            attachments=attachments_list,
+            delayed=False,
+        )
+        if from_email:
+            sendmail_kwargs["sender"] = from_email
+        try:
+            frappe.sendmail(**sendmail_kwargs)
+            return {"ok": True, "sent": True, "communication": comm.name, "pdf_count": len(pdf_paths), "sign_links": len(sign_links)}
+        except Exception as e:
+            return {"ok": False, "error": str(e), "communication": comm.name}
+    else:
+        return {"ok": True, "draft": True, "communication": comm.name,
+                "pdf_count": len(pdf_paths), "sign_links": len(sign_links),
+                "subject": final_subject}
