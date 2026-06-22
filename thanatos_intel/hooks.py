@@ -35,7 +35,9 @@ app_include_js=['/assets/thanatos_intel/js/bootstrap_jq.js',
                 '/assets/thanatos_intel/js/vies_autofill.js',
                 '/assets/thanatos_intel/js/call_logger.js',
                 '/assets/thanatos_intel/js/cockpit_land.js',
-                '/assets/thanatos_intel/js/thanatos_shell.js']
+                '/assets/thanatos_intel/js/thanatos_shell.js',
+	'/assets/thanatos_intel/js/pcu_global.js',
+]
 web_include_css=['/assets/thanatos_intel/css/thanatos_web.css']
 web_include_js=['/assets/thanatos_intel/js/fx_widget.js', '/assets/thanatos_intel/js/thanatos_login.js', '/assets/thanatos_intel/js/thanatos_intro.js']
 

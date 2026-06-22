@@ -120,7 +120,8 @@ def _resolve_sender(doctype: str, name: str):
 
 @frappe.whitelist()
 def send_email(doctype: str, name: str, recipients: str, subject: str,
-               content: str, template: str = None, attachments: str = None) -> dict:
+               content: str, template: str = None, attachments: str = None,
+               from_email: str = None) -> dict:
     """Manda email e aggancia al doc."""
     if template:
         et = frappe.get_doc("Email Template", template)
@@ -130,7 +131,11 @@ def send_email(doctype: str, name: str, recipients: str, subject: str,
 
     atts = json.loads(attachments) if attachments and isinstance(attachments, str) else (attachments or [])
 
-    ea_name, sender_email = _resolve_sender(doctype, name)
+    if from_email:
+        ea_name = frappe.db.get_value("Email Account", {"email_id": from_email}, "name")
+        sender_email = from_email
+    else:
+        ea_name, sender_email = _resolve_sender(doctype, name)
     comm = frappe.get_doc({
         "doctype": "Communication",
         "communication_type": "Communication",
@@ -317,3 +322,38 @@ def ai_suggest(doctype: str, name: str) -> dict:
         return {"ok": False, "error": f"AI gateway HTTP {r.status_code}"}
     except Exception as e:
         return {"ok": False, "error": f"AI gateway irraggiungibile: {e}"}
+
+
+# ----------- SENDER SELECTION -----------------------------------------------
+@frappe.whitelist()
+def get_senders() -> list:
+    """Ritorna lista di mittenti email disponibili (Email Account outgoing)."""
+    accounts = frappe.db.sql("""
+        SELECT name, email_id, email_account_name, default_outgoing
+        FROM `tabEmail Account`
+        WHERE enable_outgoing=1 AND IFNULL(disabled, 0)=0
+        ORDER BY default_outgoing DESC, email_id
+    """, as_dict=1)
+    out = []
+    for a in accounts:
+        out.append({
+            "value": a.email_id,
+            "label": f"{a.email_account_name} <{a.email_id}>" + (" ⭐" if a.default_outgoing else ""),
+            "account_name": a.name,
+            "default": bool(a.default_outgoing),
+        })
+    return out
+
+
+@frappe.whitelist()
+def get_wa_senders() -> list:
+    """Ritorna lista numeri WhatsApp configurati."""
+    try:
+        rows = frappe.db.sql("""
+            SELECT name, phone_number, display_name
+            FROM `tabWhatsApp Number`
+            ORDER BY phone_number
+        """, as_dict=1)
+        return [{"value": r.phone_number, "label": f"{r.display_name or r.name} <{r.phone_number}>"} for r in rows]
+    except Exception:
+        return []
