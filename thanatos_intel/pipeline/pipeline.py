@@ -358,7 +358,7 @@ def get_pipeline(case_doc_or_dict) -> list[dict]:
             "actor": step.get("actor", "operator"),
             "description": step.get("description", ""),
             "status": status,
-            "desk_url": desk_url_fn(case) if desk_url_fn and not done else "",
+            "desk_url": desk_url_fn(case) if desk_url_fn else "",
             "portal_url": step.get("portal_url", ""),
         }
         result.append(entry)

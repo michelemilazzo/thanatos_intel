@@ -47,8 +47,18 @@ window.ThanatosPipeline = (function () {
         const done_count = steps.filter(s => s.status === 'done').length;
         const pct = Math.round(done_count / steps.length * 100);
         const current_idx = steps.findIndex(s => s.status === 'current');
-        const prev_idx = current_idx > 0 ? current_idx - 1 : -1;
-        const next_idx = current_idx >= 0 && current_idx < steps.length - 1 ? current_idx + 1 : -1;
+        // Trova precedente/successivo step navigabile (con desk_url)
+        let prev_idx = -1, next_idx = -1;
+        if (current_idx > 0) {
+            for (let i = current_idx - 1; i >= 0; i--) {
+                if (steps[i].desk_url) { prev_idx = i; break; }
+            }
+        }
+        if (current_idx >= 0 && current_idx < steps.length - 1) {
+            for (let i = current_idx + 1; i < steps.length; i++) {
+                if (steps[i].desk_url) { next_idx = i; break; }
+            }
+        }
 
         let html = `
 <div id="${wrapper_id}" style="
