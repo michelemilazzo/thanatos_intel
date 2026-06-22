@@ -14,6 +14,7 @@ frappe.thanatos.SECTIONS = [
 	{key:'intelligence', label:'🔍 Intelligence', route:['List','OSINT Job']},
 	{key:'antifrode', label:'🛡 Antifrode', route:['List','Blacklist Entry']},
 	{key:'compliance', label:'📋 Compliance', route:['List','Risk Score']},
+	{key:'seo', label:'🔍 SEO', route:['List','SEO Keyword']},
 	{key:'architetto', label:'🤖 AI', route:['thanatos-ai-architect']},
 ];
 
