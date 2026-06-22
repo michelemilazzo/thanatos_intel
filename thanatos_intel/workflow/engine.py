@@ -208,8 +208,21 @@ def complete_step(case_name, seq, note=None):
             break
     if label is None:
         frappe.throw(f"Step {seq} non trovato nella pratica {case_name}")
-    notify.append_activity(case, f"Step «{label}» completato.")
+    import hashlib
+    _evd = hashlib.sha256(
+        f"{case_name}|{seq}|{label}|{frappe.session.user}|{now_datetime()}".encode("utf-8")
+    ).hexdigest()
+    notify.append_activity(case, f"Step «{label}» completato. · evidenza SHA-256 {_evd[:16]}…")
     case.save(ignore_permissions=True)
+    try:
+        frappe.get_doc({
+            "doctype": "Chain Of Custody Event",
+            "event_type": "Modified",
+            "related_reference": case_name,
+            "notes": f"Workflow: step «{label}» (#{seq}) completato da {frappe.session.user}. SHA-256: {_evd}",
+        }).insert(ignore_permissions=True)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "step custody evidence")
     for td in frappe.get_all("ToDo", filters={
         "reference_type": "Investigation Case", "reference_name": case_name,
         "status": "Open", "description": ["like", f"%[step {seq}]%"]}, pluck="name"):
