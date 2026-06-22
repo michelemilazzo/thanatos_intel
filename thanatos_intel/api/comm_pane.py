@@ -192,3 +192,107 @@ def quick_links(doctype: str, name: str) -> dict:
             links["payment"] = pf[0].stripe_session or f"{base}/portal/pay/{pf[0].name}"
             links["proforma"] = f"{base}/app/diplomatic-proforma/{pf[0].name}"
     return links
+
+
+# ----------- DUAL MANDATE ---------------------------------------------------
+@frappe.whitelist()
+def create_paired_mandate(name: str) -> str:
+    src = frappe.get_doc("Agency Mandate", name)
+    if getattr(src, "paired_mandate", None):
+        return src.paired_mandate
+    cm = frappe.copy_doc(src)
+    cm.mandate_kind = "Commercial"
+    cm.subject_matter = (src.subject_matter or "") + " — Versione commerciale per fatturazione (causale neutra)"
+    cm.fee_total = src.fee_total
+    cm.status = "Draft"
+    cm.paired_mandate = src.name
+    cm.mandate_pdf = None
+    cm.signed_on = None
+    cm.insert(ignore_permissions=True)
+    src.db_set("paired_mandate", cm.name)
+    frappe.db.commit()
+    return cm.name
+
+
+# ----------- TIMELINE -------------------------------------------------------
+DDD_STEPS = [
+    ("Draft","Bozza iniziale"),
+    ("Questionnaire Pending","Questionario al cliente"),
+    ("KYC Pending","Verifica identità (KYC)"),
+    ("KYB Pending","Verifica azienda (KYB)"),
+    ("Video Identification Pending","Identificazione video"),
+    ("Document Review","Revisione documenti"),
+    ("OSINT Review","OSINT e fonti aperte"),
+    ("Compliance Review","Compliance/AML"),
+    ("Legal Review","Revisione legale"),
+    ("Mandate Pending Signature","Mandato in firma"),
+    ("Payment Step 1 Pending","Acconto in attesa"),
+    ("Investigation Active","Investigazione attiva"),
+    ("Dossier Preparation","Preparazione dossier"),
+    ("Director Review","Revisione direttore"),
+    ("Approved for Submission","Approvato per invio"),
+    ("Submitted to Authority","Inviato all\'autorità"),
+    ("Awaiting Authority Response","In attesa decisione"),
+    ("Closed","Chiusa"),
+]
+
+
+@frappe.whitelist()
+def get_timeline(doctype: str, name: str) -> dict:
+    doc = frappe.get_doc(doctype, name)
+    current = getattr(doc, "workflow_state", None) or getattr(doc, "status", None) or "Draft"
+    steps = DDD_STEPS if doctype == "Diplomatic Eligibility Case" else [
+        ("Open","Aperta"),("In Progress","In lavorazione"),
+        ("Awaiting Client","In attesa cliente"),("Closed","Chiusa"),
+    ]
+    out = []
+    found = False
+    for k, label in steps:
+        if k == current:
+            state = "current"; found = True
+        elif not found:
+            state = "done"
+        else:
+            state = "todo"
+        out.append({"key": k, "label": label, "state": state})
+
+    # Next actions concrete
+    next_actions = []
+    if doctype == "Diplomatic Eligibility Case":
+        if current == "KYC Pending":
+            next_actions.append("Caricare 4 fototessere ICAO 35x45 sfondo bianco")
+            next_actions.append("Verificare documento identità in corso di validità")
+        if current == "Mandate Pending Signature":
+            next_actions.append("Inviare mandato per firma elettronica via mmos_sign")
+        if current == "Payment Step 1 Pending":
+            next_actions.append("Verificare incasso acconto entro 72h (pena risoluzione)")
+        if current == "Submitted to Authority":
+            next_actions.append("Follow-up con autorità ogni 5 giorni")
+
+    return {"steps": out, "current": current, "next_actions": next_actions}
+
+
+# ----------- AI SUGGEST -----------------------------------------------------
+@frappe.whitelist()
+def ai_suggest(doctype: str, name: str) -> dict:
+    import requests
+    gw = frappe.conf.get("ai_gateway_url") or "http://10.10.0.4:8800"
+    key = frappe.conf.get("ai_gateway_key") or ""
+    doc = frappe.get_doc(doctype, name).as_dict()
+    keep = {k: v for k, v in doc.items() if not k.startswith("_") and not isinstance(v, list)}
+    prompt = (
+        f"Sei un assistente Thanatos Intel. Analizza il seguente documento "
+        f"{doctype}/{name} e suggerisci 3 azioni operative concrete e prioritizzate "
+        f"per portare avanti la pratica. Rispondi in italiano, formato lista puntata.\n\n"
+        f"DOC: {keep}"
+    )
+    try:
+        r = requests.post(f"{gw}/v1/chat", json={"prompt": prompt, "max_tokens": 600},
+                          headers={"Authorization": f"Bearer {key}"} if key else {},
+                          timeout=20)
+        if r.status_code == 200:
+            data = r.json()
+            return {"ok": True, "text": data.get("text") or data.get("response") or str(data)}
+        return {"ok": False, "error": f"AI gateway HTTP {r.status_code}"}
+    except Exception as e:
+        return {"ok": False, "error": f"AI gateway irraggiungibile: {e}"}
