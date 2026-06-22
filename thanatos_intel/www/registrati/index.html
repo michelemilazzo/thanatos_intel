@@ -468,6 +468,7 @@ document.getElementById('c-send').addEventListener('click', async () => {
       const lf = new FormData();
       lf.append('usr', g('c-email')); lf.append('pwd', g('c-pw'));
       await fetch('/api/method/login', {method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:lf});
+      try { window.__thanatos_signup_clear && window.__thanatos_signup_clear(); } catch(e){}
       window.location.href = m.redirect || '/portal';
     } else {
       const txt = String((m && m.exc_type === 'ValidationError' && m.message) || (m && m.exc) || 'Errore sconosciuto');
@@ -554,5 +555,39 @@ async function viesLookupPortal(vatFieldId) {
     if (btn) { btn.textContent = '🔍'; btn.disabled = false; }
   }
 }
+
+  // Persistenza campi form: ripristina dopo refresh/errore, pulisce al success
+  (function(){
+    const STORE_KEY = 'thanatos_signup_draft_v1';
+    function gather(){
+      const data = {};
+      document.querySelectorAll('input,select,textarea').forEach(el=>{
+        if (el.type === 'password' || el.type === 'submit' || el.type === 'hidden') return;
+        if (!el.name && !el.id) return;
+        data[el.id || el.name] = el.value;
+      });
+      return data;
+    }
+    function restore(){
+      try {
+        const raw = localStorage.getItem(STORE_KEY);
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        Object.entries(d).forEach(([k,v])=>{
+          const el = document.getElementById(k) || document.querySelector(`[name="${k}"]`);
+          if (el && !el.value && v) el.value = v;
+        });
+      } catch(e) { console.warn('signup restore fail', e); }
+    }
+    function save(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(gather())); } catch(e) {} }
+    document.addEventListener('input', e=>{
+      if (e.target.matches('input,select,textarea')) save();
+    }, true);
+    window.__thanatos_signup_clear = function(){ try { localStorage.removeItem(STORE_KEY); } catch(e){} };
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', restore);
+    } else { restore(); }
+  })();
+
 </script>
 {% endblock %}

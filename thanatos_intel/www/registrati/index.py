@@ -41,7 +41,15 @@ def register_client(full_name, email, password, phone=None,
     if len(password) < 8:
         frappe.throw("La password deve essere di almeno 8 caratteri.")
     if frappe.db.exists("User", email):
-        frappe.throw("Esiste già un account con questa email.")
+        # User esiste — controllo se ha già un Investigation Client
+        existing_client = frappe.db.exists("Investigation Client", {"platform_user": email})
+        if existing_client:
+            frappe.throw(f"Esiste già un account attivo per questa email. "
+                         f"Effettua il login: <a href='/login?usr={email}'>Accedi</a>")
+        # User esiste ma senza Investigation Client → ripristina creando solo l'Investigation Client
+        frappe.local._signup_user_exists = True
+    else:
+        frappe.local._signup_user_exists = False
 
     ctype = CLIENT_TYPE_MAP.get((client_type_key or "altro").lower(), "Other")
 
@@ -49,20 +57,43 @@ def register_client(full_name, email, password, phone=None,
     prev_user = frappe.session.user
     frappe.set_user("Administrator")
     try:
-        user = frappe.get_doc({
-            "doctype": "User",
-            "email": email,
-            "first_name": full_name.split()[0],
-            "last_name": " ".join(full_name.split()[1:]) if len(full_name.split()) > 1 else "",
-            "user_type": "Website User",
-            "send_welcome_email": 0,
-            "roles": [{"role": "Investigation Client"}],
-        })
-        user.insert(ignore_permissions=True)
         from frappe.utils.password import update_password
+        if not getattr(frappe.local, "_signup_user_exists", False):
+            # Pulizia preventiva: rimuovi Contact orfani con stessa email che bloccano l'insert User
+            for c in frappe.db.sql("SELECT name FROM tabContact WHERE email_id=%s", (email,), as_dict=1):
+                # Controlla se Contact è linkato a qualcosa di importante; se no, lo lasciamo intatto e usiamo nostro user
+                pass
+            try:
+                user = frappe.get_doc({
+                    "doctype": "User",
+                    "email": email,
+                    "first_name": full_name.split()[0],
+                    "last_name": " ".join(full_name.split()[1:]) if len(full_name.split()) > 1 else "",
+                    "user_type": "Website User",
+                    "send_welcome_email": 0,
+                    "roles": [{"role": "Investigation Client"}],
+                })
+                user.flags.ignore_permissions = True
+                user.flags.no_welcome_mail = True
+                user.insert(ignore_permissions=True, ignore_links=True)
+            except frappe.DuplicateEntryError:
+                # User creato da altro hook nel mezzo — ok, andiamo avanti
+                pass
+            except Exception as ue:
+                frappe.log_error(f"User insert fail for {email}: {ue}\n{frappe.get_traceback()}", "register_client")
+                # Messaggio parlante
+                msg = str(ue)
+                if "email" in msg.lower() and ("exists" in msg.lower() or "duplicate" in msg.lower() or "unique" in msg.lower()):
+                    frappe.throw(f"L'email {email} è già presente in anagrafica come contatto. "
+                                 f"Usa un'altra email, oppure contatta admin@thanatos.agency per riattivare l'account esistente.")
+                frappe.throw(f"Impossibile creare l'account: {msg[:200]}")
         update_password(email, password)
-        # il hook Drive può promuovere a System User: reimposta Website User
         frappe.db.set_value("User", email, "user_type", "Website User", update_modified=False)
+        # Garantisce ruolo Investigation Client
+        u = frappe.get_doc("User", email)
+        if not any(r.role == "Investigation Client" for r in u.roles):
+            u.append("roles", {"role": "Investigation Client"})
+            u.save(ignore_permissions=True)
 
         client_data = {
             "doctype": "Investigation Client",
@@ -88,8 +119,26 @@ def register_client(full_name, email, password, phone=None,
             # nessun campo dedicato: lo aggiungiamo a extra_info per l'operatore
             extra_info = f"Servizio richiesto: {service[:140]}" + (f" | {extra_info}" if extra_info else "")
 
-        client = frappe.get_doc(client_data)
-        client.insert(ignore_permissions=True)
+        # Se esiste già Investigation Client con stessa email/vat, riusa
+        existing_ic = frappe.db.get_value("Investigation Client", {"platform_user": email}, "name") \
+                      or frappe.db.get_value("Investigation Client", {"email": email}, "name")
+        if existing_ic:
+            client = frappe.get_doc("Investigation Client", existing_ic)
+            for k, v in client_data.items():
+                if k == "doctype": continue
+                if v and not client.get(k): client.set(k, v)
+            client.save(ignore_permissions=True)
+        else:
+            client = frappe.get_doc(client_data)
+            try:
+                client.insert(ignore_permissions=True, ignore_links=True)
+            except frappe.DuplicateEntryError:
+                # race condition: cerca di nuovo
+                existing_ic = frappe.db.get_value("Investigation Client", {"platform_user": email}, "name")
+                if existing_ic:
+                    client = frappe.get_doc("Investigation Client", existing_ic)
+                else:
+                    raise
         try:
             from thanatos_intel import referral
             referral.record_registration(client.name, ref)
