@@ -152,6 +152,9 @@ def client_upload(case: str = ""):
 
     frappe.db.commit()
 
+    # Auto-ingest AI per file supportati (best-effort, asincrono)
+    _auto_ingest_uploaded(case, uploaded)
+
     if uploaded:
         try:
             from thanatos_intel.workflow.notify import _email_operator

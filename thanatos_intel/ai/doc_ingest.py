@@ -145,14 +145,23 @@ def _meter(ai, case):
 
 
 def _read_text_fallback(file_url):
-    """Legge il testo da file non-OCR (txt/md/csv/json/log) via File.get_content()."""
+    """Legge testo da file non-OCR: txt/md/csv (get_content) o docx (python-docx)."""
+    import os
     try:
         fd = frappe.get_doc("File", {"file_url": file_url})
+        ext = os.path.splitext(fd.file_name or "")[1].lower()
+        if ext in (".docx", ".doc"):
+            import docx as _docx
+            path = fd.get_full_path()
+            document = _docx.Document(path)
+            return "
+".join(p.text for p in document.paragraphs if p.text.strip())
         content = fd.get_content()
         if isinstance(content, bytes):
             content = content.decode("utf-8", errors="ignore")
         return content or ""
     except Exception:
+        frappe.log_error(frappe.get_traceback(), "doc_ingest fallback")
         return ""
 
 

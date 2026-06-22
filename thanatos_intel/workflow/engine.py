@@ -176,6 +176,8 @@ def advance(case_name):
 
         # AUTO di sistema (apertura, notify, work/deliver automatici): pass-through.
         # L'azione reale (genera mandato, consegna report...) si aggancera' qui in F2.
+        # AUTO di sistema: dispatch azioni reali prima del pass-through Done.
+        _run_auto_step(case, step)
         step.status = "Done"
         step.completed_on = now_datetime()
         notify.append_activity(case, f"«{step.step_label}» eseguito.")

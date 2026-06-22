@@ -158,6 +158,18 @@ def _extract_text_from_file(file_path: str, lang: str = TESSERACT_LANGS) -> tupl
             frappe.log_error(f"pytesseract image: {e}", "OCRService")
             return "", "error"
 
+    if ext in (".docx", ".doc"):
+        try:
+            import docx as _docx
+            document = _docx.Document(file_path)
+            text = "
+".join(p.text for p in document.paragraphs if p.text.strip())
+            if text.strip():
+                return text.strip(), "python_docx"
+        except Exception as e:
+            frappe.log_error(f"python-docx: {e}", "OCRService")
+            return "", "error"
+
     return "", "unsupported"
 
 

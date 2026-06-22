@@ -198,6 +198,13 @@ def webhook():
         )
         created.append(name)
 
+        # Auto-reply se configurato
+        try:
+            msg_count = frappe.db.count('Intel Lead Message', {'parent': name})
+            _send_auto_reply(wa_number, m['source_id'], name, is_new=(msg_count <= 1))
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), 'WA auto-reply dispatch')
+
         # Media in arrivo → scarica + allega (audio anche trascritto)
         if m.get("media_id"):
             _wa_phone = wa_number.phone_number if wa_number else None
@@ -219,6 +226,61 @@ def webhook():
     return {"created": created, "count": len(created)}
 
 
+
+
+def _send_auto_reply(wa_number, to_number: str, lead_name: str, is_new: bool):
+    # Invia auto-reply se configurato. Non richiede frappe.session.
+    if not wa_number:
+        return
+    wa_doc_name = wa_number.get('phone_number') if isinstance(wa_number, dict) else wa_number
+    if not wa_doc_name:
+        return
+    try:
+        wa_doc = frappe.get_doc('WhatsApp Number', wa_doc_name)
+    except Exception:
+        return
+    msg = (wa_doc.auto_reply_message or '').strip()
+    if not msg:
+        return
+    if not is_new and not wa_doc.auto_reply_always:
+        return
+    fwd = (wa_doc.call_forward_number or '').strip()
+    if fwd:
+        msg = msg.replace('{numero_operatore}', fwd)
+    else:
+        msg = msg.replace(' {numero_operatore}', '').replace('{numero_operatore}', '')
+    from frappe.utils.password import get_decrypted_password
+    phone_number_id = wa_doc.meta_phone_number_id
+    access_token = get_decrypted_password('WhatsApp Number', wa_doc.name, 'meta_access_token')
+    if not phone_number_id or not access_token:
+        return
+    to_clean = to_number.lstrip('+').replace(' ', '').replace('-', '')
+    try:
+        import requests as _req
+        resp = _req.post(
+            f'https://graph.facebook.com/v21.0/{phone_number_id}/messages',
+            json={'messaging_product': 'whatsapp', 'recipient_type': 'individual',
+                  'to': to_clean, 'type': 'text', 'text': {'preview_url': False, 'body': msg}},
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=15,
+        )
+        data = resp.json()
+        ok = resp.status_code == 200 and data.get('messages')
+        mid = data['messages'][0].get('id', '') if ok else ''
+        from frappe.utils import now_datetime
+        lead = frappe.get_doc('Intel Lead', lead_name)
+        lead.append('messages', {
+            'direction': 'Outbound',
+            'sent_at': now_datetime(),
+            'content': msg,
+            'status': 'Inviato' if ok else 'Fallito',
+            'sent_by': 'Administrator',
+            'wa_message_id': mid,
+        })
+        lead.save(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), 'WA auto-reply')
 def _has_call_events(data: dict) -> bool:
     for entry in data.get("entry", []):
         for change in entry.get("changes", []):
