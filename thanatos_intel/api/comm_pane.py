@@ -730,23 +730,7 @@ admin@thanatos.agency · <a href="https://thanatos.agency">thanatos.agency</a><b
 
     if int(send):
         ea_name = frappe.db.get_value("Email Account", {"email_id": from_email}, "name") if from_email else None
-        # Tenta anche di registrare in webmail Mail (così appare in /mail)
-    try:
-        from mail.api.mail import create_mail as _mail_create
-        from mail.utils.user import get_user_personal_account
-        try:
-            acct = get_user_personal_account(frappe.session.user) or f"{frappe.session.user}:{sender_email or frappe.session.user}"
-        except Exception:
-            acct = f"{frappe.session.user}:{sender_email or frappe.session.user}"
-        _mail_create(account=acct, from_email=sender_email or frappe.session.user,
-                     to=[{"email": recipients, "display_name": ""}], cc=[], bcc=[],
-                     subject=subject, html_body=content,
-                     attachments=[{"file_url": a.get("file_url"), "file_name": a.get("file_name","")} for a in atts] if atts else [],
-                     save_as_draft=False)
-    except Exception as _e:
-        frappe.log_error(f"webmail mirror fail: {_e}", "send_email")
-
-    sendmail_kwargs = dict(
+        sendmail_kwargs = dict(
             recipients=[recipient],
             subject=final_subject,
             message=final_body,
