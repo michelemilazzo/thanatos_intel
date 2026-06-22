@@ -357,3 +357,59 @@ def get_wa_senders() -> list:
         return [{"value": r.phone_number, "label": f"{r.display_name or r.name} <{r.phone_number}>"} for r in rows]
     except Exception:
         return []
+
+
+# ----------- RECIPIENT AUTOCOMPLETE -----------------------------------------
+@frappe.whitelist()
+def search_recipients(query: str = "", channel: str = "email", limit: int = 20) -> list:
+    """Cerca destinatari (email o telefono) tra Contact / Customer / Applicant / User / Lead."""
+    if not query: query = ""
+    q = f"%{query.strip()}%"
+    out = []
+    seen = set()
+    if channel == "email":
+        # Contact
+        for r in frappe.db.sql("""SELECT c.email_id, c.first_name, c.last_name, c.name
+            FROM `tabContact` c WHERE c.email_id IS NOT NULL AND c.email_id != ''
+            AND (c.email_id LIKE %s OR c.full_name LIKE %s OR c.first_name LIKE %s)
+            LIMIT %s""", (q, q, q, limit), as_dict=1):
+            if r.email_id and r.email_id not in seen:
+                seen.add(r.email_id)
+                full = (f"{r.first_name or ''} {r.last_name or ''}".strip() or r.name)
+                out.append({"value": r.email_id, "label": f"{full} <{r.email_id}>", "source": "Contact"})
+        # Customer (email field)
+        for r in frappe.db.sql("""SELECT name, customer_name, email_id FROM `tabCustomer`
+            WHERE email_id IS NOT NULL AND email_id != ''
+            AND (email_id LIKE %s OR customer_name LIKE %s) LIMIT %s""", (q, q, limit), as_dict=1):
+            if r.email_id and r.email_id not in seen:
+                seen.add(r.email_id)
+                out.append({"value": r.email_id, "label": f"{r.customer_name} <{r.email_id}>", "source": "Customer"})
+        # Applicant Profile
+        for r in frappe.db.sql("""SELECT name, full_legal_name, email FROM `tabApplicant Profile`
+            WHERE email IS NOT NULL AND email != ''
+            AND (email LIKE %s OR full_legal_name LIKE %s) LIMIT %s""", (q, q, limit), as_dict=1):
+            if r.email and r.email not in seen:
+                seen.add(r.email)
+                out.append({"value": r.email, "label": f"{r.full_legal_name} <{r.email}>", "source": "Applicant"})
+        # User
+        for r in frappe.db.sql("""SELECT name, full_name FROM `tabUser`
+            WHERE enabled=1 AND name != 'Administrator' AND name != 'Guest'
+            AND (name LIKE %s OR full_name LIKE %s) LIMIT %s""", (q, q, limit), as_dict=1):
+            if r.name not in seen:
+                seen.add(r.name)
+                out.append({"value": r.name, "label": f"{r.full_name or r.name} <{r.name}>", "source": "User"})
+    else:
+        # WhatsApp / telefono
+        for r in frappe.db.sql("""SELECT name, full_name, mobile_no FROM `tabContact`
+            WHERE mobile_no IS NOT NULL AND mobile_no != ''
+            AND (mobile_no LIKE %s OR full_name LIKE %s) LIMIT %s""", (q, q, limit), as_dict=1):
+            if r.mobile_no and r.mobile_no not in seen:
+                seen.add(r.mobile_no)
+                out.append({"value": r.mobile_no, "label": f"{r.full_name or r.name} {r.mobile_no}", "source": "Contact"})
+        for r in frappe.db.sql("""SELECT name, full_legal_name, phone FROM `tabApplicant Profile`
+            WHERE phone IS NOT NULL AND phone != ''
+            AND (phone LIKE %s OR full_legal_name LIKE %s) LIMIT %s""", (q, q, limit), as_dict=1):
+            if r.phone and r.phone not in seen:
+                seen.add(r.phone)
+                out.append({"value": r.phone, "label": f"{r.full_legal_name} {r.phone}", "source": "Applicant"})
+    return out[:limit]
