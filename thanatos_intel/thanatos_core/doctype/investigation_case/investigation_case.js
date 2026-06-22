@@ -319,10 +319,13 @@ frappe.ui.form.on('Investigation Case', {
 	refresh(frm) {
 		if (frm.is_new()) return;
 		tcw_inject_css();
+		if (!frm.dashboard || !frm.dashboard.add_section) return;
 		frm.dashboard.add_section(
 			'<div class="tcw-guide" id="tcw-guide"><div class="tcw-mut">Carico percorso guidato…</div></div>',
 			__('Percorso guidato'));
-		tcw_load(frm, frm.dashboard.wrapper.find('#tcw-guide'));
+		const $w = (frm.dashboard.wrapper && frm.dashboard.wrapper.find) ? frm.dashboard.wrapper.find('#tcw-guide')
+		         : (frm.dashboard.parent ? $(frm.dashboard.parent).find('#tcw-guide') : null);
+		if ($w && $w.length) tcw_load(frm, $w);
 	},
 });
 
