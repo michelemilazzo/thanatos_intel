@@ -1,4 +1,14 @@
 
+// Service Worker + Cache API cleanup (forza scaricamento JS aggiornati)
+try {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister()));
+  }
+  if (window.caches) {
+    caches.keys().then(ks => ks.forEach(k => caches.delete(k)));
+  }
+} catch(e) {}
+
 // Polyfill frappe.ready (rimosso in Frappe v16) — backward compat per script vecchi
 if (typeof frappe !== 'undefined' && typeof frappe.ready !== 'function') {
   frappe.ready = function(cb){
