@@ -331,7 +331,7 @@ def get_senders() -> list:
     accounts = frappe.db.sql("""
         SELECT name, email_id, email_account_name, default_outgoing
         FROM `tabEmail Account`
-        WHERE enable_outgoing=1 AND IFNULL(disabled, 0)=0
+        WHERE enable_outgoing=1
         ORDER BY default_outgoing DESC, email_id
     """, as_dict=1)
     out = []
