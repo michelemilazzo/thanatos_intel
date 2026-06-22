@@ -424,3 +424,89 @@ def search_recipients(query: str = "", channel: str = "email", limit: int = 20) 
                 seen.add(r.phone)
                 out.append({"value": r.phone, "label": f"{r.full_legal_name} {r.phone}", "source": "Applicant"})
     return out[:limit]
+
+
+# ----------- TRADUZIONE GENERICA + MULTI-LINGUA -----------------------------
+@frappe.whitelist()
+def translate_doc_pdf(doctype: str, name: str, target_lang: str = "en") -> dict:
+    """Traduce qualsiasi documento via Print Format del DocType + LibreTranslate.
+    Per Agency Mandate/Diplomatic Proforma delega ai loro handler specifici.
+    Per Signature Request: traduce il source_pdf via copy-source PDF + nuova anteprima Print Format del doc referenziato.
+    """
+    from werkzeug.test import EnvironBuilder
+    from werkzeug.wrappers import Request as WzRequest
+    from frappe.utils.pdf import get_pdf
+    from frappe.utils.file_manager import save_file
+    import frappe as _f
+    src_lang = _f.conf.get("mandate_source_lang") or "it"
+    if target_lang == src_lang:
+        return {"ok": False, "error": "stessa lingua origine"}
+
+    # Delegate ai handler specifici dove esistono
+    if doctype == "Agency Mandate":
+        from thanatos_intel.api.translate import translate_mandate_pdf
+        return translate_mandate_pdf(name, target_lang)
+    if doctype == "Diplomatic Proforma":
+        from thanatos_intel.api.translate import translate_proforma_pdf
+        return translate_proforma_pdf(name, target_lang)
+
+    # Signature Request → traduci il doc referenziato e aggiorna source_pdf
+    if doctype == "Signature Request":
+        sr = frappe.get_doc("Signature Request", name)
+        if not sr.reference_doctype or not sr.reference_name:
+            return {"ok": False, "error": "Signature Request senza reference"}
+        sub = translate_doc_pdf(sr.reference_doctype, sr.reference_name, target_lang)
+        if sub.get("ok"):
+            # Aggiorna source PDF della Request al PDF tradotto
+            frappe.db.set_value("Signature Request", name, "source_pdf", sub["file_url"])
+            frappe.db.commit()
+        return sub
+
+    # Fallback generico: traduci campi testo principali via Print Format standard del DocType
+    pf = frappe.db.get_value("Print Format", {"doc_type": doctype, "standard": "Yes"}, "name") or "Standard"
+    try:
+        builder = EnvironBuilder(method="GET", path="/printview")
+        frappe.local.request = WzRequest(builder.get_environ())
+        frappe.local.form_dict = frappe._dict()
+        if not getattr(frappe.local, "session_obj", None):
+            import frappe.sessions as _fsessions
+            frappe.local.session_obj = _fsessions.Session(user="Administrator", resume=False)
+        # NB: per ora HTML non tradotto (richiederebbe processing per DocType). Genera PDF in lingua originale.
+        html = frappe.get_print(doctype, name, pf)
+        from thanatos_intel.api.translate import translate_html as _th
+        html_tr = _th(html, target=target_lang, source=src_lang)
+        pdf = get_pdf(html_tr)
+        fdoc = save_file(f"{name}_{target_lang}.pdf", pdf, doctype, name, is_private=1)
+        return {"ok": True, "file_url": fdoc.file_url, "lang": target_lang}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@frappe.whitelist()
+def send_email_multilang(doctype: str, name: str, recipients: str, subject: str,
+                          content: str, langs: str = "en", from_email: str = None) -> dict:
+    """Manda lo stesso messaggio in più lingue (CSV: 'en,bg,ro')."""
+    from thanatos_intel.api.translate import translate_html
+    import frappe as _f
+    src_lang = _f.conf.get("mandate_source_lang") or "it"
+    if isinstance(langs, str):
+        targets = [l.strip() for l in langs.split(",") if l.strip()]
+    else:
+        targets = list(langs)
+    out = {"sent": [], "errors": []}
+    for lang in targets:
+        try:
+            if lang == src_lang:
+                tr_content = content
+                tr_subject = subject
+            else:
+                tr_content = translate_html(content, target=lang, source=src_lang)
+                from thanatos_intel.api.translate import translate as _t
+                tr_subject = _t(subject, target=lang, source=src_lang)
+            r = send_email(doctype, name, recipients=recipients,
+                           subject=f"[{lang.upper()}] {tr_subject}",
+                           content=tr_content, from_email=from_email)
+            out["sent"].append({"lang": lang, "ok": r.get("ok"), "communication": r.get("communication")})
+        except Exception as e:
+            out["errors"].append({"lang": lang, "error": str(e)})
+    return out
