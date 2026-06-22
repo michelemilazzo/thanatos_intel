@@ -200,12 +200,13 @@ scheduler_events={
           'thanatos_intel.notifications.client_alerts.daily_operator_digest',
           'thanatos_intel.gsc.fetch_rankings'],
  'daily_long':[],
- 'weekly':[],
+ 'weekly':['thanatos_intel.thanatos_core.compliance_ops.policy_review_check'],
  'weekly_long':[],
  'monthly':['thanatos_intel.billing.cost_invoicing.scheduled_monthly_cost_invoicing',
             'thanatos_intel.billing.erp_sync.scheduled_monthly_invoice_on_erp',
             'thanatos_intel.billing.credit_settlement.run_monthly_credit_settlement',
-            'thanatos_intel.notifications.client_alerts.monthly_data_verification_request'],
+            'thanatos_intel.notifications.client_alerts.monthly_data_verification_request',
+            'thanatos_intel.thanatos_core.compliance_ops.iso_review_reminder'],
  'monthly_long':[]
 }
 website_route_rules=[

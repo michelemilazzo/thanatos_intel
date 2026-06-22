@@ -56,7 +56,9 @@ def _nav_links():
             ("Consensi (GDPR)", "Consent Record"),
             ("Conservazione (Retention)", "Retention Rule"),
             ("Fornitori / DPA", "ISMS Supplier"),
-            ("Asset informativi", "Information Asset")]
+            ("Asset informativi", "Information Asset"),
+            ("Statement of Applicability", "SoA Control"),
+            ("Audit / Riesame ISMS", "ISMS Review")]
     items = [{"label": l, "to": d, "kind": "DocType"} for l, d in comp if frappe.db.exists("DocType", d)]
     if items:
         nav.append({"title": "Compliance / ISMS (ISO)", "items": items})

@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "field:control_id",
+ "creation": "2026-06-22 02:30:19.241569",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "control_id",
+  "control_name",
+  "theme",
+  "applicable",
+  "implemented",
+  "cb1",
+  "linked_policy",
+  "sb1",
+  "justification"
+ ],
+ "fields": [
+  {
+   "fieldname": "control_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Controllo (Annex A)",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "control_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Nome controllo"
+  },
+  {
+   "fieldname": "theme",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tema",
+   "options": "Organizzativi\nPersone\nFisici\nTecnologici"
+  },
+  {
+   "default": "1",
+   "fieldname": "applicable",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Applicabile"
+  },
+  {
+   "default": "Parziale",
+   "fieldname": "implemented",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Attuazione",
+   "options": "No\nParziale\nS\u00ec"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "linked_policy",
+   "fieldtype": "Link",
+   "label": "Policy collegata",
+   "options": "Compliance Policy"
+  },
+  {
+   "fieldname": "sb1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "justification",
+   "fieldtype": "Small Text",
+   "label": "Giustificazione / Note"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 02:30:19.241569",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "SoA Control",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "control_name",
+ "track_changes": 1
+}

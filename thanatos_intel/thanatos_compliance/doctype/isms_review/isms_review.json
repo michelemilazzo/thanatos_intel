@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "REV-.#####",
+ "creation": "2026-06-22 02:30:19.612722",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "review_type",
+  "status",
+  "review_date",
+  "next_due",
+  "cb1",
+  "lead",
+  "sb1",
+  "scope",
+  "findings",
+  "actions"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Titolo",
+   "reqd": 1
+  },
+  {
+   "default": "Audit Interno",
+   "fieldname": "review_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Tipo",
+   "options": "Audit Interno\nRiesame Direzione"
+  },
+  {
+   "default": "Pianificato",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stato",
+   "options": "Pianificato\nSvolto\nChiuso"
+  },
+  {
+   "fieldname": "review_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Data"
+  },
+  {
+   "fieldname": "next_due",
+   "fieldtype": "Date",
+   "label": "Prossima scadenza"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lead",
+   "fieldtype": "Link",
+   "label": "Responsabile",
+   "options": "User"
+  },
+  {
+   "fieldname": "sb1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "scope",
+   "fieldtype": "Small Text",
+   "label": "Ambito"
+  },
+  {
+   "fieldname": "findings",
+   "fieldtype": "Text",
+   "label": "Risultanze"
+  },
+  {
+   "fieldname": "actions",
+   "fieldtype": "Text",
+   "label": "Azioni decise"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-22 02:30:19.612722",
+ "modified_by": "Administrator",
+ "module": "Thanatos Compliance",
+ "name": "ISMS Review",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Compliance Officer",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Thanatos Director",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}
