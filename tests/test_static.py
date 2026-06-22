@@ -44,10 +44,15 @@ def test_mvp_doctype_files_exist():
 
 
 def test_investigation_case_has_core_links():
+    """Schema attuale: relazioni con entities/evidence/report via Table (case_entities) anziche Link diretti."""
     data = json.loads((APP / "thanatos_core" / "doctype" / "investigation_case" / "investigation_case.json").read_text())
     fields = {field["fieldname"]: field for field in data["fields"]}
-    assert fields["primary_entity"]["options"] == "Investigation Entity"
-    assert fields["risk_score"]["options"] == "Risk Score"
+    # campi core attesi nello schema attuale
+    assert "case_title" in fields, "missing case_title"
+    assert "status" in fields, "missing status"
+    assert "client" in fields, "missing client (Customer link)"
+    assert "case_entities" in fields, "missing case_entities child table"
+    assert fields["client"]["options"] in ("Customer", "Investigation Client")
 
 
 def test_evidence_and_report_link_to_case():

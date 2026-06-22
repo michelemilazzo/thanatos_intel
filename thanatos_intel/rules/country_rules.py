@@ -9,6 +9,7 @@ Layer 2 = diplomatic_framework (estensione DDD: passaporto diplomatico, base
 giuridica, autorità competente).
 """
 from __future__ import annotations
+import copy
 
 # Layer 1: visa / general requirements (API legacy preservata).
 COUNTRY_RULES = {
@@ -145,12 +146,12 @@ DIPLOMATIC_FRAMEWORK = {
 
 def get_country_rule(country):
     """Visa/general rule per paese (API legacy)."""
-    return dict(COUNTRY_RULES.get(country, COUNTRY_RULES["generic"]))
+    return copy.deepcopy(COUNTRY_RULES.get(country, COUNTRY_RULES["generic"]))
 
 
 def get_diplomatic_framework(country):
     """Framework DDD per paese; fallback 'generic' con risk indicator."""
-    return dict(DIPLOMATIC_FRAMEWORK.get(country, DIPLOMATIC_FRAMEWORK["generic"]))
+    return copy.deepcopy(DIPLOMATIC_FRAMEWORK.get(country, DIPLOMATIC_FRAMEWORK["generic"]))
 
 
 def list_supported_countries():
