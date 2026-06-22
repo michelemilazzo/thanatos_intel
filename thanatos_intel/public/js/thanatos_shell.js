@@ -8,7 +8,7 @@
     {key:'cockpit', label:'🏠 Cockpit', route:['thanatos-cockpit']},
     {key:'comunicazioni', label:'💬 Comunicazioni', route:['comunicazioni']},
     {key:'casi', label:'📂 Casi', route:['List','Investigation Case']},
-    {key:'ddd', label:'🪪 DDD', route:['List','Diplomatic Eligibility Case']},
+    {key:'ddd', label:'🪪 DD', route:['List','Diplomatic Eligibility Case']},
     {key:'mandati', label:'📜 Mandati', route:['List','Agency Mandate']},
     {key:'firme', label:'🖊 Firme', route:['List','Signature Request']},
     {key:'billing', label:'💶 Billing', route:['List','Diplomatic Proforma']},
