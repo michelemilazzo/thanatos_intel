@@ -27,7 +27,7 @@ body.thanatos-home #page-content{
 body.thanatos-home .page_content{display:block;}
 
 /* HERO */
-section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overflow:hidden;width:100%;box-sizing:border-box;
+section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overflow:visible;width:100%;box-sizing:border-box;
   background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
 .t-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.15;z-index:0;pointer-events:none;}
 .t-hero::before{content:"";position:absolute;inset:0;background-image:
@@ -35,7 +35,7 @@ section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overfl
   radial-gradient(circle at 80% 60%,rgba(200,169,110,.05) 0,transparent 40%);pointer-events:none;}
 .t-hero-inner{position:relative;max-width:860px;margin:0 auto;z-index:1;}
 .t-hero-logo{display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:32px;}
-.t-hero-logo img{height:180px;width:auto;display:block;filter:drop-shadow(0 8px 36px rgba(200,169,110,.35));}
+.t-hero-logo img{height:240px;width:auto;display:block;filter:drop-shadow(0 8px 36px rgba(200,169,110,.35));}
 .t-hero-brand{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:4px;}
 .t-hero-brand .name{font-family:'Cinzel Decorative','Cinzel',Georgia,serif;font-weight:700;letter-spacing:10px;
   font-size:48px;line-height:1.05;color:var(--gold);text-shadow:0 0 22px rgba(200,169,110,.5),0 2px 6px rgba(0,0,0,.6);}
@@ -149,7 +149,7 @@ section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !import
 @keyframes waPulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5);}70%{box-shadow:0 0 0 14px rgba(37,211,102,0);}100%{box-shadow:0 0 0 0 rgba(37,211,102,0);}}
 
 @media(max-width:780px){
-  .t-hero-logo img{height:130px;}
+  .t-hero-logo img{height:160px;}
   .t-hero-brand .name{font-size:32px;letter-spacing:6px;}
   .t-hero-brand .agency{font-size:16px;letter-spacing:12px;}
 }
@@ -161,9 +161,9 @@ section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !import
 
 <!-- HERO -->
 <section class="t-hero">
-  <video class="t-hero-video" autoplay muted loop playsinline preload="auto">
+  <div style="position:absolute;inset:0;overflow:hidden;z-index:0"><video class="t-hero-video" autoplay muted loop playsinline preload="auto">
     <source src="/assets/thanatos_intel/videos/hero_loop.mp4" type="video/mp4">
-  </video>
+  </video></div>
   <div class="t-hero-inner">
     <div class="t-hero-logo">
       <img src="/assets/thanatos_intel/images/thanatos-logo-mark.png" alt="Thanatos Investigazioni"/>
