@@ -102,6 +102,22 @@ def thread(doctype: str, name: str) -> list:
     return items
 
 
+
+def _resolve_sender(doctype: str, name: str):
+    """Sceglie l'Email Account in uscita in base alla Billing Entity del doc."""
+    try:
+        doc = frappe.get_doc(doctype, name)
+    except Exception:
+        return None, None
+    be_name = getattr(doc, "billing_entity", None) or getattr(doc, "intestatario_fattura", None)
+    if be_name and frappe.db.exists("Billing Entity", be_name):
+        ea = frappe.db.get_value("Billing Entity", be_name, "outgoing_email_account")
+        if ea:
+            sender = frappe.db.get_value("Email Account", ea, "email_id")
+            return ea, sender
+    return None, None
+
+
 @frappe.whitelist()
 def send_email(doctype: str, name: str, recipients: str, subject: str,
                content: str, template: str = None, attachments: str = None) -> dict:
@@ -114,6 +130,7 @@ def send_email(doctype: str, name: str, recipients: str, subject: str,
 
     atts = json.loads(attachments) if attachments and isinstance(attachments, str) else (attachments or [])
 
+    ea_name, sender_email = _resolve_sender(doctype, name)
     comm = frappe.get_doc({
         "doctype": "Communication",
         "communication_type": "Communication",
@@ -121,14 +138,15 @@ def send_email(doctype: str, name: str, recipients: str, subject: str,
         "sent_or_received": "Sent",
         "subject": subject,
         "content": content,
-        "sender": frappe.session.user,
+        "sender": sender_email or frappe.session.user,
         "recipients": recipients,
         "status": "Linked",
+        "email_account": ea_name,
         "reference_doctype": doctype,
         "reference_name": name,
     }).insert(ignore_permissions=True)
 
-    frappe.sendmail(
+    sendmail_kwargs = dict(
         recipients=[recipients],
         subject=subject,
         message=content,
@@ -138,6 +156,9 @@ def send_email(doctype: str, name: str, recipients: str, subject: str,
         attachments=atts,
         delayed=False,
     )
+    if sender_email:
+        sendmail_kwargs["sender"] = sender_email
+    frappe.sendmail(**sendmail_kwargs)
     return {"ok": True, "communication": comm.name}
 
 
