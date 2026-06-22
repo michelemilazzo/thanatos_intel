@@ -25,13 +25,14 @@
     const css = document.createElement('style');
     css.id = 'tnav-css';
     css.textContent = `
-      #tnav-bar{position:sticky;top:0;z-index:99;background:#0a0e1a;color:#fff;padding:8px 16px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;border-bottom:2px solid #C8A96E;font-family:inherit;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+      #tnav-bar{position:fixed;top:0;left:0;right:0;z-index:1001;background:#0a0e1a;color:#fff;padding:8px 16px;display:flex;gap:4px;align-items:center;flex-wrap:wrap;border-bottom:2px solid #C8A96E;font-family:inherit;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
       #tnav-bar .tnav-logo{display:flex;align-items:center;gap:8px;color:#C8A96E;font-weight:bold;letter-spacing:.5px;padding-right:14px;border-right:1px solid #1f2742;margin-right:8px;font-size:13px}
       #tnav-bar .tnav-logo img{height:22px}
       #tnav-bar .tnav-i{font-size:12px;color:#9aa3b8;text-decoration:none;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;transition:background .12s,color .12s}
       #tnav-bar .tnav-i:hover{background:#1f2742;color:#fff;text-decoration:none}
       #tnav-bar .tnav-i.act{background:#C8A96E;color:#0A0E1A;font-weight:600}
       #tnav-bar .tnav-spacer{flex:1}
+      body{padding-top:44px !important}
       /* Nascondi la vecchia .tnav dentro le Page (cockpit ne aveva una) */
       .layout-main-section .tnav, .page-body .tnav{display:none !important}
     `;
@@ -102,14 +103,19 @@
     // Hash change fallback
     window.addEventListener('hashchange', build);
     // Mutation observer per safety net (se DOM viene riscritto)
+    // Heartbeat aggressivo: ogni 800ms verifica presenza barra
+    setInterval(() => {
+      if (!document.getElementById('tnav-bar')) build();
+    }, 800);
+    // MutationObserver come safety net su tutto subtree
     let lastRender = Date.now();
     const obs = new MutationObserver(() => {
-      if (!document.getElementById('tnav-bar') && Date.now() - lastRender > 1000){
+      if (!document.getElementById('tnav-bar') && Date.now() - lastRender > 500){
         lastRender = Date.now();
         build();
       }
     });
-    obs.observe(document.body, {childList:true, subtree:false});
+    obs.observe(document.body, {childList:true, subtree:true});
   }
 
   if (document.readyState === 'loading'){
