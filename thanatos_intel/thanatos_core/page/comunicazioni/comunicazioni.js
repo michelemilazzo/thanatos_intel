@@ -47,8 +47,15 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
   <!-- SIDEBAR -->
   <div class="cc-side">
     <div class="cc-search">
-      <input id="cc-search" type="text" placeholder="🔍 Cerca conversazione…">
-      <div style="font-size:10px;color:#888;margin-top:4px"><span id="cc-count">0</span> conversazioni</div>
+      <div style="display:flex;gap:4px;margin-bottom:6px">
+        <button class="btn btn-xs cc-folder active" data-folder="all">📥 Tutti</button>
+        <button class="btn btn-xs cc-folder" data-folder="inbox">📨 Ricevuti</button>
+        <button class="btn btn-xs cc-folder" data-folder="sent">📤 Inviati</button>
+        <button class="btn btn-xs cc-folder" data-folder="email">📧</button>
+        <button class="btn btn-xs cc-folder" data-folder="wa">💬</button>
+      </div>
+      <input id="cc-search" type="text" placeholder="🔍 Cerca…">
+      <div style="font-size:10px;color:#888;margin-top:4px"><span id="cc-count">0</span> conv · <a href="/mail" target="_blank" style="float:right">Webmail nativa ↗</a></div>
     </div>
     <div class="cc-list" id="cc-list">
       <div class="cc-empty">Carico…</div>
@@ -164,7 +171,14 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
 
   function render_list(){
     const q = ($('#cc-search').val()||'').toLowerCase();
-    const filtered = allConvs.filter(c=>!q || (c.who+' '+c.snippet+' '+c.addr).toLowerCase().includes(q));
+    const filtered = allConvs.filter(c=>{
+      if(q && !(c.who+' '+c.snippet+' '+c.addr).toLowerCase().includes(q)) return false;
+      if(currentFolder==='email' && c.channel!=='email') return false;
+      if(currentFolder==='wa' && c.channel!=='whatsapp') return false;
+      if(currentFolder==='inbox' && !c.has_received) return false;
+      if(currentFolder==='sent' && !c.has_sent) return false;
+      return true;
+    });
     $('#cc-count').text(filtered.length);
     if(!filtered.length){ $('#cc-list').html('<div class="cc-empty">Nessuna conversazione</div>'); return; }
     $('#cc-list').html(filtered.map(c=>`
@@ -192,12 +206,21 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
         $('#cc-ref-dt').val(info.ref_doctype || '');
         $('#cc-ref-name').val(info.ref_name || '');
         if(!msgs.length){ $('#cc-msgs').html('<div class="cc-empty">Nessun messaggio</div>'); return; }
-        $('#cc-msgs').html(msgs.map(m=>`
-          <div class="cc-msg ${m.direction==='out'?'out':''}">
-            <div class="head">${m.channel==='email'?'📧':'💬'} ${m.direction==='in'?'← ricevuto':'→ inviato'} · ${m.ts} ${m.status?'· '+m.status:''}</div>
+        $('#cc-msgs').html(msgs.map((m,i)=>`
+          <div class="cc-msg ${m.direction==='out'?'out':''}" data-idx="${i}">
+            <div class="head" style="display:flex;align-items:center;gap:6px">
+              <span>${m.channel==='email'?'📧':'💬'} ${m.direction==='in'?'← ricevuto':'→ inviato'} · ${m.ts} ${m.status?'· '+m.status:''}</span>
+              <span style="flex:1"></span>
+              ${m.channel==='email'?`<button class="btn btn-xs btn-default cc-reply" data-idx="${i}" title="Rispondi">↩</button>`:''}
+              ${m.channel==='email'?`<button class="btn btn-xs btn-default cc-forward" data-idx="${i}" title="Inoltra">↪</button>`:''}
+            </div>
             ${m.subject?`<b>${frappe.utils.escape_html(m.subject)}</b><br>`:''}
             <div style="word-wrap:break-word;overflow-wrap:break-word;max-width:100%">${cc_fmt(m.text)}</div>
+            ${m.attachments && m.attachments.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ddd;font-size:11px"><b>📎 Allegati:</b> ${m.attachments.map(a=>`<a href="${a.url}" target="_blank">${frappe.utils.escape_html(a.name)}</a>`).join(' · ')}</div>` : ''}
           </div>`).join(''));
+        // Bind reply/forward
+        $('.cc-reply').on('click', function(){ cc_reply(msgs[$(this).data('idx')], info, false); });
+        $('.cc-forward').on('click', function(){ cc_reply(msgs[$(this).data('idx')], info, true); });
         $('#cc-msgs').scrollTop($('#cc-msgs')[0].scrollHeight);
       });
   }

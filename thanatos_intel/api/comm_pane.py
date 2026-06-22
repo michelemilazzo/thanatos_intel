@@ -774,11 +774,15 @@ def list_conversations(limit: int = 200) -> list:
         key = f"email::{addr.lower()}"
         if key not in convs:
             convs[key] = {"key": key, "channel": "email", "icon": "📧", "addr": addr, "who": addr,
-                          "count": 0, "unread": 0, "ts": None, "snippet": "", "ref_doctype": r.reference_doctype, "ref_name": r.reference_name}
+                          "count": 0, "unread": 0, "has_received": False, "has_sent": False, "ts": None, "snippet": "", "ref_doctype": r.reference_doctype, "ref_name": r.reference_name}
         c = convs[key]
         c["count"] += 1
-        if r.sent_or_received == "Received" and r.status != "Read":
-            c["unread"] += 1
+        if r.sent_or_received == "Received":
+            c["has_received"] = True
+            if r.status != "Read":
+                c["unread"] += 1
+        else:
+            c["has_sent"] = True
         if not c["ts"] or str(r.communication_date) > str(c["ts"]):
             c["ts"] = str(r.communication_date)
             c["snippet"] = (r.subject or "")[:80]
@@ -796,11 +800,15 @@ def list_conversations(limit: int = 200) -> list:
             key = f"wa::{addr}"
             if key not in convs:
                 convs[key] = {"key": key, "channel": "whatsapp", "icon": "💬", "addr": addr, "who": addr,
-                              "count": 0, "unread": 0, "ts": None, "snippet": ""}
+                              "count": 0, "unread": 0, "has_received": False, "has_sent": False, "ts": None, "snippet": ""}
             c = convs[key]
             c["count"] += 1
-            if r.type == "Incoming" and r.status != "Read":
-                c["unread"] += 1
+            if r.type == "Incoming":
+                c["has_received"] = True
+                if r.status != "Read":
+                    c["unread"] += 1
+            else:
+                c["has_sent"] = True
             if not c["ts"] or str(r.creation) > str(c["ts"]):
                 c["ts"] = str(r.creation)
                 c["snippet"] = (r.message_body or "")[:80]
@@ -839,6 +847,8 @@ def conversation_thread(key: str) -> dict:
             ORDER BY communication_date ASC LIMIT 500
         """, (f"%{addr.lower()}%", f"%{addr.lower()}%"), as_dict=1)
         for r in rows:
+            atts = frappe.db.sql("""SELECT file_name, file_url FROM `tabFile`
+                WHERE attached_to_doctype='Communication' AND attached_to_name=%s""", (r.name,), as_dict=1)
             msgs.append({
                 "channel": "email",
                 "direction": "in" if r.sent_or_received == "Received" else "out",
@@ -846,6 +856,7 @@ def conversation_thread(key: str) -> dict:
                 "subject": r.subject,
                 "text": r.content,
                 "status": r.status,
+                "attachments": [{"name": a.file_name or a.file_url, "url": a.file_url} for a in atts],
             })
         if msgs:
             info["ref_doctype"] = rows[-1].reference_doctype
