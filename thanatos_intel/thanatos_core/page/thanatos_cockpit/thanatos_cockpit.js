@@ -35,6 +35,7 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		// Quick-launch verso le app Frappe sottostanti (il cockpit le orchestra)
 		const tiles = [
 			['ð¤', 'Architetto AI', () => go('thanatos-ai-architect')],
+			['▶️', 'Nuova pratica', () => launchPractice()],
 			['＋', 'Nuovo caso', () => frappe.new_doc('Investigation Case')],
 			['📨', 'Lead / WhatsApp', () => go('List', 'Intel Lead')],
 			['🔎', 'OSINT', () => frappe.new_doc('OSINT Job')],
@@ -182,6 +183,33 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		new frappe.Chart(sel, {
 			data: { labels: data.map(x => x.label), datasets: [{ values: data.map(x => x.value) }] },
 			type: 'donut', height: 220, colors: colors,
+		});
+	}
+
+	function launchPractice() {
+		frappe.call('thanatos_intel.workflow.api.available_blueprints').then(r => {
+			const bps = r.message || [];
+			if (!bps.length) { frappe.msgprint('Nessun blueprint attivo.'); return; }
+			const byLabel = {};
+			bps.forEach(b => byLabel[(b.blueprint_name || b.name)] = b.name);
+			const d = new frappe.ui.Dialog({
+				title: 'Nuova pratica guidata',
+				fields: [
+					{ fieldtype: 'Select', fieldname: 'bp', label: 'Servizio / Blueprint', options: Object.keys(byLabel).join('\n'), reqd: 1 },
+					{ fieldtype: 'Data', fieldname: 'title', label: 'Titolo pratica', reqd: 1 },
+					{ fieldtype: 'Small Text', fieldname: 'subject', label: 'Soggetto / obiettivo' },
+				],
+				primary_action_label: 'Crea e apri',
+				primary_action(v) {
+					frappe.call('thanatos_intel.workflow.api.open_practice',
+						{ blueprint: byLabel[v.bp], case_title: v.title, subject: v.subject || '' }).then(rr => {
+							const m = rr.message || {};
+							if (m.case) { d.hide(); frappe.show_alert({ message: 'Pratica creata: ' + m.case, indicator: 'green' }); go('Form', 'Investigation Case', m.case); }
+							else if (m.message) { frappe.msgprint(m.message); }
+						});
+				}
+			});
+			d.show();
 		});
 	}
 
