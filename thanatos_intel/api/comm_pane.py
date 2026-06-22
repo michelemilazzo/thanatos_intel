@@ -302,24 +302,26 @@ def get_timeline(doctype: str, name: str) -> dict:
 @frappe.whitelist()
 def ai_suggest(doctype: str, name: str) -> dict:
     import requests
-    gw = frappe.conf.get("ai_gateway_url") or "http://10.10.0.4:8800"
-    key = frappe.conf.get("ai_gateway_key") or ""
+    gw = (frappe.conf.get("mmos_ai_gateway_url") or frappe.conf.get("ai_gateway_url") or "http://10.10.0.4:8800").rstrip("/")
+    key = frappe.conf.get("mmos_ai_gateway_key") or frappe.conf.get("ai_gateway_key") or ""
     doc = frappe.get_doc(doctype, name).as_dict()
     keep = {k: v for k, v in doc.items() if not k.startswith("_") and not isinstance(v, list)}
-    prompt = (
+    message = (
         f"Sei un assistente Thanatos Intel. Analizza il seguente documento "
         f"{doctype}/{name} e suggerisci 3 azioni operative concrete e prioritizzate "
         f"per portare avanti la pratica. Rispondi in italiano, formato lista puntata.\n\n"
         f"DOC: {keep}"
     )
     try:
-        r = requests.post(f"{gw}/v1/chat", json={"prompt": prompt, "max_tokens": 600},
-                          headers={"Authorization": f"Bearer {key}"} if key else {},
-                          timeout=20)
+        r = requests.post(f"{gw}/chat",
+                          json={"message": message},
+                          headers={"X-MMOS-AI-KEY": key, "Content-Type": "application/json"} if key else {},
+                          timeout=30)
         if r.status_code == 200:
             data = r.json()
-            return {"ok": True, "text": data.get("text") or data.get("response") or str(data)}
-        return {"ok": False, "error": f"AI gateway HTTP {r.status_code}"}
+            return {"ok": True, "text": data.get("reply") or data.get("text") or data.get("response") or str(data),
+                    "model": data.get("model"), "engine": data.get("engine")}
+        return {"ok": False, "error": f"AI gateway HTTP {r.status_code}: {r.text[:200]}"}
     except Exception as e:
         return {"ok": False, "error": f"AI gateway irraggiungibile: {e}"}
 
