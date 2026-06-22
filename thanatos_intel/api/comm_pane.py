@@ -305,7 +305,16 @@ def ai_suggest(doctype: str, name: str) -> dict:
     gw = (frappe.conf.get("mmos_ai_gateway_url") or frappe.conf.get("ai_gateway_url") or "http://10.10.0.4:8800").rstrip("/")
     key = frappe.conf.get("mmos_ai_gateway_key") or frappe.conf.get("ai_gateway_key") or ""
     doc = frappe.get_doc(doctype, name).as_dict()
-    keep = {k: v for k, v in doc.items() if not k.startswith("_") and not isinstance(v, list)}
+    # Campi essenziali (limita payload + token)
+    SKIP = {"docstatus","idx","owner","modified","creation","modified_by","_user_tags","_comments","_assign","_liked_by","mandate_body","content","description","html_body","message_body","summary","decision_notes","mandate_pdf","source_pdf","signed_pdf"}
+    keep = {}
+    for k, v in doc.items():
+        if k.startswith("_") or k in SKIP: continue
+        if isinstance(v, (list, dict)): continue
+        if v is None or v == "": continue
+        sval = str(v)
+        if len(sval) > 200: sval = sval[:200]+"…"
+        keep[k] = sval
     message = (
         f"Sei un assistente Thanatos Intel. Analizza il seguente documento "
         f"{doctype}/{name} e suggerisci 3 azioni operative concrete e prioritizzate "
@@ -316,7 +325,7 @@ def ai_suggest(doctype: str, name: str) -> dict:
         r = requests.post(f"{gw}/chat",
                           json={"message": message},
                           headers={"X-MMOS-AI-KEY": key, "Content-Type": "application/json"} if key else {},
-                          timeout=30)
+                          timeout=60)
         if r.status_code == 200:
             data = r.json()
             return {"ok": True, "text": data.get("reply") or data.get("text") or data.get("response") or str(data),
