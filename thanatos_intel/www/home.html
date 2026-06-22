@@ -6,16 +6,14 @@
 {% block head_include %}
 {{ seo_head(
    title='Thanatos Intel — Intelligence Investigativa Europea',
-   description='Piattaforma SaaS di intelligence investigativa: antifrode, due diligence, OSINT, sequestri. News e analisi quotidiane.',
+   description='Piattaforma di intelligence investigativa: antifrode, due diligence, OSINT, catena di custodia SHA-256. Pay-per-use o abbonamento.',
    path='/', lang='it', alt_path='/en') }}
-<!-- Gothic + serif fonts for Thanatos brand -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
   --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;}
-/* Override Bootstrap/web.html container limits */
 body.thanatos-home,
 body.thanatos-home .page_content,
 body.thanatos-home .container,
@@ -27,163 +25,164 @@ body.thanatos-home #page-content{
   font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif !important;
 }
 body.thanatos-home .page_content{display:block;}
-section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overflow:visible;width:100%;box-sizing:border-box;
+
+/* HERO */
+section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overflow:hidden;width:100%;box-sizing:border-box;
   background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
-.t-hero-logo{display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:36px;position:relative;z-index:1;}
-.t-hero-logo img{height:220px;width:auto;display:block;filter:drop-shadow(0 8px 36px rgba(200,169,110,.35));}
-.t-hero-brand{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:4px;}
-.t-hero-brand .name{
-  font-family:'Cinzel Decorative','Cinzel',Georgia,serif;
-  font-weight:700;letter-spacing:10px;
-  font-size:54px;line-height:1.05;
-  color:var(--gold);
-  text-shadow:0 0 22px rgba(200,169,110,.5),0 0 2px rgba(200,169,110,.75),0 2px 6px rgba(0,0,0,.6);
-}
-.t-hero-brand .agency{
-  font-family:'Cinzel Decorative','Cinzel',Georgia,serif;
-  font-weight:400;letter-spacing:18px;text-transform:lowercase;
-  font-size:24px;line-height:1;
-  color:var(--gold);opacity:.92;
-  text-shadow:0 0 14px rgba(200,169,110,.4);
-  margin-top:2px;padding-left:18px;
-}
-.t-hero-brand .tagline{
-  font-family:'Cinzel',Georgia,serif;
-  font-size:11px;letter-spacing:7px;text-transform:uppercase;
-  color:var(--gold);opacity:.6;margin-top:10px;
-}
-.t-hero-brand .tagline::before,.t-hero-brand .tagline::after{
-  content:"";display:inline-block;width:26px;height:1px;vertical-align:middle;
-  background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:0 12px;
-}
-@media(max-width:780px){
-  .t-hero-logo img{height:140px;}
-  .t-hero-brand .name{font-size:34px;letter-spacing:6px;}
-  .t-hero-brand .agency{font-size:17px;letter-spacing:12px;padding-left:12px;}
-  .t-hero-brand .tagline::before,.t-hero-brand .tagline::after{width:14px;margin:0 7px;}
-}
-.t-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.18;z-index:0;pointer-events:none;}
+.t-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.15;z-index:0;pointer-events:none;}
 .t-hero::before{content:"";position:absolute;inset:0;background-image:
   radial-gradient(circle at 20% 30%,rgba(200,169,110,.08) 0,transparent 40%),
   radial-gradient(circle at 80% 60%,rgba(200,169,110,.05) 0,transparent 40%);pointer-events:none;}
-.t-hero-inner{position:relative;max-width:980px;margin:0 auto;}
-.t-hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--gold);text-transform:uppercase;margin-bottom:18px;}
-.t-hero h1{font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:48px;line-height:1.15;
-  color:#fff;margin:0 0 18px;letter-spacing:-.5px;}
+.t-hero-inner{position:relative;max-width:860px;margin:0 auto;z-index:1;}
+.t-hero-logo{display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:32px;}
+.t-hero-logo img{height:180px;width:auto;display:block;filter:drop-shadow(0 8px 36px rgba(200,169,110,.35));}
+.t-hero-brand{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.t-hero-brand .name{font-family:'Cinzel Decorative','Cinzel',Georgia,serif;font-weight:700;letter-spacing:10px;
+  font-size:48px;line-height:1.05;color:var(--gold);text-shadow:0 0 22px rgba(200,169,110,.5),0 2px 6px rgba(0,0,0,.6);}
+.t-hero-brand .agency{font-family:'Cinzel Decorative','Cinzel',Georgia,serif;font-weight:400;letter-spacing:18px;
+  text-transform:lowercase;font-size:22px;color:var(--gold);opacity:.92;margin-top:2px;padding-left:18px;}
+.t-hero-brand .tagline{font-family:'Cinzel',Georgia,serif;font-size:11px;letter-spacing:7px;text-transform:uppercase;
+  color:var(--gold);opacity:.6;margin-top:10px;}
+.t-hero-brand .tagline::before,.t-hero-brand .tagline::after{content:"";display:inline-block;width:22px;height:1px;
+  vertical-align:middle;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin:0 10px;}
+.t-hero h1{font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:44px;line-height:1.2;
+  color:#fff;margin:0 0 16px;letter-spacing:-.5px;}
 .t-hero h1 em{font-style:normal;color:var(--gold);}
-.t-hero p.tag{max-width:720px;margin:0 auto 32px;color:#B8BCCC;font-size:17px;line-height:1.6;}
+.t-hero p.tag{max-width:640px;margin:0 auto 30px;color:#B8BCCC;font-size:16px;line-height:1.65;}
 .t-hero .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
-.t-btn{display:inline-block;padding:14px 28px;text-decoration:none;font-size:11px;letter-spacing:3px;
+.t-btn{display:inline-block;padding:13px 26px;text-decoration:none;font-size:11px;letter-spacing:3px;
   text-transform:uppercase;border:1px solid var(--gold);color:var(--gold);transition:all .15s;}
 .t-btn:hover{background:var(--gold);color:var(--navy);}
 .t-btn.solid{background:var(--gold);color:var(--navy);}
 .t-btn.solid:hover{background:var(--gold2);}
 
-.t-kpis{max-width:1180px;width:100%;margin:30px auto 0;padding:0 24px;position:relative;z-index:2;box-sizing:border-box;}
+/* KPI BAR */
+.t-kpis{max-width:1180px;width:100%;margin:30px auto 0;padding:0 24px;box-sizing:border-box;}
 .t-kpis-grid{display:grid !important;grid-template-columns:repeat(6,1fr) !important;gap:14px;
-  background:var(--panel);border:1px solid var(--line);padding:24px;border-radius:4px;
+  background:var(--panel);border:1px solid var(--line);padding:20px;border-radius:4px;
   box-shadow:0 12px 40px rgba(0,0,0,.4);}
 @media(max-width:1024px){.t-kpis-grid{grid-template-columns:repeat(3,1fr) !important;}}
 @media(max-width:560px){.t-kpis-grid{grid-template-columns:repeat(2,1fr) !important;}}
-.t-kpi{text-align:center;padding:8px 4px;border-right:1px solid var(--line);}
+.t-kpi{text-align:center;padding:6px 4px;border-right:1px solid var(--line);}
 .t-kpi:last-child{border-right:0;}
-.t-kpi .n{font-family:Georgia,serif;font-size:32px;color:var(--gold);line-height:1;}
-.t-kpi .l{color:var(--muted);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:6px;}
-@media(max-width:780px){.t-kpi{border-right:0;border-bottom:1px solid var(--line);padding:14px 0;}
-  .t-kpi:last-child{border-bottom:0;}.t-hero h1{font-size:34px;}}
+.t-kpi .n{font-family:Georgia,serif;font-size:28px;color:var(--gold);line-height:1;}
+.t-kpi .l{color:var(--muted);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;margin-top:5px;}
+@media(max-width:780px){.t-kpi{border-right:0;border-bottom:1px solid var(--line);padding:12px 0;}
+  .t-kpi:last-child{border-bottom:0;}.t-hero h1{font-size:32px;}}
 
-section.t-block{padding:72px 24px;max-width:1240px !important;width:100% !important;margin:0 auto !important;box-sizing:border-box;}
-.t-section-head{text-align:center;margin-bottom:42px;}
+/* SECTIONS */
+section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !important;margin:0 auto !important;box-sizing:border-box;}
+.t-section-head{text-align:center;margin-bottom:40px;}
 .t-section-head .eyebrow{font-size:10px;letter-spacing:5px;color:var(--gold);text-transform:uppercase;}
-.t-section-head h2{font-family:Georgia,serif;font-weight:400;font-size:32px;color:#fff;margin:10px 0 8px;}
-.t-section-head p{color:var(--muted);font-size:14px;max-width:600px;margin:0 auto;}
-.t-line{width:80px;height:1px;background:var(--gold);margin:14px auto;opacity:.7;}
+.t-section-head h2{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:10px 0 8px;}
+.t-section-head p{color:var(--muted);font-size:14px;max-width:580px;margin:0 auto;}
+.t-line{width:70px;height:1px;background:var(--gold);margin:12px auto;opacity:.7;}
 
-.t-cats{display:grid !important;grid-template-columns:repeat(3,1fr) !important;gap:18px;width:100%;}
-@media(max-width:1024px){.t-cats{grid-template-columns:repeat(2,1fr) !important;}}
-@media(max-width:640px){.t-cats{grid-template-columns:1fr !important;}}
-.t-cat{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold) !important;
-  padding:22px 20px;text-decoration:none;color:var(--text);transition:transform .15s,border-color .15s;}
-.t-cat:hover{transform:translateY(-3px);border-left-color:var(--gold2) !important;}
-.t-cat .name{font-family:Georgia,serif;font-size:17px;color:var(--gold);letter-spacing:1px;}
-.t-cat .desc{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.5;}
+/* COSA FACCIAMO — 3 card */
+.t-services{display:grid !important;grid-template-columns:repeat(3,1fr) !important;gap:20px;width:100%;}
+@media(max-width:900px){.t-services{grid-template-columns:1fr !important;}}
+.t-service{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--gold);
+  padding:28px 24px;text-decoration:none;color:var(--text);transition:transform .15s,box-shadow .15s;}
+.t-service:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3);}
+.t-service .ico{font-size:28px;margin-bottom:14px;display:block;}
+.t-service h3{font-family:Georgia,serif;font-weight:400;font-size:19px;color:var(--gold);margin:0 0 10px;}
+.t-service p{color:#A8ACBA;font-size:13px;line-height:1.65;margin:0 0 16px;}
+.t-service .tags{display:flex;flex-wrap:wrap;gap:6px;}
+.t-service .tags span{font-size:10px;letter-spacing:1.5px;color:var(--gold);border:1px solid rgba(200,169,110,.3);
+  padding:3px 8px;text-transform:uppercase;}
 
-.t-featured{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:18px;}
-@media(max-width:980px){.t-featured{grid-template-columns:1fr;}}
-.t-feat{background:var(--panel);border:1px solid var(--line);text-decoration:none;color:var(--text);
-  display:flex;flex-direction:column;transition:border-color .15s,transform .15s;overflow:hidden;}
-.t-feat:hover{border-color:var(--gold);transform:translateY(-2px);}
-.t-feat .img{aspect-ratio:16/9;background:linear-gradient(135deg,#0A0E1A,#1B2440);background-size:cover;
-  background-position:center;border-bottom:1px solid var(--line);}
-.t-feat .body{padding:20px;}
-.t-feat .cat{font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
-.t-feat h3{font-family:Georgia,serif;color:#fff;font-weight:400;font-size:20px;margin:8px 0 10px;line-height:1.3;}
-.t-feat .ex{color:var(--muted);font-size:13px;line-height:1.5;}
-.t-feat .meta{display:flex;gap:10px;color:#5B6276;font-size:11px;margin-top:14px;letter-spacing:1px;}
+/* COME FUNZIONA — 4 step */
+.t-steps{display:grid !important;grid-template-columns:repeat(4,1fr) !important;gap:0;width:100%;
+  background:var(--panel);border:1px solid var(--line);overflow:hidden;}
+@media(max-width:900px){.t-steps{grid-template-columns:repeat(2,1fr) !important;}}
+@media(max-width:500px){.t-steps{grid-template-columns:1fr !important;}}
+.t-step{padding:32px 24px;border-right:1px solid var(--line);position:relative;}
+.t-step:last-child{border-right:0;}
+@media(max-width:900px){.t-step:nth-child(2){border-right:0;}.t-step:nth-child(3){border-right:1px solid var(--line);}
+  .t-step:nth-child(1),.t-step:nth-child(2){border-bottom:1px solid var(--line);}}
+@media(max-width:500px){.t-step{border-right:0 !important;border-bottom:1px solid var(--line);}
+  .t-step:last-child{border-bottom:0;}}
+.t-step .num{font-family:Georgia,serif;font-size:48px;color:rgba(200,169,110,.15);line-height:1;
+  position:absolute;top:20px;right:20px;font-weight:700;}
+.t-step .ico{font-size:22px;margin-bottom:12px;display:block;}
+.t-step h4{font-family:Georgia,serif;font-weight:400;font-size:16px;color:var(--gold);margin:0 0 8px;}
+.t-step p{color:#A8ACBA;font-size:13px;line-height:1.6;margin:0;}
+.t-step .cta-link{display:inline-block;margin-top:14px;font-size:11px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(200,169,110,.3);}
+.t-step .cta-link:hover{border-bottom-color:var(--gold);}
 
-.t-news{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;}
-.t-news-tile{background:var(--panel);border:1px solid var(--line);padding:20px;text-decoration:none;
-  color:var(--text);transition:border-color .15s,transform .15s;display:flex;flex-direction:column;gap:8px;}
-.t-news-tile:hover{border-color:var(--gold);transform:translateY(-2px);}
-.t-news-tile .cat{font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
-.t-news-tile h4{font-family:Georgia,serif;font-weight:400;font-size:16px;color:#fff;margin:0;line-height:1.4;}
-.t-news-tile .ex{color:var(--muted);font-size:12px;line-height:1.5;}
-.t-news-tile .meta{margin-top:auto;color:#5B6276;font-size:10px;letter-spacing:1px;display:flex;gap:8px;}
-
-.t-plans{display:grid !important;grid-template-columns:repeat(4,1fr) !important;gap:18px;width:100%;}
-@media(max-width:980px){.t-plans{grid-template-columns:repeat(2,1fr) !important;}}
-@media(max-width:560px){.t-plans{grid-template-columns:1fr !important;}}
+/* PIANI */
+.t-plans{display:grid !important;grid-template-columns:repeat(4,1fr) !important;gap:16px;width:100%;}
+@media(max-width:900px){.t-plans{grid-template-columns:repeat(2,1fr) !important;}}
+@media(max-width:500px){.t-plans{grid-template-columns:1fr !important;}}
 .t-plan{background:linear-gradient(180deg,var(--panel) 0%,#0D1322 100%);border:1px solid var(--line);
-  padding:28px 22px;text-align:left;display:flex;flex-direction:column;transition:border-color .15s,transform .15s;}
+  padding:24px 20px;display:flex;flex-direction:column;transition:border-color .15s,transform .15s;}
 .t-plan:hover{border-color:var(--gold);transform:translateY(-3px);}
+.t-plan.featured{border-color:var(--gold);background:linear-gradient(180deg,#16213A 0%,#0D1322 100%);}
 .t-plan .lvl{font-size:10px;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
-.t-plan h3{font-family:Georgia,serif;font-weight:400;font-size:22px;color:#fff;margin:8px 0 4px;}
-.t-plan .price{font-family:Georgia,serif;color:var(--gold);font-size:36px;margin:14px 0 4px;}
+.t-plan h3{font-family:Georgia,serif;font-weight:400;font-size:20px;color:#fff;margin:6px 0 4px;}
+.t-plan .price{font-family:Georgia,serif;color:var(--gold);font-size:32px;margin:12px 0 4px;}
 .t-plan .price small{font-size:12px;color:var(--muted);}
-.t-plan ul{list-style:none;padding:0;margin:18px 0;font-size:12px;color:#D0D2DC;}
-.t-plan li{padding:6px 0;border-bottom:1px dashed var(--line);}
+.t-plan ul{list-style:none;padding:0;margin:14px 0;font-size:12px;color:#C0C2CC;flex:1;}
+.t-plan li{padding:5px 0;border-bottom:1px dashed var(--line);}
 .t-plan li:last-child{border-bottom:0;}
 .t-plan li::before{content:"·  ";color:var(--gold);}
 .t-plan .cta{margin-top:auto;}
 
-.t-pillars{display:grid !important;grid-template-columns:repeat(4,1fr) !important;gap:18px;width:100%;}
-@media(max-width:980px){.t-pillars{grid-template-columns:repeat(2,1fr) !important;}}
-@media(max-width:560px){.t-pillars{grid-template-columns:1fr !important;}}
-.t-pillar{padding:24px;border-left:2px solid var(--gold);background:rgba(200,169,110,.04);}
-.t-pillar .name{color:var(--gold);font-size:13px;letter-spacing:2.5px;text-transform:uppercase;}
-.t-pillar .body{color:#C8CBD4;font-size:13px;margin-top:10px;line-height:1.6;}
+/* CTA FINALE */
+.t-cta-band{background:linear-gradient(135deg,#0D1322 0%,#13192C 100%);border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);padding:64px 24px;text-align:center;}
+.t-cta-band h2{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#fff;margin:0 0 12px;}
+.t-cta-band p{color:var(--muted);font-size:14px;max-width:480px;margin:0 auto 28px;}
 
-.t-empty{text-align:center;color:var(--muted);padding:42px;border:1px dashed var(--line);}
+/* SEZIONE DARK per steps */
+.t-dark-bg{background:var(--navy2);}
+
+/* WA float */
+.wa-float{position:fixed;right:20px;bottom:20px;z-index:9999;display:inline-flex;align-items:center;
+  background:#25D366;color:#fff !important;text-decoration:none;padding:10px;border-radius:999px;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);transition:transform .15s,box-shadow .15s;}
+.wa-float:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(37,211,102,.45);color:#fff;}
+.wa-float svg{flex:0 0 auto;}
+.wa-float::after{content:"";position:absolute;inset:0;border-radius:999px;box-shadow:0 0 0 0 rgba(37,211,102,.6);
+  animation:waPulse 2.4s infinite;}
+@keyframes waPulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5);}70%{box-shadow:0 0 0 14px rgba(37,211,102,0);}100%{box-shadow:0 0 0 0 rgba(37,211,102,0);}}
+
+@media(max-width:780px){
+  .t-hero-logo img{height:130px;}
+  .t-hero-brand .name{font-size:32px;letter-spacing:6px;}
+  .t-hero-brand .agency{font-size:16px;letter-spacing:12px;}
+}
 </style>
 {% endblock %}
 
 {% block content %}
 {{ thanatos_header('home') }}
 
+<!-- HERO -->
 <section class="t-hero">
   <video class="t-hero-video" autoplay muted loop playsinline preload="auto">
     <source src="/assets/thanatos_intel/videos/hero_loop.mp4" type="video/mp4">
   </video>
-  <div class="t-hero-inner" style="position:relative;z-index:1;">
+  <div class="t-hero-inner">
     <div class="t-hero-logo">
       <img src="/assets/thanatos_intel/images/thanatos-logo-mark.png" alt="Thanatos Investigazioni"/>
       <div class="t-hero-brand">
         <div class="name">Thanatos</div>
         <div class="agency">agency</div>
         <div class="tagline">Investigazioni &amp; Intelligence</div>
-        <div class="tagline">Intelligence · Antifrode · Due Diligence</div>
       </div>
     </div>
     <h1>
-      <span style="display:block;">Intelligence <em>investigativa</em> europea</span>
-      <span style="display:block;">rigore, riservatezza, risultati.</span>
+      <span style="display:block;">Investigazioni professionali,</span>
+      <span style="display:block;"><em>risultati ammissibili</em> in giudizio.</span>
     </h1>
     <p class="tag">
-      Antifrode, due diligence, OSINT, sequestri e confische. Catena di custodia SHA-256 ammissibile
-      in giudizio. Newsroom quotidiana. Pay-per-use o abbonamento.
+      Antifrode, due diligence, OSINT e sequestri. Ogni prova è certificata con catena di custodia SHA-256,
+      valida in tribunale in Italia, Romania e UE. Pay-per-use o abbonamento mensile.
     </p>
     <div class="cta-row">
-      <a class="t-btn solid" href="/portal/billing">Vedi i piani →</a>
+      <a class="t-btn solid" href="/portal/billing">Inizia ora →</a>
       <a class="t-btn" href="/portal">Accedi al portale</a>
     </div>
   </div>
@@ -197,122 +196,101 @@ section.t-block{padding:72px 24px;max-width:1240px !important;width:100% !import
   </script>
 </section>
 
+<!-- KPI BAR -->
 <div class="t-kpis">
   <div class="t-kpis-grid">
     <div class="t-kpi"><div class="n">{{ stats.cases or '11' }}</div><div class="l">Casi gestiti</div></div>
     <div class="t-kpi"><div class="n">{{ stats.evidence or '12' }}</div><div class="l">Prove acquisite</div></div>
     <div class="t-kpi"><div class="n">{{ stats.reports or '1' }}</div><div class="l">Report</div></div>
-    <div class="t-kpi"><div class="n">{{ stats.osint or '24×7' }}</div><div class="l">Lookup OSINT</div></div>
-    <div class="t-kpi"><div class="n">{{ stats.news or '7' }}</div><div class="l">Intel Crypto</div></div>
-    <div class="t-kpi"><div class="n">{{ stats.clients or '14' }}</div><div class="l">Clienti</div></div>
+    <div class="t-kpi"><div class="n">{{ stats.osint or '24×7' }}</div><div class="l">OSINT attivo</div></div>
+    <div class="t-kpi"><div class="n">SHA-256</div><div class="l">Custodia prove</div></div>
+    <div class="t-kpi"><div class="n">{{ stats.clients or '14' }}</div><div class="l">Clienti attivi</div></div>
   </div>
 </div>
 
-{% if categories %}
+<!-- COSA FACCIAMO -->
 <section class="t-block">
   <div class="t-section-head">
-    <div class="eyebrow">Aree operative</div>
-    <h2>Aree di intelligence</h2>
+    <div class="eyebrow">I nostri servizi</div>
+    <h2>Cosa facciamo per te</h2>
     <div class="t-line"></div>
-    <p>Verticali coperti da analisti, OSINT engine e network europeo.</p>
+    <p>Tre aree di intervento, un unico portale sicuro. Ogni attività è tracciata, certificata e consegnata in forma di report legalmente valido.</p>
   </div>
-  <div class="t-cats">
-    {% for c in categories %}
-    <a class="t-cat" href="/news/categoria/{{ c.category_slug }}" style="border-left-color:{{ c.color or '#C8A96E' }}">
-      <div class="name">{{ c.category_name }}</div>
-      {% if c.description %}<div class="desc">{{ c.description }}</div>{% endif %}
+  <div class="t-services">
+    <a class="t-service" href="/servizi">
+      <span class="ico">🔍</span>
+      <h3>Indagini investigative</h3>
+      <p>Pratiche di investigazione gestite da investigatori autorizzati. Dalla raccolta prove alla redazione del dossier finale, tutto certificato e ammissibile in giudizio.</p>
+      <div class="tags"><span>Antifrode</span><span>Sequestri</span><span>Infedeltà aziendale</span></div>
     </a>
-    {% endfor %}
+    <a class="t-service" href="/portal/osint/fonti">
+      <span class="ico">🌐</span>
+      <h3>Intelligence &amp; OSINT</h3>
+      <p>Ricerche su persone, aziende, wallet crypto e domini. Fonti aperte, sanctions list, HIBP, blockchain. Risultati in minuti, non in giorni.</p>
+      <div class="tags"><span>Crypto wallet</span><span>Sanctions</span><span>Verifica identità</span></div>
+    </a>
+    <a class="t-service" href="/servizi">
+      <span class="ico">📋</span>
+      <h3>Due Diligence &amp; Compliance</h3>
+      <p>Verifica approfondita su persone, aziende e controparti. Report KYC/KYB strutturati per uso legale, bancario o assicurativo.</p>
+      <div class="tags"><span>KYC/KYB</span><span>GDPR</span><span>AML</span></div>
+    </a>
   </div>
 </section>
-{% endif %}
 
-{% if featured %}
+<!-- COME FUNZIONA -->
+<div class="t-dark-bg">
 <section class="t-block">
   <div class="t-section-head">
-    <div class="eyebrow">In primo piano</div>
-    <h2>Newsroom</h2>
+    <div class="eyebrow">Il processo</div>
+    <h2>Come funziona</h2>
     <div class="t-line"></div>
+    <p>Dal primo contatto al report finale in quattro passi. Nessun vincolo, nessuna burocrazia inutile.</p>
   </div>
-  <div class="t-featured">
-    {% for n in featured %}
-    <a class="t-feat" href="/news/{{ n.slug }}">
-      <div class="img" {% if n.featured_image %}style="background-image:url('{{ n.featured_image }}')"{% else %}style="display:flex;align-items:center;justify-content:center;color:#C8A96E;font-family:Georgia,serif;letter-spacing:3px;text-transform:uppercase;font-size:12px;opacity:.5"{% endif %}>{% if not n.featured_image %}{{ n.category or 'Thanatos' }}{% endif %}</div>
-      <div class="body">
-        <div class="cat">{{ n.category or 'News' }}</div>
-        <h3>{{ n.title }}</h3>
-        {% if n.excerpt %}<p class="ex">{{ n.excerpt[:180] }}{% if n.excerpt|length > 180 %}…{% endif %}</p>{% endif %}
-        <div class="meta">
-          {% if n.published_at %}<span>{{ frappe.utils.format_datetime(n.published_at, 'd MMM yyyy') }}</span>{% endif %}
-          {% if n.reading_time_min %}<span>· {{ n.reading_time_min }} min</span>{% endif %}
-        </div>
-      </div>
-    </a>
-    {% endfor %}
+  <div class="t-steps">
+    <div class="t-step">
+      <span class="num">01</span>
+      <span class="ico">👤</span>
+      <h4>Registrati</h4>
+      <p>Crea un account gratuito in 60 secondi. Nessuna carta di credito richiesta per iniziare. Puoi esplorare il portale prima di acquistare.</p>
+      <a class="cta-link" href="/register">Registrati gratis →</a>
+    </div>
+    <div class="t-step">
+      <span class="num">02</span>
+      <span class="ico">📁</span>
+      <h4>Apri un caso</h4>
+      <p>Descrivi il tuo problema o seleziona un servizio dal catalogo. Puoi allegare documenti, screenshot e informazioni riservate in modo sicuro.</p>
+      <a class="cta-link" href="/portal">Vai al portale →</a>
+    </div>
+    <div class="t-step">
+      <span class="num">03</span>
+      <span class="ico">⚙️</span>
+      <h4>Lavoriamo per te</h4>
+      <p>I nostri analisti elaborano il caso. Puoi seguire l'avanzamento in tempo reale dal portale. Ogni prova è hashata e tracciata automaticamente.</p>
+    </div>
+    <div class="t-step">
+      <span class="num">04</span>
+      <span class="ico">📄</span>
+      <h4>Ricevi il report</h4>
+      <p>Ottieni un report firmato digitalmente, con catena di custodia SHA-256. Pronto per uso legale, tribunale o decisioni aziendali.</p>
+      <a class="cta-link" href="/pay-per-use">Vedi i prezzi →</a>
+    </div>
   </div>
 </section>
-{% endif %}
+</div>
 
-<section class="t-block">
-  <div class="t-section-head">
-    <div class="eyebrow">Ultime</div>
-    <h2>Ultime notizie</h2>
-    <div class="t-line"></div>
-  </div>
-  {% if latest %}
-  <div class="t-news">
-    {% for n in latest %}
-    <a class="t-news-tile" href="/news/{{ n.slug }}">
-      <div class="cat">{{ n.category or 'News' }}</div>
-      <h4>{{ n.title }}</h4>
-      {% if n.excerpt %}<div class="ex">{{ n.excerpt[:140] }}{% if n.excerpt|length > 140 %}…{% endif %}</div>{% endif %}
-      <div class="meta">
-        {% if n.published_at %}<span>{{ frappe.utils.format_datetime(n.published_at, 'd MMM yyyy') }}</span>{% endif %}
-        {% if n.source_name_label %}<span>· {{ n.source_name_label }}</span>{% endif %}
-      </div>
-    </a>
-    {% endfor %}
-  </div>
-  <div style="text-align:center;margin-top:36px;"><a class="t-btn" href="/notizie">Tutte le notizie →</a></div>
-  {% else %}
-  <div class="t-news">
-    <a class="t-news-tile" href="#" style="opacity:.92">
-      <div class="cat">Crypto Intelligence</div>
-      <h4>DOJ Seizes $15 Billion in Bitcoin — Pig Butchering Network Smantellata</h4>
-      <div class="ex">Identificati 29 wallet BTC connessi a una rete di pig butchering sud-est asiatico.
-        Pattern wallet multilivello + offuscamento mixer. <em>Sintesi Thanatos da Chainalysis.</em></div>
-      <div class="meta"><span>Giugno 2026</span><span>· Pig Butchering</span><span>· Rischio Alto</span></div>
-    </a>
-    <a class="t-news-tile" href="#" style="opacity:.92">
-      <div class="cat">AI Threats</div>
-      <h4>AI-Powered Crypto Scams — Deepfake & Vocal Cloning in salita</h4>
-      <div class="ex">Truffe investment basate su AI generativa: video deepfake CEO + clonazione vocale
-        usati per autorizzare bonifici crypto fraudolenti.</div>
-      <div class="meta"><span>Maggio 2026</span><span>· Investment Scam</span><span>· Rischio Alto</span></div>
-    </a>
-    <a class="t-news-tile" href="#" style="opacity:.92">
-      <div class="cat">Compliance</div>
-      <h4>OFAC Targets $10B Pig Butchering Industry — Nuova Strike Force USA</h4>
-      <div class="ex">US Treasury crea task force dedicata. Implicazioni per processi KYC/KYB e screening
-        sanctions su transazioni crypto verso giurisdizioni a rischio.</div>
-      <div class="meta"><span>Novembre 2025</span><span>· Sanctions</span><span>· Rischio Critico</span></div>
-    </a>
-  </div>
-  <div style="text-align:center;margin-top:36px;"><a class="t-btn" href="/notizie">Vedi tutte le intel →</a></div>
-  {% endif %}
-</section>
-
+<!-- PIANI -->
 {% if plans %}
 <section class="t-block">
   <div class="t-section-head">
     <div class="eyebrow">Abbonamenti</div>
-    <h2>Piani Thanatos Intel</h2>
+    <h2>Scegli il tuo piano</h2>
     <div class="t-line"></div>
-    <p>Quattro livelli. Pagamento sicuro Stripe. Senza vincoli.</p>
+    <p>Inizia gratis. Passa al piano giusto quando sei pronto. Cancella quando vuoi.</p>
   </div>
   <div class="t-plans">
     {% for p in plans %}
-    <div class="t-plan">
+    <div class="t-plan{% if p.plan_level == 'Basic' %} featured{% endif %}">
       <div class="lvl">{{ p.plan_level }}</div>
       <h3>{{ p.plan_name }}</h3>
       <div class="price">€{{ "%.0f"|format(p.monthly_price) }}<small> / mese</small></div>
@@ -328,40 +306,62 @@ section.t-block{padding:72px 24px;max-width:1240px !important;width:100% !import
     {% endfor %}
   </div>
 </section>
-{% endif %}
-
+{% else %}
 <section class="t-block">
   <div class="t-section-head">
-    <div class="eyebrow">Tecnologia</div>
-    <h2>Pilastri operativi</h2>
+    <div class="eyebrow">Abbonamenti</div>
+    <h2>Scegli il tuo piano</h2>
     <div class="t-line"></div>
+    <p>Inizia gratis. Passa al piano giusto quando sei pronto. Cancella quando vuoi.</p>
   </div>
-  <div class="t-pillars">
-    <div class="t-pillar"><div class="name">Chain of Custody</div><div class="body">Hash SHA-256 su ogni prova. Custodia immutabile, ammissibile in giudizio (conf. Legea 329/2003).</div></div>
-    <div class="t-pillar"><div class="name">OSINT automatico</div><div class="body">HIBP, AbuseIPDB, RDAP, sanctions lists. Cache 24h, lookup on-demand.</div></div>
-    <div class="t-pillar"><div class="name">Report brandizzati</div><div class="body">ReportLab + firme digitali. Pronti per Tribunale, IT/RO/EU.</div></div>
-    <a class="t-pillar" href="/pay-per-use" style="text-decoration:none;color:inherit;display:block;"><div class="name">Pay-Per-Use →</div><div class="body">Servizi on-demand: crypto fraud, cyber intelligence, antifrode tecnologica. Pagamento Stripe.</div></a>
+  <div class="t-plans">
+    <div class="t-plan">
+      <div class="lvl">Free</div>
+      <h3>Free</h3>
+      <div class="price">€0<small> / mese</small></div>
+      <ul><li>1 verifica / mese</li><li>1 analisi / mese</li><li>1 report / mese</li><li>1 utente</li><li>Email</li></ul>
+      <div class="cta"><a class="t-btn solid" href="/portal/billing">Attiva →</a></div>
+    </div>
+    <div class="t-plan">
+      <div class="lvl">Pay-per-use</div>
+      <h3>Pay-per-use</h3>
+      <div class="price">€1<small> / uso</small></div>
+      <ul><li>∞ verifiche / mese</li><li>∞ analisi / mese</li><li>∞ report / mese</li><li>1 utente</li><li>Email</li></ul>
+      <div class="cta"><a class="t-btn solid" href="/portal/billing">Attiva →</a></div>
+    </div>
+    <div class="t-plan featured">
+      <div class="lvl">Basic</div>
+      <h3>Basic</h3>
+      <div class="price">€150<small> / mese</small></div>
+      <ul><li>3 verifiche / mese</li><li>3 analisi / mese</li><li>1 report / mese</li><li>1 utente</li><li>Email</li></ul>
+      <div class="cta"><a class="t-btn solid" href="/portal/billing">Attiva →</a></div>
+    </div>
+    <div class="t-plan">
+      <div class="lvl">Professional</div>
+      <h3>Professional</h3>
+      <div class="price">€350<small> / mese</small></div>
+      <ul><li>20 verifiche / mese</li><li>20 analisi / mese</li><li>5 report / mese</li><li>5 utenti</li><li>Priority</li></ul>
+      <div class="cta"><a class="t-btn solid" href="/portal/billing">Attiva →</a></div>
+    </div>
   </div>
 </section>
+{% endif %}
 
+<!-- CTA FINALE -->
+<div class="t-cta-band">
+  <h2>Hai un caso da gestire adesso?</h2>
+  <p>Scrivici su WhatsApp o accedi al portale. Un operatore risponde entro pochi minuti.</p>
+  <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+    <a class="t-btn solid" href="https://wa.me/393509434569?text=Ciao%20Thanatos%2C%20vorrei%20informazioni%20sui%20vostri%20servizi" target="_blank" rel="noopener">💬 Scrivici su WhatsApp</a>
+    <a class="t-btn" href="/register">Apri un account gratis →</a>
+  </div>
+</div>
+
+<!-- WA FLOAT -->
 <a class="wa-float" href="https://wa.me/393509434569?text=Ciao%20Thanatos%2C%20vorrei%20informazioni%20sui%20vostri%20servizi"
    target="_blank" rel="noopener" aria-label="Contattaci su WhatsApp" title="Scrivici su WhatsApp">
   <svg viewBox="0 0 32 32" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M16.001 3.2C9.064 3.2 3.4 8.86 3.4 15.8c0 2.22.58 4.39 1.69 6.3L3.2 28.8l6.86-1.8a12.5 12.5 0 0 0 5.94 1.51h.005c6.936 0 12.6-5.66 12.6-12.6 0-3.37-1.31-6.53-3.69-8.91A12.52 12.52 0 0 0 16.001 3.2zm0 22.99h-.004a10.4 10.4 0 0 1-5.3-1.45l-.38-.23-3.95 1.04 1.05-3.85-.25-.4a10.38 10.38 0 0 1-1.6-5.5c0-5.76 4.7-10.45 10.48-10.45 2.8 0 5.42 1.09 7.4 3.07a10.4 10.4 0 0 1 3.06 7.4c0 5.76-4.7 10.45-10.46 10.45zm5.74-7.82c-.31-.16-1.86-.92-2.15-1.02-.29-.11-.5-.16-.71.16-.21.31-.82 1.02-1 1.23-.18.21-.37.24-.68.08-.31-.16-1.33-.49-2.53-1.56-.94-.83-1.57-1.86-1.75-2.17-.18-.31-.02-.48.14-.63.14-.14.31-.37.47-.55.16-.18.21-.31.31-.52.1-.21.05-.39-.03-.55-.08-.16-.71-1.71-.97-2.34-.26-.61-.52-.53-.71-.54l-.61-.01c-.21 0-.55.08-.84.39-.29.31-1.1 1.08-1.1 2.63 0 1.55 1.13 3.05 1.29 3.26.16.21 2.23 3.4 5.4 4.77.75.32 1.34.52 1.8.66.76.24 1.45.21 1.99.13.61-.09 1.86-.76 2.12-1.49.26-.73.26-1.36.18-1.49-.08-.13-.29-.21-.6-.37z"/></svg>
-  <span>WhatsApp</span>
 </a>
-<style>
-.wa-float span{display:none;}.wa-float{position:fixed;right:20px;bottom:20px;z-index:9999;display:inline-flex;align-items:center;gap:10px;
-  background:#25D366;color:#fff !important;text-decoration:none;padding:10px;border-radius:999px;
-  box-shadow:0 8px 24px rgba(0,0,0,.35);font-family:-apple-system,system-ui,sans-serif;font-size:14px;font-weight:600;
-  letter-spacing:.3px;transition:transform .15s,box-shadow .15s;}
-.wa-float:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(37,211,102,.45);color:#fff;}
-.wa-float svg{flex:0 0 auto;}
-.wa-float::after{content:"";position:absolute;inset:0;border-radius:999px;box-shadow:0 0 0 0 rgba(37,211,102,.6);
-  animation:waPulse 2.4s infinite;}
-@keyframes waPulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.5);}70%{box-shadow:0 0 0 14px rgba(37,211,102,0);}100%{box-shadow:0 0 0 0 rgba(37,211,102,0);}}
-@media(max-width:600px){.wa-float span{display:none;}.wa-float{padding:10px;right:16px;bottom:16px;}}
-</style>
 
-</body>
 {{ thanatos_footer() }}
 {% endblock %}
