@@ -121,6 +121,9 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     </div>
     <div style="margin-top:12px">
       <button class="btn" onclick="openBillingPortal()">Gestisci carta / abbonamento →</button>
+      {% if current_sub and current_sub.stripe_subscription_id and current_sub.status not in ("canceled","Cancelled") %}
+      <button class="btn" style="margin-top:8px;border-color:#c0392b;color:#c0392b" onclick="cancelSub('{{ current_sub.stripe_subscription_id|e }}')">Disdici abbonamento →</button>
+      {% endif %}
     </div>
   </div>
   {% endif %}
@@ -283,6 +286,20 @@ async function buyService(serviceCode) {
   } catch (e) {
     alert("Errore: " + e.message);
   }
+}
+
+async function cancelSub(subId) {
+  if (!confirm("Sei sicuro di voler disdire l'abbonamento? Rimarrà attivo fino alla scadenza del periodo corrente.")) return;
+  try {
+    const r = await fetch("/api/method/thanatos_intel.integrations.stripe_bridge.cancel_subscription", {
+      method: "POST", credentials: "include",
+      headers: {"Content-Type": "application/x-www-form-urlencoded", "X-Frappe-CSRF-Token": CSRF},
+      body: new URLSearchParams({stripe_subscription_id: subId, at_period_end: 1}).toString(),
+    });
+    const j = await r.json();
+    if (j.message) { alert("Abbonamento disdetto. Rimarrà attivo fino alla scadenza del periodo."); location.reload(); }
+    else { alert("Errore: " + (j._error_message || j.exc || JSON.stringify(j))); }
+  } catch(e) { alert("Errore: " + e.message); }
 }
 </script>
 {% endblock %}
