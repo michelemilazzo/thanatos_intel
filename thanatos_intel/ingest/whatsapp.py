@@ -198,10 +198,12 @@ def webhook():
         )
         created.append(name)
 
-        # Auto-reply se configurato
+        # Auto-reply se nessun operatore ha ancora risposto
         try:
-            msg_count = frappe.db.count('Intel Lead Message', {'parent': name})
-            _send_auto_reply(wa_number, m['source_id'], name, is_new=(msg_count <= 1))
+            has_outbound = frappe.db.count('Intel Lead Message',
+                {'parent': name, 'direction': 'Outbound'})
+            if not has_outbound:
+                _send_auto_reply(wa_number, m['source_id'], name, is_new=True)
         except Exception:
             frappe.log_error(frappe.get_traceback(), 'WA auto-reply dispatch')
 

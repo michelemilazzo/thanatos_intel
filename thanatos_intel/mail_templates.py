@@ -20,17 +20,33 @@ def _get_from_email(user: str) -> str:
 
 def _create_draft(from_email: str, to: list, subject: str, html_body: str, cc: list | None = None) -> dict:
     from mail.api.mail import create_mail
+    # Risolvi "account" (Mail upstream >=0.2: arg obbligatorio)
+    import frappe as _f
+    account = _f.db.get_value("User Account", {"email": from_email}, "name") \
+        or _f.db.get_value("Mailbox", {"email": from_email}, "name") \
+        or _f.db.get_value("Mail Account", {"email": from_email}, "name") \
+        or from_email
+    # Normalizza destinatari: create_mail si aspetta list[dict] con chiave 'email'
+    def _norm(addrs):
+        out = []
+        for a in (addrs or []):
+            if isinstance(a, dict):
+                out.append({"email": a.get("email") or a.get("address"), "display_name": a.get("display_name","")})
+            else:
+                out.append({"email": str(a), "display_name": ""})
+        return out
     result = create_mail(
-        attachments=[],
+        account=account,
         from_email=from_email,
-        to=to,
-        cc=cc or [],
+        to=_norm(to),
+        cc=_norm(cc),
         bcc=[],
         subject=subject,
         html_body=html_body,
+        attachments=[],
         save_as_draft=True,
     )
-    return {"draft_id": result.get("id"), "mail_url": "/mail"}
+    return {"draft_id": result.get("id"), "mail_url": "/mail", "account": account}
 
 
 def _client_email(applicant_id: str) -> str | None:
