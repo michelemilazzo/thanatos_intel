@@ -108,8 +108,8 @@ def translate_mandate_pdf(name: str, target_lang: str = "en") -> dict:
         frappe.local.request = WzRequest(builder.get_environ())
         frappe.local.form_dict = frappe._dict()
         if not getattr(frappe.local, "session_obj", None):
-            import frappe.sessions
-            frappe.local.session_obj = frappe.sessions.Session(user="Administrator", resume=False)
+            import frappe.sessions as _fsessions
+            frappe.local.session_obj = _fsessions.Session(user="Administrator", resume=False)
         html = frappe.get_print("Agency Mandate", name, "Mandato d'Incarico", doc=d)
         pdf = get_pdf(html)
         fname = f"{name}_{target_lang}.pdf"
@@ -139,8 +139,8 @@ def translate_proforma_pdf(name: str, target_lang: str = "en") -> dict:
         frappe.local.request = WzRequest(builder.get_environ())
         frappe.local.form_dict = frappe._dict()
         if not getattr(frappe.local, "session_obj", None):
-            import frappe.sessions
-            frappe.local.session_obj = frappe.sessions.Session(user="Administrator", resume=False)
+            import frappe.sessions as _fsessions
+            frappe.local.session_obj = _fsessions.Session(user="Administrator", resume=False)
         html = frappe.get_print("Diplomatic Proforma", name, "Proforma DDD", doc=d)
         pdf = get_pdf(html)
         fname = f"{name}_{target_lang}.pdf"
