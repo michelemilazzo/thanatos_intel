@@ -1,5 +1,6 @@
 app_name='thanatos_intel'
-before_request=["thanatos_intel.utils.portal.bounce_client_from_desk",
+before_request=[
+	"thanatos_intel.utils.portal.bounce_client_from_desk",
                 "thanatos_intel.patches.drive_access_patch.apply"]
 auth_hooks=["thanatos_intel.thanatos_ddd.auth_patch.allow_thanatos_guest_paths"]
 
