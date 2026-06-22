@@ -890,3 +890,79 @@ def conversation_thread(key: str) -> dict:
             info["who"] = nm
             break
     return {"info": info, "messages": msgs}
+
+
+# ----------- TAGS / ARCHIVE / SEARCH / MARK READ ---------------------------
+@frappe.whitelist()
+def set_conversation_tag(key: str, tag: str, action: str = "add") -> dict:
+    """Aggiunge/rimuove tag a tutte le Communication della conversazione (via _user_tags)."""
+    if "::" not in key: return {"ok": False}
+    ch, addr = key.split("::", 1)
+    if ch != "email": return {"ok": False, "error": "tag solo email per ora"}
+    names = frappe.db.sql("""SELECT name FROM tabCommunication
+        WHERE communication_medium='Email'
+        AND (LOWER(sender) LIKE %s OR LOWER(recipients) LIKE %s)""",
+        (f"%{addr.lower()}%", f"%{addr.lower()}%"))
+    for (n,) in names:
+        if action == "add":
+            frappe.db.sql("UPDATE tabCommunication SET _user_tags=CONCAT(IFNULL(_user_tags,''), %s) WHERE name=%s AND IFNULL(_user_tags,'') NOT LIKE %s",
+                (f",{tag}", n, f"%,{tag}%"))
+        else:
+            frappe.db.sql("UPDATE tabCommunication SET _user_tags=REPLACE(IFNULL(_user_tags,''), %s, '') WHERE name=%s",
+                (f",{tag}", n))
+    frappe.db.commit()
+    return {"ok": True, "count": len(names)}
+
+
+@frappe.whitelist()
+def archive_conversation(key: str, archived: int = 1) -> dict:
+    if "::" not in key: return {"ok": False}
+    ch, addr = key.split("::", 1)
+    if ch == "email":
+        n = frappe.db.sql("""UPDATE tabCommunication SET archived=%s
+            WHERE communication_medium='Email'
+            AND (LOWER(sender) LIKE %s OR LOWER(recipients) LIKE %s)""",
+            (int(archived), f"%{addr.lower()}%", f"%{addr.lower()}%"))
+        frappe.db.commit()
+        return {"ok": True}
+    return {"ok": False}
+
+
+@frappe.whitelist()
+def mark_conversation_read(key: str) -> dict:
+    if "::" not in key: return {"ok": False}
+    ch, addr = key.split("::", 1)
+    if ch == "email":
+        frappe.db.sql("""UPDATE tabCommunication SET `status`='Read'
+            WHERE communication_medium='Email' AND sent_or_received='Received'
+            AND `status`!='Read' AND LOWER(sender) LIKE %s""", (f"%{addr.lower()}%",))
+    else:
+        try:
+            frappe.db.sql("""UPDATE `tabWABA WhatsApp Message` SET `status`='Read'
+                WHERE type='Incoming' AND `status`!='Read' AND `from`=%s""", (addr,))
+        except Exception: pass
+    frappe.db.commit()
+    return {"ok": True}
+
+
+@frappe.whitelist()
+def search_full_text(query: str, limit: int = 50) -> list:
+    """Cerca nel body delle Communication + WABA messages."""
+    q = f"%{query}%"
+    out = []
+    for r in frappe.db.sql("""SELECT name, communication_date, sender, recipients, subject, sent_or_received
+        FROM tabCommunication WHERE communication_medium='Email'
+        AND (content LIKE %s OR subject LIKE %s)
+        ORDER BY communication_date DESC LIMIT %s""", (q, q, limit), as_dict=1):
+        addr = (r.sender if r.sent_or_received == "Received" else (r.recipients or "").split(",")[0]).strip()
+        out.append({"channel":"email","key":f"email::{addr.lower()}",
+                    "snippet": (r.subject or "")[:100], "ts": str(r.communication_date), "addr": addr})
+    try:
+        for r in frappe.db.sql("""SELECT name, creation, `from`, `to`, type, message_body
+            FROM `tabWABA WhatsApp Message` WHERE message_body LIKE %s
+            ORDER BY creation DESC LIMIT %s""", (q, limit), as_dict=1):
+            addr = r["from"] if r.type=="Incoming" else r["to"]
+            out.append({"channel":"whatsapp","key":f"wa::{addr}",
+                        "snippet":(r.message_body or "")[:100], "ts": str(r.creation), "addr": addr})
+    except Exception: pass
+    return sorted(out, key=lambda x:x["ts"] or "", reverse=True)[:limit]

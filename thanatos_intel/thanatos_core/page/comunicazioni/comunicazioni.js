@@ -37,6 +37,16 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
   .cc-send{background:#1f6feb;color:#fff;border:0;padding:8px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px}
   .cc-send:hover{background:#1656c0}
   .cc-empty{padding:40px;text-align:center;color:#999;font-style:italic}
+  .cc-dropzone{border:2px dashed #1f6feb;background:rgba(31,111,235,0.05);text-align:center;padding:20px;color:#1f6feb;border-radius:6px;margin:6px 0}
+  .cc-tag{display:inline-block;background:#e3f0ff;color:#1f6feb;padding:2px 8px;border-radius:10px;font-size:10px;margin:1px;cursor:pointer}
+  .cc-tag .x{margin-left:4px;cursor:pointer;color:#999}
+  .cc-att-preview{display:inline-block;margin:4px;border:1px solid #ddd;border-radius:4px;background:#fff;max-width:120px}
+  .cc-att-preview img{max-width:100%;display:block;cursor:pointer}
+  .cc-lightbox{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center}
+  .cc-lightbox img,.cc-lightbox iframe{max-width:90vw;max-height:90vh;border:0}
+  .cc-lightbox .close{position:absolute;top:10px;right:20px;color:#fff;font-size:30px;cursor:pointer}
+  .cc-actions{padding:8px 12px;border-bottom:1px solid #eee;background:#fff;display:flex;gap:6px;align-items:center}
+
   .cc-tab{display:flex;gap:0;border-bottom:1px solid #e3e3e3}
   .cc-tab button{flex:1;padding:8px;border:0;background:#fff;cursor:pointer;font-size:12px;border-bottom:2px solid transparent}
   .cc-tab button.active{border-bottom-color:#1f6feb;font-weight:bold;color:#1f6feb}
@@ -54,7 +64,7 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
         <button class="btn btn-xs cc-folder" data-folder="email">📧</button>
         <button class="btn btn-xs cc-folder" data-folder="wa">💬</button>
       </div>
-      <input id="cc-search" type="text" placeholder="🔍 Cerca…">
+      <input id="cc-search" type="text" placeholder="🔍 Cerca (anche nel testo dei messaggi)…">
       <div style="font-size:10px;color:#888;margin-top:4px"><span id="cc-count">0</span> conv · <a href="/mail" target="_blank" style="float:right">Webmail nativa ↗</a></div>
     </div>
     <div class="cc-list" id="cc-list">
@@ -67,6 +77,12 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
     <div class="cc-thread-hd" id="cc-thread-hd">
       <b id="cc-thread-who">— Seleziona una conversazione —</b>
       <div style="font-size:11px;color:#666" id="cc-thread-meta"></div>
+    </div>
+    <div class="cc-actions" id="cc-actions" style="display:none">
+      <button class="btn btn-xs btn-default" id="cc-mark-read" title="Segna come letta">✓ Letta</button>
+      <button class="btn btn-xs btn-default" id="cc-archive" title="Archivia conversazione">🗄 Archivia</button>
+      <button class="btn btn-xs btn-default" id="cc-add-tag" title="Aggiungi tag">🏷 + Tag</button>
+      <span id="cc-tags" style="flex:1"></span>
     </div>
     <div class="cc-msgs" id="cc-msgs">
       <div class="cc-empty">Nessuna conversazione selezionata</div>
@@ -154,6 +170,61 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
 </div>
   `);
 
+  
+  function render_attachments(atts){
+    if(!atts || !atts.length) return '';
+    return `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ddd;font-size:11px"><b>📎 Allegati:</b><div>${atts.map(a=>{
+      const ext = (a.name||'').split('.').pop().toLowerCase();
+      if(['png','jpg','jpeg','gif','webp'].includes(ext))
+        return `<div class="cc-att-preview"><img src="${a.url}" data-url="${a.url}" data-name="${frappe.utils.escape_html(a.name)}" onclick="cc_lightbox('${a.url}','image','${frappe.utils.escape_html(a.name)}')"></div>`;
+      if(ext === 'pdf')
+        return `<div class="cc-att-preview" style="padding:8px;font-size:11px;cursor:pointer" onclick="cc_lightbox('${a.url}','pdf','${frappe.utils.escape_html(a.name)}')">📄 ${frappe.utils.escape_html(a.name)} <small>(PDF — click)</small></div>`;
+      return `<a href="${a.url}" target="_blank" style="display:inline-block;padding:4px 8px;margin:2px;background:#f0f0f0;border-radius:4px">📎 ${frappe.utils.escape_html(a.name)}</a>`;
+    }).join('')}</div></div>`;
+  }
+
+  window.cc_lightbox = function(url, type, name){
+    const lb = $(`<div class="cc-lightbox" tabindex="-1">
+      <span class="close">×</span>
+      ${type==='image'?`<img src="${url}">`:`<iframe src="${url}#toolbar=1" style="width:90vw;height:90vh"></iframe>`}
+    </div>`);
+    lb.find('.close').on('click', ()=>lb.remove());
+    lb.on('click', e=>{ if($(e.target).hasClass('cc-lightbox')) lb.remove(); });
+    $('body').append(lb);
+  };
+
+  // Drag&drop sul textarea
+  function setup_drag_drop(){
+    const $ta = $('#cc-body');
+    $ta.on('dragover', e=>{ e.preventDefault(); $ta.css('border-color','#1f6feb'); });
+    $ta.on('dragleave drop', e=>{ $ta.css('border-color',''); });
+    $ta.on('drop', async e=>{
+      e.preventDefault();
+      const files = e.originalEvent.dataTransfer.files;
+      for(const f of files){
+        const fd = new FormData();
+        fd.append('file', f, f.name);
+        fd.append('is_private', 1);
+        fd.append('doctype', $('#cc-ref-dt').val()||'User');
+        fd.append('docname', $('#cc-ref-name').val()||frappe.session.user);
+        const r = await fetch('/api/method/upload_file',{method:'POST',headers:{'X-Frappe-CSRF-Token':frappe.csrf_token},body:fd}).then(r=>r.json());
+        if(r.message){ attachments.push({file_url:r.message.file_url, file_name:r.message.file_name}); render_attachments_chip(); }
+      }
+    });
+  }
+  function render_attachments_chip(){
+    if(!attachments.length){ $('#cc-att').html('<span style="color:#999;font-size:11px">Trascina file qui sotto o usa il bottone "+ Aggiungi"</span>'); return; }
+    $('#cc-att').html(attachments.map((a,i)=>`<span class="chip">📎 ${frappe.utils.escape_html(a.file_name)}<span class="x" data-i="${i}">✕</span></span>`).join(''));
+  }
+
+  // Socketio realtime
+  if(window.frappe && frappe.realtime){
+    frappe.realtime.on('comm_pane_update', (data)=>{
+      load_conversations();
+      if(activeKey && activeKey.includes(data.addr)) load_thread(activeKey);
+    });
+  }
+
   let allConvs = [];
   let activeKey = null;
   let attachments = [];
@@ -195,6 +266,7 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
   }
 
   function load_thread(key){
+    $('#cc-actions').show();
     $('#cc-msgs').html('<div class="cc-empty">Carico…</div>');
     frappe.call({method:'thanatos_intel.api.comm_pane.conversation_thread', args:{key}})
       .then(r=>{
@@ -216,12 +288,33 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
             </div>
             ${m.subject?`<b>${frappe.utils.escape_html(m.subject)}</b><br>`:''}
             <div style="word-wrap:break-word;overflow-wrap:break-word;max-width:100%">${cc_fmt(m.text)}</div>
-            ${m.attachments && m.attachments.length ? `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #ddd;font-size:11px"><b>📎 Allegati:</b> ${m.attachments.map(a=>`<a href="${a.url}" target="_blank">${frappe.utils.escape_html(a.name)}</a>`).join(' · ')}</div>` : ''}
+            ${render_attachments(m.attachments)}
           </div>`).join(''));
         // Bind reply/forward
         $('.cc-reply').on('click', function(){ cc_reply(msgs[$(this).data('idx')], info, false); });
         $('.cc-forward').on('click', function(){ cc_reply(msgs[$(this).data('idx')], info, true); });
         $('#cc-msgs').scrollTop($('#cc-msgs')[0].scrollHeight);
+        // Bind action buttons
+        $('#cc-mark-read').off('click').on('click', async()=>{
+          await frappe.call({method:'thanatos_intel.api.comm_pane.mark_conversation_read', args:{key}});
+          frappe.show_alert({message:'Segnata come letta',indicator:'green'});
+          load_conversations();
+        });
+        $('#cc-archive').off('click').on('click', async()=>{
+          if(!confirm('Archiviare la conversazione?')) return;
+          await frappe.call({method:'thanatos_intel.api.comm_pane.archive_conversation', args:{key, archived:1}});
+          frappe.show_alert({message:'Archiviata',indicator:'orange'});
+          activeKey = null;
+          load_conversations();
+        });
+        $('#cc-add-tag').off('click').on('click', ()=>{
+          frappe.prompt([{fieldname:'tag',fieldtype:'Data',label:'Tag (es. urgente, vip, contenzioso)',reqd:1}],
+            async v=>{
+              await frappe.call({method:'thanatos_intel.api.comm_pane.set_conversation_tag', args:{key, tag:v.tag, action:'add'}});
+              frappe.show_alert({message:'Tag aggiunto',indicator:'green'});
+              load_thread(key);
+            }, 'Aggiungi tag');
+        });
       });
   }
 
@@ -374,5 +467,6 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
 
   $('#cc-search').on('input', render_list);
 
+  setup_drag_drop();
   load_conversations();
 };
