@@ -2,6 +2,14 @@ frappe.pages['thanatos-dossier'].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({ parent: wrapper, title: 'Dossier & Bacheca', single_column: true });
 	frappe.thanatos && frappe.thanatos.nav(page, 'dossier');
 	page.set_secondary_action('Aggiorna', () => load());
+	page.set_primary_action('📄 Dossier auditor (PDF)', () => {
+		frappe.show_alert({ message: 'Genero il dossier ISO…', indicator: 'blue' });
+		frappe.call('thanatos_intel.thanatos_core.dossier.generate_audit_dossier').then(r => {
+			const m = r.message || {};
+			if (m.ok) { window.open(m.url, '_blank'); frappe.show_alert({ message: 'Dossier pronto', indicator: 'green' }); }
+			else { frappe.msgprint('Generazione non riuscita (vedi error log).'); }
+		});
+	});
 	injectCSS();
 	const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
 	const go = (...r) => frappe.set_route.apply(null, r);
