@@ -94,8 +94,102 @@
     }
   }
 
+  
+
+  // Custom Sidebar: aggiunge sezioni Thanatos alla sidebar del desk
+  const SIDEBAR_GROUPS = [
+    {label:'🎯 Operativo', items:[
+      {l:'🏠 Home', r:['Workspaces','Thanatos Intel']},
+      {l:'💬 Comunicazioni', r:['comunicazioni']},
+      {l:'🏠 Cockpit', r:['thanatos-cockpit']},
+    ]},
+    {label:'👤 Anagrafiche', items:[
+      {l:'Customer', r:['List','Customer']},
+      {l:'Contact', r:['List','Contact']},
+      {l:'Applicant Profile', r:['List','Applicant Profile']},
+      {l:'Intel Lead', r:['List','Intel Lead']},
+    ]},
+    {label:'📋 Pratiche', items:[
+      {l:'Investigation Case', r:['List','Investigation Case']},
+      {l:'DD / DDD Case', r:['List','Diplomatic Eligibility Case']},
+      {l:'KYB Check', r:['List','KYB Check']},
+      {l:'KYC Check', r:['List','KYC Check']},
+      {l:'OSINT Job', r:['List','OSINT Job']},
+    ]},
+    {label:'📜 Mandati & Billing', items:[
+      {l:'Agency Mandate', r:['List','Agency Mandate']},
+      {l:'Diplomatic Proforma', r:['List','Diplomatic Proforma']},
+      {l:'Sales Invoice', r:['List','Sales Invoice']},
+      {l:'Quotation', r:['List','Quotation']},
+    ]},
+    {label:'🖊 Firme', items:[
+      {l:'Signature Request', r:['List','Signature Request']},
+      {l:'Signature Template', r:['List','Signature Template']},
+      {l:'Mandate Clause', r:['List','Mandate Clause']},
+    ]},
+    {label:'🛡 Compliance', items:[
+      {l:'Risk Score', r:['List','Risk Score']},
+      {l:'Risk Indicator', r:['List','Risk Indicator']},
+      {l:'Blacklist Entry', r:['List','Blacklist Entry']},
+      {l:'Chain Of Custody', r:['List','Chain Of Custody Event']},
+    ]},
+    {label:'📁 Evidence', items:[
+      {l:'Investigation Entity', r:['List','Investigation Entity']},
+      {l:'Investigation Evidence', r:['List','Investigation Evidence']},
+      {l:'Investigation Report', r:['List','Investigation Report']},
+    ]},
+    {label:'🔍 SEO & Analytics', items:[
+      {l:'SEO Keyword', r:['List','SEO Keyword']},
+      {l:'Email Template', r:['List','Email Template']},
+      {l:'Web Page View', r:['List','Web Page View']},
+    ]},
+    {label:'🛠 Setup', items:[
+      {l:'Setup', r:['Workspaces','Thanatos Setup']},
+      {l:'Insight', r:['Workspaces','Thanatos Insight']},
+      {l:'Email Account', r:['List','Email Account']},
+      {l:'Billing Entity', r:['List','Billing Entity']},
+    ]},
+  ];
+
+  function buildSidebar(){
+    const targets = ['.desk-sidebar', '.layout-side-section', '#sidebar', '.sidebar-padding'];
+    let host = null;
+    for (const s of targets){ host = document.querySelector(s); if (host) break; }
+    if (!host) return;
+    if (host.querySelector('.tnav-sidebar')) return; // già fatto
+
+    const wrap = document.createElement('div');
+    wrap.className = 'tnav-sidebar';
+    wrap.innerHTML = SIDEBAR_GROUPS.map(g => `
+      <div class="tnav-sb-grp" data-grp="${g.label}">
+        <div class="tnav-sb-h">${g.label}</div>
+        <div class="tnav-sb-items">
+          ${g.items.map(i => `<a class="tnav-sb-i" data-route='${JSON.stringify(i.r)}'>${i.l}</a>`).join('')}
+        </div>
+      </div>`).join('');
+
+    // CSS
+    if (!document.getElementById('tnav-sb-css')){
+      const c = document.createElement('style'); c.id = 'tnav-sb-css';
+      c.textContent = `
+        .tnav-sidebar{padding:12px 8px;font-size:12px;border-top:1px solid #e3e3e3;margin-top:12px}
+        .tnav-sb-h{color:#666;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 6px 4px;margin-top:6px}
+        .tnav-sb-i{display:block;padding:5px 12px;color:#333;text-decoration:none;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .tnav-sb-i:hover{background:#f0f4ff;color:#1f6feb;text-decoration:none}
+      `;
+      document.head.appendChild(c);
+    }
+    host.appendChild(wrap);
+    wrap.addEventListener('click', e => {
+      const a = e.target.closest('.tnav-sb-i[data-route]');
+      if (!a) return;
+      try { frappe.set_route.apply(null, JSON.parse(a.getAttribute('data-route'))); } catch(_){}
+    });
+  }
+
+
   function setup(){
-    build();
+    build(); buildSidebar();
     // Re-render ad ogni navigazione
     if (window.frappe && frappe.router && frappe.router.on){
       try { frappe.router.on('change', build); } catch(_){}
@@ -105,7 +199,7 @@
     // Mutation observer per safety net (se DOM viene riscritto)
     // Heartbeat aggressivo: ogni 800ms verifica presenza barra
     setInterval(() => {
-      if (!document.getElementById('tnav-bar')) build();
+      if (!document.getElementById('tnav-bar')) build(); buildSidebar();
     }, 800);
     // MutationObserver come safety net su tutto subtree
     let lastRender = Date.now();
