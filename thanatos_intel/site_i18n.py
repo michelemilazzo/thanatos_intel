@@ -216,7 +216,7 @@ def warm_cache(langs=None, paths=None):
     visitatore non paga la latenza libretranslate. Schedulato hourly.
     NB: il page-cache e' chiave-su-HTML, non su URL -> scaldando lo slug IT
     con ?lang=xx si scalda anche l'alias EN (stesso template)."""
-    base = (frappe.conf.get("site_warm_base") or "https://thanatos.onekeyco.com").rstrip("/")
+    base = (frappe.conf.get("site_warm_base") or "https://thanatos.agency").rstrip("/")
     langs = langs or ["en"]
     paths = paths or WARM_PATHS
     for lang in langs:

@@ -134,7 +134,7 @@ def on_case_status_changed(doc, method=None):
             return
 
         label = _STATUS_LABEL.get(new_status, new_status)
-        case_url = f"https://thanatos.onekeyco.com/portal/case?name={doc.name}"
+        case_url = f"https://thanatos.agency/portal/case?name={doc.name}"
 
         # Prova prima con template DB, poi fallback hardcoded
         tpl_name = "Thanatos - Stato aggiornato"

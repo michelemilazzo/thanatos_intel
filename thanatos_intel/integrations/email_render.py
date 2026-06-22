@@ -8,7 +8,7 @@ bottoni bulletproof.
 """
 import frappe
 
-LOGO_PNG = "https://thanatos.onekeyco.com/assets/thanatos_intel/images/thanatos-logo.png"
+LOGO_PNG = "https://thanatos.agency/assets/thanatos_intel/images/thanatos-logo.png"
 NAVY = "#0D1B3E"
 GOLD = "#C8A96E"
 
@@ -61,8 +61,8 @@ def render(body_html, title="", preheader="", cta=None):
         </td></tr>
         <tr><td class="tn-pad" style="padding:18px 28px 26px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#8a93a3;border-top:1px solid #eef0f3">
           Thanatos Intel &middot; Investigazioni &amp; OSINT<br>
-          <a href="https://thanatos.onekeyco.com" style="color:{gold};text-decoration:none">thanatos.onekeyco.com</a>
-          &middot; <a href="https://thanatos.onekeyco.com/portal" style="color:{gold};text-decoration:none">Area clienti</a>
+          <a href="https://thanatos.agency" style="color:{gold};text-decoration:none">thanatos.agency</a>
+          &middot; <a href="https://thanatos.agency/portal" style="color:{gold};text-decoration:none">Area clienti</a>
         </td></tr>
       </table>
     </div>

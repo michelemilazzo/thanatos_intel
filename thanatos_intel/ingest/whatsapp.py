@@ -4,7 +4,7 @@ Supporta multi-numero tramite DocType WhatsApp Number.
 Ogni numero ha il proprio token e configurazione provider.
 
 Webhook URL (da impostare su Twilio/Meta):
-  https://thanatos.onekeyco.com/api/method/thanatos_intel.ingest.whatsapp.webhook
+  https://thanatos.agency/api/method/thanatos_intel.ingest.whatsapp.webhook
   ?number_id=+39123456789&token=IL-TUO-TOKEN
 
   oppure (fallback globale):

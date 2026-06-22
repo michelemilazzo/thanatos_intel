@@ -199,7 +199,7 @@ def _alert(case, changes):
         from thanatos_intel.integrations import email_render
         frappe.sendmail(recipients=rec, subject="[Thanatos] Alert wallet — %s" % case.name,
                         message=email_render.render(html, preheader="Variazioni sui wallet monitorati",
-                                                    cta=("Apri la pratica", "https://thanatos.onekeyco.com/portal/case/%s" % case.name)),
+                                                    cta=("Apri la pratica", "https://thanatos.agency/portal/case/%s" % case.name)),
                         reference_doctype="Investigation Case", reference_name=case.name)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "monitor alert email")

@@ -98,8 +98,8 @@ def draft_ddd_offer(mandate_name: str) -> dict:
         workflow_state = c.workflow_state or ""
 
     subject = f"Proposta Due Diligence Diplomatica {country} — {client_name or mandate_name}"
-    case_url = f"https://thanatos.onekeyco.com/app/diplomatic-eligibility-case/{m.ddd_case}" if m.ddd_case else ""
-    mandate_url = f"https://thanatos.onekeyco.com/app/agency-mandate/{mandate_name}"
+    case_url = f"https://thanatos.agency/app/diplomatic-eligibility-case/{m.ddd_case}" if m.ddd_case else ""
+    mandate_url = f"https://thanatos.agency/app/agency-mandate/{mandate_name}"
 
     html = f"""
 <p>Gentile {client_name or 'Cliente'},</p>
@@ -141,7 +141,7 @@ def draft_kyc_request(case_name: str) -> dict:
     client_email = _client_email(c.applicant)
     client_name = _client_name(c.applicant)
     country = c.country or ""
-    case_url = f"https://thanatos.onekeyco.com/app/diplomatic-eligibility-case/{case_name}"
+    case_url = f"https://thanatos.agency/app/diplomatic-eligibility-case/{case_name}"
 
     subject = f"Richiesta documentazione KYC/KYB — Pratica {case_name} — {country}"
 
@@ -233,7 +233,7 @@ def draft_status_update(case_name: str) -> dict:
     client_name = _client_name(c.applicant)
     country = c.country or ""
     state = c.workflow_state or ""
-    case_url = f"https://thanatos.onekeyco.com/app/diplomatic-eligibility-case/{case_name}"
+    case_url = f"https://thanatos.agency/app/diplomatic-eligibility-case/{case_name}"
 
     subject = f"Aggiornamento pratica DDD {case_name} — {country} — {state}"
 

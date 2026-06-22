@@ -4,8 +4,8 @@ del profit-split (revenue_engine.execute_payout) usano poi quell id."""
 import frappe
 from thanatos_intel.integrations.stripe_bridge import _get_stripe
 
-RETURN_URL = "https://thanatos.onekeyco.com/collaboratore?connect=done"
-REFRESH_URL = "https://thanatos.onekeyco.com/collaboratore?connect=refresh"
+RETURN_URL = "https://thanatos.agency/collaboratore?connect=done"
+REFRESH_URL = "https://thanatos.agency/collaboratore?connect=refresh"
 
 
 def _affiliate(user):

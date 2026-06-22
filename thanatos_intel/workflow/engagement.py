@@ -149,7 +149,7 @@ def _notify_client(case, file_url):
             subject=_("Thanatos — Incarico verifica wallet (perfezionato)"),
             message=email_render.render(_body, title=_("Incarico perfezionato"),
                                         preheader=_("Il suo incarico è attivo"),
-                                        cta=(_("Apri la pratica"), "https://thanatos.onekeyco.com/portal/case/%s" % case.name)),
+                                        cta=(_("Apri la pratica"), "https://thanatos.agency/portal/case/%s" % case.name)),
             attachments=[{"fname": f"incarico_{case.name}.pdf",
                           "fcontent": frappe.get_doc("File", {"file_url": file_url}).get_content()}],
             reference_doctype="Investigation Case", reference_name=case.name,

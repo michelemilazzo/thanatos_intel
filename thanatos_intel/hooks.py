@@ -23,7 +23,7 @@ app_license='MIT'
 app_icon='icon-bar-chart'
 app_color='navy'
 app_email='info@onekeyco.com'
-app_docs='https://thanatos.onekeyco.com'
+app_docs='https://thanatos.agency'
 app_country='IT'
 
 app_logo_url='/assets/thanatos_intel/images/thanatos-icon-192.png'

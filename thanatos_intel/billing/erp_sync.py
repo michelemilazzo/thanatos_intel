@@ -2,13 +2,13 @@
 Due flussi separati — NON mischiare:
 
   FLUSSO 1 — MMOS fattura Thanatos per l'infrastruttura:
-    thanatos.onekeyco.com  →  erp.onekeyco.com
+    thanatos.agency  →  erp.onekeyco.com
     (Infrastructure Cost)      (Quotation/Sales Invoice)
     Company seller = MMOS/OneKeyCo, Customer = Thanatos Investigazioni S.R.L.
     Credenziali: erpnext_endpoint, erpnext_api_key, erpnext_api_secret
 
   FLUSSO 2 — Thanatos registra i pagamenti clienti nella propria contabilità:
-    thanatos.onekeyco.com  →  books.thanatos.agency
+    thanatos.agency  →  books.thanatos.agency
     (Investigation Client)     (Customer + Sales Invoice)
     Company = Thanatos Investigazioni S.R.L., Customer = cliente finale
     Credenziali: erpnext_thanatos_books_endpoint, erpnext_thanatos_books_api_key,

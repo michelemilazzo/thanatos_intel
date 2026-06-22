@@ -238,7 +238,7 @@ text-decoration:none;display:inline-block">Accedi alla pagina di richiesta →</
 
 def _notify_staff_request(doc):
     client_name = frappe.db.get_value("Investigation Client", doc.client, "client_name") or doc.client
-    desk_url = f"https://thanatos.onekeyco.com/app/client-legacy-delegate/{doc.name}"
+    desk_url = f"https://thanatos.agency/app/client-legacy-delegate/{doc.name}"
     try:
         frappe.sendmail(
             recipients=["cases@thanatos.agency"],

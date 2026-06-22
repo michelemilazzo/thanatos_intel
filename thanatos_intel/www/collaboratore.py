@@ -18,7 +18,7 @@ def get_context(context):
 	context.featured = feat
 	code = frappe.scrub(aff.applicant_name)[:24].replace("_", "-") if (aff and aff.applicant_name) else ""
 	context.referral_code = code
-	context.referral_link = ("https://thanatos.onekeyco.com/?ref=" + code) if code else ""
+	context.referral_link = ("https://thanatos.agency/?ref=" + code) if code else ""
 
 	# i miei clienti attribuiti + commissione stimata
 	clients, est, attributed = [], 0.0, 0.0

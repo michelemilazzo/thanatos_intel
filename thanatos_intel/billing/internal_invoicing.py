@@ -1,6 +1,6 @@
 """Thanatos Internal Billing — fatturazione clienti DENTRO Thanatos.
 
-Usa l'ERPNext LOCALE installato su thanatos.onekeyco.com (stesso bench).
+Usa l'ERPNext LOCALE installato su thanatos.agency (stesso bench).
 Differente da erp_sync.py che parla con erp.onekeyco.com (book-keeping
 OneKeyCo, dove finiscono solo i costi infra + fee dovuti a OneKeyCo da
 Thanatos).
@@ -12,7 +12,7 @@ Mappa Thanatos → ERPNext locale:
   Investigation Report   →  delivery trigger
   Pay-per-use checkout   →  Stripe Payment Entry diretto
 
-Tutti i record vivono nel DB del sito thanatos.onekeyco.com (zero rete).
+Tutti i record vivono nel DB del sito thanatos.agency (zero rete).
 """
 from __future__ import annotations
 import frappe
