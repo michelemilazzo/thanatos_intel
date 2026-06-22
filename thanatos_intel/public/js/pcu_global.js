@@ -1,6 +1,6 @@
 
 // PCU Global Floating Widget — accessibile da ogni pagina desk
-frappe.ready(function(){ if(window.__pcu_global_loaded) return; window.__pcu_global_loaded = true;
+$(document).ready(function(){ if(window.__pcu_global_loaded) return; window.__pcu_global_loaded = true;
 
 function injectStyle(){
   if(document.getElementById('pcu-g-style')) return;
