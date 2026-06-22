@@ -194,6 +194,48 @@ def advance(case_name):
     return _finish({"status": "done"})
 
 
+
+
+def _run_auto_step(case, step):
+    try:
+        label=(step.step_label or '').lower()
+        at=step.action_type or ''
+        if at=='work' and 'generazione mandato' in label:
+            from thanatos_intel.workflow.engagement import prepare_mandate
+            prepare_mandate(case.name)
+        elif at=='deliver':
+            _auto_deliver(case)
+        elif at=='notify':
+            _auto_notify_closure(case)
+        elif at=='work' and 'conservazione' in label:
+            _auto_set_retention(case)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(),'auto_step '+str(step.step_label or ''))
+
+def _auto_deliver(case):
+    try:
+        from thanatos_intel.workflow.notify import channels
+        t=case.case_title or case.name
+        channels(case.name,message='Il report di '+t+' e disponibile.',subject='Report disponibile',action_type='report_ready')
+    except Exception:
+        frappe.log_error(frappe.get_traceback(),'auto_deliver')
+
+def _auto_notify_closure(case):
+    try:
+        from thanatos_intel.workflow.notify import channels
+        t=case.case_title or case.name
+        channels(case.name,message='Pratica '+t+' chiusa.',subject='Pratica chiusa',action_type='deliver')
+    except Exception:pass
+
+def _auto_set_retention(case):
+    import datetime
+    try:
+        if not frappe.db.get_value('Investigation Case',case.name,'retention_until'):
+            ret=frappe.utils.getdate()+datetime.timedelta(days=1825)
+            frappe.db.set_value('Investigation Case',case.name,'retention_until',str(ret),update_modified=False)
+    except Exception:pass
+
+
 @frappe.whitelist()
 def complete_step(case_name, seq, note=None):
     """Chiude lo step indicato (gate sbloccato) e fa proseguire la pratica."""

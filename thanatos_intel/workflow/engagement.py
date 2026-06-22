@@ -173,3 +173,17 @@ def on_step_paid(case_name, seq=None, payment_ref=None):
     if pay_step:
         return engine.complete_step(case_name, pay_step.seq, note=f"Pagamento ricevuto ({payment_ref or 'stripe'})")
     return {"ok": True, "no_pay_step": True}
+
+
+def prepare_mandate(case_name):
+    case = frappe.get_doc("Investigation Case", case_name)
+    if case.get("engagement_html"):
+        return
+    html = _render(case)
+    case.db_set("engagement_html", html, update_modified=False)
+    try:
+        file_url = _make_pdf(case)
+        case.db_set("engagement_pdf", file_url, update_modified=False)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "prepare_mandate pdf")
+    frappe.db.commit()

@@ -147,6 +147,8 @@ table{min-width:520px}
           {% if step.status=='current' and step.actor=='client' and step.raw_status=='Awaiting Client' %}
           {% if step.action_type=='pay' %}
           <button class="wf-pay" data-seq="{{ step.seq }}" style="margin-top:8px;padding:6px 14px;background:var(--gold);color:#0A0E1A;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:0;cursor:pointer">Rivedi incarico e paga ›</button>
+          {% elif step.action_type=='sign' %}
+          <button class="wf-sign" data-seq="{{ step.seq }}" style="margin-top:8px;padding:6px 14px;background:var(--gold);color:#0A0E1A;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:0;cursor:pointer">Leggi e firma mandato ›</button>
           {% else %}
           <button class="wf-act" data-seq="{{ step.seq }}" data-kind="client" style="margin-top:8px;padding:6px 14px;background:var(--gold);color:#0A0E1A;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border:0;cursor:pointer">Procedi ›</button>
           {% endif %}
@@ -458,6 +460,30 @@ table{min-width:520px}
         : 'thanatos_intel.workflow.api.complete_gate';
       const d=await post(method,fd);
       if(d.message){ location.reload(); } else { b.disabled=false; b.textContent=old; alert('Errore: '+(d._server_messages||'')); }
+    }));
+    document.querySelectorAll('.wf-sign').forEach(b=>b.addEventListener('click',async()=>{
+      b.disabled=true; const old=b.textContent; b.textContent='...';
+      const fd=new FormData(); fd.append('case_name',CASE);
+      const g=await post('thanatos_intel.workflow.engagement.get_engagement',fd);
+      b.disabled=false; b.textContent=old;
+      if(!g.message){alert('Errore caricamento mandato');return;}
+      const seq=b.dataset.seq;
+      const {ov,bx}=modal(g.message.html
+        +'<label style="display:flex;gap:8px;align-items:flex-start;margin-top:16px;font-size:13px"><input type="checkbox" id="sign-chk" style="margin-top:3px"> Ho letto e accetto il mandato d'incarico.</label>'
+        +'<div style="margin-top:14px;text-align:right"><button id="sign-cancel" style="background:#eee;border:0;padding:8px 14px;border-radius:4px;margin-right:8px;cursor:pointer">Annulla</button>'
+        +'<button id="sign-ok" disabled style="background:#C8A96E;color:#0A0E1A;border:0;padding:8px 16px;border-radius:4px;cursor:pointer;opacity:.5">Firma e continua ›</button></div>');
+      const chk=bx.querySelector('#sign-chk'), ok=bx.querySelector('#sign-ok');
+      chk.addEventListener('change',()=>{ok.disabled=!chk.checked;ok.style.opacity=chk.checked?1:.5;});
+      bx.querySelector('#sign-cancel').addEventListener('click',()=>ov.remove());
+      ok.addEventListener('click',async()=>{
+        ok.disabled=true; ok.textContent='...';
+        const f1=new FormData(); f1.append('case_name',CASE);
+        await post('thanatos_intel.workflow.engagement.accept_engagement',f1);
+        const f2=new FormData(); f2.append('case_name',CASE); f2.append('seq',seq);
+        const r=await post('thanatos_intel.workflow.api.client_act',f2);
+        ov.remove();
+        if(r.message){ location.reload(); } else { alert('Errore: '+(r._server_messages||'')); }
+      });
     }));
     const ai=document.getElementById('ai-suggest');
     if(ai) ai.addEventListener('click',async()=>{

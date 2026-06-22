@@ -145,17 +145,14 @@ def _meter(ai, case):
 
 
 def _read_text_fallback(file_url):
-    """Legge testo da file non-OCR: txt/md/csv (get_content) o docx (python-docx)."""
     import os
     try:
         fd = frappe.get_doc("File", {"file_url": file_url})
         ext = os.path.splitext(fd.file_name or "")[1].lower()
         if ext in (".docx", ".doc"):
             import docx as _docx
-            path = fd.get_full_path()
-            document = _docx.Document(path)
-            return "
-".join(p.text for p in document.paragraphs if p.text.strip())
+            doc = _docx.Document(fd.get_full_path())
+            return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
         content = fd.get_content()
         if isinstance(content, bytes):
             content = content.decode("utf-8", errors="ignore")
@@ -163,41 +160,3 @@ def _read_text_fallback(file_url):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "doc_ingest fallback")
         return ""
-
-
-@frappe.whitelist()
-def ingest_document(file_url, investigation_case, document_type="generic", create_evidence=1):
-    """Ingest completo di un documento allegato a un caso."""
-    if not frappe.db.exists("Investigation Case", investigation_case):
-        frappe.throw(_("Caso non trovato"))
-
-    # 1. OCR
-    ocr = ocr_file(file_url, document_type=document_type)
-    text = (ocr or {}).get("raw_text", "") or ""
-    if not text.strip():
-        text = _read_text_fallback(file_url)
-        if text:
-            ocr = dict(ocr or {}, provider="plain_text", confidence=1.0)
-
-    # 2. AI extraction
-    ai = _gateway(message=f"Tipo dichiarato: {document_type}\n\nTesto OCR:\n{text[:9000]}",
-                  system=EXTRACT_SYSTEM, task_type="extract")
-    parsed = _normalize(_extract_json(ai.get("reply"))) if ai else None
-
-    # 3. Evidence (catena custodia)
-    evidence = None
-    if int(create_evidence or 0):
-        evidence = _create_evidence(file_url, investigation_case, parsed, ocr or {})
-
-    # 4. billing
-    _meter(ai, investigation_case)
-
-    return {
-        "ok": True,
-        "ai_available": bool(ai),
-        "ocr": {"provider": (ocr or {}).get("provider"),
-                "confidence": (ocr or {}).get("confidence"),
-                "chars": len(text)},
-        "extracted": parsed,
-        "evidence": evidence,
-    }
