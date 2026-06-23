@@ -13,6 +13,7 @@ import base64
 import hashlib
 import io
 import frappe
+from thanatos_intel.thanatos_ddd.portal_acl import can_access_mandate
 from frappe.utils import now_datetime
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -93,6 +94,8 @@ def _stamp_signature(original_pdf_path: str, sig_png: bytes,
 @frappe.whitelist(methods=["POST"])
 def sign_mandate(mandate: str, signature_base64: str,
                  signer_name: str = None) -> dict:
+    if not can_access_mandate(mandate):
+        frappe.throw("Non sei autorizzato per questo mandato", frappe.PermissionError)
     if not signature_base64:
         frappe.throw("Firma mancante")
     m = frappe.get_doc("Agency Mandate", mandate)

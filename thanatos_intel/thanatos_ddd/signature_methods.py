@@ -18,6 +18,7 @@ import random
 import hashlib
 import datetime
 import frappe
+from thanatos_intel.thanatos_ddd.portal_acl import can_access_mandate
 import requests
 from frappe.utils import now_datetime
 
@@ -43,6 +44,8 @@ def _twilio_send_sms(to: str, body: str) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def send_otp(mandate: str, phone: str = None) -> dict:
+    if not can_access_mandate(mandate):
+        frappe.throw("Non sei autorizzato per questo mandato", frappe.PermissionError)
     m = frappe.get_doc("Agency Mandate", mandate)
     if not phone and m.applicant:
         phone = frappe.db.get_value("Applicant Profile", m.applicant, "phone")
@@ -416,6 +419,8 @@ def mmos_sign_send(mandate: str) -> dict:
 @frappe.whitelist(methods=["POST"])
 def dispatch(mandate: str, method: str, **kw) -> dict:
     """method: SES | SES_OTP | AES_PADES | DOCUSIGN | ADOBE_SIGN | HELLOSIGN"""
+    if not can_access_mandate(mandate):
+        frappe.throw("Non sei autorizzato per questo mandato", frappe.PermissionError)
     method = (method or "SES").upper()
     if method == "SES":
         from thanatos_intel.thanatos_ddd.signature import sign_mandate
