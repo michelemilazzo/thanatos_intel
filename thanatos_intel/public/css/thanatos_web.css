@@ -3,6 +3,8 @@
    Caricato via hooks: web_include_css
    =================================================================== */
 
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@400;700&display=swap");
+
 /* ─── Token globali ─────────────────────────────────────────────── */
 :root {
   --navy:  #0A0E1A;
