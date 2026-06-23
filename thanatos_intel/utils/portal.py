@@ -13,7 +13,10 @@ def get_home_page(user=None):
         return "home"
     roles = set(frappe.get_roles(user))
     if roles & DESK_ROLES:
-        return "/app/thanatos-cockpit"
+        # la home pubblica "/" deve renderizzare una rotta website valida:
+        # un percorso /app/* non e' servibile come home e darebbe 404.
+        # Lo staff entra nel desk dal menu utente (App Thanatos / Desk).
+        return "home"
     if roles & PORTAL_ROLES:
         return "/portal"
     return "/portal"
