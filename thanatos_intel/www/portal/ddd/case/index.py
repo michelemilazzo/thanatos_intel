@@ -1,5 +1,7 @@
 import frappe
 
+from thanatos_intel.thanatos_ddd.portal_acl import can_access_case
+
 
 def get_context(context):
     context.no_cache = 1
@@ -8,6 +10,9 @@ def get_context(context):
         raise frappe.Redirect
     name = frappe.form_dict.get("name")
     if not name or not frappe.db.exists("Diplomatic Eligibility Case", name):
+        frappe.local.flags.redirect_location = "/portal/ddd"
+        raise frappe.Redirect
+    if not can_access_case(name):
         frappe.local.flags.redirect_location = "/portal/ddd"
         raise frappe.Redirect
 

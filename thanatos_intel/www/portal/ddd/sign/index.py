@@ -1,5 +1,7 @@
 import frappe
 
+from thanatos_intel.thanatos_ddd.portal_acl import can_access_mandate
+
 
 def get_context(context):
     context.no_cache = 1
@@ -9,6 +11,8 @@ def get_context(context):
     name = frappe.form_dict.get("mandate")
     if not name or not frappe.db.exists("Agency Mandate", name):
         frappe.throw("Mandato non trovato")
+    if not can_access_mandate(name):
+        frappe.throw("Non sei autorizzato a firmare questo mandato", frappe.PermissionError)
     m = frappe.get_doc("Agency Mandate", name)
     context.mandate = m
     context.title = f"Firma mandato {m.name}"
