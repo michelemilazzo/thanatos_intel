@@ -24,6 +24,15 @@
   padding:8px 12px;border-bottom:1px solid transparent;transition:color .15s,border-color .15s;}
 .tx-links a:hover{color:#C8A96E;}
 .tx-links a.act{color:#C8A96E;border-bottom-color:#C8A96E;}
+.tx-drop{position:relative;display:inline-block;}
+.tx-drop>.tx-toggle{cursor:pointer;}
+.tx-caret{font-size:9px;opacity:.7;}
+.tx-drop-menu{position:absolute;top:100%;left:0;min-width:248px;background:#111729;border:1px solid #1F2742;
+  border-radius:6px;padding:6px;display:none;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:60;}
+.tx-drop:hover>.tx-drop-menu{display:flex;}
+.tx-drop-menu a{color:#A4A9BC;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;
+  padding:9px 12px;border-bottom:none;border-radius:4px;white-space:nowrap;}
+.tx-drop-menu a:hover{color:#C8A96E;background:#0A0E1A;}
 .tx-cta{display:inline-block;padding:8px 16px;border:1px solid #C8A96E;color:#C8A96E;text-decoration:none;
   font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-left:8px;transition:background .15s,color .15s;}
 .tx-cta:hover{background:#C8A96E;color:#0A0E1A;}
@@ -49,6 +58,11 @@
   .tx-links a:hover{background:#111729;}
   .tx-cta{margin-left:0;}
   .tx-nav-inner{position:relative;}
+  .tx-drop{width:100%;}
+  .tx-drop>.tx-toggle{width:100%;}
+  .tx-drop-menu{position:static;display:flex;border:none;box-shadow:none;background:transparent;
+    padding:0 0 4px 14px;min-width:0;}
+  .tx-drop-menu a{font-size:10.5px;color:#7A8294;padding:8px 12px;}
 }
 .tx-user{position:relative;display:inline-block;margin-left:8px;}
 .tx-user>.tx-cta{margin-left:0;cursor:pointer;}
@@ -73,14 +87,22 @@
     </button>
     <div class="tx-links" id="txLinks">
       <a href="/" class="{% if active=='home' %}act{% endif %}">Home</a>
-      <a href="/soluzioni" class="{% if active=='soluzioni' %}act{% endif %}">Soluzioni</a>
-      <a href="/servizi" class="{% if active=='servizi' %}act{% endif %}">Servizi</a>
+      <div class="tx-drop">
+        <a href="/soluzioni" class="tx-toggle {% if active in ['soluzioni','servizi'] %}act{% endif %}">Soluzioni <span class="tx-caret">&#9662;</span></a>
+        <div class="tx-drop-menu">
+          <a href="/soluzioni">Panoramica</a>
+          <a href="/servizi">Servizi</a>
+          <a href="/soluzioni/antifrode">Antifrode</a>
+          <a href="/soluzioni/cyber-intelligence">Cyber Intelligence</a>
+          <a href="/soluzioni/corporate-intelligence">Corporate Due Diligence</a>
+          <a href="/soluzioni/financial-intelligence">Financial Intelligence</a>
+        </div>
+      </div>
       <a href="/piani" class="{% if active=='pricing' %}act{% endif %}">Piani</a>
       <a href="/notizie" class="{% if active=='news' %}act{% endif %}">Newsroom</a>
       <a href="/verifica-blacklist" class="{% if active=='blacklist' %}act{% endif %}">Blacklist</a>
       <a href="/chi-siamo" class="{% if active=='about' %}act{% endif %}">Chi siamo</a>
       <a href="/collabora" class="{% if active=='collabora' %}act{% endif %}">Collabora</a>
-      <a href="/portale" class="{% if active=='portal' %}act{% endif %}">Portale</a>
       {%- set _sl = (frappe.form_dict.get('lang') or (frappe.request.cookies.get('site_lang') if frappe.request else '') or 'it') -%}
       <span style="border:1px solid #1F2742;border-radius:4px;overflow:hidden;display:inline-flex"><a href="?lang=it" title="Italiano" style="padding:5px 9px;text-decoration:none;color:{% if _sl=='en' %}#7A8194{% else %}#C8A96E{% endif %}">IT</a><a href="?lang=en" title="English" style="padding:5px 9px;text-decoration:none;border-left:1px solid #1F2742;color:{% if _sl=='en' %}#C8A96E{% else %}#7A8194{% endif %}">EN</a></span>
       {% if frappe.session.user == 'Guest' %}
@@ -254,6 +276,12 @@
 .tx-foot .legal{max-width:1240px;margin:32px auto 0;padding-top:18px;border-top:1px solid #1F2742;
   text-align:center;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#5B6276;}
 @media(max-width:780px){.tx-foot-inner{grid-template-columns:1fr 1fr;}}
+.tx-sitemap{max-width:1240px;margin:36px auto 0;padding-top:22px;border-top:1px solid #1F2742;
+  display:flex;flex-wrap:wrap;gap:8px 0;justify-content:center;}
+.tx-sitemap a{color:#7A8294;text-decoration:none;font-size:11px;letter-spacing:1px;padding:2px 14px;
+  border-right:1px solid #1F2742;line-height:1.1;}
+.tx-sitemap a:hover{color:#C8A96E;}
+@media(max-width:600px){.tx-sitemap a{border-right:none;padding:4px 10px;}}
 </style>
 <footer class="tx-foot">
   <div class="tx-foot-inner">
@@ -281,6 +309,9 @@
       <p style="color:#7A8294;font-size:11px;">SHA-256 Chain of Custody · Legea 329/2003 (detectiv particular)<br/>GDPR · Reg. UE 2016/679 · Legea 190/2018 · ISO 27001 ready</p>
     </div>
   </div>
+  <nav class="tx-sitemap" aria-label="Mappa del sito">
+    <a href="/">Home</a><a href="/soluzioni">Soluzioni</a><a href="/servizi">Servizi</a><a href="/soluzioni/antifrode">Antifrode</a><a href="/soluzioni/cyber-intelligence">Cyber Intelligence</a><a href="/soluzioni/corporate-intelligence">Corporate Due Diligence</a><a href="/soluzioni/financial-intelligence">Financial Intelligence</a><a href="/piani">Piani</a><a href="/casi">Casi studio</a><a href="/notizie">Newsroom</a><a href="/verifica-blacklist">Blacklist</a><a href="/chi-siamo">Chi siamo</a><a href="/collabora">Collabora</a><a href="/portale">Area clienti</a><a href="/privacy">Privacy</a><a href="/termini">Termini</a><a href="/cookie">Cookie</a>
+  </nav>
   <div class="legal">
     <a href="/privacy" style="color:#7A8294;text-decoration:none;">Privacy</a> ·
     <a href="/termini" style="color:#7A8294;text-decoration:none;">Termini</a> ·
