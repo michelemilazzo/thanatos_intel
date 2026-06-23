@@ -43,6 +43,7 @@ class NewsArticle(WebsiteGenerator):
 
 	def get_context(self, context):
 		context.parents = [{"label": "News", "route": "news"}]
+		context.body_class = "thanatos-article"
 		context.no_cache = 1
 		try:
 			frappe.db.set_value("News Article", self.name, "views",

@@ -22,7 +22,15 @@
 </script>
 <style>
 :root{--navy:#0A0E1A;--navy2:#13192C;--gold:#C8A96E;--muted:#7A8294;--line:#1F2742;}
-body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New Roman',serif;}
+body.thanatos-article,
+body.thanatos-article .page_content,
+body.thanatos-article .container,
+body.thanatos-article .container-fluid,
+body.thanatos-article main,
+body.thanatos-article #page-content{
+  background:var(--navy) !important;color:#E6E8EE !important;
+  font-family:var(--font-body,-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif);}
+body.thanatos-article .page_content{display:block;max-width:100%;padding:0;}
 .page_content{padding:0;max-width:100%;}
 .art-head{background:linear-gradient(180deg,#070A14,#0A0E1A);padding:32px 24px 24px;border-bottom:1px solid var(--line);text-align:center;}
 .art-head a img{height:42px;}
@@ -80,7 +88,6 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
 
 {% block content %}
 {{ thanatos_header("news") }}
-<body class="article">
 <header class="art-head"><a href="/"><img src="/assets/thanatos_intel/images/thanatos-logo-mark.png"/></a></header>
 <div style="max-width:760px;margin:8px auto 0;padding:0 22px;text-align:right;font-size:11px;letter-spacing:2px"><a href="?lang=it" style="color:{% if view_lang=='en' %}#5B6276{% else %}#C8A96E{% endif %};text-decoration:none;padding:0 6px;border-right:1px solid #2a3550">IT</a><a href="?lang=en" style="color:{% if view_lang=='en' %}#C8A96E{% else %}#5B6276{% endif %};text-decoration:none;padding:0 6px">EN</a></div>
 <article class="art-wrap">
@@ -189,6 +196,5 @@ body.article{background:var(--navy);color:#E6E8EE;font-family:Georgia,'Times New
   </div>
 </section>
 {% endif %}
-</body>
 {{ thanatos_footer() }}
 {% endblock %}
