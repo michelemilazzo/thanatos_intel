@@ -799,12 +799,17 @@
     if (document.getElementById('ti-replay-btn')) return;
     const b = document.createElement('button');
     b.id = 'ti-replay-btn';
-    b.textContent = '▶ Replay intro';
+    b.textContent = '▶';
+    b.title = 'Replay intro';
+    b.setAttribute('aria-label', 'Replay intro');
     b.style.cssText =
-      'position:fixed;right:18px;bottom:18px;z-index:9998;' +
-      'padding:10px 16px;background:rgba(15,10,3,0.78);border:1px solid rgba(' + GOLD_RGB + ',0.35);' +
-      'color:' + GOLD + ';font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;' +
-      'letter-spacing:0.22em;text-transform:uppercase;cursor:pointer;backdrop-filter:blur(8px);';
+      'position:fixed;left:20px;bottom:20px;z-index:9998;' +
+      'width:48px;height:48px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;padding-left:3px;' +
+      'background:rgba(15,10,3,0.85);border:1px solid rgba(' + GOLD_RGB + ',0.45);' +
+      'color:' + GOLD + ';font-size:16px;line-height:1;cursor:pointer;backdrop-filter:blur(8px);' +
+      'box-shadow:0 8px 24px rgba(0,0,0,.35);transition:transform .15s,box-shadow .15s;';
+    b.onmouseenter = () => { b.style.transform = 'translateY(-2px)'; b.style.boxShadow = '0 12px 30px rgba(' + GOLD_RGB + ',0.30)'; };
+    b.onmouseleave = () => { b.style.transform = 'none'; b.style.boxShadow = '0 8px 24px rgba(0,0,0,.35)'; };
     b.onclick = () => {
       try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
       b.remove();
