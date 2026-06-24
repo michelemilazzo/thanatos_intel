@@ -248,8 +248,6 @@
       <a href="/portal/invoices" class="{{ 'act' if active=='billing' else '' }}">Fatture</a>
       <a href="/servizi">Servizi</a>
       <a href="/support" class="{{ 'act' if active=='support' else '' }}">Supporto</a>
-      <a href="/portal/invita" class="{{ 'act' if active=='invita' else '' }}">Invita</a>
-      <a href="/portal/privacy" class="{{ 'act' if active=='privacy' else '' }}">Privacy</a>
       {% endif %}
       {% if _is_op %}
       <div class="sep"></div>
@@ -263,9 +261,6 @@
       {% endif %}
       <div class="sep"></div>
       <a href="/portal/guide" class="{{ 'act' if active=='guide' else '' }}">Guida</a>
-      {% if _is_client %}
-      <a href="/portal/legacy" class="{{ 'act' if active=='legacy' else '' }}">Legacy</a>
-      {% endif %}
     </div>
     <div class="px-right">
       {% if _is_client %}
