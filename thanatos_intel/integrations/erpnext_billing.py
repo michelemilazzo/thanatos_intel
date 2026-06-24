@@ -287,6 +287,7 @@ def after_payment(usage_event_name: str):
 		frappe.log_error(frappe.get_traceback(), f"after_payment {usage_event_name}")
 		return {"ok": False, "error": str(e)[:300]}
 
+
 # ====== Sync Investigation Client -> Customer / Address / Contact ======
 
 def _addr_country(name):
@@ -315,6 +316,7 @@ def _upsert_address(customer, addr_type, title, line1, city, province, pincode, 
 	if not name:
 		doc.append("links", {"link_doctype": "Customer", "link_name": customer})
 	doc.flags.ignore_permissions = True
+	doc.flags.ignore_mandatory = True
 	doc.save(ignore_permissions=True)
 	return doc.name
 
@@ -331,22 +333,20 @@ def _upsert_contact(customer, first_name, last_name, email, phone):
 	doc.is_primary_contact = 1
 	if not name:
 		doc.append("links", {"link_doctype": "Customer", "link_name": customer})
-	# email
-	if email:
-		if not any(getattr(r, "email_id", None) == email for r in (doc.email_ids or [])):
-			doc.append("email_ids", {"email_id": email, "is_primary": 1})
-	# phone
-	if phone:
-		if not any(getattr(r, "phone", None) == phone for r in (doc.phone_nos or [])):
-			doc.append("phone_nos", {"phone": phone, "is_primary_phone": 1})
+	if email and not any(getattr(r, "email_id", None) == email for r in (doc.email_ids or [])):
+		doc.append("email_ids", {"email_id": email, "is_primary": 1})
+	if phone and not any(getattr(r, "phone", None) == phone for r in (doc.phone_nos or [])):
+		doc.append("phone_nos", {"phone": phone, "is_primary_phone": 1})
 	doc.flags.ignore_permissions = True
+	doc.flags.ignore_mandatory = True
 	doc.save(ignore_permissions=True)
 	return doc.name
 
 
 def sync_client(client_name):
 	"""Allinea Investigation Client -> Customer + Address (Fatt./Sped.) + Contact.
-	Chiamata da on_update: vale per modifiche del cliente (portale) e operatore (desk)."""
+	Ordine: prima Address/Contact (cosi il primary e' completo), poi Customer
+	(ERPNext ri-valida customer_primary_address ad ogni on_update)."""
 	client = frappe.get_doc("Investigation Client", client_name)
 	customer = client.get("erp_customer_id")
 	if not customer or not frappe.db.exists("Customer", customer):
@@ -354,6 +354,28 @@ def sync_client(client_name):
 		if not customer:
 			return None
 
+	# 1) Address PRIMA
+	bill = _upsert_address(
+		customer, "Billing", (client.client_name or "Fatturazione") + " - Fatturazione",
+		client.get("billing_address_line1"), client.get("billing_city"),
+		client.get("billing_province"), client.get("billing_postal_code"), client.get("country"))
+	_upsert_address(
+		customer, "Shipping", (client.client_name or "Spedizione") + " - Spedizione",
+		client.get("ship_address_line1"), client.get("ship_city"),
+		client.get("ship_province"), client.get("ship_postal_code"), client.get("ship_country"))
+
+	# 2) Contact
+	user = client.get("platform_user")
+	fn = ln = email = None
+	phone = client.get("phone")
+	if user and frappe.db.exists("User", user):
+		u = frappe.db.get_value("User", user, ["first_name", "last_name", "email", "phone", "mobile_no"], as_dict=True)
+		fn, ln, email = u.first_name, u.last_name, u.email
+		phone = phone or u.phone or u.mobile_no
+	email = email or client.get("email")
+	con = _upsert_contact(customer, fn, ln, email, phone)
+
+	# 3) Customer
 	ct_map = {"Individual": "Individual", "Company": "Company",
 	          "Law Firm": "Company", "Accounting Firm": "Company", "Other": "Company"}
 	lang_map = {"Italian": "it", "Romanian": "ro", "English": "en"}
@@ -367,36 +389,14 @@ def sync_client(client_name):
 		cust.language = lc
 	if cust.meta.has_field("fiscal_code") and client.get("codice_fiscale"):
 		cust.fiscal_code = client.codice_fiscale
-	cust.flags.ignore_permissions = True
-	cust.save(ignore_permissions=True)
-
-	# Address fatturazione
-	bill = _upsert_address(customer, "Billing",
-		(client.client_name or "Fatturazione") + " - Fatturazione",
-		client.get("billing_address_line1"), client.get("billing_city"),
-		client.get("billing_province"), client.get("billing_postal_code"),
-		client.get("country"))
-	if bill:
-		frappe.db.set_value("Customer", customer, "customer_primary_address", bill)
-	# Address spedizione
-	_upsert_address(customer, "Shipping",
-		(client.client_name or "Spedizione") + " - Spedizione",
-		client.get("ship_address_line1"), client.get("ship_city"),
-		client.get("ship_province"), client.get("ship_postal_code"),
-		client.get("ship_country"))
-
-	# Contact primario
-	user = client.get("platform_user")
-	fn = ln = None
-	email = None
-	phone = client.get("phone")
-	if user and frappe.db.exists("User", user):
-		u = frappe.db.get_value("User", user, ["first_name", "last_name", "email", "phone", "mobile_no"], as_dict=True)
-		fn, ln, email = u.first_name, u.last_name, u.email
-		phone = phone or u.phone or u.mobile_no
-	email = email or client.get("email")
-	con = _upsert_contact(customer, fn, ln, email, phone)
+	# primary address SOLO se completo (city+country): altrimenti ERPNext
+	# create_primary_address ri-valida e fallisce su campo obbligatorio
+	bill_ok = bool(bill and frappe.db.get_value("Address", bill, "city")
+	               and frappe.db.get_value("Address", bill, "country"))
+	cust.customer_primary_address = bill if bill_ok else None
 	if con:
-		frappe.db.set_value("Customer", customer, "customer_primary_contact", con)
+		cust.customer_primary_contact = con
+	cust.flags.ignore_permissions = True
+	cust.flags.ignore_mandatory = True
+	cust.save(ignore_permissions=True)
 	return customer
-

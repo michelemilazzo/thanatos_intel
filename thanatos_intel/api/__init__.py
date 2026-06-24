@@ -62,19 +62,19 @@ def update_my_profile(first_name=None, last_name=None, phone=None, mobile_no=Non
 				changed = True
 
 		# Copia indirizzi marcati "uguale a residenza"
-		if _truthy(c.get("dom_same_as_res")):
+		if _truthy(c.get("dom_same_as_res")) and c.res_address_line1:
 			c.dom_address_line1 = c.res_address_line1
 			c.dom_city = c.res_city
 			c.dom_province = c.res_province
 			c.dom_postal_code = c.res_postal_code
 			c.dom_country = c.res_country
-		if _truthy(c.get("ship_same_as_res")):
+		if _truthy(c.get("ship_same_as_res")) and c.res_address_line1:
 			c.ship_address_line1 = c.res_address_line1
 			c.ship_city = c.res_city
 			c.ship_province = c.res_province
 			c.ship_postal_code = c.res_postal_code
 			c.ship_country = c.res_country
-		if _truthy(c.get("bill_same_as_res")):
+		if _truthy(c.get("bill_same_as_res")) and c.res_address_line1:
 			c.billing_address_line1 = c.res_address_line1
 			c.billing_city = c.res_city
 			c.billing_province = c.res_province
