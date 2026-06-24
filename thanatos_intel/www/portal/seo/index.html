@@ -124,13 +124,31 @@ h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 
   </div>
 
   <!-- MOTORI DI RICERCA / GSC -->
+  {% set gsc = d.gsc or {} %}
+  {% set gsum = gsc.summary or {} %}
   <div class="box">
-    <h2>Posizionamento sui motori <span class="badge {{ 'ok' if d.gsc_connected else 'no' }}">{{ 'Connesso' if d.gsc_connected else 'Da connettere' }}</span></h2>
-    {% if d.gsc_connected %}
-      <div class="note">Google Search Console connesso. Le query, posizioni medie e impression compaiono qui sotto.</div>
+    <h2>Posizionamento su Google <span class="badge {{ 'ok' if gsc.connected else 'no' }}">{{ 'Connesso' if gsc.connected else ('Configurato' if gsc.configured else 'Da connettere') }}</span></h2>
+    {% if gsum.queries %}
+      <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi" style="padding:14px"><div class="v">{{ gsum.avg_position }}</div><div class="l">Posizione media</div></div>
+        <div class="kpi" style="padding:14px"><div class="v">{{ gsum.top10 }}<small>/{{ gsum.queries }}</small></div><div class="l">In top 10</div></div>
+        <div class="kpi" style="padding:14px"><div class="v">{{ gsum.clicks }}</div><div class="l">Clic</div></div>
+        <div class="kpi" style="padding:14px"><div class="v">{{ gsum.impressions }}</div><div class="l">Impression</div></div>
+      </div>
+      <div class="note" style="margin:6px 0 14px">Parole chiave trovate su Google al {{ gsum.date }} — query per cui il sito appare nei risultati (posizione = ranking medio, più basso è meglio).</div>
+      <h2 style="font-size:13px">Parole chiave trovate ({{ gsc.queries|length }})</h2>
+      <ul class="rowlist">
+        <li style="color:var(--grey);font-size:11px;letter-spacing:1px;text-transform:uppercase">
+          <span class="lab">Query</span><span class="n" title="Posizione media">Pos</span><span class="n" title="Impression">Imp</span><span class="n" title="Clic">Clic</span></li>
+        {% for r in gsc.queries %}
+        <li><span class="lab" title="{{ r.query }}">{{ r.query }}</span>
+          <span class="n">{{ r.position }}</span><span class="n">{{ r.impressions }}</span><span class="n">{{ r.clicks }}</span></li>
+        {% endfor %}
+      </ul>
+      <p class="note" style="margin-top:8px">Proprietà: <code>{{ gsc.property }}</code></p>
     {% else %}
-      <p class="note">Per vedere <b>parole chiave trovate su Google, posizione media, impression e click</b> serve collegare l'API di Google Search Console (la proprietà <code>sc-domain:thanatos.agency</code> è già verificata e la sitemap inviata).<br>
-      Caricando un <b>service account JSON</b> con accesso in lettura alla proprietà GSC nel site_config (<code>gsc_service_account</code>), questa sezione mostra automaticamente le query reali.</p>
+      <p class="note">Qui appariranno le <b>parole chiave per cui il sito viene trovato su Google</b>, con posizione media, impression e click. La proprietà <code>{{ gsc.property or 'sc-domain:thanatos.agency' }}</code> è già verificata e la sitemap inviata.<br><br>
+      {% if gsc.configured %}Service account presente ma nessun dato ancora importato — lancia il fetch (job giornaliero <code>30 7 * * *</code> o manuale <code>thanatos_intel.gsc.fetch_rankings</code>). Se la proprietà non è tra quelle del service account serve il provisioning.{% else %}Manca il service account GSC (<code>/home/frappe/.secrets/search_console.json</code> o vault <code>google_search_console.service_account_json</code>) con accesso in lettura alla proprietà.{% endif %}</p>
       <p style="margin-top:12px"><a class="btn ghost" href="https://search.google.com/search-console/performance/search-analytics?resource_id=sc-domain%3Athanatos.agency" target="_blank" rel="noopener">Apri Search Console ↗</a></p>
     {% endif %}
   </div>

@@ -97,5 +97,15 @@ def get_dashboard(days=30):
 		internal["top_searches"] = []
 	out["internal"] = internal
 
-	out["gsc_connected"] = bool(frappe.get_site_config().get("gsc_service_account"))
+	# Google Search Console — posizioni reali (modulo gsc.py + DocType Keyword Ranking)
+	gsc = {"configured": False, "connected": False}
+	try:
+		from thanatos_intel import gsc as _gsc
+		gsc = _gsc.gsc_status()
+		gsc["summary"] = _gsc.ranking_summary()
+		gsc["queries"] = _gsc.latest_rankings(limit=30)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "seo_dashboard gsc")
+	out["gsc"] = gsc
+	out["gsc_connected"] = bool(gsc.get("connected"))
 	return out

@@ -102,7 +102,7 @@ def fetch_rankings(days=28, row_limit=250):
     n = 0
     existing_kw = set(k.lower() for k in frappe.get_all("SEO Keyword", pluck="keyword"))
     for row in rows:
-        q = (row.get("keys") or [""])[0][:200]
+        q = (row.get("keys") or [""])[0][:140]
         if not q:
             continue
         data = {
@@ -112,11 +112,14 @@ def fetch_rankings(days=28, row_limit=250):
             "clicks": int(row.get("clicks") or 0),
             "ctr": round(float(row.get("ctr") or 0) * 100, 2),
         }
-        name = frappe.db.get_value("Keyword Ranking", {"query": q, "capture_date": today}, "name")
-        if name:
-            frappe.db.set_value("Keyword Ranking", name, data, update_modified=False)
-        else:
-            frappe.get_doc(dict(doctype="Keyword Ranking", **data)).insert(ignore_permissions=True)
+        try:
+            name = frappe.db.get_value("Keyword Ranking", {"query": q, "capture_date": today}, "name")
+            if name:
+                frappe.db.set_value("Keyword Ranking", name, data, update_modified=False)
+            else:
+                frappe.get_doc(dict(doctype="Keyword Ranking", **data)).insert(ignore_permissions=True)
+        except Exception:
+            continue
         if data["impressions"] >= 10 and q.lower() not in existing_kw:
             try:
                 frappe.get_doc({"doctype": "SEO Keyword", "keyword": q[:140], "origin": "GSC",
