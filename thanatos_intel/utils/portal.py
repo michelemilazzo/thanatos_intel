@@ -79,5 +79,10 @@ def bounce_client_from_desk():
     if roles & DESK_ROLES:
         return
     if roles & PORTAL_ROLES:
-        frappe.local.flags.redirect_location = "/portal"
-        raise frappe.Redirect
+        # NB: in un hook before_request `raise frappe.Redirect` NON viene convertito
+        # in redirect (class Redirect(Exception); handle_exception non gestisce il 301)
+        # -> pagina "301: Uncaught Exception". Serve un redirect werkzeug (HTTPException).
+        from werkzeug.routing import RequestRedirect
+        _rr = RequestRedirect(frappe.utils.get_url("/portal"))
+        _rr.code = 302  # temporaneo (308 permanente verrebbe cachato dal browser)
+        raise _rr
