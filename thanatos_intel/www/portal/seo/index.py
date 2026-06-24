@@ -11,7 +11,23 @@ def get_context(context):
     if not _is_staff():
         frappe.local.flags.redirect_location = "/portal"
         raise frappe.Redirect
-    context.title = "SEO — Thanatos"
+    context.title = "SEO &amp; Analytics — Thanatos"
+
+    try:
+        days = int(frappe.form_dict.get("days") or 30)
+    except Exception:
+        days = 30
+    if days not in (7, 30, 90):
+        days = 30
+    context.days = days
+
+    from thanatos_intel.seo_dashboard import get_dashboard
+    try:
+        context.dash = get_dashboard(days)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "seo page dashboard")
+        context.dash = {}
+
     context.keywords = frappe.get_all(
         "SEO Keyword", fields=["name", "keyword", "origin", "is_active", "weight"],
         order_by="is_active desc, weight desc, keyword asc", limit_page_length=0)
