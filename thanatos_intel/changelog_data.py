@@ -1,57 +1,101 @@
-"""Changelog Thanatos Intel — voci versionate nel repo.
-Per aggiungere un aggiornamento: appendere un dict a UPDATES (data ISO YYYY-MM-DD)."""
+"""Changelog Thanatos Intel — generato AUTOMATICAMENTE dalla cronologia git del repo.
+Ogni commit diventa una voce (data, titolo, dettaglio, area dedotta). Nessuna voce manuale."""
+import os
+import re
+import subprocess
+
 import frappe
 
-# area: SEO | Desk | Portale | Profilo | Fatturazione | Sicurezza | Comunicazione | Sistema
-# audience: Interno | Staff | Cliente | Tutti
-UPDATES = [
-    {"date": "2026-06-25", "area": "Desk", "audience": "Interno", "highlight": 1,
-     "title": "Pagina Aggiornamenti",
-     "desc": "Nuova pagina interna in Thanatos Intel con lo storico di tutte le novità rilasciate, filtrabile per area."},
-    {"date": "2026-06-25", "area": "Desk", "audience": "Staff", "highlight": 1,
-     "title": "Ruoli & Utenti",
-     "desc": "Pagina per definire il ruolo di ogni utente (staff o portale) con un click; imposta automaticamente il tipo utente coerente. Solo amministratori."},
-    {"date": "2026-06-25", "area": "Sistema", "audience": "Staff", "highlight": 1,
-     "title": "Impostazioni di sistema",
-     "desc": "Hub unico con stato delle integrazioni (Google Search Console, Cloudflare, email, Stripe) e accesso rapido a tutte le impostazioni native."},
-    {"date": "2026-06-25", "area": "SEO", "audience": "Staff", "highlight": 1,
-     "title": "SEO & Analytics nel desk",
-     "desc": "Dashboard SEO spostata nel desk Thanatos Intel: traffico reale (Cloudflare), posizioni su Google (Search Console), parole chiave trovate, contenuti e ricerche interne. Switch 7/30/90 giorni."},
-    {"date": "2026-06-25", "area": "SEO", "audience": "Interno",
-     "title": "Google Search Console collegato",
-     "desc": "Importazione automatica delle posizioni reali da Google (query, posizione media, impression, click), aggiornamento giornaliero."},
-    {"date": "2026-06-24", "area": "Profilo", "audience": "Cliente", "highlight": 1,
-     "title": "Profilo cliente completo",
-     "desc": "Pagina profilo a schede: contatti, indirizzi multipli (residenza/domicilio/spedizione/fatturazione), verifica identità KYC/KYB con upload documenti, società collegata (UBO/amministratore), segnalazione clienti e sicurezza (2FA)."},
-    {"date": "2026-06-24", "area": "Profilo", "audience": "Interno",
-     "title": "Dati cliente allineati a ERPNext",
-     "desc": "I dati del profilo si sincronizzano su Customer/Address/Contact nativi, così fatture e anagrafiche sono sempre coerenti."},
-    {"date": "2026-06-24", "area": "Portale", "audience": "Cliente",
-     "title": "Accesso clienti sempre al portale",
-     "desc": "Dopo il login i clienti atterrano sempre nell'area riservata; risolto l'errore che portava alcuni clienti a una pagina di errore."},
-    {"date": "2026-06-24", "area": "Portale", "audience": "Cliente",
-     "title": "Privacy e consensi GDPR",
-     "desc": "Pagina privacy aggiornata con gestione dei consensi (marketing, profilazione, condivisione partner), basi giuridiche, export e cancellazione dati."},
-    {"date": "2026-06-24", "area": "Portale", "audience": "Cliente",
-     "title": "Ricerca nel portale",
-     "desc": "Barra di ricerca limitata ai casi del cliente, ai documenti e agli articoli informativi."},
-    {"date": "2026-06-24", "area": "Portale", "audience": "Tutti", "highlight": 1,
-     "title": "Home e sito più leggibili",
-     "desc": "Home rinnovata con logo visibile ed effetto di sfondo, navigazione riorganizzata (Soluzioni, sitemap nel footer) e testi resi pienamente leggibili su tutte le pagine pubbliche."},
-    {"date": "2026-06-24", "area": "Comunicazione", "audience": "Interno",
-     "title": "Webmail amministratore",
-     "desc": "Risolto il caricamento della webmail e collegata la casella admin@thanatos.agency all'amministratore."},
-    {"date": "2026-06-24", "area": "SEO", "audience": "Interno",
-     "title": "Parole chiave SEO",
-     "desc": "Aggiunte 17 parole chiave strategiche (detective privato, investigatore privato, agenzia investigativa…) e pagine dedicate per intercettarle."},
+APP_PATH = frappe.get_app_path("thanatos_intel", "..") if hasattr(frappe, "get_app_path") else None
+
+# parole chiave -> area (prima corrispondenza vince)
+AREA_RULES = [
+    ("SEO", ["seo", "analytics", "keyword", "parole chiave", "gsc", "search console", "sitemap", "meta"]),
+    ("Profilo", ["profil", "kyc", "kyb", "indirizz", "anagrafic"]),
+    ("Portale", ["portale", "portal", "privacy", "gdpr", "consens", "ricerca", "home", "nav", "leggibil", "theme", "tema", "font"]),
+    ("Fatturazione", ["fattur", "invoice", "billing", "stripe", "abbonament", "proforma", "iva", "ron", "eur"]),
+    ("Sicurezza", ["sicurezz", "2fa", "passkey", "login", "auth", "permess", "ruolo", "ruoli", "role"]),
+    ("Comunicazione", ["mail", "webmail", "whatsapp", "waba", "email", "notif", "stalwart"]),
+    ("Sistema", ["impostazion", "settings", "workspace", "desk", "deploy", "migrate", "bench", "nginx", "cron", "scheduler"]),
 ]
+
+# commit da nascondere (rumore)
+SKIP_RE = re.compile(r"^(merge|wip|tmp|temp|fixup|amend|revert|bump|typo|lint|format|chore)\b", re.I)
+HIGHLIGHT_RE = re.compile(r"\b(nuov|aggiun|pagina|dashboard|feature|introdu|crea)", re.I)
+
+
+def _area(text):
+    t = (text or "").lower()
+    for area, kws in AREA_RULES:
+        if any(k in t for k in kws):
+            return area
+    return "Altro"
+
+
+def _clean_body(body):
+    lines = []
+    for ln in (body or "").splitlines():
+        s = ln.strip()
+        if not s:
+            continue
+        if s.lower().startswith("co-authored-by") or s.startswith("🤖") or "claude code" in s.lower():
+            continue
+        lines.append(s.lstrip("-• ").strip())
+    return lines
+
+
+def _git_log(limit=200):
+    path = os.path.abspath(os.path.join(frappe.get_app_path("thanatos_intel"), ".."))
+    sep, rec = "\x1f", "\x1e"
+    fmt = sep.join(["%H", "%ad", "%s", "%b"]) + rec
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", path, "log", "--no-merges", "--date=short",
+             "-n", str(limit), "--pretty=format:" + fmt],
+            stderr=subprocess.DEVNULL, timeout=15).decode("utf-8", "replace")
+    except Exception:
+        return []
+    items = []
+    for raw in out.split(rec):
+        raw = raw.strip("\n")
+        if not raw:
+            continue
+        parts = raw.split(sep)
+        if len(parts) < 3:
+            continue
+        h, date, subject = parts[0], parts[1], parts[2]
+        body = parts[3] if len(parts) > 3 else ""
+        if SKIP_RE.match(subject.strip()):
+            continue
+        # titolo: togli prefisso "Thanatos Intel:" / "thanatos_intel:" e simili
+        title = re.sub(r"^[\w \-]{0,24}:\s*", "", subject).strip() or subject
+        title = title[:1].upper() + title[1:]
+        body_lines = _clean_body(body)
+        desc = " · ".join(body_lines[:4])
+        area = _area(subject)
+        if area == "Altro":
+            area = _area(subject + " " + body)
+        items.append({
+            "date": date,
+            "title": title[:160],
+            "desc": desc[:600],
+            "area": area,
+            "audience": "Cliente" if re.search(r"client|portale|portal", subject, re.I) else "Interno",
+            "highlight": 1 if HIGHLIGHT_RE.search(subject) else 0,
+            "hash": h[:8],
+        })
+    return items
 
 
 @frappe.whitelist()
 def get_updates():
-    # leggibile da tutto lo staff (System User); i Guest non arrivano alla page desk
     if frappe.session.user == "Guest":
         frappe.throw("Accesso non consentito.", frappe.PermissionError)
-    items = sorted(UPDATES, key=lambda u: u.get("date", ""), reverse=True)
-    areas = sorted({u.get("area", "Altro") for u in UPDATES})
-    return {"updates": items, "areas": areas, "count": len(items)}
+    cache = frappe.cache()
+    key = "thanatos_changelog_git"
+    items = cache.get_value(key)
+    if not items:
+        items = _git_log()
+        cache.set_value(key, items, expires_in_sec=600)
+    areas = sorted({u.get("area", "Altro") for u in items})
+    return {"updates": items, "areas": areas, "count": len(items), "auto": True}

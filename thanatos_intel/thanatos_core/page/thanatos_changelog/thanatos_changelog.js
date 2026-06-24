@@ -28,7 +28,7 @@ frappe.pages['thanatos-changelog'].on_page_load = function(wrapper){
   .cl-empty{color:var(--text-muted,#999);font-style:italic;padding:30px;text-align:center}
   </style>
   <div class="cl-wrap">
-    <div class="cl-intro">Tutte le novità rilasciate su Thanatos, dalla più recente. Filtra per area per vedere solo ciò che ti interessa.</div>
+    <div class="cl-intro">Tutte le novità rilasciate su Thanatos, generate automaticamente dalla cronologia di sviluppo. Filtra per area.</div>
     <div class="cl-filters" id="cl-filters"></div>
     <div id="cl-list"><div class="cl-empty">Caricamento…</div></div>
   </div>`);
@@ -63,7 +63,7 @@ frappe.pages['thanatos-changelog'].on_page_load = function(wrapper){
         <div class="cl-body">
           <div class="cl-t">${u.highlight?'<span class="cl-star">★</span>':''}${frappe.utils.escape_html(u.title)}</div>
           <div class="cl-d">${frappe.utils.escape_html(u.desc||'')}</div>
-          <div class="cl-meta"><span class="cl-badge">${frappe.utils.escape_html(u.area)}</span>${aud?`<span class="cl-badge aud-${aud}">${aud}</span>`:''}</div>
+          <div class="cl-meta"><span class="cl-badge">${frappe.utils.escape_html(u.area)}</span>${aud?`<span class="cl-badge aud-${aud}">${aud}</span>`:''}${u.hash?`<span class="cl-badge" style="font-family:monospace;opacity:.6">${u.hash}</span>`:''}</div>
         </div>
       </div>`);
     });
