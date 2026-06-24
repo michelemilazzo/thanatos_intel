@@ -1,0 +1,18 @@
+{
+ "content": null,
+ "creation": "2026-06-25 00:00:00",
+ "doctype": "Page",
+ "icon": "list",
+ "idx": 0,
+ "modified": "2026-06-25 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "thanatos-changelog",
+ "owner": "Administrator",
+ "page_name": "thanatos-changelog",
+ "roles": [{"role": "System Manager"}, {"role": "Thanatos Operator"}, {"role": "Thanatos Manager"}, {"role": "Thanatos Director"}, {"role": "Thanatos Analyst"}],
+ "script": null,
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "📋 Aggiornamenti"
+}
