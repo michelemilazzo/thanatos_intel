@@ -1,80 +1,143 @@
 {% extends "templates/web.html" %}
 {% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
-
 {% block title %}Modifica profilo — Thanatos Intel{% endblock %}
-
 {% block head_include %}
-<style>
-body, body .page_content, body .container { background:#0A0E1A !important; max-width:100% !important; }
-</style>
+<style>body, body .page_content, body .container { background:#0A0E1A !important; max-width:100% !important; }</style>
 {% endblock %}
+
+{% macro country_select(fid, sel) %}
+<select id="{{ fid }}">
+  <option value=""{% if not sel %} selected{% endif %}>—</option>
+  {% for cc in countries %}<option value="{{ cc }}"{% if cc==sel %} selected{% endif %}>{{ cc }}</option>{% endfor %}
+</select>
+{% endmacro %}
 
 {% block page_content %}
 {{ thanatos_header('account') }}
 <style>
 :root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2742;}
 .acc{background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:60vh}
-.acc-wrap{max-width:620px;margin:0 auto;padding:56px 22px 48px}
-.acc .back{display:inline-block;color:var(--grey);text-decoration:none;font-size:12px;letter-spacing:1px;margin-bottom:18px}
+.acc-wrap{max-width:680px;margin:0 auto;padding:52px 22px 56px}
+.acc .back{display:inline-block;color:var(--grey);text-decoration:none;font-size:12px;letter-spacing:1px;margin-bottom:16px}
 .acc .back:hover{color:var(--gold)}
 .acc h1{font-family:Georgia,serif;font-weight:400;font-size:32px;color:var(--gold);margin:0 0 6px;letter-spacing:1px}
-.acc .sub{color:var(--grey);font-size:13px;margin:0 0 28px}
-.acc-card{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:24px 24px;margin-bottom:18px}
+.acc .sub{color:var(--grey);font-size:13px;margin:0 0 24px}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--border);margin-bottom:24px}
+.tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--grey);font-size:12px;letter-spacing:1.5px;text-transform:uppercase;padding:11px 14px;cursor:pointer;transition:color .15s,border-color .15s}
+.tab:hover{color:#E8E9F0}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.pane{display:none}.pane.active{display:block}
+.acc-card{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:24px;margin-bottom:18px}
 .acc-card h2{font-family:Georgia,serif;font-weight:400;font-size:16px;color:#E8E9F0;letter-spacing:1px;margin:0 0 4px}
-.acc-card .ch{color:var(--grey);font-size:12px;margin:0 0 20px}
-.fld{margin-bottom:18px}
+.acc-card .ch{color:var(--grey);font-size:12px;margin:0 0 18px}
+.fld{margin-bottom:16px}
 .fld label{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);margin-bottom:7px}
 .fld input,.fld select{width:100%;box-sizing:border-box;background:#0A0E1A;border:1px solid var(--border);border-radius:6px;color:#E8E9F0;font-size:14px;padding:11px 13px;outline:none;transition:border-color .15s}
 .fld select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237A8294' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
 .fld input:focus,.fld select:focus{border-color:var(--gold)}
 .fld input:disabled{color:var(--grey);cursor:not-allowed}
 .fld .hint{display:block;color:var(--grey);font-size:11px;margin-top:5px;letter-spacing:0;text-transform:none}
-.row2{display:flex;gap:14px;flex-wrap:wrap}
-.row2 .fld{flex:1;min-width:140px}
-.row3{display:flex;gap:14px;flex-wrap:wrap}
-.row3 .fld{flex:1;min-width:120px}
-.btn-save{margin-top:2px;width:100%;background:var(--gold);color:#0A0E1A;border:none;border-radius:6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;padding:14px;cursor:pointer;transition:background .15s}
-.btn-save:hover{background:#B8975A}
-.btn-save:disabled{opacity:.6;cursor:not-allowed}
-.msg{margin-top:14px;font-size:13px;min-height:18px;text-align:center}
-.msg.ok{color:#5fb573}.msg.err{color:#d05a5a}
+.row2{display:flex;gap:14px;flex-wrap:wrap}.row2 .fld{flex:1;min-width:150px}
+.row3{display:flex;gap:14px;flex-wrap:wrap}.row3 .fld{flex:1;min-width:110px}
+.sameas{display:flex;align-items:center;gap:9px;margin:2px 0 14px;color:#C8CBD4;font-size:13px;cursor:pointer}
+.sameas input{width:17px;height:17px;accent-color:var(--gold);cursor:pointer}
+.collapse{overflow:hidden}
+.btn-save{margin-top:4px;width:100%;background:var(--gold);color:#0A0E1A;border:none;border-radius:6px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:700;padding:14px;cursor:pointer;transition:background .15s}
+.btn-save:hover{background:#B8975A}.btn-save:disabled{opacity:.6;cursor:not-allowed}
+.msg{margin-top:14px;font-size:13px;min-height:18px;text-align:center}.msg.ok{color:#5fb573}.msg.err{color:#d05a5a}
+.badge{display:inline-block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:999px;border:1px solid var(--border)}
+.badge.b-pending{color:#d8b25a;border-color:#5a4a22;background:rgba(200,169,110,.08)}
+.badge.b-review{color:#6aa6d8;border-color:#244a5a;background:rgba(106,166,216,.08)}
+.badge.b-ok{color:#5fb573;border-color:#22502f;background:rgba(95,181,115,.08)}
+.badge.b-no{color:#d05a5a;border-color:#5a2222;background:rgba(208,90,90,.08)}
+.up{border:1px dashed var(--border);border-radius:8px;padding:16px;margin-bottom:12px;background:#0A0E1A}
+.up label.t{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--grey);margin-bottom:9px}
+.up input[type=file]{width:100%;font-size:12px;color:#C8CBD4}
+.up .st{font-size:12px;margin-top:7px;color:var(--grey)}.up .st.done{color:#5fb573}
+.doclist{list-style:none;padding:0;margin:8px 0 0}.doclist li{font-size:13px;color:#C8CBD4;padding:6px 0;border-bottom:1px dashed var(--border)}
+.doclist a{color:var(--gold);text-decoration:none}
 </style>
-<div class="acc">
-  <div class="acc-wrap">
-    <a class="back" href="/account">‹ Il mio account</a>
-    <h1>Modifica profilo</h1>
-    <p class="sub">Aggiorna i tuoi dati anagrafici, di contatto e di fatturazione.</p>
-    <form id="prof-form" autocomplete="on">
+<div class="acc"><div class="acc-wrap">
+  <a class="back" href="/account">‹ Il mio account</a>
+  <h1>Modifica profilo</h1>
+  <p class="sub">Contatti, indirizzi, fatturazione e verifica identità.</p>
 
+  <div class="tabs">
+    <button class="tab active" data-pane="p-contatti">Contatti</button>
+    <button class="tab" data-pane="p-indirizzi">Indirizzi</button>
+    <button class="tab" data-pane="p-fatt">Fatturazione</button>
+    <button class="tab" data-pane="p-verifica">Verifica identità</button>
+  </div>
+
+  <form id="prof-form" autocomplete="on">
+    <!-- CONTATTI -->
+    <div class="pane active" id="p-contatti">
       <div class="acc-card">
-        <h2>Contatti</h2>
-        <p class="ch">Come ti contattiamo e accedi alla piattaforma.</p>
+        <h2>Contatti</h2><p class="ch">Come ti contattiamo e accedi alla piattaforma.</p>
         <div class="row2">
-          <div class="fld"><label>Nome</label>
-            <input id="first_name" type="text" value="{{ first_name }}" autocomplete="given-name"></div>
-          <div class="fld"><label>Cognome</label>
-            <input id="last_name" type="text" value="{{ last_name }}" autocomplete="family-name"></div>
+          <div class="fld"><label>Nome</label><input id="first_name" type="text" value="{{ first_name }}" autocomplete="given-name"></div>
+          <div class="fld"><label>Cognome</label><input id="last_name" type="text" value="{{ last_name }}" autocomplete="family-name"></div>
         </div>
         <div class="row2">
-          <div class="fld"><label>Telefono</label>
-            <input id="phone" type="tel" value="{{ phone }}" autocomplete="tel"></div>
-          <div class="fld"><label>Cellulare</label>
-            <input id="mobile_no" type="tel" value="{{ mobile_no }}" autocomplete="tel"></div>
+          <div class="fld"><label>Telefono</label><input id="phone" type="tel" value="{{ phone }}" autocomplete="tel"></div>
+          <div class="fld"><label>Cellulare</label><input id="mobile_no" type="tel" value="{{ mobile_no }}" autocomplete="tel"></div>
         </div>
-        <div class="fld"><label>Email (non modificabile)</label>
-          <input type="email" value="{{ user_email }}" disabled></div>
+        <div class="fld"><label>Email (non modificabile)</label><input type="email" value="{{ user_email }}" disabled></div>
       </div>
+    </div>
 
+    <!-- INDIRIZZI -->
+    <div class="pane" id="p-indirizzi">
       {% if has_client %}
       <div class="acc-card">
-        <h2>Anagrafica e fatturazione</h2>
-        <p class="ch">Dati usati per fatture, mandati e documenti legali.</p>
+        <h2>Residenza</h2><p class="ch">Indirizzo di residenza anagrafica.</p>
+        <div class="fld"><label>Via e civico</label><input id="res_address_line1" type="text" value="{{ res_address_line1 }}" autocomplete="address-line1"></div>
+        <div class="row3">
+          <div class="fld"><label>Città</label><input id="res_city" type="text" value="{{ res_city }}"></div>
+          <div class="fld"><label>Provincia</label><input id="res_province" type="text" value="{{ res_province }}"></div>
+          <div class="fld"><label>CAP</label><input id="res_postal_code" type="text" value="{{ res_postal_code }}"></div>
+        </div>
+        <div class="fld"><label>Paese</label>{{ country_select('res_country', res_country) }}</div>
+      </div>
+      <div class="acc-card">
+        <h2>Domicilio</h2>
+        <label class="sameas"><input type="checkbox" id="dom_same_as_res" {% if dom_same_as_res %}checked{% endif %}> Uguale alla residenza</label>
+        <div id="dom_block">
+          <div class="fld"><label>Via e civico</label><input id="dom_address_line1" type="text" value="{{ dom_address_line1 }}"></div>
+          <div class="row3">
+            <div class="fld"><label>Città</label><input id="dom_city" type="text" value="{{ dom_city }}"></div>
+            <div class="fld"><label>Provincia</label><input id="dom_province" type="text" value="{{ dom_province }}"></div>
+            <div class="fld"><label>CAP</label><input id="dom_postal_code" type="text" value="{{ dom_postal_code }}"></div>
+          </div>
+          <div class="fld"><label>Paese</label>{{ country_select('dom_country', dom_country) }}</div>
+        </div>
+      </div>
+      <div class="acc-card">
+        <h2>Spedizione</h2>
+        <label class="sameas"><input type="checkbox" id="ship_same_as_res" {% if ship_same_as_res %}checked{% endif %}> Uguale alla residenza</label>
+        <div id="ship_block">
+          <div class="fld"><label>Via e civico</label><input id="ship_address_line1" type="text" value="{{ ship_address_line1 }}"></div>
+          <div class="row3">
+            <div class="fld"><label>Città</label><input id="ship_city" type="text" value="{{ ship_city }}"></div>
+            <div class="fld"><label>Provincia</label><input id="ship_province" type="text" value="{{ ship_province }}"></div>
+            <div class="fld"><label>CAP</label><input id="ship_postal_code" type="text" value="{{ ship_postal_code }}"></div>
+          </div>
+          <div class="fld"><label>Paese</label>{{ country_select('ship_country', ship_country) }}</div>
+        </div>
+      </div>
+      {% else %}<div class="acc-card"><p class="ch">Indirizzi disponibili dopo l'attivazione del profilo cliente.</p></div>{% endif %}
+    </div>
+
+    <!-- FATTURAZIONE -->
+    <div class="pane" id="p-fatt">
+      {% if has_client %}
+      <div class="acc-card">
+        <h2>Anagrafica fiscale</h2><p class="ch">Dati usati per fatture, mandati e documenti legali.</p>
         <div class="row2">
           <div class="fld"><label>Tipo cliente</label>
             <select id="client_type">
-              {% set _ct = client_type %}
-              <option value=""{% if not _ct %} selected{% endif %}>—</option>
-              <option value="Individual"{% if _ct=='Individual' %} selected{% endif %}>Privato</option>
+              {% set _ct=client_type %}
+              <option value="Individual"{% if _ct=='Individual' or not _ct %} selected{% endif %}>Privato</option>
               <option value="Company"{% if _ct=='Company' %} selected{% endif %}>Azienda</option>
               <option value="Law Firm"{% if _ct=='Law Firm' %} selected{% endif %}>Studio legale</option>
               <option value="Accounting Firm"{% if _ct=='Accounting Firm' %} selected{% endif %}>Studio commercialista</option>
@@ -82,74 +145,157 @@ body, body .page_content, body .container { background:#0A0E1A !important; max-w
             </select></div>
           <div class="fld"><label>Lingua preferita</label>
             <select id="preferred_language">
-              {% set _pl = preferred_language %}
+              {% set _pl=preferred_language %}
               <option value="Italian"{% if _pl=='Italian' or not _pl %} selected{% endif %}>Italiano</option>
               <option value="Romanian"{% if _pl=='Romanian' %} selected{% endif %}>Rumeno</option>
               <option value="English"{% if _pl=='English' %} selected{% endif %}>Inglese</option>
             </select></div>
         </div>
-        <div class="fld"><label>Ragione sociale / Intestazione</label>
-          <input id="client_name" type="text" value="{{ client_name }}" autocomplete="organization">
-          <span class="hint">Per i privati: nome e cognome. Per le aziende/studi: denominazione completa.</span></div>
+        <div class="fld"><label>Ragione sociale / Intestazione</label><input id="client_name" type="text" value="{{ client_name }}" autocomplete="organization"><span class="hint">Privati: nome e cognome. Aziende/studi: denominazione completa.</span></div>
         <div class="row2">
-          <div class="fld"><label>P.IVA / VAT / CUI</label>
-            <input id="vat_number" type="text" value="{{ vat_number }}"></div>
-          <div class="fld"><label>Codice fiscale</label>
-            <input id="codice_fiscale" type="text" value="{{ codice_fiscale }}"></div>
-        </div>
-        <div class="fld"><label>Paese</label>
-          <select id="country">
-            <option value=""{% if not country %} selected{% endif %}>—</option>
-            {% for cc in countries %}
-            <option value="{{ cc }}"{% if cc==country %} selected{% endif %}>{{ cc }}</option>
-            {% endfor %}
-          </select></div>
-        <div class="fld"><label>Indirizzo (via e civico)</label>
-          <input id="billing_address_line1" type="text" value="{{ billing_address_line1 }}" autocomplete="address-line1"></div>
-        <div class="row3">
-          <div class="fld"><label>Città</label>
-            <input id="billing_city" type="text" value="{{ billing_city }}" autocomplete="address-level2"></div>
-          <div class="fld"><label>Provincia</label>
-            <input id="billing_province" type="text" value="{{ billing_province }}" autocomplete="address-level1"></div>
-          <div class="fld"><label>CAP</label>
-            <input id="billing_postal_code" type="text" value="{{ billing_postal_code }}" autocomplete="postal-code"></div>
+          <div class="fld"><label>P.IVA / VAT / CUI</label><input id="vat_number" type="text" value="{{ vat_number }}"></div>
+          <div class="fld"><label>Codice fiscale</label><input id="codice_fiscale" type="text" value="{{ codice_fiscale }}"></div>
         </div>
       </div>
-      {% endif %}
+      <div class="acc-card">
+        <h2>Indirizzo di fatturazione</h2>
+        <label class="sameas"><input type="checkbox" id="bill_same_as_res" {% if bill_same_as_res %}checked{% endif %}> Uguale alla residenza</label>
+        <div id="bill_block">
+          <div class="fld"><label>Via e civico</label><input id="billing_address_line1" type="text" value="{{ billing_address_line1 }}"></div>
+          <div class="row3">
+            <div class="fld"><label>Città</label><input id="billing_city" type="text" value="{{ billing_city }}"></div>
+            <div class="fld"><label>Provincia</label><input id="billing_province" type="text" value="{{ billing_province }}"></div>
+            <div class="fld"><label>CAP</label><input id="billing_postal_code" type="text" value="{{ billing_postal_code }}"></div>
+          </div>
+          <div class="fld"><label>Paese</label>{{ country_select('country', country) }}</div>
+        </div>
+      </div>
+      {% else %}<div class="acc-card"><p class="ch">Dati di fatturazione disponibili dopo l'attivazione del profilo cliente.</p></div>{% endif %}
+    </div>
 
+    <div id="save-row" class="pane-shared">
       <button type="submit" class="btn-save" id="save-btn">Salva modifiche</button>
       <div class="msg" id="msg"></div>
-    </form>
+    </div>
+  </form>
+
+  <!-- VERIFICA -->
+  <div class="pane" id="p-verifica">
+    {% if not has_client %}
+      <div class="acc-card"><p class="ch">Verifica disponibile dopo l'attivazione del profilo cliente.</p></div>
+    {% else %}
+    <div class="acc-card">
+      <h2>Verifica identità {% if is_individual %}(KYC){% else %}(KYB){% endif %}</h2>
+      <p class="ch">Documenti richiesti per legge (antiriciclaggio / due diligence), come per banche ed EMI. Trasmissione cifrata, uso riservato.</p>
+      {% set vs = verify_status %}
+      <p style="margin:0 0 16px">Stato:
+        {% if vs in ['Passed','Approved'] %}<span class="badge b-ok">Approvato</span>
+        {% elif vs in ['In Review','Pending Review'] %}<span class="badge b-review">In revisione</span>
+        {% elif vs in ['Failed','Rejected'] %}<span class="badge b-no">Da rifare</span>
+        {% else %}<span class="badge b-pending">Da completare</span>{% endif %}
+      </p>
+
+      {% if verify_docs %}
+      <ul class="doclist">
+        {% for d in verify_docs %}<li>📎 <a href="{{ d.file_url }}" target="_blank">{{ d.file_name }}</a></li>{% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if can_submit_verify %}
+      <div id="verify-uploads" style="margin-top:16px">
+        {% if is_individual %}
+        <div class="up"><label class="t">Documento d'identità — fronte *</label><input type="file" data-k="idf" accept="image/*,application/pdf"><div class="st"></div></div>
+        <div class="up"><label class="t">Documento d'identità — retro</label><input type="file" data-k="idb" accept="image/*,application/pdf"><div class="st"></div></div>
+        <div class="up"><label class="t">Selfie con documento *</label><input type="file" data-k="self" accept="image/*" capture="user"><div class="st"></div></div>
+        {% else %}
+        <div class="up"><label class="t">Visura camerale *</label><input type="file" data-k="vis" accept="image/*,application/pdf"><div class="st"></div></div>
+        <div class="up"><label class="t">Atto costitutivo / Statuto</label><input type="file" data-k="coi" accept="image/*,application/pdf"><div class="st"></div></div>
+        <div class="up"><label class="t">Documento rappresentante legale — fronte *</label><input type="file" data-k="repf" accept="image/*,application/pdf"><div class="st"></div></div>
+        <div class="up"><label class="t">Documento rappresentante legale — retro</label><input type="file" data-k="repb" accept="image/*,application/pdf"><div class="st"></div></div>
+        {% endif %}
+        <button type="button" class="btn-save" id="verify-btn">Invia per verifica</button>
+        <div class="msg" id="vmsg"></div>
+      </div>
+      {% else %}
+      <p class="ch" style="margin-top:12px">I documenti sono stati inviati. Ti aggiorneremo via email sull'esito.</p>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
-</div>
+
+</div></div>
 {{ thanatos_footer() }}
 <script>
 frappe.ready(function(){
   var hasClient = {{ 'true' if has_client else 'false' }};
-  var btn=document.getElementById('save-btn');
-  var msg=document.getElementById('msg');
-  function val(id){ var e=document.getElementById(id); return e? e.value : undefined; }
-  document.getElementById('prof-form').addEventListener('submit',function(e){
-    e.preventDefault();
-    btn.disabled=true; msg.className='msg'; msg.textContent='Salvataggio…';
-    var args={
-      first_name:val('first_name'), last_name:val('last_name'),
-      phone:val('phone'), mobile_no:val('mobile_no')
-    };
-    if(hasClient){
-      args.client_name=val('client_name'); args.client_type=val('client_type');
-      args.country=val('country'); args.vat_number=val('vat_number');
-      args.codice_fiscale=val('codice_fiscale'); args.preferred_language=val('preferred_language');
-      args.billing_address_line1=val('billing_address_line1'); args.billing_city=val('billing_city');
-      args.billing_province=val('billing_province'); args.billing_postal_code=val('billing_postal_code');
-    }
-    frappe.call({
-      method:'thanatos_intel.api.update_my_profile',
-      args:args,
-      callback:function(r){ msg.className='msg ok'; msg.textContent='Profilo aggiornato.'; btn.disabled=false; },
-      error:function(){ msg.className='msg err'; msg.textContent='Salvataggio non riuscito.'; btn.disabled=false; }
+  var clientDoc = "{{ client_docname }}";
+  // tabs
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click',function(){
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.pane').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById(t.dataset.pane).classList.add('active');
+      var onData = t.dataset.pane !== 'p-verifica';
+      document.getElementById('save-row').style.display = onData ? 'block':'none';
     });
   });
+  // same-as toggles
+  function bindSame(cbId, blockId){
+    var cb=document.getElementById(cbId), bl=document.getElementById(blockId);
+    if(!cb||!bl) return;
+    function sync(){ bl.style.display = cb.checked ? 'none':'block'; }
+    cb.addEventListener('change',sync); sync();
+  }
+  bindSame('dom_same_as_res','dom_block');
+  bindSame('ship_same_as_res','ship_block');
+  bindSame('bill_same_as_res','bill_block');
+  // save
+  function val(id){var e=document.getElementById(id);return e?e.value:undefined;}
+  function chk(id){var e=document.getElementById(id);return e?(e.checked?'1':'0'):undefined;}
+  var btn=document.getElementById('save-btn'), msg=document.getElementById('msg');
+  document.getElementById('prof-form').addEventListener('submit',function(e){
+    e.preventDefault(); btn.disabled=true; msg.className='msg'; msg.textContent='Salvataggio…';
+    var a={first_name:val('first_name'),last_name:val('last_name'),phone:val('phone'),mobile_no:val('mobile_no')};
+    if(hasClient){
+      Object.assign(a,{
+        client_name:val('client_name'),client_type:val('client_type'),preferred_language:val('preferred_language'),
+        vat_number:val('vat_number'),codice_fiscale:val('codice_fiscale'),country:val('country'),
+        res_address_line1:val('res_address_line1'),res_city:val('res_city'),res_province:val('res_province'),res_postal_code:val('res_postal_code'),res_country:val('res_country'),
+        dom_same_as_res:chk('dom_same_as_res'),dom_address_line1:val('dom_address_line1'),dom_city:val('dom_city'),dom_province:val('dom_province'),dom_postal_code:val('dom_postal_code'),dom_country:val('dom_country'),
+        ship_same_as_res:chk('ship_same_as_res'),ship_address_line1:val('ship_address_line1'),ship_city:val('ship_city'),ship_province:val('ship_province'),ship_postal_code:val('ship_postal_code'),ship_country:val('ship_country'),
+        bill_same_as_res:chk('bill_same_as_res'),billing_address_line1:val('billing_address_line1'),billing_city:val('billing_city'),billing_province:val('billing_province'),billing_postal_code:val('billing_postal_code')
+      });
+    }
+    frappe.call({method:'thanatos_intel.api.update_my_profile',args:a,
+      callback:function(){msg.className='msg ok';msg.textContent='Profilo aggiornato.';btn.disabled=false;},
+      error:function(){msg.className='msg err';msg.textContent='Salvataggio non riuscito.';btn.disabled=false;}});
+  });
+  // verifica upload + submit
+  var vbtn=document.getElementById('verify-btn');
+  if(vbtn){
+    var vmsg=document.getElementById('vmsg');
+    async function up(input){
+      var f=input.files[0]; if(!f) return false;
+      var st=input.parentNode.querySelector('.st'); st.textContent='Caricamento…';
+      var fd=new FormData(); fd.append('file',f,f.name); fd.append('is_private',1);
+      fd.append('doctype','Investigation Client'); fd.append('docname',clientDoc);
+      var r=await fetch('/api/method/upload_file',{method:'POST',headers:{'X-Frappe-CSRF-Token':frappe.csrf_token||''},body:fd});
+      if(r.ok){ st.textContent='✓ caricato'; st.className='st done'; return true; }
+      st.textContent='Errore upload'; return false;
+    }
+    vbtn.addEventListener('click',async function(){
+      vbtn.disabled=true; vmsg.className='msg'; vmsg.textContent='Invio…';
+      var inputs=document.querySelectorAll('#verify-uploads input[type=file]');
+      var any=false;
+      for(var i=0;i<inputs.length;i++){ if(inputs[i].files[0]){ var ok=await up(inputs[i]); any=any||ok; } }
+      if(!any){ vmsg.className='msg err'; vmsg.textContent='Carica almeno i documenti obbligatori (*).'; vbtn.disabled=false; return; }
+      var method = {{ 'true' if is_individual else 'false' }} ? 'thanatos_intel.api.onboarding.submit_kyc':'thanatos_intel.api.onboarding.submit_kyb';
+      frappe.call({method:method,
+        callback:function(r){ if(r.message&&r.message.ok===false){ vmsg.className='msg err'; vmsg.textContent=r.message.error||'Invio non riuscito.'; vbtn.disabled=false; } else { vmsg.className='msg ok'; vmsg.textContent='Documenti inviati. Verifica in corso.'; setTimeout(function(){location.reload();},1200);} },
+        error:function(){ vmsg.className='msg err'; vmsg.textContent='Invio non riuscito.'; vbtn.disabled=false; }});
+    });
+  }
 });
 </script>
 {% endblock %}

@@ -25,6 +25,15 @@ def after_migrate():
     _setup_pipeline()
     _seed_workflow()
     _register_kyc_provider()
+    _ensure_client_address_fields()
+
+
+def _ensure_client_address_fields():
+    try:
+        from thanatos_intel.patches.client_address_fields import apply
+        apply()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ensure_client_address_fields")
 
 
 def _register_kyc_provider():
