@@ -11,7 +11,8 @@
 {%- set applicant = {} -%}
 {%- set mnd = frappe.get_doc("Agency Mandate", doc.mandate) if doc.mandate else None -%}
 {%- if mnd and mnd.applicant -%}{%- set applicant = frappe.get_doc("Applicant Profile", mnd.applicant) -%}{%- endif -%}
-{%- set cliente = (mnd.applicant_name if mnd and mnd.applicant_name else (applicant.full_legal_name if applicant else "—")) -%}
+{%- set client_company = frappe.get_doc("Company Profile", doc.client_company) if doc.get("client_company") else None -%}
+{%- set cliente = (client_company.company_name if client_company and client_company.company_name else (mnd.applicant_name if mnd and mnd.applicant_name else (applicant.full_legal_name if applicant else "—"))) -%}
 {%- set tot = doc.total or doc.amount or 0 -%}
 {%- set tot_ron = doc.total_ron or doc.amount_ron or 0 -%}
 
