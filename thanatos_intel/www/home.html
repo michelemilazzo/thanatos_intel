@@ -27,8 +27,9 @@ body.thanatos-home #page-content{
 body.thanatos-home .page_content{display:block;}
 
 /* HERO */
-section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overflow:hidden;width:100%;box-sizing:border-box;
-  background:radial-gradient(ellipse at 50% 30%,#101A33 0%,#0A0E1A 52%,#04060C 100%);border-bottom:1px solid var(--line);}
+section.t-hero{position:relative;padding:64px 24px 60px;text-align:center;overflow:hidden;width:100%;box-sizing:border-box;
+  min-height:90vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 40%,#101A33 0%,#0A0E1A 52%,#04060C 100%);border-bottom:1px solid var(--line);}
 .t-hero-video{display:none !important;}
 .t-hero::before{content:"";position:absolute;inset:-30%;z-index:0;pointer-events:none;
   background:
@@ -53,7 +54,9 @@ section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overfl
 @keyframes txTwinkle{from{opacity:.55}to{opacity:1}}
 .t-hero-inner{position:relative;max-width:860px;margin:0 auto;z-index:1;}
 .t-hero-logo{display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:32px;}
-.t-hero-logo img{height:250px;width:auto;display:block;image-rendering:-webkit-optimize-contrast;filter:drop-shadow(0 6px 30px rgba(200,169,110,.45)) drop-shadow(0 0 60px rgba(200,169,110,.20));}
+.t-hero-logo{position:relative;}
+.t-hero-logo::before{content:"";position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:520px;height:520px;border-radius:50%;z-index:-1;pointer-events:none;background:radial-gradient(circle,rgba(200,169,110,.18) 0%,rgba(120,92,210,.10) 38%,transparent 68%);filter:blur(6px);}
+.t-hero-logo img{height:230px;width:auto;display:block;image-rendering:-webkit-optimize-contrast;filter:drop-shadow(0 6px 30px rgba(200,169,110,.45)) drop-shadow(0 0 60px rgba(200,169,110,.20));}
 .t-hero-brand{margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:4px;}
 .t-hero-brand .name{font-family:'Cinzel Decorative','Cinzel',Georgia,serif;font-weight:700;letter-spacing:10px;
   font-size:48px;line-height:1.05;color:var(--gold);text-shadow:0 0 22px rgba(200,169,110,.5),0 2px 6px rgba(0,0,0,.6);}
@@ -160,7 +163,9 @@ section.t-block{padding:46px 24px;max-width:1200px !important;width:100% !import
 
 
 @media(max-width:780px){
-  .t-hero-logo img{height:160px;}
+  section.t-hero{min-height:auto;padding:48px 20px 44px;}
+  .t-hero-logo::before{width:300px;height:300px;}
+  .t-hero-logo img{height:150px;}
   .t-hero-brand .name{font-size:32px;letter-spacing:6px;}
   .t-hero-brand .agency{font-size:16px;letter-spacing:12px;}
 }
