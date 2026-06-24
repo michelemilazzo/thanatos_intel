@@ -101,12 +101,16 @@
       <a href="/piani" class="{% if active=='pricing' %}act{% endif %}">Piani</a>
       <a href="/notizie" class="{% if active=='news' %}act{% endif %}">Newsroom</a>
       <a href="/verifica-blacklist" class="{% if active=='blacklist' %}act{% endif %}">Blacklist</a>
-      <a href="/chi-siamo" class="{% if active=='about' %}act{% endif %}">Chi siamo</a>
-      <a href="/collabora" class="{% if active=='collabora' %}act{% endif %}">Collabora</a>
+      <div class="tx-drop">
+        <a href="/chi-siamo" class="tx-toggle {% if active in ['about','collabora'] %}act{% endif %}">Chi siamo <span class="tx-caret">&#9662;</span></a>
+        <div class="tx-drop-menu">
+          <a href="/chi-siamo">Chi siamo</a>
+          <a href="/collabora">Collabora</a>
+        </div>
+      </div>
       {%- set _sl = (frappe.form_dict.get('lang') or (frappe.request.cookies.get('site_lang') if frappe.request else '') or 'it') -%}
       <span style="border:1px solid #1F2742;border-radius:4px;overflow:hidden;display:inline-flex"><a href="?lang=it" title="Italiano" style="padding:5px 9px;text-decoration:none;color:{% if _sl=='en' %}#7A8194{% else %}#C8A96E{% endif %}">IT</a><a href="?lang=en" title="English" style="padding:5px 9px;text-decoration:none;border-left:1px solid #1F2742;color:{% if _sl=='en' %}#C8A96E{% else %}#7A8194{% endif %}">EN</a></span>
       {% if frappe.session.user == 'Guest' %}
-      <a class="tx-cta" href="/registrati">Registrati</a>
       <a class="tx-cta solid" href="/login">Accedi</a>
       {% else %}
       {% set _staff = is_full_access() %}
