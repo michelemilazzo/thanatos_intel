@@ -57,7 +57,7 @@ section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overfl
 .t-btn.solid:hover{background:var(--gold2);}
 
 /* KPI BAR */
-.t-kpis{max-width:1180px;width:100%;margin:30px auto 0;padding:0 24px;box-sizing:border-box;}
+.t-kpis{max-width:1180px;width:100%;margin:8px auto 0;padding:0 24px;box-sizing:border-box;}
 .t-kpis-grid{display:grid !important;grid-template-columns:repeat(6,1fr) !important;gap:14px;
   background:var(--panel);border:1px solid var(--line);padding:20px;border-radius:4px;
   box-shadow:0 12px 40px rgba(0,0,0,.4);}
@@ -71,8 +71,8 @@ section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overfl
   .t-kpi:last-child{border-bottom:0;}.t-hero h1{font-size:32px;}}
 
 /* SECTIONS */
-section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !important;margin:0 auto !important;box-sizing:border-box;}
-.t-section-head{text-align:center;margin-bottom:40px;}
+section.t-block{padding:46px 24px;max-width:1200px !important;width:100% !important;margin:0 auto !important;box-sizing:border-box;}
+.t-section-head{text-align:center;margin-bottom:28px;}
 .t-section-head .eyebrow{font-size:10px;letter-spacing:5px;color:var(--gold);text-transform:uppercase;}
 .t-section-head h2{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:10px 0 8px;}
 .t-section-head p{color:var(--muted);font-size:14px;max-width:580px;margin:0 auto;}
@@ -84,7 +84,8 @@ section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !import
 .t-service{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--gold);
   padding:28px 24px;text-decoration:none;color:var(--text);transition:transform .15s,box-shadow .15s;}
 .t-service:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.3);}
-.t-service .ico{font-size:28px;margin-bottom:14px;display:block;}
+.t-service .ico{margin-bottom:14px;display:block;color:var(--gold);line-height:0;}
+.t-service .ico svg{width:30px;height:30px;}
 .t-service h3{font-family:Georgia,serif;font-weight:400;font-size:19px;color:var(--gold);margin:0 0 10px;}
 .t-service p{color:#A8ACBA;font-size:13px;line-height:1.65;margin:0 0 16px;}
 .t-service .tags{display:flex;flex-wrap:wrap;gap:6px;}
@@ -104,7 +105,8 @@ section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !import
   .t-step:last-child{border-bottom:0;}}
 .t-step .num{font-family:Georgia,serif;font-size:48px;color:rgba(200,169,110,.15);line-height:1;
   position:absolute;top:20px;right:20px;font-weight:700;}
-.t-step .ico{font-size:22px;margin-bottom:12px;display:block;}
+.t-step .ico{margin-bottom:12px;display:block;color:var(--gold);line-height:0;}
+.t-step .ico svg{width:24px;height:24px;}
 .t-step h4{font-family:Georgia,serif;font-weight:400;font-size:16px;color:var(--gold);margin:0 0 8px;}
 .t-step p{color:#A8ACBA;font-size:13px;line-height:1.6;margin:0;}
 .t-step .cta-link{display:inline-block;margin-top:14px;font-size:11px;letter-spacing:2px;
@@ -199,12 +201,12 @@ section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !import
 <!-- KPI BAR -->
 <div class="t-kpis">
   <div class="t-kpis-grid">
-    <div class="t-kpi"><div class="n">{{ stats.cases or '11' }}</div><div class="l">Casi gestiti</div></div>
-    <div class="t-kpi"><div class="n">{{ stats.evidence or '12' }}</div><div class="l">Prove acquisite</div></div>
-    <div class="t-kpi"><div class="n">{{ stats.reports or '1' }}</div><div class="l">Report</div></div>
-    <div class="t-kpi"><div class="n">{{ stats.osint or '24×7' }}</div><div class="l">OSINT attivo</div></div>
-    <div class="t-kpi"><div class="n">SHA-256</div><div class="l">Custodia prove</div></div>
-    <div class="t-kpi"><div class="n">{{ stats.clients or '14' }}</div><div class="l">Clienti attivi</div></div>
+    <div class="t-kpi"><div class="n">24/7</div><div class="l">Monitoraggio OSINT</div></div>
+    <div class="t-kpi"><div class="n">SHA-256</div><div class="l">Catena di custodia</div></div>
+    <div class="t-kpi"><div class="n">IT·RO·UE</div><div class="l">Validità legale</div></div>
+    <div class="t-kpi"><div class="n">&lt;60s</div><div class="l">Onboarding</div></div>
+    <div class="t-kpi"><div class="n">GDPR</div><div class="l">Conforme</div></div>
+    <div class="t-kpi"><div class="n">100%</div><div class="l">Tracciabilità</div></div>
   </div>
 </div>
 
@@ -218,19 +220,19 @@ section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !import
   </div>
   <div class="t-services">
     <a class="t-service" href="/servizi">
-      <span class="ico">🔍</span>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20.5" y1="20.5" x2="16.5" y2="16.5"/></svg></span>
       <h3>Indagini investigative</h3>
       <p>Pratiche di investigazione gestite da investigatori autorizzati. Dalla raccolta prove alla redazione del dossier finale, tutto certificato e ammissibile in giudizio.</p>
       <div class="tags"><span>Antifrode</span><span>Sequestri</span><span>Infedeltà aziendale</span></div>
     </a>
     <a class="t-service" href="/portal/osint/fonti">
-      <span class="ico">🌐</span>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg></span>
       <h3>Intelligence &amp; OSINT</h3>
       <p>Ricerche su persone, aziende, wallet crypto e domini. Fonti aperte, sanctions list, HIBP, blockchain. Risultati in minuti, non in giorni.</p>
       <div class="tags"><span>Crypto wallet</span><span>Sanctions</span><span>Verifica identità</span></div>
     </a>
     <a class="t-service" href="/servizi">
-      <span class="ico">📋</span>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.6-7 9c-4-1.4-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
       <h3>Due Diligence &amp; Compliance</h3>
       <p>Verifica approfondita su persone, aziende e controparti. Report KYC/KYB strutturati per uso legale, bancario o assicurativo.</p>
       <div class="tags"><span>KYC/KYB</span><span>GDPR</span><span>AML</span></div>
@@ -250,27 +252,27 @@ section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !import
   <div class="t-steps">
     <div class="t-step">
       <span class="num">01</span>
-      <span class="ico">👤</span>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3.5 20a6 6 0 0 1 11 0"/><line x1="18.5" y1="9" x2="18.5" y2="15"/><line x1="15.5" y1="12" x2="21.5" y2="12"/></svg></span>
       <h4>Registrati</h4>
       <p>Crea un account gratuito in 60 secondi. Nessuna carta di credito richiesta per iniziare. Puoi esplorare il portale prima di acquistare.</p>
       <a class="cta-link" href="/register">Registrati gratis →</a>
     </div>
     <div class="t-step">
       <span class="num">02</span>
-      <span class="ico">📁</span>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
       <h4>Apri un caso</h4>
       <p>Descrivi il tuo problema o seleziona un servizio dal catalogo. Puoi allegare documenti, screenshot e informazioni riservate in modo sicuro.</p>
       <a class="cta-link" href="/portal">Vai al portale →</a>
     </div>
     <div class="t-step">
       <span class="num">03</span>
-      <span class="ico">⚙️</span>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></span>
       <h4>Lavoriamo per te</h4>
       <p>I nostri analisti elaborano il caso. Puoi seguire l'avanzamento in tempo reale dal portale. Ogni prova è hashata e tracciata automaticamente.</p>
     </div>
     <div class="t-step">
       <span class="num">04</span>
-      <span class="ico">📄</span>
+      <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
       <h4>Ricevi il report</h4>
       <p>Ottieni un report firmato digitalmente, con catena di custodia SHA-256. Pronto per uso legale, tribunale o decisioni aziendali.</p>
       <a class="cta-link" href="/pay-per-use">Vedi i prezzi →</a>
@@ -290,8 +292,7 @@ section.t-block{padding:64px 24px;max-width:1200px !important;width:100% !import
   </div>
   <div class="t-plans">
     {% for p in plans %}
-    <div class="t-plan{% if p.plan_level == 'Basic' %} featured{% endif %}">
-      <div class="lvl">{{ p.plan_level }}</div>
+    <div class="t-plan{% if p.plan_name == 'Professional' %} featured{% endif %}">
       <h3>{{ p.plan_name }}</h3>
       <div class="price">€{{ "%.0f"|format(p.monthly_price) }}<small> / mese</small></div>
       <ul>
