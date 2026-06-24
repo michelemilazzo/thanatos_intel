@@ -89,6 +89,19 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 .qa-ic{line-height:0;color:var(--gold);margin-bottom:2px;}
 .qa-ic svg{width:26px;height:26px;}
 .qa-label{font-size:10px;color:var(--grey);text-transform:uppercase;letter-spacing:1.5px;font-weight:500;}
+.psearch{position:relative;max-width:680px;margin:0 0 28px}
+.psearch-ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--grey);pointer-events:none}
+.psearch input{width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:#E8E9F0;font-size:14px;padding:13px 14px 13px 42px;outline:none;font-family:inherit}
+.psearch input:focus{border-color:var(--gold)}
+.psearch-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:50;max-height:60vh;overflow:auto;display:none}
+.psearch-results.open{display:block}
+.psg{padding:9px 14px 5px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);border-top:1px solid var(--border)}
+.psg:first-child{border-top:none}
+.psr{display:block;padding:9px 14px;text-decoration:none;color:#E8E9F0;border-top:1px solid #161d33}
+.psr:hover{background:var(--bg)}
+.psr .t{font-size:13px}
+.psr .s{font-size:11px;color:var(--grey);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.psr-empty{padding:14px;color:var(--grey);font-size:12px;text-align:center}
 </style>
 {% endblock %}
 
@@ -164,6 +177,13 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     <div class="stat"><div class="v">{{ evidence_total }}</div><div class="l">Evidenze</div><div class="d">SHA-256 custody</div></div>
   </div>
   {% endif %}
+
+  <!-- RICERCA -->
+  <div class="psearch">
+    <svg class="psearch-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="20.5" y1="20.5" x2="16.5" y2="16.5"/></svg>
+    <input id="psearch-input" type="search" placeholder="Cerca nelle tue pratiche, documenti e negli articoli…" autocomplete="off" aria-label="Cerca">
+    <div class="psearch-results" id="psearch-results"></div>
+  </div>
 
   <!-- ACCESSO RAPIDO -->
   <div style="margin:0 0 36px">
@@ -366,6 +386,29 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 </div>
 {{ thanatos_footer() }}
 <script>
+(function(){
+  var inp=document.getElementById('psearch-input'), box=document.getElementById('psearch-results'), t;
+  if(!inp) return;
+  var TYPE={'Pratica':'Pratiche','Documento':'Documenti','Articolo':'Articoli','Info':'Scorciatoie'};
+  function esc(x){var d=document.createElement('div');d.textContent=x||'';return d.innerHTML;}
+  function render(items){
+    if(!items.length){box.innerHTML='<div class="psr-empty">Nessun risultato</div>';box.classList.add('open');return;}
+    var g={},order=['Pratica','Documento','Articolo','Info'],h='';
+    items.forEach(function(r){(g[r.type]=g[r.type]||[]).push(r);});
+    order.forEach(function(tp){ if(!g[tp])return; h+='<div class="psg">'+TYPE[tp]+'</div>';
+      g[tp].forEach(function(r){ h+='<a class="psr" href="'+esc(r.url)+'"><div class="t">'+esc(r.title)+'</div>'+(r.snippet?'<div class="s">'+esc(r.snippet)+'</div>':'')+'</a>'; }); });
+    box.innerHTML=h; box.classList.add('open');
+  }
+  inp.addEventListener('input',function(){ clearTimeout(t); var q=inp.value.trim();
+    if(q.length<2){box.classList.remove('open');box.innerHTML='';return;}
+    t=setTimeout(function(){
+      fetch('/api/method/thanatos_intel.api.search.portal_search?q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}})
+        .then(function(r){return r.json();}).then(function(d){render((d.message&&d.message.results)||[]);})
+        .catch(function(){box.classList.remove('open');});
+    },220);
+  });
+  document.addEventListener('click',function(e){ if(!e.target.closest('.psearch'))box.classList.remove('open'); });
+})();
 function filterCases(q){
   const grid=document.getElementById('case-grid');
   if(!grid)return;
