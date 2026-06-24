@@ -33,8 +33,10 @@
 .tx-drop-menu a{color:#A4A9BC;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;
   padding:9px 12px;border-bottom:none;border-radius:4px;white-space:nowrap;}
 .tx-drop-menu a:hover{color:#C8A96E;background:#0A0E1A;}
-.tx-cta{display:inline-block;padding:8px 16px;border:1px solid #C8A96E;color:#C8A96E;text-decoration:none;
-  font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-left:8px;transition:background .15s,color .15s;}
+.tx-cta{display:inline-block;padding:9px 18px;border:1px solid #C8A96E;border-radius:6px;color:#C8A96E;text-decoration:none;
+  font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-left:8px;transition:background .15s,color .15s,box-shadow .15s;}
+.tx-cta.solid{box-shadow:0 2px 10px rgba(200,169,110,.18);}
+.tx-cta.solid:hover{box-shadow:0 4px 16px rgba(200,169,110,.30);}
 .tx-cta:hover{background:#C8A96E;color:#0A0E1A;}
 .tx-cta.solid{background:#C8A96E;color:#0A0E1A;}
 .tx-cta.solid:hover{background:#B8975A;}
@@ -63,18 +65,30 @@
   .tx-drop-menu{position:static;display:flex;border:none;box-shadow:none;background:transparent;
     padding:0 0 4px 14px;min-width:0;}
   .tx-drop-menu a{font-size:10.5px;color:#7A8294;padding:8px 12px;}
+  .tx-user{width:100%;margin-left:0;}
+  .tx-menu{position:static;display:flex;box-shadow:none;min-width:0;margin-top:4px;}
+  .tx-user:hover>.tx-menu{display:flex;}
 }
 .tx-user{position:relative;display:inline-block;margin-left:8px;}
 .tx-user>.tx-cta{margin-left:0;cursor:pointer;}
 .tx-cta.tx-prof{display:inline-flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;}
 .tx-avatar{width:26px;height:26px;border-radius:50%;background:#C8A96E;color:#0A0E1A;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;overflow:hidden;flex:0 0 auto;}
 .tx-avatar img{width:100%;height:100%;object-fit:cover;}
-.tx-menu{position:absolute;right:0;top:100%;min-width:180px;background:#111729;border:1px solid #1F2742;
-  border-radius:6px;padding:6px;display:none;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:60;}
+.tx-menu{position:absolute;right:0;top:100%;min-width:250px;background:#111729;border:1px solid #1F2742;
+  border-radius:8px;padding:0;overflow:hidden;display:none;flex-direction:column;box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:60;}
 .tx-user:hover>.tx-menu{display:flex;}
 .tx-menu a{color:#A4A9BC;text-decoration:none;font-size:11px;letter-spacing:2px;text-transform:uppercase;
-  padding:9px 12px;border-bottom:none;border-radius:4px;}
+  padding:10px 16px;border-bottom:none;border-radius:0;}
 .tx-menu a:hover{color:#C8A96E;background:#0A0E1A;}
+
+.tx-menu-head{display:flex;align-items:center;gap:10px;padding:13px 16px;background:#0E1424;border-bottom:1px solid #1F2742;}
+.tx-avatar.lg{width:40px;height:40px;font-size:15px;}
+.tx-menu-id{display:flex;flex-direction:column;min-width:0;}
+.tx-menu-id strong{color:#E6E8EE;font-size:12.5px;letter-spacing:.4px;text-transform:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+.tx-menu-id small{color:#7A8294;font-size:10px;letter-spacing:.3px;text-transform:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+.tx-menu-div{height:1px;background:#1F2742;margin:0;}
+.tx-menu-logout{color:#C98A8A !important;}
+.tx-menu-logout:hover{color:#E0A0A0 !important;background:#1A1014 !important;}
 </style>
 <nav class="tx-nav">
   <div class="tx-nav-inner">
@@ -121,15 +135,24 @@
           <span>{{ _pu.full_name.split(' ')[0] if _pu.full_name else 'Area riservata' }} ▾</span>
         </a>
         <div class="tx-menu">
+          <div class="tx-menu-head">
+            <span class="tx-avatar lg">{% if _pu.image %}<img src="{{ _pu.image }}" alt=""/>{% else %}{{ _pu.initials }}{% endif %}</span>
+            <div class="tx-menu-id">
+              <strong>{{ _pu.full_name or 'Area riservata' }}</strong>
+              <small>{{ frappe.session.user }}</small>
+            </div>
+          </div>
           {% if _staff %}
           <a href="/app/thanatos-intel">App Thanatos</a>
           <a href="/app">Desk</a>
           <a href="/drive">Drive</a>
           <a href="/crm">CRM</a>
+          <div class="tx-menu-div"></div>
           {% endif %}
           <a href="/portale">Portale</a>
           <a href="/sicurezza">Sicurezza</a>
-          <a href="/logout">Esci</a>
+          <div class="tx-menu-div"></div>
+          <a href="/logout" class="tx-menu-logout">Esci</a>
         </div>
       </div>
       {% endif %}
