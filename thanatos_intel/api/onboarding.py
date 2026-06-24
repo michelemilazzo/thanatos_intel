@@ -178,11 +178,19 @@ def submit_kyc() -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def submit_kyb() -> dict:
-    """Finalize KYB submission: set status Pending Review, create KYB Check."""
+def submit_kyb(company_name=None, company_type=None, registration_number=None,
+               vat_number=None, incorporation_date=None, company_country=None,
+               registered_address=None, beneficial_owners=None, company_role=None) -> dict:
+    """Finalize KYB submission: create KYB Check. Per le aziende e per i privati
+    che possiedono/rappresentano una societa (has_company)."""
     c = _current_client()
-    if c.client_type == "Individual":
-        return {"ok": False, "error": "KYB valido solo per Azienda/Studio."}
+    is_individual = (c.client_type == "Individual")
+    if is_individual and not c.get("has_company"):
+        return {"ok": False, "error": "Indica prima di possedere o rappresentare una societa."}
+
+    def _nz(v):
+        v = (v or "").strip() if isinstance(v, str) else v
+        return v or None
 
     files = frappe.get_all("File",
         filters={"attached_to_doctype": "Investigation Client", "attached_to_name": c.name},
@@ -193,9 +201,16 @@ def submit_kyb() -> dict:
     kyb = frappe.get_doc({
         "doctype": "KYB Check",
         "client": c.name,
-        "company_name": c.client_name,
-        "company_country": c.country,
-        "registered_address": c.address,
+        "company_name": _nz(company_name) or c.client_name,
+        "company_type": _nz(company_type),
+        "registration_number": _nz(registration_number),
+        "vat_number": _nz(vat_number) or c.get("vat_number"),
+        "incorporation_date": _nz(incorporation_date),
+        "company_country": _nz(company_country) or c.country,
+        "registered_address": _nz(registered_address) or c.get("address"),
+        "beneficial_owners": _nz(beneficial_owners),
+        "legal_rep_name": c.client_name if is_individual else None,
+        "legal_rep_role": _nz(company_role) or (c.get("company_role") if is_individual else None),
         "status": "In Review",
     })
     kyb.flags.ignore_permissions = True
@@ -208,13 +223,14 @@ def submit_kyb() -> dict:
         }, update_modified=False)
 
     c.db_set("kyb_status", "In Review", commit=False)
-    # carta gia presente, oppure cliente a credito (fatturazione a bonifico) -> completo;
-    # altrimenti percorso KYB-first: la carta viene richiesta dopo il KYB
-    if c.payment_method_added or c.credit_granted:
-        c.db_set("onboarding_status", "Under Review", commit=False)
-        c.db_set("onboarding_completed_at", frappe.utils.now_datetime(), commit=False)
-    else:
-        c.db_set("onboarding_status", "Pending Card", commit=False)
+    # Per i privati il KYB e supplementare (la societa collegata): l onboarding
+    # resta guidato dal KYC, non tocchiamo onboarding_status.
+    if not is_individual:
+        if c.payment_method_added or c.credit_granted:
+            c.db_set("onboarding_status", "Under Review", commit=False)
+            c.db_set("onboarding_completed_at", frappe.utils.now_datetime(), commit=False)
+        else:
+            c.db_set("onboarding_status", "Pending Card", commit=False)
     frappe.db.commit()
 
     try:

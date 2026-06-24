@@ -28,6 +28,9 @@ ADDR_FIELDS = {
         {"fieldname": "ship_country", "label": "Spedizione — Paese", "fieldtype": "Link", "options": "Country", "insert_after": "ship_postal_code", "depends_on": "eval:!doc.ship_same_as_res"},
         # Fatturazione = residenza (riusa billing_* esistenti)
         {"fieldname": "bill_same_as_res", "label": "Fatturazione = residenza", "fieldtype": "Check", "default": "1", "insert_after": "billing_postal_code"},
+        # Persona con societa collegata (UBO / amministratore)
+        {"fieldname": "has_company", "label": "Possiede/rappresenta una societa", "fieldtype": "Check", "default": "0", "insert_after": "bill_same_as_res"},
+        {"fieldname": "company_role", "label": "Ruolo nella societa", "fieldtype": "Select", "options": "\nUBO\nAmministratore\nEntrambi", "insert_after": "has_company", "depends_on": "eval:doc.has_company"},
     ]
 }
 

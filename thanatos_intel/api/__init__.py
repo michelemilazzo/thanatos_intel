@@ -12,7 +12,8 @@ def update_my_profile(first_name=None, last_name=None, phone=None, mobile_no=Non
                       ship_same_as_res=None, ship_address_line1=None, ship_city=None,
                       ship_province=None, ship_postal_code=None, ship_country=None,
                       bill_same_as_res=None, billing_address_line1=None,
-                      billing_city=None, billing_province=None, billing_postal_code=None):
+                      billing_city=None, billing_province=None, billing_postal_code=None,
+                      has_company=None, company_role=None):
 	"""Aggiorna i dati dell'utente corrente (portale) e, se esiste, anagrafica,
 	indirizzi (residenza/domicilio/spedizione/fatturazione) e fatturazione del suo
 	Investigation Client. Gli indirizzi 'uguale a residenza' vengono copiati."""
@@ -49,11 +50,12 @@ def update_my_profile(first_name=None, last_name=None, phone=None, mobile_no=Non
 			"bill_same_as_res": bill_same_as_res,
 			"billing_address_line1": billing_address_line1, "billing_city": billing_city,
 			"billing_province": billing_province, "billing_postal_code": billing_postal_code,
+			"has_company": has_company, "company_role": company_role,
 		}
 		changed = False
 		for field, value in incoming.items():
 			if value is not None:
-				if field.endswith("same_as_res"):
+				if field.endswith("same_as_res") or field == "has_company":
 					c.set(field, 1 if _truthy(value) else 0)
 				else:
 					c.set(field, value.strip() if isinstance(value, str) else value)

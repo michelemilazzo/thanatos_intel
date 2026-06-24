@@ -5,6 +5,16 @@ no_cache = 1
 _SUBMITTABLE = ("", "Not Required", "Not Started", "In Progress", "Failed", "Rejected", None)
 
 
+def _docs_for(check_dt, client):
+	last = frappe.get_all(check_dt, filters={"client": client},
+	                      fields=["name"], order_by="creation desc", limit=1)
+	if not last:
+		return []
+	return frappe.get_all("File",
+		filters={"attached_to_doctype": check_dt, "attached_to_name": last[0].name},
+		fields=["file_name", "file_url"], limit=20)
+
+
 def get_context(context):
 	if frappe.session.user == "Guest":
 		frappe.local.flags.redirect_location = "/login?redirect-to=/modifica-profilo"
@@ -36,11 +46,9 @@ def get_context(context):
 	context.preferred_language = g("preferred_language")
 	context.country = g("country")
 
-	# Indirizzi
 	for pfx in ("res", "dom", "ship"):
 		for suf in ("address_line1", "city", "province", "postal_code", "country"):
 			setattr(context, f"{pfx}_{suf}", g(f"{pfx}_{suf}"))
-	# flag default ON quando il cliente non ha ancora salvato nulla
 	context.dom_same_as_res = 1 if (not c or c.get("dom_same_as_res")) else 0
 	context.ship_same_as_res = 1 if (not c or c.get("ship_same_as_res")) else 0
 	context.bill_same_as_res = 1 if (not c or c.get("bill_same_as_res")) else 0
@@ -54,24 +62,38 @@ def get_context(context):
 	except Exception:
 		context.countries = []
 
-	# Verifica identita (KYC privati / KYB aziende)
+	# Verifica
 	context.is_individual = (context.client_type == "Individual") or not context.client_type
-	context.kyc_status = g("kyc_status")
-	context.kyb_status = g("kyb_status")
-	cur_status = context.kyc_status if context.is_individual else context.kyb_status
-	context.verify_status = cur_status or "Not Started"
-	context.can_submit_verify = bool(c) and (cur_status in _SUBMITTABLE)
+	context.has_company = 1 if (c and c.get("has_company")) else 0
+	context.company_role = g("company_role")
 
-	# documenti gia inviati (allegati all'ultimo check)
-	context.verify_docs = []
+	context.kyc_status = g("kyc_status") or "Not Started"
+	context.kyb_status = g("kyb_status") or "Not Started"
+	context.kyc_can_submit = bool(c) and (g("kyc_status") in _SUBMITTABLE)
+	context.kyb_can_submit = bool(c) and (g("kyb_status") in _SUBMITTABLE)
+	context.kyc_docs = _docs_for("KYC Check", c.name) if c else []
+	context.kyb_docs = _docs_for("KYB Check", c.name) if c else []
+	# il KYB serve alle aziende sempre, e ai privati solo se has_company
+	context.kyb_required = bool(c) and ((not context.is_individual) or context.has_company)
+
+	# Segnalazione clienti (referral)
+	context.ref = {}
 	if c:
-		check_dt = "KYC Check" if context.is_individual else "KYB Check"
-		last = frappe.get_all(check_dt, filters={"client": c.name},
-		                      fields=["name"], order_by="creation desc", limit=1)
-		if last:
-			context.verify_docs = frappe.get_all("File",
-				filters={"attached_to_doctype": check_dt, "attached_to_name": last[0].name},
-				fields=["file_name", "file_url"], limit=20)
+		try:
+			from thanatos_intel import referral
+			context.ref = referral.my_tree(frappe.session.user) or {}
+		except Exception:
+			context.ref = {}
+	context.ref_qr = None
+	link = (context.ref or {}).get("link")
+	if link:
+		try:
+			import io, base64, qrcode
+			img = qrcode.make(link)
+			buf = io.BytesIO(); img.save(buf, format="PNG")
+			context.ref_qr = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+		except Exception:
+			context.ref_qr = None
 
 	context.no_cache = 1
 	return context
