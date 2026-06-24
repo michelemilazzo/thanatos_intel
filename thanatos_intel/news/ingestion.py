@@ -187,6 +187,21 @@ def _ai_rewrite(title: str, content: str, language: str = "it") -> tuple[str, st
 
 # ---------- core ingest ----------
 
+def _fetch_feed(url: str):
+	"""Scarica il feed con UA browser (alcuni server servono HTML a UA sconosciuti
+	o redirigono) e lo passa a feedparser come bytes; fallback al fetch di feedparser."""
+	import feedparser
+	try:
+		import requests
+		r = requests.get(url, timeout=20, allow_redirects=True,
+			headers={"User-Agent": "Mozilla/5.0 (compatible; thanatos-news/1.0)"})
+		if r.status_code == 200 and r.content:
+			return feedparser.parse(r.content)
+	except Exception:
+		pass
+	return feedparser.parse(url)
+
+
 @frappe.whitelist()
 def fetch_source(name: str) -> dict:
 	src = frappe.get_doc("News Source", name)
@@ -199,7 +214,7 @@ def fetch_source(name: str) -> dict:
 	except ImportError:
 		return {"error": "feedparser not installed"}
 
-	parsed = feedparser.parse(src.rss_url)
+	parsed = _fetch_feed(src.rss_url)
 	if getattr(parsed, "bozo", 0) and not getattr(parsed, "entries", None):
 		_record_fetch(src, ok=False, err=str(parsed.bozo_exception)[:240], inserted=0)
 		return {"error": str(parsed.bozo_exception)[:240]}
