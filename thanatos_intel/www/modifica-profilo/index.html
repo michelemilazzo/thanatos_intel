@@ -171,7 +171,7 @@
       {% if is_individual %}
       <div class="acc-card">
         <h2>Verifica identità (KYC)</h2>
-        <p class="ch">Documenti richiesti per legge (antiriciclaggio), come banche ed EMI. Trasmissione cifrata.</p>
+        <p class="ch">Documenti richiesti per legge (antiriciclaggio), Trasmissione cifrata.</p>
         <p style="margin:0 0 14px">Stato: {{ status_badge(kyc_status) }}</p>
         {% if kyc_docs %}<ul class="doclist">{% for d in kyc_docs %}<li>📎 <a href="{{ d.file_url }}" target="_blank">{{ d.file_name }}</a></li>{% endfor %}</ul>{% endif %}
         {% if kyc_can_submit %}
@@ -202,7 +202,7 @@
       {% else %}
       <div class="acc-card">
         <h2>Verifica azienda (KYB)</h2>
-        <p class="ch">Documenti societari richiesti per legge, come banche ed EMI. Trasmissione cifrata.</p>
+        <p class="ch">Documenti societari richiesti per legge, Trasmissione cifrata.</p>
         <p style="margin:0 0 14px">Stato: {{ status_badge(kyb_status) }}</p>
         {% if kyb_docs %}<ul class="doclist">{% for d in kyb_docs %}<li>📎 <a href="{{ d.file_url }}" target="_blank">{{ d.file_name }}</a></li>{% endfor %}</ul>{% endif %}
         {% if kyb_can_submit %}<div id="kyb-uploads" style="margin-top:14px">{{ kyb_form(client_name, vat_number, country) }}</div>
