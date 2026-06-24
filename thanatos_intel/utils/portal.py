@@ -44,6 +44,18 @@ def confine_client_session(login_manager=None):
         return
     if roles & PORTAL_ROLES:
         frappe.local.response["home_page"] = "/portal"
+        # I clienti atterrano SEMPRE nel portale: neutralizza un redirect
+        # post-login (cache redirect_after_login + response.redirect_to) che
+        # punti fuori da /portal. I deep-link interni (/portal/...) restano.
+        try:
+            cached = frappe.cache.hget("redirect_after_login", user) or ""
+            if cached and not str(cached).startswith("/portal"):
+                frappe.cache.hdel("redirect_after_login", user)
+            rt = frappe.local.response.get("redirect_to") or ""
+            if rt and not str(rt).startswith("/portal"):
+                frappe.local.response["redirect_to"] = "/portal"
+        except Exception:
+            pass
 
 
 def bounce_client_from_desk():
