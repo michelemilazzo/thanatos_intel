@@ -8,10 +8,12 @@
 {%- set emittente_iban = be.iban if be and be.iban else "" -%}
 {%- set gov_law = be.governing_law if be and be.governing_law else "Legea Română" -%}
 
-{%- set client = {} -%}
-{%- if doc.client -%}{%- set client = frappe.get_doc("Investigation Client", doc.client) -%}{%- endif -%}
 {%- set applicant = {} -%}
-{%- if doc.applicant -%}{%- set applicant = frappe.get_doc("Applicant Profile", doc.applicant) -%}{%- endif -%}
+{%- set mnd = frappe.get_doc("Agency Mandate", doc.mandate) if doc.mandate else None -%}
+{%- if mnd and mnd.applicant -%}{%- set applicant = frappe.get_doc("Applicant Profile", mnd.applicant) -%}{%- endif -%}
+{%- set cliente = (mnd.applicant_name if mnd and mnd.applicant_name else (applicant.full_legal_name if applicant else "—")) -%}
+{%- set tot = doc.total or doc.amount or 0 -%}
+{%- set tot_ron = doc.total_ron or doc.amount_ron or 0 -%}
 
 <!DOCTYPE html>
 <html lang="it">
@@ -49,15 +51,14 @@
                border-top: 1px solid #ddd; text-align: center; line-height: 1.5; }
   .status-badge { display: inline-block; padding: 3px 10px; font-size: 8pt; letter-spacing: 1px;
                   text-transform: uppercase; border-radius: 2px; font-weight: 600;
-                  background: {% if doc.payment_status == 'Paid' %}#d4edda{% else %}#fff3cd{% endif %};
-                  color: {% if doc.payment_status == 'Paid' %}#155724{% else %}#856404{% endif %}; }
+                  background: {% if doc.status == 'Paid' %}#d4edda{% else %}#fff3cd{% endif %};
+                  color: {% if doc.status == 'Paid' %}#155724{% else %}#856404{% endif %}; }
   .note-box { font-size: 9pt; color: #555; margin: 14px 0; padding: 10px 14px;
               border: 1px dashed #ccc; border-radius: 2px; }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="tx-header">
   <img class="tx-logo"
        src="{{ frappe.utils.get_url() }}/assets/thanatos_intel/images/thanatos-logo-mark.png"
@@ -68,20 +69,18 @@
   </div>
 </div>
 
-<!-- TITOLO -->
 <div class="doc-title">
   <h1>Preventivo / Proforma</h1>
   <div class="doc-sub">{{ doc.name }}
-    &nbsp;·&nbsp; {{ frappe.utils.formatdate(doc.creation, "dd MMMM yyyy") }}
-    &nbsp;·&nbsp; <span class="status-badge">{{ doc.payment_status or "Da saldare" }}</span>
+    &nbsp;·&nbsp; {{ frappe.utils.formatdate(doc.issued_on or doc.creation, "dd MMMM yyyy") }}
+    &nbsp;·&nbsp; <span class="status-badge">{{ "Pagata" if doc.status == "Paid" else "Da saldare" }}</span>
   </div>
 </div>
 
-<!-- INFO GRID -->
 <div class="info-grid">
   <div class="info-cell">
     <div class="lbl">Cliente</div>
-    <div class="val">{{ client.client_name if client else doc.client }}</div>
+    <div class="val">{{ cliente }}</div>
   </div>
   <div class="info-cell">
     <div class="lbl">Pratica</div>
@@ -97,48 +96,35 @@
   </div>
 </div>
 
-<!-- VOCI -->
 <table class="items">
   <thead>
     <tr>
-      <th style="width:50%">Descrizione servizio</th>
-      <th style="width:20%">Quantità</th>
+      <th style="width:55%">Descrizione servizio</th>
+      <th style="width:15%">Quantità</th>
       <th style="width:15%">Prezzo unit.</th>
       <th style="width:15%">Totale</th>
     </tr>
   </thead>
   <tbody>
-    {% if doc.get("services") %}
-      {% for s in doc.services %}
-      <tr>
-        <td>{{ s.service_name or s.description or "—" }}</td>
-        <td>{{ s.qty or 1 }}</td>
-        <td>{{ "%.2f"|format(s.unit_price or s.rate or 0) }} {{ doc.currency or "EUR" }}</td>
-        <td>{{ "%.2f"|format(s.amount or (s.qty or 1) * (s.unit_price or s.rate or 0)) }} {{ doc.currency or "EUR" }}</td>
-      </tr>
-      {% endfor %}
-    {% else %}
     <tr>
-      <td>Servizio DDD — {{ doc.ddd_case or "Pratica" }}</td>
+      <td>{{ doc.step_title or ("Servizio DDD — " ~ (doc.ddd_case or "Pratica")) }}</td>
       <td>1</td>
-      <td>{{ "%.2f"|format(doc.total_amount or 0) }} {{ doc.currency or "EUR" }}</td>
-      <td>{{ "%.2f"|format(doc.total_amount or 0) }} {{ doc.currency or "EUR" }}</td>
+      <td>{{ "%.2f"|format(tot) }} {{ doc.currency or "EUR" }}</td>
+      <td>{{ "%.2f"|format(tot) }} {{ doc.currency or "EUR" }}</td>
     </tr>
-    {% endif %}
   </tbody>
   <tfoot>
     <tr class="subtotal">
       <td colspan="3">Totale dovuto</td>
-      <td><strong>{{ "%.2f"|format(doc.total_amount or 0) }} {{ doc.currency or "EUR" }}</strong>
-        {% if doc.get("total_amount_ron") %}
-        <br/><span style="font-size:8pt;color:#888">≈ {{ "%.2f"|format(doc.total_amount_ron) }} RON</span>
+      <td><strong>{{ "%.2f"|format(tot) }} {{ doc.currency or "EUR" }}</strong>
+        {% if tot_ron %}
+        <br/><span style="font-size:8pt;color:#888">≈ {{ "%.2f"|format(tot_ron) }} {{ doc.ron_ccy or "RON" }}</span>
         {% endif %}
       </td>
     </tr>
   </tfoot>
 </table>
 
-<!-- PAGAMENTO -->
 {% if emittente_iban %}
 <div class="payment-box">
   <div class="lbl">Coordinate bancarie per il pagamento</div>
@@ -158,7 +144,6 @@
 <div class="note-box">{{ doc.notes }}</div>
 {% endif %}
 
-<!-- FOOTER -->
 <div class="legal-box">
   {{ emittente }} · {{ emittente_vat }} · {{ emittente_addr }}<br/>
   Proforma n. {{ doc.name }} — Il presente documento non costituisce fattura fiscale ai sensi di legge.<br/>
