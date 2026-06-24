@@ -796,6 +796,7 @@
 
   // ── Replay button on the live home ───────────────────────
   function addReplayButton() {
+    if (!document.body || !document.body.classList.contains('thanatos-home')) return;
     if (document.getElementById('ti-replay-btn')) return;
     const b = document.createElement('button');
     b.id = 'ti-replay-btn';
