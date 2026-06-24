@@ -97,6 +97,7 @@
     <button class="tab" data-pane="p-fatt">Fatturazione</button>
     <button class="tab" data-pane="p-verifica">Verifica</button>
     <button class="tab" data-pane="p-segnala">Segnala clienti</button>
+    <button class="tab" data-pane="p-sicurezza">Sicurezza</button>
   </div>
 
   <form id="prof-form" autocomplete="on">
@@ -241,6 +242,18 @@
     {% endif %}
   </div>
 
+  <!-- SICUREZZA -->
+  <div class="pane" id="p-sicurezza">
+    <div class="acc-card">
+      <h2>Autenticazione a due fattori (2FA)</h2>
+      <p class="ch">Aggiunge un secondo livello di sicurezza all'accesso tramite app authenticator (Google Authenticator, Authy, ecc.). Facoltativa.</p>
+      <p style="margin:0 0 16px;font-size:13px">Stato: <span class="badge {{ 'b-ok' if two_factor_enabled else 'b-pending' }}" id="tfa-badge">{{ 'Attiva' if two_factor_enabled else 'Non attiva' }}</span></p>
+      <button type="button" class="btn-save" id="tfa-btn">{{ 'Disattiva 2FA' if two_factor_enabled else 'Attiva 2FA' }}</button>
+      <div class="msg" id="tfa-msg"></div>
+      <p class="ch" style="margin-top:14px">Dopo l'attivazione, al prossimo accesso il sistema mostrerà un QR da scansionare con l'app; da quel momento servirà il codice a 6 cifre.</p>
+    </div>
+  </div>
+
 </div></div>
 {{ thanatos_footer() }}
 <script>
@@ -294,6 +307,12 @@ frappe.ready(function(){
   // ref copy
   var rc=document.getElementById('ref-copy');
   if(rc)rc.addEventListener('click',function(){var i=document.getElementById('ref-link');i.select();try{document.execCommand('copy');rc.textContent='Copiato';setTimeout(()=>rc.textContent='Copia',1500);}catch(e){}});
+  var tb=document.getElementById('tfa-btn');
+  if(tb){var tfaEnabled={{ 'true' if two_factor_enabled else 'false' }};var bdg=document.getElementById('tfa-badge'),tm=document.getElementById('tfa-msg');
+    tb.addEventListener('click',function(){tb.disabled=true;tm.className='msg';tm.textContent='…';
+      frappe.call({method:'mmos_brand.two_factor.set_two_factor',args:{enable:tfaEnabled?0:1},
+        callback:function(r){tfaEnabled=!!(r.message&&r.message.enabled);bdg.textContent=tfaEnabled?'Attiva':'Non attiva';bdg.className='badge '+(tfaEnabled?'b-ok':'b-pending');tb.textContent=tfaEnabled?'Disattiva 2FA':'Attiva 2FA';tm.className='msg ok';tm.textContent=tfaEnabled?'2FA attivata. Al prossimo accesso configura l’app authenticator.':'2FA disattivata.';tb.disabled=false;},
+        error:function(){tm.className='msg err';tm.textContent='Operazione non riuscita.';tb.disabled=false;}});});}
 });
 </script>
 {% endblock %}

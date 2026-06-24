@@ -95,5 +95,12 @@ def get_context(context):
 		except Exception:
 			context.ref_qr = None
 
+	# Sicurezza: stato 2FA
+	try:
+		from mmos_brand.two_factor import OPTIN_ROLE
+		context.two_factor_enabled = OPTIN_ROLE in frappe.get_roles(frappe.session.user)
+	except Exception:
+		context.two_factor_enabled = False
+
 	context.no_cache = 1
 	return context
