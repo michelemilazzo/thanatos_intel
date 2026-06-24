@@ -305,11 +305,26 @@ section.t-block{padding:46px 24px;max-width:1200px !important;width:100% !import
       <h3>{{ p.plan_name }}</h3>
       <div class="price">€{{ "%.0f"|format(p.monthly_price) }}<small> / mese</small></div>
       <ul>
-        <li>{{ p.included_verifications or '∞' }} verifiche / mese</li>
-        <li>{{ p.included_analyses or '∞' }} analisi / mese</li>
-        <li>{{ p.included_reports or '∞' }} report / mese</li>
+        {% if p.plan_name == 'Pay-per-use' %}
+        <li>Carta sempre attiva · €1/mese</li>
+        <li>Paghi solo ciò che usi</li>
+        <li>Listino trasparente per servizio</li>
+        <li>Nessun canone, nessun impegno</li>
+        <li>{{ p.support_level }}</li>
+        {% elif p.plan_name == 'Free' %}
+        <li>Account gratuito</li>
+        <li>Esplora il portale</li>
+        <li>Verifica blacklist base</li>
+        <li>1 utente</li>
+        <li>{{ p.support_level }}</li>
+        {% else %}
+        {% set unlimited = (p.plan_name == 'Enterprise') %}
+        <li>{{ '∞' if unlimited else p.included_verifications }} verifiche / mese</li>
+        <li>{{ '∞' if unlimited else p.included_analyses }} analisi / mese</li>
+        <li>{{ '∞' if unlimited else p.included_reports }} report / mese</li>
         <li>{{ p.max_users or 1 }} utenti</li>
         <li>{{ p.support_level }}</li>
+        {% endif %}
       </ul>
       <div class="cta"><a class="t-btn solid" href="/portal/billing">Attiva →</a></div>
     </div>
