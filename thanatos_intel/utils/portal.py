@@ -54,7 +54,11 @@ def bounce_client_from_desk():
         path = (frappe.local.request.path or "")
     except Exception:
         return
-    if not (path == "/app" or path.startswith("/app/") or path.startswith("/app?")):
+    _desk = (
+        path == "/app" or path.startswith("/app/") or path.startswith("/app?")
+        or path == "/desk" or path.startswith("/desk/") or path.startswith("/desk?")
+    )
+    if not _desk:
         return
     user = getattr(frappe.session, "user", None)
     if not user or user == "Guest":
