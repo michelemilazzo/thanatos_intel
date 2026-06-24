@@ -121,11 +121,79 @@ CATEGORIES = {
             "Intelligence e competenze, in un unico percorso.",
         ],
     },
+    "detective-privato": {
+        "cat": "Investigazioni Complete", "icon": "\U0001F575",
+        "title": "Detective privato e investigatore privato \u2014 Agenzia investigativa",
+        "meta": "Agenzia investigativa europea: detective e investigatori privati per investigazioni e indagini private, con report documentati e ammissibili in giudizio.",
+        "eyebrow": "Detective privato",
+        "h1": "Detective e investigatori privati",
+        "intro": [
+            "Quando ti serve un detective privato o un investigatore privato vuoi un'agenzia investigativa che lavori in modo riservato e con metodo. Thanatos \u00e8 un'agenzia investigativa privata europea che conduce investigazioni private e indagini private per privati, studi legali e aziende.",
+            "Ogni attivit\u00e0 \u00e8 tracciata e documentata con catena di custodia SHA-256: non semplici informazioni, ma prove organizzate in un report utilizzabile in sede legale, in Italia e in UE.",
+        ],
+    },
+    "indagini-patrimoniali": {
+        "cat": "Financial Intelligence", "icon": "\U0001F3E6",
+        "title": "Indagini patrimoniali e prevenzione patrimoniale",
+        "meta": "Indagini patrimoniali e per la prevenzione patrimoniale e personale: rintraccio di beni, conti, immobili e wallet, con dossier documentato e valore legale.",
+        "eyebrow": "Indagini patrimoniali",
+        "h1": "Indagini patrimoniali",
+        "intro": [
+            "Le indagini patrimoniali ricostruiscono il reale patrimonio di una persona o di un'azienda: conti, immobili, partecipazioni societarie, beni mobili e wallet crypto. Sono lo strumento chiave per recupero crediti, cause e indagini per la prevenzione patrimoniale.",
+            "Thanatos integra financial intelligence, analisi societaria e tracciamento blockchain in una mappa patrimoniale documentata, utile anche nelle indagini per prevenzione patrimoniale e personale.",
+        ],
+    },
+    "indagini-aziendali": {
+        "cat": "Corporate Intelligence", "icon": "\U0001F3DB",
+        "title": "Indagini aziendali \u2014 due diligence e tutela d'impresa",
+        "meta": "Indagini aziendali: due diligence su controparti, concorrenza sleale, infedelt\u00e0 dei dipendenti e tutela del patrimonio aziendale, con prove documentate.",
+        "eyebrow": "Indagini aziendali",
+        "h1": "Indagini aziendali",
+        "intro": [
+            "Le indagini aziendali proteggono l'impresa: verifica di clienti e fornitori, concorrenza sleale, sottrazione di know-how, infedelt\u00e0 dei dipendenti e ammanchi. Thanatos indaga con discrezione e restituisce prove spendibili.",
+            "Dalla due diligence sulla controparte all'accertamento interno, ogni esito \u00e8 documentato e ammissibile in giudizio o nei procedimenti disciplinari.",
+        ],
+    },
+    "indagini-coniugali": {
+        "cat": "Investigazioni Complete", "icon": "\U0001F50D",
+        "title": "Indagini coniugali e familiari",
+        "meta": "Indagini coniugali e familiari riservate: infedelt\u00e0, separazioni, affidamento dei minori e tutela dei familiari, con prove documentate e ammissibili.",
+        "eyebrow": "Indagini coniugali",
+        "h1": "Indagini coniugali e familiari",
+        "intro": [
+            "Le indagini coniugali rispondono a un bisogno delicato: capire la verit\u00e0 in caso di sospetta infedelt\u00e0, tutelarsi in una separazione o nell'affidamento dei figli. Thanatos opera con la massima riservatezza e nel rispetto della privacy.",
+            "Raccogliamo elementi in modo lecito e li documentiamo in un report utilizzabile dal tuo avvocato in sede di separazione, divorzio o affidamento.",
+        ],
+    },
+    "indagini-penali": {
+        "cat": "Investigazioni Complete", "icon": "\u2696",
+        "title": "Indagini penali e investigazioni difensive",
+        "meta": "Indagini penali e investigazioni difensive a supporto del difensore: raccolta di elementi di prova per la difesa, con report e perizie penali ammissibili.",
+        "eyebrow": "Indagini penali",
+        "h1": "Indagini penali e difensive",
+        "intro": [
+            "Le indagini penali difensive affiancano l'avvocato nella raccolta di elementi a favore dell'assistito. Thanatos supporta gli studi legali con investigazioni mirate, anche nelle indagini per la difesa sui sequestri di prevenzione patrimoniale.",
+            "Ogni elemento \u00e8 raccolto con metodo e documentato con catena di custodia, pronto per il deposito e per le perizie penali.",
+        ],
+    },
+    "sequestri-prevenzione-patrimoniale": {
+        "cat": "Sequestri e Confische", "icon": "\u2696",
+        "title": "Sequestri di prevenzione patrimoniale e penali \u2014 perizie",
+        "meta": "Indagini e perizie per sequestri di prevenzione patrimoniale e sequestri penali: difesa, ricostruzione patrimoniale e perizie penali documentate.",
+        "eyebrow": "Sequestri di prevenzione patrimoniale",
+        "h1": "Sequestri di prevenzione patrimoniale e penali",
+        "intro": [
+            "I sequestri di prevenzione patrimoniale e i sequestri penali incidono su patrimoni e aziende. Thanatos affianca difensori e parti con indagini per la difesa, ricostruzione dell'origine dei beni e perizie per i sequestri di prevenzione patrimoniale.",
+            "Produciamo dossier e perizie penali documentati, utili a contestare o sostenere la misura, con tracciamento patrimoniale e catena di custodia.",
+        ],
+    },
 }
 
-ORDER = ["verifiche-rapide", "antifrode", "cyber-intelligence", "corporate-intelligence",
-         "financial-intelligence", "analisi-documenti", "sequestri-confische",
-         "investigazioni-complete", "enterprise-api", "abbonamenti-academy"]
+ORDER = ["detective-privato", "verifiche-rapide", "antifrode", "cyber-intelligence",
+         "corporate-intelligence", "financial-intelligence", "indagini-patrimoniali",
+         "indagini-aziendali", "indagini-coniugali", "indagini-penali", "analisi-documenti",
+         "sequestri-confische", "sequestri-prevenzione-patrimoniale", "investigazioni-complete",
+         "enterprise-api", "abbonamenti-academy"]
 
 
 def get_context(context):
