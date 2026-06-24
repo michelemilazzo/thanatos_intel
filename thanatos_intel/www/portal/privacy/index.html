@@ -32,6 +32,21 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
   padding:14px 16px;margin-bottom:16px;font-size:12px;color:#e8a0a0;line-height:1.5}
 .already-badge{background:rgba(224,82,82,.15);border:1px solid rgba(224,82,82,.3);
   border-radius:6px;padding:10px 14px;font-size:12px;color:var(--danger)}
+.consent-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border)}
+.consent-row:last-of-type{border-bottom:none}
+.consent-tx .ct{color:#E8E9F0;font-size:13.5px;margin-bottom:3px}
+.consent-tx .cd{color:var(--grey);font-size:12px;line-height:1.5}
+.switch{position:relative;display:inline-block;width:42px;height:24px;flex:0 0 auto;margin-top:2px}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#2a3350;border-radius:24px;transition:.2s;cursor:pointer}
+.slider:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#7A8294;border-radius:50%;transition:.2s}
+.switch input:checked+.slider{background:var(--gold-soft);border:1px solid var(--gold)}
+.switch input:checked+.slider:before{transform:translateX(18px);background:var(--gold)}
+.legal-list{list-style:none;padding:0;margin:0}
+.legal-list li{padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;color:#C0C4D0;line-height:1.5}
+.legal-list li:last-child{border-bottom:none}
+.legal-list b{color:#E8E9F0;font-weight:500}
+.legal-list .lb{display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);border-radius:10px;padding:1px 8px;margin-left:6px}
 </style>
 {% endblock %}
 
@@ -52,6 +67,31 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     <p>Nessun profilo cliente collegato a questo account.</p>
   </div>
   {% else %}
+
+  {# --- Consensi --- #}
+  <div class="card">
+    <h2>I tuoi consensi (Art. 6-7 GDPR)</h2>
+    <p>Gestisci i consensi facoltativi. Puoi modificarli quando vuoi; la revoca non pregiudica i trattamenti svolti in precedenza.</p>
+    {% for pp in consent_purposes %}
+    <div class="consent-row">
+      <div class="consent-tx"><div class="ct">{{ pp.label }}</div><div class="cd">{{ pp.desc }}</div></div>
+      <label class="switch"><input type="checkbox" {% if consents.get(pp.key) %}checked{% endif %} onchange="setConsent('{{ pp.key }}', this)"><span class="slider"></span></label>
+    </div>
+    {% endfor %}
+    <div class="msg" id="msg-consent"></div>
+  </div>
+
+  {# --- Basi giuridiche --- #}
+  <div class="card">
+    <h2>Basi giuridiche del trattamento</h2>
+    <p>Alcuni trattamenti sono necessari e non richiedono il tuo consenso:</p>
+    <ul class="legal-list">
+      <li><b>Esecuzione del contratto</b> <span class="lb">Art. 6.1.b</span><br>Gestione pratiche, erogazione dei servizi e fatturazione.</li>
+      <li><b>Obblighi legali</b> <span class="lb">Art. 6.1.c</span><br>Antiriciclaggio, KYC/KYB e conservazione documentale obbligatoria.</li>
+      <li><b>Legittimo interesse</b> <span class="lb">Art. 6.1.f</span><br>Sicurezza della piattaforma e prevenzione delle frodi.</li>
+    </ul>
+    <p style="margin:14px 0 0"><a href="/privacy" style="color:var(--gold)">Leggi l'informativa privacy completa →</a></p>
+  </div>
 
   {# --- Export dati --- #}
   <div class="card">
@@ -98,7 +138,7 @@ function exportData(){
   const msg = document.getElementById('msg-export');
   fetch('/api/method/thanatos_intel.www.portal.privacy.index.request_data_export', {
     method:'POST',
-    headers:{'X-Frappe-CSRF-Token': frappe.csrf_token || '{{ frappe.session.get("csrf_token","") }}',
+    headers:{'X-Frappe-CSRF-Token': (window.frappe && window.frappe.csrf_token) || '{{ frappe.session.get("csrf_token","") }}',
              'Content-Type':'application/json'},
     body:'{}'
   }).then(r=>r.json()).then(d=>{
@@ -118,7 +158,7 @@ function confirmDelete(){
   const msg = document.getElementById('msg-delete');
   fetch('/api/method/thanatos_intel.www.portal.privacy.index.request_account_deletion', {
     method:'POST',
-    headers:{'X-Frappe-CSRF-Token': frappe.csrf_token || '{{ frappe.session.get("csrf_token","") }}',
+    headers:{'X-Frappe-CSRF-Token': (window.frappe && window.frappe.csrf_token) || '{{ frappe.session.get("csrf_token","") }}',
              'Content-Type':'application/json'},
     body:'{}'
   }).then(r=>r.json()).then(d=>{
@@ -131,6 +171,20 @@ function confirmDelete(){
     }
   }).catch(()=>{msg.className='msg err';msg.textContent='Errore di rete.';btn.disabled=false;
     btn.textContent='Richiedi cancellazione account'});
+}
+
+function setConsent(key, el){
+  el.disabled=true;
+  const msg=document.getElementById('msg-consent');
+  fetch('/api/method/thanatos_intel.www.portal.privacy.index.set_consent',{
+    method:'POST',
+    headers:{'X-Frappe-CSRF-Token': (window.frappe && window.frappe.csrf_token) || '{{ frappe.session.get("csrf_token","") }}','Content-Type':'application/json'},
+    body:JSON.stringify({purpose:key, granted: el.checked?1:0})
+  }).then(r=>r.json()).then(d=>{
+    if(d.message && d.message.ok){ msg.className='msg ok'; msg.textContent='Preferenze aggiornate.'; }
+    else { msg.className='msg err'; msg.textContent='Errore nel salvataggio.'; el.checked=!el.checked; }
+  }).catch(()=>{msg.className='msg err';msg.textContent='Errore di rete.';el.checked=!el.checked;})
+  .finally(()=>{el.disabled=false; setTimeout(()=>{if(msg.className.indexOf('ok')>=0)msg.className='msg';},2500);});
 }
 </script>
 {% endblock %}

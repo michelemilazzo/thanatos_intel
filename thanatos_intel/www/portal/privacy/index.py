@@ -5,6 +5,15 @@ from frappe.utils import now_datetime
 
 no_cache = 1
 
+CONSENT_PURPOSES = [
+    {"key": "marketing", "label": "Comunicazioni marketing e newsletter",
+     "desc": "Offerte, novità e contenuti promozionali via email."},
+    {"key": "profiling", "label": "Profilazione per offerte personalizzate",
+     "desc": "Analisi delle tue preferenze per proporti servizi pertinenti."},
+    {"key": "partner_sharing", "label": "Condivisione con partner selezionati",
+     "desc": "Comunicazione dei dati a partner commerciali selezionati."},
+]
+
 
 def get_context(context):
     if frappe.session.user == "Guest":
@@ -16,9 +25,16 @@ def get_context(context):
     context.title = "Privacy & GDPR — Thanatos"
     context.client = cl
     context.deletion_pending = False
+    context.consent_purposes = CONSENT_PURPOSES
+    context.consents = {}
     if cl:
         context.deletion_pending = bool(
             frappe.db.get_value("Investigation Client", cl.name, "deletion_requested_at"))
+        for pp in CONSENT_PURPOSES:
+            rec = frappe.db.get_value(
+                "Consent Record", {"client": cl.name, "purpose": pp["key"]},
+                ["given_on", "withdrawn_on"], as_dict=True)
+            context.consents[pp["key"]] = bool(rec and rec.given_on and not rec.withdrawn_on)
     return context
 
 
@@ -123,3 +139,37 @@ def request_account_deletion():
     )
 
     return {"ok": True, "requested_at": str(now_datetime())}
+
+
+@frappe.whitelist(methods=["POST"])
+def set_consent(purpose, granted):
+    """Registra/revoca un consenso (GDPR Art. 7) tramite Consent Record."""
+    from thanatos_intel.workflow.api import _client_for_user
+    cl = _client_for_user(frappe.session.user)
+    if not cl:
+        frappe.throw(_("Profilo cliente non trovato."), frappe.PermissionError)
+    valid = {p["key"] for p in CONSENT_PURPOSES}
+    if purpose not in valid:
+        frappe.throw(_("Finalità non valida."))
+    granted = str(granted) in ("1", "true", "True", "on")
+
+    name = frappe.db.get_value("Consent Record", {"client": cl.name, "purpose": purpose}, "name")
+    if name:
+        doc = frappe.get_doc("Consent Record", name)
+    else:
+        doc = frappe.new_doc("Consent Record")
+        doc.client = cl.name
+        doc.purpose = purpose
+        doc.legal_basis = "Consenso"
+        doc.data_subject = cl.client_name or frappe.session.user
+        doc.email = frappe.session.user
+        doc.channel = "portale"
+    if granted:
+        doc.given_on = now_datetime()
+        doc.withdrawn_on = None
+    else:
+        doc.withdrawn_on = now_datetime()
+    doc.flags.ignore_permissions = True
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"ok": True, "purpose": purpose, "granted": granted}
