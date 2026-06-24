@@ -201,6 +201,21 @@
   border-radius:999px;font-size:9px;font-weight:700;min-width:16px;height:16px;
   display:none;align-items:center;justify-content:center;padding:0 3px;letter-spacing:0;}
 .px-bell-badge.show{display:inline-flex;}
+.px-drop{position:relative;display:inline-block;}
+.px-drop>.px-toggle{cursor:pointer;}
+.px-caret{font-size:8px;opacity:.7;margin-left:2px;}
+.px-drop-menu{position:absolute;top:100%;left:0;min-width:200px;background:#111729;border:1px solid #1F2742;border-radius:6px;padding:6px;display:none;flex-direction:column;box-shadow:0 10px 28px rgba(0,0,0,.5);z-index:60;}
+.px-drop:hover>.px-drop-menu{display:flex;}
+.px-drop-menu a{border-bottom:none!important;padding:9px 12px!important;border-radius:4px;}
+.px-drop-menu a:hover{background:#0A0E1A;}
+.px-acct{position:relative;}
+.px-acct>.px-acct-btn{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:#A4A9BC;border:1px solid #1F2742;border-radius:3px;padding:5px 9px;text-decoration:none;}
+.px-acct>.px-acct-btn:hover{border-color:#C8A96E;color:#C8A96E;}
+.px-acct-avatar{width:22px;height:22px;border-radius:50%;background:#C8A96E;color:#0A0E1A;display:inline-flex;align-items:center;justify-content:center;}
+.px-acct-menu{position:absolute;right:0;top:100%;min-width:200px;background:#111729;border:1px solid #1F2742;border-radius:6px;padding:6px;display:none;flex-direction:column;box-shadow:0 10px 28px rgba(0,0,0,.5);z-index:60;}
+.px-acct:hover>.px-acct-menu{display:flex;}
+.px-acct-menu a{border:none!important;border-radius:4px;padding:9px 12px!important;}
+.px-acct-menu a:hover{background:#0A0E1A;color:#C8A96E;}
 @media(max-width:900px){
   .px-brand span{display:none;}
   .px-links a{font-size:10px;padding:14px 8px;letter-spacing:1px;}
@@ -225,6 +240,9 @@
   .px-right{margin-left:0;padding:6px 0 10px;border-top:1px solid #1F2742;}
   .px-right a{padding:10px 8px;}
   .px-bell{align-self:flex-start;}
+  .px-drop,.px-acct{width:100%;}
+  .px-drop-menu,.px-acct-menu{position:static;display:flex;border:none;box-shadow:none;padding:0 0 0 14px;min-width:0;background:transparent;}
+  .px-acct>.px-acct-btn{width:100%;border:none;padding:12px 6px;}
 }
 </style>
 <style>
@@ -244,10 +262,21 @@
       <a href="/portal" class="{{ 'act' if active=='home' else '' }}">Dashboard</a>
       <a href="/portal#cases" class="{{ 'act' if active=='cases' else '' }}">I miei casi</a>
       {% if _is_client %}
-      <a href="/portal#docs" class="{{ 'act' if active=='docs' else '' }}">Documenti</a>
-      <a href="/portal/invoices" class="{{ 'act' if active=='billing' else '' }}">Fatture</a>
-      <a href="/servizi">Servizi</a>
-      <a href="/support" class="{{ 'act' if active=='support' else '' }}">Supporto</a>
+      <div class="px-drop">
+        <a href="/portal#docs" class="px-toggle {{ 'act' if active in ['docs','billing'] else '' }}">Pratica <span class="px-caret">&#9662;</span></a>
+        <div class="px-drop-menu">
+          <a href="/portal#docs">Documenti</a>
+          <a href="/portal/invoices">Fatture</a>
+        </div>
+      </div>
+      <div class="px-drop">
+        <a href="/servizi" class="px-toggle {{ 'act' if active in ['support','guide'] else '' }}">Servizi <span class="px-caret">&#9662;</span></a>
+        <div class="px-drop-menu">
+          <a href="/servizi">Servizi</a>
+          <a href="/support">Supporto</a>
+          <a href="/portal/guide">Guida</a>
+        </div>
+      </div>
       {% endif %}
       {% if _is_op %}
       <div class="sep"></div>
@@ -258,21 +287,25 @@
       <a href="/crm" class="{{ 'act' if active=='crm' else '' }}">CRM</a>
       <a href="/support" class="{{ 'act' if active=='support' else '' }}">Helpdesk</a>
       <a href="/app" class="{{ 'act' if active=='desk' else '' }}">Desk</a>
-      {% endif %}
-      <div class="sep"></div>
       <a href="/portal/guide" class="{{ 'act' if active=='guide' else '' }}">Guida</a>
+      {% endif %}
     </div>
     <div class="px-right">
       {% if _is_client %}
       <a href="/portal" class="px-bell" id="px-bell-link" title="Azioni in attesa">
-        🔔<span class="px-bell-badge" id="px-bell-badge"></span>
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="px-bell-badge" id="px-bell-badge"></span>
       </a>
       {% endif %}
-      <a href="/account" class="{{ 'act' if active=='account' else '' }}">Account</a>
-      <a href="/" target="_blank" rel="noopener" title="Apri il sito in una nuova finestra">Sito &#8599;</a>
-      <a href="/sicurezza" class="{{ 'act' if active=='security' else '' }}">Sicurezza</a>
-      <a href="https://webmail.thanatos.agency" target="_blank" rel="noopener">Webmail</a>
-      <a href="/logout" class="logout">Esci</a>
+      <div class="px-acct">
+        <a href="/account" class="px-acct-btn {{ 'act' if active=='account' else '' }}" title="Account"><span class="px-acct-avatar"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span><span class="px-caret">&#9662;</span></a>
+        <div class="px-acct-menu">
+          <a href="/account" class="{{ 'act' if active=='account' else '' }}">Account</a>
+          <a href="/sicurezza" class="{{ 'act' if active=='security' else '' }}">Sicurezza</a>
+          <a href="/" target="_blank" rel="noopener">Sito &#8599;</a>
+          <a href="https://webmail.thanatos.agency" target="_blank" rel="noopener">Webmail</a>
+          <a href="/logout" class="logout">Esci</a>
+        </div>
+      </div>
     </div>
   </div>
 </nav>
