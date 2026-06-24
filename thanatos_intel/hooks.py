@@ -183,7 +183,7 @@ doc_events={
  },
 }
 scheduler_events={
- 'cron':{},
+ 'cron':{'0 7 * * *':['thanatos_intel.news.ingestion.daily_publish']},
  'all':[],
  'hourly':['thanatos_intel.news.ingestion.hourly_ingest',
            'thanatos_intel.thanatos_core.currency.converter.fetch_rates',

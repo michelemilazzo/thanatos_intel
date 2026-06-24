@@ -296,3 +296,29 @@ def daily_case_digest():
 		generate_weekly_digest()
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "daily_case_digest")
+
+
+def daily_publish(hours: int = 26) -> int:
+	"""Pubblica gli articoli ingeriti di recente ancora in bozza (published=0).
+	Eseguito ogni giorno alle 07:00 (cron). published_at = data reale della fonte o adesso."""
+
+	from frappe.utils import now_datetime, add_to_date
+
+	cutoff = add_to_date(now_datetime(), hours=-abs(hours))
+	names = frappe.get_all(
+		"News Article",
+		filters={"published": 0, "creation": [">=", cutoff]},
+		pluck="name",
+	)
+	count = 0
+	for name in names:
+		ext = frappe.db.get_value("News Article", name, "external_published_at")
+		frappe.db.set_value(
+			"News Article", name,
+			{"published": 1, "published_at": ext or now_datetime()},
+			update_modified=False,
+		)
+		count += 1
+	frappe.db.commit()
+	frappe.logger().info(f"[news] daily_publish: pubblicati {count} articoli")
+	return count
