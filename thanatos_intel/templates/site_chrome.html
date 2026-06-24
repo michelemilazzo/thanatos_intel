@@ -102,17 +102,17 @@
     <div class="tx-links" id="txLinks">
       <a href="/" class="{% if active=='home' %}act{% endif %}">Home</a>
       <div class="tx-drop">
-        <a href="/soluzioni" class="tx-toggle {% if active in ['soluzioni','servizi'] %}act{% endif %}">Soluzioni <span class="tx-caret">&#9662;</span></a>
+        <a href="/soluzioni" class="tx-toggle {% if active in ['soluzioni','servizi','pricing'] %}act{% endif %}">Soluzioni <span class="tx-caret">&#9662;</span></a>
         <div class="tx-drop-menu">
           <a href="/soluzioni">Panoramica</a>
           <a href="/servizi">Servizi</a>
+          <a href="/piani">Piani &amp; prezzi</a>
           <a href="/soluzioni/antifrode">Antifrode</a>
           <a href="/soluzioni/cyber-intelligence">Cyber Intelligence</a>
           <a href="/soluzioni/corporate-intelligence">Corporate Due Diligence</a>
           <a href="/soluzioni/financial-intelligence">Financial Intelligence</a>
         </div>
       </div>
-      <a href="/piani" class="{% if active=='pricing' %}act{% endif %}">Piani</a>
       <a href="/notizie" class="{% if active=='news' %}act{% endif %}">Newsroom</a>
       <a href="/verifica-blacklist" class="{% if active=='blacklist' %}act{% endif %}">Blacklist</a>
       <div class="tx-drop">
