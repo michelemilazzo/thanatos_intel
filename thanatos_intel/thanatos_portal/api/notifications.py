@@ -24,7 +24,7 @@ def portal_action_count():
     awaiting = frappe.db.sql("""
         SELECT COUNT(DISTINCT ic.name)
         FROM `tabInvestigation Case` ic
-        JOIN `tabCase Step` cs ON cs.parent = ic.name
+        JOIN `tabCase Step Instance` cs ON cs.parent = ic.name
         WHERE ic.client = %s
           AND ic.status NOT IN ('Closed','Cancelled')
           AND cs.status = 'Awaiting Client'
