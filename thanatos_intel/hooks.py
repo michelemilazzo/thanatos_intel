@@ -92,7 +92,8 @@ fixtures=[
    'Quotation-custom_ron_ccy', 'Quotation-custom_net_total_ron',
    'Quotation-custom_grand_total_ron',
    'Quotation-investigation_case', 'Sales Invoice-investigation_case',
-   'HD Ticket-investigation_case']]]},
+   'HD Ticket-investigation_case',
+   'Diplomatic Proforma-client_company']]]},
 ]
 
 doc_events={
