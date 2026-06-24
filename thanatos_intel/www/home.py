@@ -1,9 +1,16 @@
 import frappe
+from thanatos_intel.utils.portal import DESK_ROLES, PORTAL_ROLES
 
 no_cache = 0
 
+# Destinazione di atterraggio per chi e' loggato (la home marketing
+# resta solo per i Guest). Staff -> desk; clienti portale -> /portal.
+STAFF_LANDING = "/app/thanatos-intel"
+
+
 
 def get_context(context):
+	_redirect_logged_in()
 	context.body_class = "thanatos-home"
 	context.no_cache = 0
 	context.featured = _safe_get_all(
@@ -40,6 +47,18 @@ def get_context(context):
 		limit=4,
 	)
 	return context
+
+
+def _redirect_logged_in():
+	"""Guest -> home marketing. Staff -> desk. Clienti portale -> /portal."""
+	user = getattr(frappe.session, "user", None)
+	if not user or user == "Guest":
+		return
+	roles = set(frappe.get_roles(user))
+	dest = STAFF_LANDING if (roles & DESK_ROLES) else ("/portal" if (roles & PORTAL_ROLES) else None)
+	if dest:
+		frappe.local.flags.redirect_location = dest
+		raise frappe.Redirect
 
 
 def _safe_get_all(doctype, **kwargs):
