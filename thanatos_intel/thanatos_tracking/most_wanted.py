@@ -1,12 +1,10 @@
-"""Import liste pubbliche di latitanti come Tracking Target (classification=Public Wanted).
+"""Import liste pubbliche di latitanti/ricercati come Tracking Target (Public Wanted).
 
-Fonti:
-- Interpol Red Notices — via dataset bulk OpenSanctions (interpol_red_notices,
-  FollowTheMoney NDJSON, aggiornato giornalmente, no chiave). L'API diretta
-  ws-public.interpol.int e' bloccata dal WAF sugli IP datacenter (403).
-- Europol EU Most Wanted — best-effort sul sito pubblico (degrada a stub se cambia).
+Fonte: dataset bulk **OpenSanctions** (FollowTheMoney NDJSON, aggiornati ogni
+giorno, senza chiave). L'API diretta Interpol (ws-public.interpol.int) e' bloccata
+dal WAF sugli IP datacenter (403), quindi NON si usa.
 
-Idempotente: dedup per (source, source_ref). Re-import aggiorna i campi.
+Catalogo fonti in DATASETS. Idempotente: dedup per (source, source_ref=id OpenSanctions).
 """
 import json
 
@@ -15,11 +13,33 @@ import requests
 
 from thanatos_intel.osint.engine import UA
 
-INTERPOL_OS_DATASET = (
-    "https://data.opensanctions.org/datasets/latest/"
-    "interpol_red_notices/entities.ftm.json"
-)
+DATASET_URL = "https://data.opensanctions.org/datasets/latest/{key}/entities.ftm.json"
 OS_ENTITY_URL = "https://www.opensanctions.org/entities/{id}/"
+
+# key OpenSanctions -> (label sorgente, priorita')
+DATASETS = {
+    "interpol_red_notices": ("Interpol Red Notice", "High"),
+    "eu_europol_wanted": ("Europol EU Most Wanted", "High"),
+    "us_fbi_most_wanted": ("FBI Most Wanted", "High"),
+    "gb_nca_most_wanted": ("UK NCA Most Wanted", "High"),
+    "de_bka_wanted": ("Germany BKA Wanted", "High"),
+    "es_cnp_wanted": ("Spain Police Most Wanted", "High"),
+    "nl_most_wanted": ("Netherlands Most Wanted", "High"),
+    "us_dea_fugitives": ("US DEA Fugitives", "High"),
+    "us_ice_wanted": ("US ICE Most Wanted", "High"),
+    "us_secret_service": ("US Secret Service Most Wanted", "High"),
+    "za_wanted": ("South Africa Wanted", "Medium"),
+}
+# alias service-secret key reale
+_KEY_FIX = {"us_secret_service": "us_ss_wanted"}
+
+
+def _first(p, *keys):
+    for k in keys:
+        v = p.get(k)
+        if v:
+            return v[0]
+    return None
 
 
 def _upsert(source, ref, fields):
@@ -31,7 +51,7 @@ def _upsert(source, ref, fields):
         doc.update(fields)
         doc.flags.skip_enrich = True
         doc.save(ignore_permissions=True)
-        return ("updated", doc.name)
+        return "updated"
     doc = frappe.new_doc("Tracking Target")
     doc.update(fields)
     doc.classification = "Public Wanted"
@@ -39,27 +59,26 @@ def _upsert(source, ref, fields):
     doc.source_ref = ref
     doc.flags.skip_enrich = True
     doc.insert(ignore_permissions=True)
-    return ("created", doc.name)
+    return "created"
 
 
 @frappe.whitelist()
-def import_interpol(limit: int = 500):
-    """Importa Red Notices Interpol dal dataset bulk OpenSanctions (FTM NDJSON).
-
-    `limit` = max target da importare (0 = tutti, ~6400). Idempotente.
-    """
+def import_dataset(key: str, limit: int = 0):
+    """Importa un dataset wanted OpenSanctions. limit=0 -> tutti."""
+    if key not in DATASETS:
+        frappe.throw(f"Dataset non supportato: {key}")
     limit = int(limit)
+    label, prio = DATASETS[key]
+    url = DATASET_URL.format(key=_KEY_FIX.get(key, key))
     created = updated = seen = 0
-    headers = {"user-agent": UA, "accept": "application/json"}
     try:
-        r = requests.get(INTERPOL_OS_DATASET, headers=headers, stream=True, timeout=60)
+        r = requests.get(url, headers={"user-agent": UA}, stream=True, timeout=90)
         if r.status_code != 200:
-            return {"source": "Interpol Red Notice", "error": True,
-                    "http": r.status_code, "created": 0, "updated": 0}
+            return {"source": label, "error": True, "http": r.status_code,
+                    "created": 0, "updated": 0}
     except Exception:
-        frappe.log_error(frappe.get_traceback(), "interpol import")
-        return {"source": "Interpol Red Notice", "error": True,
-                "created": 0, "updated": 0}
+        frappe.log_error(frappe.get_traceback(), f"wanted import {key}")
+        return {"source": label, "error": True, "created": 0, "updated": 0}
 
     for raw in r.iter_lines():
         if not raw:
@@ -74,79 +93,65 @@ def import_interpol(limit: int = 500):
         if not ref:
             continue
         p = e.get("properties", {})
-        name = (p.get("name") or [None])[0] or " ".join(
-            filter(None, [(p.get("firstName") or [""])[0], (p.get("lastName") or [""])[0]])
-        )
+        name = _first(p, "name") or " ".join(filter(None, [
+            _first(p, "firstName") or "", _first(p, "lastName") or ""]))
         if not name:
             continue
         fields = {
             "target_name": name.title(),
             "target_type": "Person",
             "nationality": ", ".join(c.upper() for c in (p.get("nationality") or [])),
-            "date_of_birth": _parse_dob((p.get("birthDate") or [None])[0]),
-            "last_known_location": ", ".join(p.get("birthPlace") or [])[:140] or None,
-            "wanted_for": ", ".join(p.get("topics") or []),
-            "source_url": OS_ENTITY_URL.format(id=ref),
-            "priority": "High",
+            "date_of_birth": _parse_dob(_first(p, "birthDate")),
+            "last_known_location": (", ".join(p.get("birthPlace") or []) or None),
+            "aliases": "\n".join(p.get("alias") or []) or None,
+            "wanted_for": (_first(p, "notes") or ", ".join(p.get("topics") or [])),
+            "source_url": _first(p, "sourceUrl") or OS_ENTITY_URL.format(id=ref),
+            "priority": prio,
         }
-        action, _ = _upsert("Interpol Red Notice", ref, fields)
-        created += action == "created"
-        updated += action == "updated"
+        if fields["last_known_location"]:
+            fields["last_known_location"] = fields["last_known_location"][:140]
+        res = _upsert(label, ref, fields)
+        created += res == "created"
+        updated += res == "updated"
         seen += 1
         if seen % 200 == 0:
             frappe.db.commit()
         if limit and seen >= limit:
             break
     frappe.db.commit()
-    return {"source": "Interpol Red Notice", "created": created,
-            "updated": updated, "imported": seen}
+    return {"source": label, "created": created, "updated": updated, "imported": seen}
 
 
 @frappe.whitelist()
-def import_europol():
-    """Best-effort import Europol EU Most Wanted (eumostwanted.eu).
+def import_interpol(limit: int = 0):
+    return import_dataset("interpol_red_notices", limit)
 
-    Il sito non espone un'API stabile: tentiamo il feed pubblico e degradiamo a
-    stub senza errori se la struttura cambia.
-    """
-    created = updated = 0
-    headers = {"user-agent": UA}
-    try:
-        r = requests.get("https://eumostwanted.eu/api/fugitives", headers=headers, timeout=20)
-        if r.status_code != 200:
-            return {"source": "Europol EU Most Wanted", "stub": True,
-                    "note": "feed non disponibile (import manuale)"}
-        data = r.json()
-    except Exception:
-        return {"source": "Europol EU Most Wanted", "stub": True,
-                "note": "feed non disponibile (import manuale)"}
 
-    items = data if isinstance(data, list) else data.get("data", [])
-    for it in items:
-        ref = str(it.get("id") or it.get("slug") or "")
-        if not ref:
-            continue
-        fields = {
-            "target_name": it.get("name") or it.get("title") or ref,
-            "target_type": "Person",
-            "nationality": it.get("nationality") or "",
-            "wanted_for": it.get("crime") or it.get("offence") or "",
-            "source_url": it.get("url") or "",
-            "priority": "High",
-        }
-        action, _ = _upsert("Europol EU Most Wanted", ref, fields)
-        created += action == "created"
-        updated += action == "updated"
-    frappe.db.commit()
-    return {"source": "Europol EU Most Wanted", "created": created, "updated": updated}
+@frappe.whitelist()
+def import_europol(limit: int = 0):
+    return import_dataset("eu_europol_wanted", limit)
+
+
+@frappe.whitelist()
+def list_sources():
+    """Fonti disponibili per il selettore desk."""
+    return [{"key": k, "label": v[0]} for k, v in DATASETS.items()]
+
+
+@frappe.whitelist()
+def import_all(limit_per: int = 0):
+    """Importa tutte le fonti del catalogo. Ritorna il riepilogo per fonte."""
+    out = []
+    for key in DATASETS:
+        out.append(import_dataset(key, int(limit_per)))
+    total = sum(r.get("imported", 0) for r in out)
+    return {"results": out, "total_imported": total}
 
 
 def _parse_dob(s):
     if not s:
         return None
-    s = str(s).strip()
-    # Interpol usa spesso YYYY/MM/DD
-    s = s.replace("/", "-")
+    s = str(s).strip().replace("/", "-")
     parts = s.split("-")
     if len(parts) == 3 and len(parts[0]) == 4:
         try:
