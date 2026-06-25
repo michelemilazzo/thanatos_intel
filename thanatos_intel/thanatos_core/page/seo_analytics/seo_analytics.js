@@ -69,10 +69,10 @@ frappe.pages['seo-analytics'].on_page_load = function(wrapper){
       <div class="sa-kpi"><div class="v">${gs.queries?gs.avg_position:'—'}</div><div class="l">Pos. media Google</div></div>
     </div>
 
-    <div class="sa-box"><h3>Traffico sito <span class="sa-muted">— Cloudflare Web Analytics</span></h3>
-      ${!tr.configured?'<div class="sa-empty">Web Analytics non configurato.</div>':tr.error?'<div class="sa-empty">Dati non disponibili al momento.</div>':`
+    <div class="sa-box"><h3>Traffico sito <span class="sa-muted">— ${tr.source==='cloudflare'?'Cloudflare Web Analytics':'traffico reale (server-side)'}</span></h3>
+      ${!tr.configured?'<div class="sa-empty">Nessun dato di traffico.</div>':tr.error?'<div class="sa-empty">Dati non disponibili al momento.</div>':`
       <div class="sa-bars">${bars}</div>
-      <div class="sa-muted">Totale ${tr.total||0} visite negli ultimi ${d.days||days} giorni.</div>
+      <div class="sa-muted">Totale ${tr.total||0} page view${tr.visitors!=null?` · ${tr.visitors} visitatori`:''} negli ultimi ${d.days||days} giorni.${tr.cf_total!=null?` <span class="sa-badge">Cloudflare (campionato): ~${tr.cf_total}</span>`:''}</div>
       <div class="sa-cols" style="margin-top:18px">
         <div><div class="sa-rl hd" style="padding-bottom:6px">Pagine più viste</div><ul class="sa-rl">${rows(tr.top_pages,true)}</ul></div>
         <div>
@@ -90,9 +90,9 @@ frappe.pages['seo-analytics'].on_page_load = function(wrapper){
         <div class="sa-kpi"><div class="v">${gs.clicks}</div><div class="l">Clic</div></div>
         <div class="sa-kpi"><div class="v">${gs.impressions}</div><div class="l">Impression</div></div>
       </div>
-      <div class="sa-muted" style="margin:2px 0 12px">Parole chiave trovate su Google al ${gs.date} (posizione = ranking medio, più basso è meglio).</div>
-      <ul class="sa-rl"><li class="hd"><span class="lab">Query</span><span class="n">Pos</span><span class="n">Imp</span><span class="n">Clic</span></li>
-        ${(gsc.queries||[]).map(r=>`<li><span class="lab" title="${frappe.utils.escape_html(r.query||'')}">${frappe.utils.escape_html(r.query||'')}</span><span class="n">${r.position}</span><span class="n">${r.impressions}</span><span class="n">${r.clicks}</span></li>`).join('')}
+      <div class="sa-muted" style="margin:2px 0 12px">Parole chiave trovate su Google al ${gs.date} — Pos = ranking medio (più basso è meglio), Pag. = pagina dei risultati Google (1 = prime 10 posizioni), Pagina sito = url tuo che compare.</div>
+      <ul class="sa-rl"><li class="hd"><span class="lab">Query</span><span class="n">Pos</span><span class="n">Pag.</span><span class="n">Imp</span><span class="n">Clic</span><span class="lab" style="flex:0 0 26%">Pagina sito</span></li>
+        ${(gsc.queries||[]).map(r=>{const pos=r.position||0; const pag=pos?Math.ceil(pos/10):'—'; let pg=r.landing_page||''; try{pg=pg?new URL(pg).pathname:''}catch(e){} return `<li><span class="lab" title="${frappe.utils.escape_html(r.query||'')}">${frappe.utils.escape_html(r.query||'')}</span><span class="n">${r.position}</span><span class="n">${pag}</span><span class="n">${r.impressions}</span><span class="n">${r.clicks}</span><span class="lab" style="flex:0 0 26%" title="${frappe.utils.escape_html(r.landing_page||'')}">${frappe.utils.escape_html(pg||'—')}</span></li>`;}).join('')}
       </ul>
       <div class="sa-muted" style="margin-top:8px">Proprietà: <code>${gsc.property||''}</code></div>`
       :`<div class="sa-muted">Qui appaiono le parole chiave per cui il sito viene trovato su Google, con posizione media, impression e click.<br>
