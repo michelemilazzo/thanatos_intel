@@ -98,6 +98,21 @@ def fetch_rankings(days=28, row_limit=250):
         frappe.log_error(r.text[:800], "gsc fetch")
         return {"ok": False, "reason": "API %s: %s" % (r.status_code, r.text[:160])}
     rows = r.json().get("rows", [])
+    # mappa query -> landing page del sito (dimensione page), tiene la pagina con piu' impression
+    page_map = {}
+    try:
+        body2 = {"startDate": str(start), "endDate": str(end), "dimensions": ["query", "page"],
+                 "rowLimit": int(row_limit) * 2,
+                 "orderBy": [{"fieldName": "impressions", "sortOrder": "DESCENDING"}]}
+        r2 = requests.post(url, headers={"Authorization": "Bearer " + token}, json=body2, timeout=40)
+        if r2.status_code < 400:
+            for row2 in r2.json().get("rows", []):
+                keys = row2.get("keys") or ["", ""]
+                qk, pg = (keys[0] or ""), (keys[1] if len(keys) > 1 else "")
+                if qk and pg and qk not in page_map:
+                    page_map[qk] = pg
+    except Exception:
+        pass
     today = str(end)
     n = 0
     existing_kw = set(k.lower() for k in frappe.get_all("SEO Keyword", pluck="keyword"))
@@ -111,6 +126,7 @@ def fetch_rankings(days=28, row_limit=250):
             "impressions": int(row.get("impressions") or 0),
             "clicks": int(row.get("clicks") or 0),
             "ctr": round(float(row.get("ctr") or 0) * 100, 2),
+            "landing_page": (page_map.get((row.get("keys") or [""])[0]) or "")[:500],
         }
         try:
             name = frappe.db.get_value("Keyword Ranking", {"query": q, "capture_date": today}, "name")
@@ -142,7 +158,7 @@ def latest_rankings(limit=25):
     if not last:
         return []
     return frappe.get_all("Keyword Ranking", filters={"capture_date": last},
-                          fields=["query", "position", "impressions", "clicks", "ctr"],
+                          fields=["query", "position", "impressions", "clicks", "ctr", "landing_page"],
                           order_by="impressions desc", limit=int(limit))
 
 

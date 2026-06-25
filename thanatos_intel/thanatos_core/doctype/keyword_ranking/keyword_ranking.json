@@ -4,16 +4,72 @@
  "creation": "2026-06-21 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": ["query", "capture_date", "position", "cb", "impressions", "clicks", "ctr", "property"],
+ "field_order": [
+  "query",
+  "capture_date",
+  "position",
+  "cb",
+  "impressions",
+  "clicks",
+  "ctr",
+  "property",
+  "landing_page"
+ ],
  "fields": [
-  {"fieldname": "query", "fieldtype": "Data", "label": "Query", "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "capture_date", "fieldtype": "Date", "label": "Date", "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "position", "fieldtype": "Float", "label": "Position", "precision": "1", "in_list_view": 1},
-  {"fieldname": "cb", "fieldtype": "Column Break"},
-  {"fieldname": "impressions", "fieldtype": "Int", "label": "Impressions", "in_list_view": 1},
-  {"fieldname": "clicks", "fieldtype": "Int", "label": "Clicks", "in_list_view": 1},
-  {"fieldname": "ctr", "fieldtype": "Float", "label": "CTR %", "precision": "2"},
-  {"fieldname": "property", "fieldtype": "Data", "label": "Property"}
+  {
+   "fieldname": "query",
+   "fieldtype": "Data",
+   "label": "Query",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "capture_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "position",
+   "fieldtype": "Float",
+   "label": "Position",
+   "precision": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "impressions",
+   "fieldtype": "Int",
+   "label": "Impressions",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "clicks",
+   "fieldtype": "Int",
+   "label": "Clicks",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ctr",
+   "fieldtype": "Float",
+   "label": "CTR %",
+   "precision": "2"
+  },
+  {
+   "fieldname": "property",
+   "fieldtype": "Data",
+   "label": "Property"
+  },
+  {
+   "fieldname": "landing_page",
+   "fieldtype": "Small Text",
+   "label": "Landing Page",
+   "read_only": 1
+  }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
@@ -22,8 +78,23 @@
  "name": "Keyword Ranking",
  "owner": "Administrator",
  "permissions": [
-  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
-  {"read": 1, "report": 1, "role": "Investigation Manager"}
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Investigation Manager"
+  }
  ],
  "sort_field": "capture_date",
  "sort_order": "DESC",
