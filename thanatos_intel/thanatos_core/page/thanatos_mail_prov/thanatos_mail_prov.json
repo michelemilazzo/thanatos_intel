@@ -1,0 +1,7 @@
+{
+ "content": null, "creation": "2026-06-25 00:00:00", "doctype": "Page",
+ "icon": "mail", "idx": 0, "modified": "2026-06-25 00:00:00", "modified_by": "Administrator",
+ "module": "Thanatos Core", "name": "thanatos-mail-prov", "owner": "Administrator",
+ "page_name": "thanatos-mail-prov", "roles": [{"role": "System Manager"}],
+ "standard": "Yes", "system_page": 0, "title": "📬 Provisioning Webmail"
+}
