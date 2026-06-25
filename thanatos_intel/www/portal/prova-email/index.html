@@ -1,0 +1,104 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import portal_nav, thanatos_footer %}
+{% block title %}{{ title }}{% endblock %}
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2742;--ok:#6aa66a;}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:720px;margin:0 auto;padding:36px 24px 70px}
+h1{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#fff;margin:0 0 4px}
+.sub{color:var(--grey);font-size:13px;margin:0 0 24px;line-height:1.6}
+.box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:18px}
+label{display:block;font-size:12px;color:var(--grey);text-transform:uppercase;letter-spacing:.5px;margin:0 0 7px}
+select,textarea,input[type=file]{width:100%;background:#0A0E1A;border:1px solid var(--border);border-radius:6px;color:#E8E9F0;font-size:14px;padding:11px 13px}
+select:focus,textarea:focus{outline:none;border-color:var(--gold)}
+textarea{min-height:80px;resize:vertical;font-family:inherit}
+.drop{border:2px dashed var(--border);border-radius:8px;padding:26px;text-align:center;color:var(--grey);cursor:pointer;font-size:13px}
+.drop.over{border-color:var(--gold);background:rgba(200,169,110,.06)}
+.btn{background:var(--gold);color:#0A0E1A;border:none;border-radius:6px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;padding:12px 20px;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.howto{font-size:12px;color:var(--grey);line-height:1.7;background:#0A0E1A;border:1px solid var(--border);border-radius:6px;padding:14px}
+.howto b{color:#E8E9F0}
+.msg{font-size:13px;margin-top:12px;min-height:16px}.msg.ok{color:var(--ok)}.msg.err{color:#d05a5a}
+.flist{margin:10px 0 0;font-size:12px;color:var(--grey)}
+.res{margin-top:14px;font-size:13px}
+.res .it{padding:8px 0;border-bottom:1px solid var(--border)}
+.res .it b{color:#fff}
+.field{margin-bottom:16px}
+</style>
+{% endblock %}
+{% block content %}
+{{ portal_nav('prova-email') }}
+<div class="shell">
+  <h1>Invia un'email come prova</h1>
+  <p class="sub">Porta in Thanatos Intel le email che hai ricevuto (Gmail, Outlook, ecc.) come <b>prova certa</b>: vengono archiviate sulla tua pratica con mittente, data, testo e allegati originali integri (impronta SHA-256 + catena di custodia).</p>
+
+  <div class="box">
+    <div class="field">
+      <label>Pratica</label>
+      <select id="case">
+        {% for c in cases %}<option value="{{ c.name }}" {{ 'selected' if preselect==c.name else '' }}>{{ c.case_number or c.name }} — {{ c.case_title or '' }}</option>{% endfor %}
+      </select>
+      {% if not cases %}<div class="sub" style="margin-top:8px">Nessuna pratica disponibile.</div>{% endif %}
+    </div>
+    <div class="field">
+      <label>File email (.eml / .msg)</label>
+      <div class="drop" id="drop">Trascina qui i file <b>.eml</b> oppure clicca per selezionarli<input type="file" id="file" accept=".eml,.msg" multiple style="display:none"></div>
+      <div class="flist" id="flist"></div>
+    </div>
+    <div class="field">
+      <label>Nota (opzionale)</label>
+      <textarea id="note" placeholder="Es. email ricevuta il giorno della minaccia…"></textarea>
+    </div>
+    <button class="btn" id="send" {{ 'disabled' if not cases else '' }}>Invia come prova</button>
+    <div class="msg" id="msg"></div>
+    <div class="res" id="res"></div>
+  </div>
+
+  <div class="box">
+    <label>Come esporto un'email come file .eml</label>
+    <div class="howto">
+      <b>Gmail (da computer):</b> apri l'email → menù ⋮ in alto a destra → <b>Scarica messaggio</b> (ottieni un file <b>.eml</b>).<br>
+      <b>Outlook / Windows Mail:</b> apri l'email → <b>File → Salva con nome</b> → tipo <b>.eml</b>, oppure trascina l'email sul desktop.<br>
+      <b>Apple Mail:</b> seleziona l'email → <b>Archivio → Salva come…</b> → formato <b>Raw / .eml</b>.<br>
+      Poi carica qui il file: manteniamo intatti mittente, data e allegati come prova.
+    </div>
+  </div>
+</div>
+{{ thanatos_footer() }}
+<script>
+(function(){
+  var CSRF = (window.frappe && window.frappe.csrf_token) || '{{ csrf_token }}';
+  var drop=document.getElementById('drop'), input=document.getElementById('file'),
+      flist=document.getElementById('flist'), msg=document.getElementById('msg'),
+      res=document.getElementById('res'), send=document.getElementById('send');
+  var picked=[];
+  function show(){ flist.innerHTML = picked.length ? ('Selezionati: '+picked.map(function(f){return f.name}).join(', ')) : ''; }
+  drop.addEventListener('click',function(){input.click()});
+  input.addEventListener('change',function(){ picked=Array.prototype.slice.call(input.files); show(); });
+  ['dragover','dragenter'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.add('over')})});
+  ['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('over')})});
+  drop.addEventListener('drop',function(ev){ picked=Array.prototype.slice.call(ev.dataTransfer.files); show(); });
+  function ok(t){msg.className='msg ok';msg.textContent=t}
+  function err(t){msg.className='msg err';msg.textContent=t}
+  send.addEventListener('click',function(){
+    var c=document.getElementById('case').value;
+    if(!c){err('Seleziona una pratica.');return;}
+    if(!picked.length){err('Seleziona almeno un file .eml.');return;}
+    var fd=new FormData(); fd.append('case',c); fd.append('note',document.getElementById('note').value||'');
+    picked.forEach(function(f){fd.append('files',f)});
+    send.disabled=true; ok('Caricamento in corso…'); res.innerHTML='';
+    fetch('/api/method/thanatos_intel.api.evidence_mail.submit_email_evidence',{
+      method:'POST',headers:{'X-Frappe-CSRF-Token':CSRF},body:fd,credentials:'same-origin'})
+      .then(function(r){return r.json()}).then(function(j){
+        send.disabled=false;
+        var m=(j&&j.message)||{};
+        if(m.count){ ok(m.count+' email archiviate come prova.');
+          res.innerHTML=(m.imported||[]).map(function(i){return '<div class="it"><b>'+(i.subject||'')+'</b><br>da '+(i.from||'')+(i.attachments&&i.attachments.length?(' · '+i.attachments.length+' allegati'):'')+'</div>'}).join('');
+          picked=[];input.value='';show();
+        } else { err('Nessuna email importata. '+((m.errors&&m.errors[0]&&m.errors[0].error)||'')); }
+      }).catch(function(){ send.disabled=false; err('Errore di rete.'); });
+  });
+})();
+</script>
+{% endblock %}
