@@ -46,6 +46,24 @@ frappe.listview_settings["Tracking Target"] = {
 			run("thanatos_intel.thanatos_tracking.most_wanted.import_europol", { limit: 0 }, "Europol"),
 			__("Most Wanted"));
 
+		listview.page.add_inner_button(__("Fetch Photos (missing)"), () => {
+			frappe.prompt(
+				[{ fieldname: "limit", label: __("Max"), fieldtype: "Int", default: 100 }],
+				(v) => {
+					frappe.dom.freeze(__("Fetching photos..."));
+					frappe.call({
+						method: "thanatos_intel.thanatos_tracking.most_wanted.fetch_photos_bulk",
+						args: { limit: v.limit || 100 },
+					}).then((r) => {
+						frappe.dom.unfreeze();
+						const m = r.message || {};
+						frappe.show_alert({ message: __("Photos: {0} ok, {1} failed", [m.ok, m.failed]),
+							indicator: "blue" });
+						listview.refresh();
+					}).catch(() => frappe.dom.unfreeze());
+				}, __("Fetch Missing Photos"), __("Fetch"));
+		}, __("Most Wanted"));
+
 		listview.page.add_inner_button(__("Import ALL sources"), () => {
 			frappe.confirm(__("Import all configured wanted lists? This may create thousands of records."),
 				() => run("thanatos_intel.thanatos_tracking.most_wanted.import_all", { limit_per: 0 }, "all sources"));

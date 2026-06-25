@@ -148,8 +148,9 @@ def import_europol(limit: int = 0):
 import re
 
 _IMG_PATTERNS = [
-    r'<meta[^>]+(?:property|name)=["\'](?:og:image|twitter:image)["\'][^>]+content=["\']([^"\']+)["\']',
-    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\'](?:og:image|twitter:image)["\']',
+    r'<meta[^>]+(?:property|name)=["\'](?:og:image|twitter:image|twitter:image:src)["\'][^>]+content=["\']([^"\']+)["\']',
+    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\'](?:og:image|twitter:image|twitter:image:src)["\']',
+    r'<link[^>]+rel=["\']image_src["\'][^>]+href=["\']([^"\']+)["\']',
 ]
 
 
@@ -197,10 +198,27 @@ def fetch_photo(target: str):
         f = save_file(f"{doc.name}.{ext}", ir.content, doc.doctype, doc.name,
                       is_private=0)
         doc.db_set("photo", f.file_url)
+        frappe.db.commit()
         return {"ok": True, "photo": f.file_url}
     except Exception:
         frappe.log_error(frappe.get_traceback(), "fetch_photo")
         return {"ok": False, "reason": "errore salvataggio"}
+
+
+@frappe.whitelist()
+def fetch_photos_bulk(source: str = None, limit: int = 100):
+    """Recupera le foto mancanti (best-effort) per i target con pagina sorgente."""
+    limit = int(limit)
+    filters = {"classification": "Public Wanted", "photo": ["is", "not set"],
+               "source_url": ["is", "set"]}
+    if source:
+        filters["source"] = source
+    ok = fail = 0
+    for n in frappe.get_all("Tracking Target", filters, pluck="name")[:limit]:
+        r = fetch_photo(n)
+        ok += 1 if r.get("ok") else 0
+        fail += 0 if r.get("ok") else 1
+    return {"ok": ok, "failed": fail}
 
 
 @frappe.whitelist()
