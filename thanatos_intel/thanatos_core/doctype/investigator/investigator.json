@@ -19,6 +19,15 @@
    "in_list_view": 1
   },
   {
+   "fieldname": "codename",
+   "fieldtype": "Data",
+   "label": "Codename (esterno)",
+   "unique": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Sigla mostrata a clienti/esterni. Il nome reale resta interno. Se vuoto, generato automaticamente (INV-NN)."
+  },
+  {
    "fieldname": "investigator_type",
    "fieldtype": "Select",
    "label": "Type",

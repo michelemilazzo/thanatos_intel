@@ -198,15 +198,28 @@ def webhook():
         )
         created.append(name)
 
-        # Auto-reply se non ci sono outbound recenti (4h) — evita spam ma re-engage dopo silenzio
+        # Risposta automatica: bot AI se abilitato sul numero, altrimenti messaggio fisso
         try:
             from frappe.utils import add_to_date, now_datetime
-            cutoff = add_to_date(now_datetime(), hours=-4)
-            recent_outbound = frappe.db.count('Intel Lead Message', {
-                'parent': name, 'direction': 'Outbound', 'sent_at': ['>=', cutoff]
-            })
-            if not recent_outbound:
-                _send_auto_reply(wa_number, m['source_id'], name, is_new=True)
+            bot_on = bool(
+                wa_number and frappe.db.get_value(
+                    'WhatsApp Number', wa_number.get('phone_number'), 'ai_bot_enabled')
+            )
+            txt = (m.get('content') or '').strip()
+            if bot_on and txt and not txt.startswith('['):
+                frappe.enqueue(
+                    'thanatos_intel.ingest.wa_bot.generate_reply',
+                    queue='short', timeout=200,
+                    lead_name=name, wa_number=wa_number.get('phone_number'),
+                    to_number=m['source_id'],
+                )
+            else:
+                cutoff = add_to_date(now_datetime(), hours=-4)
+                recent_outbound = frappe.db.count('Intel Lead Message', {
+                    'parent': name, 'direction': 'Outbound', 'sent_at': ['>=', cutoff]
+                })
+                if not recent_outbound:
+                    _send_auto_reply(wa_number, m['source_id'], name, is_new=True)
         except Exception:
             frappe.log_error(frappe.get_traceback(), 'WA auto-reply dispatch')
 

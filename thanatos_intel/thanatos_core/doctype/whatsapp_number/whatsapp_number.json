@@ -128,6 +128,25 @@
    "default": "0"
   },
   {
+   "fieldname": "sb_aibot",
+   "fieldtype": "Section Break",
+   "label": "Bot AI"
+  },
+  {
+   "fieldname": "ai_bot_enabled",
+   "fieldtype": "Check",
+   "default": "0",
+   "label": "Bot AI su WhatsApp",
+   "description": "Se attivo, le risposte automatiche sono generate dal bot AI (triage + handoff all'operatore) invece del messaggio fisso."
+  },
+  {
+   "fieldname": "ai_bot_system_prompt",
+   "fieldtype": "Small Text",
+   "label": "Istruzioni bot (opzionale)",
+   "depends_on": "ai_bot_enabled",
+   "description": "Sovrascrive la persona/istruzioni di default del bot. Lascia vuoto per usare quelle standard di Thanatos."
+  },
+  {
    "fieldname": "call_forward_number",
    "fieldtype": "Data",
    "label": "Numero telefono operatore (per redirect chiamate WA)",
