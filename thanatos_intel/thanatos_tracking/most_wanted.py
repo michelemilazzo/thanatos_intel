@@ -191,7 +191,9 @@ def fetch_photo(target: str):
         if ir.status_code != 200 or not ir.content:
             return {"ok": False, "reason": "download immagine fallito"}
         from frappe.utils.file_manager import save_file
-        ext = (img_url.rsplit(".", 1)[-1].split("?")[0] or "jpg")[:4]
+        ct = (ir.headers.get("content-type") or "").lower()
+        ext = {"image/png": "png", "image/jpeg": "jpg", "image/jpg": "jpg",
+               "image/webp": "webp", "image/gif": "gif"}.get(ct.split(";")[0], "jpg")
         f = save_file(f"{doc.name}.{ext}", ir.content, doc.doctype, doc.name,
                       is_private=0)
         doc.db_set("photo", f.file_url)
