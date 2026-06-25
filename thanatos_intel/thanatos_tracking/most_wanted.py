@@ -1,17 +1,25 @@
 """Import liste pubbliche di latitanti come Tracking Target (classification=Public Wanted).
 
 Fonti:
-- Interpol Red Notices — API pubblica JSON (ws-public.interpol.int), nessuna chiave.
+- Interpol Red Notices — via dataset bulk OpenSanctions (interpol_red_notices,
+  FollowTheMoney NDJSON, aggiornato giornalmente, no chiave). L'API diretta
+  ws-public.interpol.int e' bloccata dal WAF sugli IP datacenter (403).
 - Europol EU Most Wanted — best-effort sul sito pubblico (degrada a stub se cambia).
 
 Idempotente: dedup per (source, source_ref). Re-import aggiorna i campi.
 """
+import json
+
 import frappe
 import requests
 
 from thanatos_intel.osint.engine import UA
 
-INTERPOL_RED_URL = "https://ws-public.interpol.int/notices/v1/red"
+INTERPOL_OS_DATASET = (
+    "https://data.opensanctions.org/datasets/latest/"
+    "interpol_red_notices/entities.ftm.json"
+)
+OS_ENTITY_URL = "https://www.opensanctions.org/entities/{id}/"
 
 
 def _upsert(source, ref, fields):
@@ -35,48 +43,63 @@ def _upsert(source, ref, fields):
 
 
 @frappe.whitelist()
-def import_interpol(pages: int = 1, per_page: int = 50):
-    """Importa Red Notices Interpol. Ritorna conteggio created/updated."""
-    pages = int(pages)
-    per_page = int(per_page)
-    created = updated = 0
+def import_interpol(limit: int = 500):
+    """Importa Red Notices Interpol dal dataset bulk OpenSanctions (FTM NDJSON).
+
+    `limit` = max target da importare (0 = tutti, ~6400). Idempotente.
+    """
+    limit = int(limit)
+    created = updated = seen = 0
     headers = {"user-agent": UA, "accept": "application/json"}
-    for page in range(1, pages + 1):
+    try:
+        r = requests.get(INTERPOL_OS_DATASET, headers=headers, stream=True, timeout=60)
+        if r.status_code != 200:
+            return {"source": "Interpol Red Notice", "error": True,
+                    "http": r.status_code, "created": 0, "updated": 0}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "interpol import")
+        return {"source": "Interpol Red Notice", "error": True,
+                "created": 0, "updated": 0}
+
+    for raw in r.iter_lines():
+        if not raw:
+            continue
         try:
-            r = requests.get(
-                INTERPOL_RED_URL,
-                params={"resultPerPage": per_page, "page": page},
-                headers=headers, timeout=20,
-            )
-            if r.status_code != 200:
-                break
-            notices = (r.json() or {}).get("_embedded", {}).get("notices", [])
+            e = json.loads(raw)
         except Exception:
-            frappe.log_error(frappe.get_traceback(), "interpol import")
+            continue
+        if e.get("schema") != "Person":
+            continue
+        ref = e.get("id")
+        if not ref:
+            continue
+        p = e.get("properties", {})
+        name = (p.get("name") or [None])[0] or " ".join(
+            filter(None, [(p.get("firstName") or [""])[0], (p.get("lastName") or [""])[0]])
+        )
+        if not name:
+            continue
+        fields = {
+            "target_name": name.title(),
+            "target_type": "Person",
+            "nationality": ", ".join(c.upper() for c in (p.get("nationality") or [])),
+            "date_of_birth": _parse_dob((p.get("birthDate") or [None])[0]),
+            "last_known_location": ", ".join(p.get("birthPlace") or [])[:140] or None,
+            "wanted_for": ", ".join(p.get("topics") or []),
+            "source_url": OS_ENTITY_URL.format(id=ref),
+            "priority": "High",
+        }
+        action, _ = _upsert("Interpol Red Notice", ref, fields)
+        created += action == "created"
+        updated += action == "updated"
+        seen += 1
+        if seen % 200 == 0:
+            frappe.db.commit()
+        if limit and seen >= limit:
             break
-        if not notices:
-            break
-        for n in notices:
-            ref = n.get("entity_id")
-            if not ref:
-                continue
-            full = " ".join(filter(None, [n.get("forename"), n.get("name")])).title()
-            img = (n.get("_links", {}).get("thumbnail")
-                   or n.get("_links", {}).get("images") or {}).get("href")
-            fields = {
-                "target_name": full or ref,
-                "target_type": "Person",
-                "nationality": ", ".join(n.get("nationalities") or []),
-                "date_of_birth": _parse_dob(n.get("date_of_birth")),
-                "source_url": (n.get("_links", {}).get("self") or {}).get("href"),
-                "photo": img,
-                "priority": "High",
-            }
-            action, _ = _upsert("Interpol Red Notice", ref, fields)
-            created += action == "created"
-            updated += action == "updated"
-        frappe.db.commit()
-    return {"source": "Interpol Red Notice", "created": created, "updated": updated}
+    frappe.db.commit()
+    return {"source": "Interpol Red Notice", "created": created,
+            "updated": updated, "imported": seen}
 
 
 @frappe.whitelist()

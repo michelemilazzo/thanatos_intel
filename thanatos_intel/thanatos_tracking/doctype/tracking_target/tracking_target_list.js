@@ -2,16 +2,20 @@ frappe.listview_settings["Tracking Target"] = {
 	onload(listview) {
 		listview.page.add_inner_button(__("Import Interpol"), () => {
 			frappe.prompt(
-				[{ fieldname: "pages", label: __("Pages (x50)"), fieldtype: "Int", default: 1 }],
+				[{ fieldname: "limit", label: __("Max targets (0 = all ~6400)"), fieldtype: "Int", default: 500 }],
 				(v) => {
 					frappe.dom.freeze(__("Importing Interpol Red Notices..."));
 					frappe.call({
 						method: "thanatos_intel.thanatos_tracking.most_wanted.import_interpol",
-						args: { pages: v.pages || 1 },
+						args: { limit: v.limit || 0 },
 					}).then((r) => {
 						frappe.dom.unfreeze();
-						frappe.show_alert({ message: __("Interpol: {0} created, {1} updated",
-							[r.message.created, r.message.updated]), indicator: "green" });
+						const m = r.message || {};
+						frappe.show_alert({
+							message: m.error ? __("Interpol import failed ({0})", [m.http || "network"])
+								: __("Interpol: {0} created, {1} updated", [m.created, m.updated]),
+							indicator: m.error ? "red" : "green",
+						});
 						listview.refresh();
 					}).catch(() => frappe.dom.unfreeze());
 				},
