@@ -1,0 +1,12 @@
+{
+  "doctype": "DocType",
+  "name": "Trackathon Participant",
+  "module": "Thanatos Tracking",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "user", "fieldtype": "Link", "label": "User", "options": "User", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "team_role", "fieldtype": "Data", "label": "Role", "in_list_view": 1},
+    {"fieldname": "leads_contributed", "fieldtype": "Int", "label": "Leads", "in_list_view": 1, "read_only": 1}
+  ],
+  "permissions": []
+}

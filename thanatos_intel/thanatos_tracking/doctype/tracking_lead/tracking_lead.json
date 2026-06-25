@@ -1,0 +1,37 @@
+{
+  "doctype": "DocType",
+  "name": "Tracking Lead",
+  "module": "Thanatos Tracking",
+  "autoname": "format:LEAD-{YYYY}-{#####}",
+  "title_field": "summary",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "summary", "fieldtype": "Data", "label": "Summary", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "target", "fieldtype": "Link", "label": "Target", "options": "Tracking Target", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "trackathon_session", "fieldtype": "Link", "label": "Trackathon Session", "options": "Trackathon Session", "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "lead_type", "fieldtype": "Select", "label": "Type", "options": "Sighting\nSocial Media\nFinancial\nLocation\nAssociate\nDocument\nVehicle\nOther", "default": "Sighting", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "confidence", "fieldtype": "Select", "label": "Confidence", "options": "Low\nMedium\nHigh", "default": "Medium", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "New\nUnder Review\nVerified\nDismissed", "default": "New", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "sb_detail", "fieldtype": "Section Break", "label": "Detail"},
+    {"fieldname": "details", "fieldtype": "Text Editor", "label": "Details"},
+    {"fieldname": "sb_source", "fieldtype": "Section Break", "label": "Source & Location"},
+    {"fieldname": "source", "fieldtype": "Data", "label": "Source"},
+    {"fieldname": "source_url", "fieldtype": "Data", "label": "Source URL"},
+    {"fieldname": "observed_at", "fieldtype": "Datetime", "label": "Observed At"},
+    {"fieldname": "col_2", "fieldtype": "Column Break"},
+    {"fieldname": "geo_location", "fieldtype": "Data", "label": "Geo Location"},
+    {"fieldname": "latitude", "fieldtype": "Float", "label": "Latitude", "precision": "6"},
+    {"fieldname": "longitude", "fieldtype": "Float", "label": "Longitude", "precision": "6"},
+    {"fieldname": "sb_verif", "fieldtype": "Section Break", "label": "Verification"},
+    {"fieldname": "reported_by", "fieldtype": "Link", "label": "Reported By", "options": "User"},
+    {"fieldname": "verified", "fieldtype": "Check", "label": "Verified", "default": "0"},
+    {"fieldname": "col_3", "fieldtype": "Column Break"},
+    {"fieldname": "verified_by", "fieldtype": "Link", "label": "Verified By", "options": "User", "read_only": 1}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

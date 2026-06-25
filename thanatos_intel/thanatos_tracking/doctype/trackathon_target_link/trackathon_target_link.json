@@ -1,0 +1,13 @@
+{
+  "doctype": "DocType",
+  "name": "Trackathon Target Link",
+  "module": "Thanatos Tracking",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "target", "fieldtype": "Link", "label": "Target", "options": "Tracking Target", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "target_name", "fieldtype": "Data", "label": "Name", "fetch_from": "target.target_name", "read_only": 1, "in_list_view": 1},
+    {"fieldname": "target_status", "fieldtype": "Data", "label": "Status", "fetch_from": "target.status", "read_only": 1, "in_list_view": 1},
+    {"fieldname": "leads", "fieldtype": "Int", "label": "Leads", "in_list_view": 1, "read_only": 1}
+  ],
+  "permissions": []
+}

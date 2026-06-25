@@ -14,7 +14,7 @@
    "label": "Nuovi casi nel tempo"
   }
  ],
- "content": "[{\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Thanatos Intel</b></span>\", \"col\": 12}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\"><b>Panoramica</b></span>\", \"col\": 12}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Casi aperti\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Casi in lavorazione\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Evidenze da custodire\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Mandati DDD attivi\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"OSINT job attivi\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Clienti\", \"col\": 4}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\"><b>Andamento</b></span>\", \"col\": 12}}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Casi per stato\", \"col\": 6}}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Mandati DDD per fase\", \"col\": 6}}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Nuovi casi nel tempo\", \"col\": 6}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\"><b>Accesso rapido</b></span>\", \"col\": 12}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Cockpit\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Centro Operativo\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Portale Clienti\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Drive\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"CRM\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Helpdesk\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Analytics\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wiki Procedure\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Guida Operatori\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Risk Score\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Nuovo caso\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Mandato DDD\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"OSINT Lookup\", \"col\": 3}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\"><b>Aree di lavoro</b></span>\", \"col\": 12}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Indagini\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"DDD Diplomatico\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"OSINT\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Antifrode & Cyber\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Corporate & Financial\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Clienti & Billing\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Newsroom\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Admin & Regole\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Campo & Tracciamento\", \"col\": 4}}]",
+ "content": "[{\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Thanatos Intel</b></span>\", \"col\": 12}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\"><b>Panoramica</b></span>\", \"col\": 12}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Casi aperti\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Casi in lavorazione\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Evidenze da custodire\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Mandati DDD attivi\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"OSINT job attivi\", \"col\": 4}}, {\"type\": \"number_card\", \"data\": {\"number_card_name\": \"Clienti\", \"col\": 4}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\"><b>Andamento</b></span>\", \"col\": 12}}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Casi per stato\", \"col\": 6}}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Mandati DDD per fase\", \"col\": 6}}, {\"type\": \"chart\", \"data\": {\"chart_name\": \"Nuovi casi nel tempo\", \"col\": 6}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\"><b>Accesso rapido</b></span>\", \"col\": 12}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Cockpit\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Centro Operativo\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Portale Clienti\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Drive\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"CRM\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Helpdesk\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Analytics\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Wiki Procedure\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Guida Operatori\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Risk Score\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Nuovo caso\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Mandato DDD\", \"col\": 3}}, {\"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"OSINT Lookup\", \"col\": 3}}, {\"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h6 text-muted\\\"><b>Aree di lavoro</b></span>\", \"col\": 12}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Indagini\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"DDD Diplomatico\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"OSINT\", \"col\": 4}}, {\"id\": \"mwtrkcard01\", \"type\": \"card\", \"data\": {\"card_name\": \"Most Wanted & Trackathon\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Antifrode & Cyber\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Corporate & Financial\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Clienti & Billing\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Newsroom\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Admin & Regole\", \"col\": 4}}, {\"type\": \"card\", \"data\": {\"card_name\": \"Campo & Tracciamento\", \"col\": 4}}, {\"id\": \"mwtrkshort01\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Most Wanted\", \"col\": 3}}]",
  "creation": "2026-06-14 01:56:36.342264",
  "custom_blocks": [],
  "docstatus": 0,
@@ -224,6 +224,47 @@
    "label": "IOC",
    "link_count": 0,
    "link_to": "IOC",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Most Wanted & Trackathon",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tracking Target",
+   "link_count": 0,
+   "link_to": "Tracking Target",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Tracking Lead",
+   "link_count": 0,
+   "link_to": "Tracking Lead",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Trackathon Session",
+   "link_count": 0,
+   "link_to": "Trackathon Session",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -975,6 +1016,14 @@
    "label": "Drive",
    "type": "URL",
    "url": "/drive"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Most Wanted",
+   "link_to": "Tracking Target",
+   "stats_filter": "{}",
+   "type": "DocType"
   }
  ],
  "title": "Thanatos Intel",
