@@ -39,12 +39,22 @@ def client_detail(client):
     tl = []
 
     cases = _all("Investigation Case", filters={"client": client},
-                 fields=["name", "case_title", "status", "priority", "opening_date", "payment_status"],
+                 fields=["name", "case_title", "status", "priority", "opening_date", "payment_status", "assigned_investigator"],
                  order_by="opening_date desc")
     case_names = [x.name for x in cases]
+
+    def _full_name(u):
+        if not u:
+            return ""
+        return frappe.db.get_value("User", u, "full_name") or u
+
     for x in cases:
+        gestore = _full_name(x.assigned_investigator)
+        title = x.case_title or x.name
+        if gestore:
+            title += f" · gestore: {gestore}"
         tl.append({"when": str(x.opening_date or ""), "icon": "📂", "kind": "Caso",
-                   "title": x.case_title or x.name, "tag": x.status, "dt": "Investigation Case", "ref": x.name})
+                   "title": title, "tag": x.status, "dt": "Investigation Case", "ref": x.name})
 
     for a in _all("Investigation Appointment", filters={"linked_client": client},
                   fields=["name", "title", "appointment_type", "appointment_date", "status"],
