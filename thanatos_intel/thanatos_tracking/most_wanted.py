@@ -97,19 +97,32 @@ def import_dataset(key: str, limit: int = 0):
             _first(p, "firstName") or "", _first(p, "lastName") or ""]))
         if not name:
             continue
+        notes = p.get("notes") or []
+        aliases = (p.get("alias") or []) + (p.get("weakAlias") or [])
+        loc = ", ".join(p.get("birthPlace") or []) or None
+        nat = p.get("nationality") or p.get("citizenship") or p.get("country") or []
+        desc = ""
+        if notes:
+            desc = "".join(f"<p>{frappe.utils.escape_html(x)}</p>" for x in notes)
         fields = {
             "target_name": name.title(),
             "target_type": "Person",
-            "nationality": ", ".join(c.upper() for c in (p.get("nationality") or [])),
+            "nationality": ", ".join(c.upper() for c in nat),
+            "gender": _first(p, "gender"),
+            "ethnicity": _first(p, "ethnicity"),
             "date_of_birth": _parse_dob(_first(p, "birthDate")),
-            "last_known_location": (", ".join(p.get("birthPlace") or []) or None),
-            "aliases": "\n".join(p.get("alias") or []) or None,
-            "wanted_for": (_first(p, "notes") or ", ".join(p.get("topics") or [])),
+            "last_known_location": (loc[:140] if loc else None),
+            "aliases": "\n".join(aliases) or None,
+            "height": _first(p, "height"),
+            "weight": _first(p, "weight"),
+            "eye_color": _first(p, "eyeColor"),
+            "hair_color": _first(p, "hairColor"),
+            "distinguishing_marks": "; ".join(p.get("appearance") or []) or None,
+            "wanted_for": ", ".join(p.get("topics") or []) or None,
+            "description": desc or None,
             "source_url": _first(p, "sourceUrl") or OS_ENTITY_URL.format(id=ref),
             "priority": prio,
         }
-        if fields["last_known_location"]:
-            fields["last_known_location"] = fields["last_known_location"][:140]
         res = _upsert(label, ref, fields)
         created += res == "created"
         updated += res == "updated"
@@ -130,6 +143,62 @@ def import_interpol(limit: int = 0):
 @frappe.whitelist()
 def import_europol(limit: int = 0):
     return import_dataset("eu_europol_wanted", limit)
+
+
+import re
+
+_IMG_PATTERNS = [
+    r'<meta[^>]+(?:property|name)=["\'](?:og:image|twitter:image)["\'][^>]+content=["\']([^"\']+)["\']',
+    r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\'](?:og:image|twitter:image)["\']',
+]
+
+
+@frappe.whitelist()
+def fetch_photo(target: str):
+    """Scarica la foto dalla pagina sorgente (og:image) e la allega al Target.
+
+    Funziona per fonti con sourceUrl = pagina pubblica reale (Europol/FBI/liste
+    nazionali). Per Interpol il mugshot e' solo sull'API WAF-bloccata -> stub.
+    """
+    doc = frappe.get_doc("Tracking Target", target)
+    url = doc.source_url or ""
+    if not url or "opensanctions.org" in url:
+        return {"ok": False, "reason": "Nessuna pagina sorgente con foto (Interpol: mugshot non accessibile)"}
+    try:
+        r = requests.get(url, headers={"user-agent": UA}, timeout=20)
+        if r.status_code != 200:
+            return {"ok": False, "reason": f"HTTP {r.status_code}"}
+        html = r.text
+    except Exception:
+        return {"ok": False, "reason": "fetch fallito"}
+
+    img_url = None
+    for pat in _IMG_PATTERNS:
+        m = re.search(pat, html, re.I)
+        if m:
+            img_url = m.group(1)
+            break
+    if not img_url:
+        return {"ok": False, "reason": "nessuna og:image nella pagina"}
+    if img_url.startswith("//"):
+        img_url = "https:" + img_url
+    elif img_url.startswith("/"):
+        from urllib.parse import urljoin
+        img_url = urljoin(url, img_url)
+
+    try:
+        ir = requests.get(img_url, headers={"user-agent": UA}, timeout=20)
+        if ir.status_code != 200 or not ir.content:
+            return {"ok": False, "reason": "download immagine fallito"}
+        from frappe.utils.file_manager import save_file
+        ext = (img_url.rsplit(".", 1)[-1].split("?")[0] or "jpg")[:4]
+        f = save_file(f"{doc.name}.{ext}", ir.content, doc.doctype, doc.name,
+                      is_private=0)
+        doc.db_set("photo", f.file_url)
+        return {"ok": True, "photo": f.file_url}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "fetch_photo")
+        return {"ok": False, "reason": "errore salvataggio"}
 
 
 @frappe.whitelist()
