@@ -132,11 +132,18 @@ def provision(user=None, mailbox=None, full_name=None, quota_mb=1024):
             frappe.throw(f"Creazione casella fallita: {r.status_code} {r.text[:200]}")
         created = True
 
-    # app-password dedicata alla webmail (secret aggiuntivo sull'account)
+    # app-password dedicata alla webmail: PRESERVA i secret esistenti (password
+    # principale + eventuali app-password), aggiungendo solo la nuova. Stalwart su
+    # 'secrets' fa SET-replace anche con addItem in alcune versioni -> usare read+set.
+    cur = requests.get(f"{url}/api/principal/{quote(mailbox, safe='')}", auth=auth, timeout=15)
+    existing = []
+    if cur.status_code == 200:
+        existing = ((cur.json().get("data") or {}).get("secrets") or [])
     app_pw = _secrets.token_urlsafe(18)
+    new_secrets = list(existing) + [_bcrypt(app_pw)]
     r = requests.patch(
         f"{url}/api/principal/{quote(mailbox, safe='')}", auth=auth, timeout=20,
-        json=[{"action": "addItem", "field": "secrets", "value": _bcrypt(app_pw)}])
+        json=[{"action": "set", "field": "secrets", "value": new_secrets}])
     if r.status_code >= 400:
         frappe.throw(f"Impostazione app-password fallita: {r.status_code} {r.text[:200]}")
     requests.get(f"{url}/api/reload", auth=auth, timeout=15)
