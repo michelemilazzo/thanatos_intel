@@ -159,3 +159,19 @@ def generate_reply(lead_name, wa_number, to_number):
     if handoff:
         _handoff(lead_name, wa_doc)
     return {"ok": True, "handoff": handoff}
+
+
+def trigger_for_lead(lead_name, wa_phone):
+    """Fa rispondere il bot all'ultimo messaggio del lead, se il numero ha il bot
+    attivo. Usato dopo trascrizione vocale o ricezione di un media."""
+    if not wa_phone:
+        return
+    if not int(frappe.db.get_value("WhatsApp Number", wa_phone, "ai_bot_enabled") or 0):
+        return
+    to_number = frappe.db.get_value("Intel Lead", lead_name, "source_identifier")
+    if not to_number:
+        return
+    try:
+        generate_reply(lead_name, wa_phone, to_number)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "wa_bot trigger_for_lead")

@@ -162,6 +162,14 @@ def process_voice_note(lead_name: str, media_id: str, wa_phone: str | None = Non
             frappe.db.set_value("Intel Lead", lead_name, "content", label)
 
         frappe.db.commit()
+
+        # bot AI risponde alla nota vocale trascritta
+        if text:
+            try:
+                from thanatos_intel.ingest.wa_bot import trigger_for_lead
+                trigger_for_lead(lead_name, wa_phone)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"wa_bot voice {lead_name}")
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"process_voice_note {lead_name}")
 
@@ -216,5 +224,12 @@ def process_media_attachment(lead_name: str, media_id: str, media_type: str,
             frappe.db.set_value("Intel Lead", lead_name, "content", label)
 
         frappe.db.commit()
+
+        # bot AI prende atto del media ricevuto e prosegue la conversazione
+        try:
+            from thanatos_intel.ingest.wa_bot import trigger_for_lead
+            trigger_for_lead(lead_name, wa_phone)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"wa_bot media {lead_name}")
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"process_media_attachment {lead_name}")
