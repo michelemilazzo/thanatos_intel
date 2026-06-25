@@ -44,22 +44,21 @@ frappe.pages['thanatos-mail-prov'].on_page_load = function(wrapper){
     $msg.text('Verifica…'); $plan.hide(); $go.prop('disabled',true);
     frappe.call({method:'thanatos_intel.api.mail_provisioning.preview',args:{user:$user.val()||'',mailbox:mb}})
       .then(r=>{ const p=r.message; lastPlan=p; $msg.text('');
-        $plan.show().html(
-          `Casella <b>${p.mailbox}</b><br>`+
-          (p.account_exists?'<span class="ok">✓ account già esistente</span>':'<span class="warn">＋ verrà creato l\\'account</span>')+'<br>'+
-          (p.already_webmail_enabled?'<span class="warn">↻ webmail già abilitata: verrà rigenerata l\\'app-password</span>':'<span class="ok">＋ verrà generata l\\'app-password webmail</span>'));
+        const l1 = p.account_exists ? '<span class="ok">✓ account già esistente</span>' : '<span class="warn">＋ verrà creato un nuovo account</span>';
+        const l2 = p.already_webmail_enabled ? '<span class="warn">↻ webmail già attiva: app-password rigenerata</span>' : '<span class="ok">＋ verrà generata la app-password webmail</span>';
+        $plan.show().html('Casella <b>'+p.mailbox+'</b><br>'+l1+'<br>'+l2);
         $go.prop('disabled',false);
       }).catch(e=>{ $msg.html('<span style="color:#c0392b">'+(e.message||'Errore')+'</span>'); });
   });
 
   $go.on('click', ()=>{
     if(!lastPlan) return;
-    frappe.confirm(`Provisionare <b>${lastPlan.mailbox}</b> sul mailserver?`, ()=>{
+    frappe.confirm('Provisionare <b>'+lastPlan.mailbox+'</b> sul mailserver?', ()=>{
       $msg.text('Provisioning…'); $go.prop('disabled',true);
       frappe.call({method:'thanatos_intel.api.mail_provisioning.provision',
         args:{user:$user.val()||'',mailbox:lastPlan.mailbox},freeze:true,freeze_message:'Mailserver…'})
         .then(r=>{ const m=r.message;
-          frappe.show_alert({message:`${m.mailbox} ${m.account_created?'creata e ':''}abilitata alla webmail`,indicator:'green'});
+          frappe.show_alert({message:m.mailbox+(m.account_created?' creata e':'')+' abilitata alla webmail',indicator:'green'});
           $msg.html('<span style="color:#2e7d32">Fatto.</span>'); $plan.hide(); loadEnabled();
         }).catch(e=>{ $msg.html('<span style="color:#c0392b">'+(e.message||'Errore')+'</span>'); $go.prop('disabled',false); });
     });
@@ -69,7 +68,7 @@ frappe.pages['thanatos-mail-prov'].on_page_load = function(wrapper){
     frappe.call({method:'thanatos_intel.api.mail_provisioning.list_enabled'}).then(r=>{
       const a=r.message||[]; const $e=$('#mp-enabled').empty();
       if(!a.length){ $e.html('<span class="mp-empty">Nessuna casella ancora abilitata.</span>'); return; }
-      a.forEach(m=>$e.append(`<span class="mp-tag">✉️ ${frappe.utils.escape_html(m)}</span>`));
+      a.forEach(m=>$e.append('<span class="mp-tag">✉️ '+frappe.utils.escape_html(m)+'</span>'));
     });
   }
   loadEnabled();
