@@ -1,0 +1,268 @@
+[
+ {
+  "name": "Global Search Settings",
+  "doctype": "Global Search Settings",
+  "allowed_in_global_search": [
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Customer"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Supplier"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Item"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Warehouse"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Account"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Employee"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "BOM"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Sales Invoice"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Sales Order"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Quotation"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Work Order"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Purchase Order"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Purchase Receipt"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Purchase Invoice"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Delivery Note"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Stock Entry"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Material Request"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Delivery Trip"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Pick List"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Salary Slip"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Leave Application"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Expense Claim"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Contact"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Address"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "ToDo"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Payment Entry"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Lead"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Opportunity"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Item Price"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Purchase Taxes and Charges Template"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Sales Taxes and Charges"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Asset"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Project"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Task"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Timesheet"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Issue"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Serial No"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Employee Grade"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Batch"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Job Opening"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Job Applicant"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Job Offer"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Salary Structure Assignment"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Appraisal"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Branch"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Department"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Note"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Designation"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Event"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Dashboard"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Country"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Currency"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Letter Head"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Workflow"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Maintenance Schedule"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Maintenance Visit"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Warranty Claim"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Web Page"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Web Form"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Diplomatic Eligibility Case"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Applicant Profile"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Agency Mandate"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Diplomatic Proforma"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Company Profile"
+   },
+   {
+    "doctype": "Global Search DocType",
+    "document_type": "Investigation Case"
+   }
+  ]
+ }
+]

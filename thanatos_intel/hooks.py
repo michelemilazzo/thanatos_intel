@@ -94,6 +94,11 @@ fixtures=[
    'Quotation-investigation_case', 'Sales Invoice-investigation_case',
    'HD Ticket-investigation_case',
    'Diplomatic Proforma-client_company']]]},
+ {'doctype': 'Property Setter', 'filters': [
+   ['doc_type', 'in', ['Diplomatic Eligibility Case', 'Applicant Profile',
+     'Agency Mandate', 'Diplomatic Proforma', 'Company Profile', 'Investigation Case']],
+   ['property', 'in', ['in_global_search', 'title_field']]]},
+ {'doctype': 'Global Search Settings'},
 ]
 
 doc_events={

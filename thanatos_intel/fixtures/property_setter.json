@@ -1,0 +1,122 @@
+[
+ {
+  "name": "Diplomatic Proforma-main-title_field",
+  "doctype_or_field": "DocField",
+  "doc_type": "Diplomatic Proforma",
+  "field_name": "",
+  "property": "title_field",
+  "property_type": "Data",
+  "value": "step_title",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Agency Mandate-main-title_field",
+  "doctype_or_field": "DocField",
+  "doc_type": "Agency Mandate",
+  "field_name": "",
+  "property": "title_field",
+  "property_type": "Data",
+  "value": "applicant_name",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Applicant Profile-main-title_field",
+  "doctype_or_field": "DocField",
+  "doc_type": "Applicant Profile",
+  "field_name": "",
+  "property": "title_field",
+  "property_type": "Data",
+  "value": "full_legal_name",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Diplomatic Eligibility Case-main-title_field",
+  "doctype_or_field": "DocField",
+  "doc_type": "Diplomatic Eligibility Case",
+  "field_name": "",
+  "property": "title_field",
+  "property_type": "Data",
+  "value": "applicant_name",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Investigation Case-case_title-in_global_search",
+  "doctype_or_field": "DocField",
+  "doc_type": "Investigation Case",
+  "field_name": "case_title",
+  "property": "in_global_search",
+  "property_type": "Check",
+  "value": "1",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Company Profile-company_name-in_global_search",
+  "doctype_or_field": "DocField",
+  "doc_type": "Company Profile",
+  "field_name": "company_name",
+  "property": "in_global_search",
+  "property_type": "Check",
+  "value": "1",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Diplomatic Proforma-step_title-in_global_search",
+  "doctype_or_field": "DocField",
+  "doc_type": "Diplomatic Proforma",
+  "field_name": "step_title",
+  "property": "in_global_search",
+  "property_type": "Check",
+  "value": "1",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Agency Mandate-subject_matter-in_global_search",
+  "doctype_or_field": "DocField",
+  "doc_type": "Agency Mandate",
+  "field_name": "subject_matter",
+  "property": "in_global_search",
+  "property_type": "Check",
+  "value": "1",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Agency Mandate-applicant_name-in_global_search",
+  "doctype_or_field": "DocField",
+  "doc_type": "Agency Mandate",
+  "field_name": "applicant_name",
+  "property": "in_global_search",
+  "property_type": "Check",
+  "value": "1",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Applicant Profile-email-in_global_search",
+  "doctype_or_field": "DocField",
+  "doc_type": "Applicant Profile",
+  "field_name": "email",
+  "property": "in_global_search",
+  "property_type": "Check",
+  "value": "1",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Applicant Profile-full_legal_name-in_global_search",
+  "doctype_or_field": "DocField",
+  "doc_type": "Applicant Profile",
+  "field_name": "full_legal_name",
+  "property": "in_global_search",
+  "property_type": "Check",
+  "value": "1",
+  "doctype": "Property Setter"
+ },
+ {
+  "name": "Diplomatic Eligibility Case-applicant_name-in_global_search",
+  "doctype_or_field": "DocField",
+  "doc_type": "Diplomatic Eligibility Case",
+  "field_name": "applicant_name",
+  "property": "in_global_search",
+  "property_type": "Check",
+  "value": "1",
+  "doctype": "Property Setter"
+ }
+]
