@@ -26,26 +26,40 @@ def forward_incoming_call(call_id, pnid, frm, sdp, wa_number=None):
         return {"ok": False, "error": "numero non trovato"}
     token = get_decrypted_password("WhatsApp Number", name, "meta_access_token")
     base = frappe.utils.get_url()
-    op_num = (frappe.db.get_value("WhatsApp Number", name, "call_forward_number") or "").strip()
-    op_nums = _operator_chain(op_num)
-    announce_text = _announce_text(op_num or (op_nums[0] if op_nums else ""))
+    op_nums = _operator_chain(name)
+    op_num = op_nums[0] if op_nums else ""
+    ring_timeout = int(frappe.db.get_value("WhatsApp Number", name, "ring_timeout") or 25)
+    announce_text = _announce_text(op_num)
     r = requests.post(
         f"{_media_url()}/incoming",
         json={"call_id": call_id, "pnid": pnid, "from": frm, "sdp": sdp,
               "token": token, "frappe_url": base, "operator_number": op_num,
-              "operator_numbers": op_nums, "announce_text": announce_text},
+              "operator_numbers": op_nums, "ring_timeout": ring_timeout,
+              "announce_text": announce_text},
         timeout=20,
     )
     return r.json()
 
 
-def _operator_chain(primary):
-    """Lista ordinata di numeri operatore: primario + investigatori 'Available'
-    con telefono. Usata per il dirottamento a cascata se uno non risponde."""
+def _operator_chain(wa_name):
+    """Lista ordinata di numeri operatore dal pannello (WhatsApp Operator Route).
+    Fallback: call_forward_number + investigatori 'Available' (compat)."""
     chain = []
-    p = (primary or "").strip()
-    if p:
-        chain.append(p)
+    routes = frappe.get_all(
+        "WhatsApp Operator Route",
+        filters={"parent": wa_name, "parenttype": "WhatsApp Number", "enabled": 1},
+        fields=["phone", "investigator"], order_by="idx asc")
+    for r in routes:
+        ph = (r.get("phone") or "").strip()
+        if not ph and r.get("investigator"):
+            ph = (frappe.db.get_value("Investigator", r["investigator"], "phone") or "").strip()
+        if ph and ph not in chain:
+            chain.append(ph)
+    if chain:
+        return chain
+    primary = (frappe.db.get_value("WhatsApp Number", wa_name, "call_forward_number") or "").strip()
+    if primary:
+        chain.append(primary)
     for inv in frappe.get_all("Investigator", filters={"availability": "Available"},
                               fields=["phone"]):
         ph = (inv.get("phone") or "").strip()

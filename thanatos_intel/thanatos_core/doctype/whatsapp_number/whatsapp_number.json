@@ -153,6 +153,24 @@
    "description": "Incluso nell auto-reply quando Meta non supporta il trasferimento chiamata diretto."
   },
   {
+   "fieldname": "sb_callrouting",
+   "fieldtype": "Section Break",
+   "label": "Dirottamento chiamate"
+  },
+  {
+   "fieldname": "operator_routes",
+   "fieldtype": "Table",
+   "options": "WhatsApp Operator Route",
+   "label": "Operatori (in ordine: primario poi fallback)",
+   "description": "Le chiamate vengono dirottate in quest'ordine. Se un operatore rifiuta, e' occupato o non risponde, passa al successivo."
+  },
+  {
+   "fieldname": "ring_timeout",
+   "fieldtype": "Int",
+   "label": "Secondi di squillo per operatore",
+   "default": "25"
+  },
+  {
    "fieldname": "sb_qr",
    "fieldtype": "Section Break",
    "label": "QR Code & Link"
