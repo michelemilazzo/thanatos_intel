@@ -28,6 +28,21 @@
    "description": "Sigla mostrata a clienti/esterni. Il nome reale resta interno. Se vuoto, generato automaticamente (INV-NN)."
   },
   {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "options": "Phone",
+   "label": "Telefono / WhatsApp operatore",
+   "in_standard_filter": 1,
+   "description": "Numero WhatsApp su cui ricevere le chiamate dirottate."
+  },
+  {
+   "fieldname": "languages",
+   "fieldtype": "Data",
+   "label": "Lingue parlate",
+   "in_list_view": 1,
+   "description": "Lingue in cui l'operatore assiste i clienti, es. Italiano, Inglese, Rumeno. Usate nell'annuncio di chiamata."
+  },
+  {
    "fieldname": "investigator_type",
    "fieldtype": "Select",
    "label": "Type",

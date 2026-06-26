@@ -27,13 +27,36 @@ def forward_incoming_call(call_id, pnid, frm, sdp, wa_number=None):
     token = get_decrypted_password("WhatsApp Number", name, "meta_access_token")
     base = frappe.utils.get_url()
     op_num = (frappe.db.get_value("WhatsApp Number", name, "call_forward_number") or "").strip()
+    announce_text = _announce_text(op_num)
     r = requests.post(
         f"{_media_url()}/incoming",
         json={"call_id": call_id, "pnid": pnid, "from": frm, "sdp": sdp,
-              "token": token, "frappe_url": base, "operator_number": op_num},
+              "token": token, "frappe_url": base, "operator_number": op_num,
+              "announce_text": announce_text},
         timeout=20,
     )
     return r.json()
+
+
+def _announce_text(op_num):
+    """Annuncio di registrazione + lingua dell'operatore (dalla scheda Investigator).
+    Conforme a Legea 329/2003 + GDPR (avviso di registrazione)."""
+    langs = ""
+    digits = "".join(c for c in (op_num or "") if c.isdigit())
+    if digits:
+        tail = digits[-9:]
+        inv = frappe.db.sql(
+            """SELECT languages FROM `tabInvestigator`
+               WHERE languages IS NOT NULL AND languages != ''
+                 AND REPLACE(REPLACE(REPLACE(phone,' ',''),'+',''),'-','') LIKE %s
+               LIMIT 1""",
+            ("%" + tail,), as_dict=True)
+        if inv:
+            langs = (inv[0].languages or "").strip()
+    lingua = f"L'operatore le rispondera in {langs}. " if langs else ""
+    return ("Benvenuto a Thanatos Investigazioni. La informiamo che, ai sensi della "
+            "normativa vigente, questa chiamata sara registrata. "
+            f"{lingua}Resti in linea, la mettiamo in contatto con un operatore.")
 
 
 def operator_answer(call_id, sdp):
