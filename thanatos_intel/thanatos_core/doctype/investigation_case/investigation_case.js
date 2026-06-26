@@ -422,3 +422,41 @@ function tcw_inject_css() {
 	`;
 	$('<style id="tcw-css">').text(css).appendTo(document.head);
 }
+
+// --- Genera fattura ARES (azione one-click) ---
+frappe.ui.form.on("Investigation Case", {
+    refresh(frm) {
+        if (frm.is_new()) return;
+        frm.add_custom_button(__("Genera fattura ARES"), () => {
+            const d = new frappe.ui.Dialog({
+                title: __("Genera fattura ARES"),
+                fields: [
+                    {fieldname: "customer", fieldtype: "Link", options: "Customer",
+                     label: __("Cliente (fatturazione)"), reqd: 1},
+                    {fieldname: "amount", fieldtype: "Currency", label: __("Imponibile (EUR)"), reqd: 1},
+                    {fieldname: "description", fieldtype: "Small Text", label: __("Descrizione riga"),
+                     default: "Servizi di investigazione - " + (frm.doc.case_title || frm.doc.name)},
+                ],
+                primary_action_label: __("Crea bozza"),
+                primary_action(values) {
+                    frappe.call({
+                        method: "thanatos_intel.billing.ares_invoice.create_ares_invoice",
+                        args: {case: frm.doc.name, customer: values.customer,
+                               amount: values.amount, description: values.description},
+                        freeze: true,
+                        freeze_message: __("Creazione fattura ARES..."),
+                        callback(r) {
+                            if (r.message) {
+                                d.hide();
+                                frappe.show_alert({message: __("Fattura {0} creata", [r.message]),
+                                                   indicator: "green"});
+                                frappe.set_route("Form", "Sales Invoice", r.message);
+                            }
+                        },
+                    });
+                },
+            });
+            d.show();
+        }, __("Azioni"));
+    },
+});

@@ -228,6 +228,9 @@ def webhook():
         # Media in arrivo → scarica + allega (audio anche trascritto)
         if m.get("media_id"):
             _wa_phone = wa_number.phone_number if wa_number else None
+            # feedback immediato "sta scrivendo..." mentre trascrive/analizza (media typing)
+            if _wa_phone and frappe.db.get_value("WhatsApp Number", _wa_phone, "ai_bot_enabled"):
+                _mark_read_typing(_wa_phone, m.get("wa_message_id"))
             if m.get("media_type") == "audio":
                 frappe.enqueue(
                     "thanatos_intel.ingest.voice_notes.process_voice_note",
