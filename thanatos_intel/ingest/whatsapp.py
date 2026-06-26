@@ -99,6 +99,7 @@ def _parse_meta(data: dict) -> list[dict]:
                     "media_type": media_type,
                     "media_id": media_id,
                     "media_filename": media_filename,
+                    "wa_message_id": msg.get("id", ""),
                 })
     return results
 
@@ -207,6 +208,7 @@ def webhook():
             )
             txt = (m.get('content') or '').strip()
             if bot_on and txt and not txt.startswith('['):
+                _mark_read_typing(wa_number.get('phone_number'), m.get('wa_message_id'))
                 frappe.enqueue(
                     'thanatos_intel.ingest.wa_bot.generate_reply',
                     queue='short', timeout=200,
@@ -244,6 +246,28 @@ def webhook():
     return {"created": created, "count": len(created)}
 
 
+
+
+def _mark_read_typing(phone_number, wamid):
+    """Marca il messaggio come letto e mostra l'indicatore 'sta scrivendo...'
+    al cliente, per ridurre il lag percepito mentre il bot genera la risposta."""
+    if not (phone_number and wamid):
+        return
+    pnid = frappe.db.get_value("WhatsApp Number", phone_number, "meta_phone_number_id")
+    if not pnid:
+        return
+    from frappe.utils.password import get_decrypted_password
+    token = get_decrypted_password("WhatsApp Number", phone_number, "meta_access_token")
+    if not token:
+        return
+    try:
+        import requests as _r
+        _r.post(f"https://graph.facebook.com/v21.0/{pnid}/messages",
+                json={"messaging_product": "whatsapp", "status": "read",
+                      "message_id": wamid, "typing_indicator": {"type": "text"}},
+                headers={"Authorization": f"Bearer {token}"}, timeout=8)
+    except Exception:
+        pass
 
 
 def _send_auto_reply(wa_number, to_number: str, lead_name: str, is_new: bool):
