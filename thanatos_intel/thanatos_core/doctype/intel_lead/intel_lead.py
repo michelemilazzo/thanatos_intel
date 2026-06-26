@@ -46,15 +46,12 @@ def find_or_create_lead(source_identifier: str, source_name: str, content: str,
     Cerca un lead aperto dallo stesso mittente nelle ultime N ore.
     Se esiste, aggiunge il messaggio al thread; altrimenti crea un nuovo lead.
     """
-    from frappe.utils import add_to_date
-
-    # cerca lead esistente (non archiviato) dallo stesso mittente+numero WA
-    window_start = add_to_date(now_datetime(), hours=-_THREAD_WINDOW_HOURS)
+    # un thread per numero: riusa SEMPRE il lead aperto (non archiviato) dello stesso
+    # mittente+numero WA, senza finestra temporale (no chat duplicate per giorno)
     filters = {
         "source_type": source_type,
         "source_identifier": source_identifier,
         "status": ["not in", ["Archiviato"]],
-        "last_message_at": [">=", window_start],
     }
     if wa_number:
         filters["whatsapp_number"] = wa_number.get("phone_number", "")

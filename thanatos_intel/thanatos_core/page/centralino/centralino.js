@@ -40,6 +40,7 @@ class CentralinoPage {
       <button class="ctlno-filter" data-f="closed">Chiuse</button>
     </div>
     <div class="ctlno-header-right">
+      <button class="ctlno-deviazione" id="ctlno-deviazione" title="Impostazioni deviazione chiamate">⚙ Deviazione</button>
       <input class="ctlno-search" id="ctlno-search" placeholder="🔍 Cerca...">
       <div class="ctlno-status-wrap">
         <button class="ctlno-status-btn online" id="ctlno-status-btn">● Online ▾</button>
@@ -74,6 +75,15 @@ class CentralinoPage {
             $(e.currentTarget).addClass("act");
             this.filter = $(e.currentTarget).data("f");
             this.loadConversations();
+        });
+
+        // Impostazioni deviazione chiamate -> form WhatsApp Number
+        $(root).on("click", "#ctlno-deviazione", () => {
+            frappe.db.get_value("WhatsApp Number", {"is_active": 1}, "name").then((r) => {
+                const n = r && r.message && r.message.name;
+                if (n) frappe.set_route("Form", "WhatsApp Number", n);
+                else frappe.set_route("List", "WhatsApp Number");
+            });
         });
 
         // Ricerca
@@ -583,6 +593,9 @@ ${replyBox}`);
 .ctlno-title { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: #C8A96E; text-transform: uppercase; }
 .ctlno-header-center { display: flex; gap: 4px; flex: 1; }
 .ctlno-header-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.ctlno-deviazione { background: #1a1f2e; color: #C8A96E; border: 1px solid #C8A96E;
+  border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.ctlno-deviazione:hover { background: #C8A96E; color: #0A0E1A; }
 
 /* ─── Filters ─────────────────────────────────────────────────────── */
 .ctlno-filter {
