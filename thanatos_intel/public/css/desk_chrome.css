@@ -79,10 +79,15 @@ a[href*="thanatos-intel"] .icon-container > svg {
 
 
 
-/* PCU: toolbar bottoni form — evita overflow su Investigation Case e simili */
-.page-actions { overflow-x: auto !important; max-width: 80vw; flex-wrap: nowrap; }
-.page-actions::-webkit-scrollbar { height: 4px; }
-.page-actions::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+/* PCU: toolbar bottoni form — i bottoni vanno a capo invece di essere ritagliati/nascosti.
+   NIENTE overflow:auto qui: creava un clipping context che tagliava i dropdown. */
+.page-actions {
+  overflow: visible !important;
+  max-width: none !important;
+  flex-wrap: wrap !important;
+  row-gap: 4px;
+  justify-content: flex-end;
+}
 .page-actions .btn-group > .btn,
 .page-actions > .btn {
   font-size: 12px !important;
@@ -90,6 +95,12 @@ a[href*="thanatos-intel"] .icon-container > svg {
   white-space: nowrap;
 }
 .page-actions .menu-btn-group .dropdown-menu { min-width: 220px; }
+/* I menu a tendina delle azioni devono stare SOPRA la sidebar destra del form */
+.page-actions .dropdown-menu,
+.inner-group-button .dropdown-menu,
+.custom-btn-group .dropdown-menu {
+  z-index: 1060 !important;
+}
 
 /* PCU floating fab — z-index sotto modali ma sopra altro */
 #pcu-g-fab { z-index: 9999 !important; }
