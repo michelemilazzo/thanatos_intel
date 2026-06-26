@@ -36,6 +36,10 @@
       body{padding-top:46px !important}
       /* Nascondi la vecchia .tnav dentro le Page (cockpit ne aveva una) */
       .layout-main-section .tnav, .page-body .tnav{display:none !important}
+      /* Toolbar/header Frappe SOTTO la top-nav (mai coperti dalla barra) */
+      .page-head{top:46px !important;z-index:5 !important}
+      .frappe-list .list-filters,.layout-main-section .filter-section{top:46px !important}
+      .layout-main-section-wrapper .page-head{top:46px !important}
     `;
     document.head.appendChild(css);
   }
