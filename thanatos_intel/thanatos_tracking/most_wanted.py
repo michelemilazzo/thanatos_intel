@@ -207,6 +207,84 @@ def fetch_photo(target: str):
         return {"ok": False, "reason": "errore salvataggio"}
 
 
+INTERPOL_IMAGES_API = "https://ws-public.interpol.int/notices/v1/red/{nid}/images"
+_NOTICE_RE = re.compile(r"(20\d{2})[/-](\d{3,})")
+
+
+def _proxies():
+    """Proxy residenziale dedicato ai mugshot Interpol (WAF blocca IP datacenter).
+
+    site_config: `residential_proxy` o `interpol_proxy` = http://user:pass@host:port
+    """
+    proxy = frappe.conf.get("interpol_proxy") or frappe.conf.get("residential_proxy")
+    return {"http": proxy, "https": proxy} if proxy else None
+
+
+def _interpol_notice_id(doc):
+    """Ricava l'ID notice Interpol (YYYY-NNNNNN) dalla pagina OpenSanctions (no WAF)."""
+    url = doc.source_url or OS_ENTITY_URL.format(id=doc.source_ref)
+    try:
+        r = requests.get(url, headers={"user-agent": UA}, timeout=20)
+        if r.status_code != 200:
+            return None
+        m = _NOTICE_RE.search(r.text)
+        return f"{m.group(1)}-{m.group(2)}" if m else None
+    except Exception:
+        return None
+
+
+@frappe.whitelist()
+def fetch_interpol_photo(target: str):
+    """Scarica il mugshot Interpol via proxy residenziale e lo allega al Target."""
+    proxies = _proxies()
+    if not proxies:
+        return {"ok": False, "reason": "proxy residenziale non configurato (site_config residential_proxy)"}
+    doc = frappe.get_doc("Tracking Target", target)
+    nid = _interpol_notice_id(doc)
+    if not nid:
+        return {"ok": False, "reason": "notice id non trovato"}
+    try:
+        r = requests.get(INTERPOL_IMAGES_API.format(nid=nid),
+                         headers={"user-agent": UA, "accept": "application/json"},
+                         proxies=proxies, timeout=30)
+        if r.status_code != 200:
+            return {"ok": False, "reason": f"images API HTTP {r.status_code}"}
+        imgs = (r.json() or {}).get("_embedded", {}).get("images", [])
+        if not imgs:
+            return {"ok": False, "reason": "nessuna immagine nella notice"}
+        href = (imgs[0].get("_links", {}).get("self") or {}).get("href")
+        if not href:
+            return {"ok": False, "reason": "link immagine assente"}
+        ir = requests.get(href, headers={"user-agent": UA}, proxies=proxies, timeout=30)
+        if ir.status_code != 200 or not ir.content:
+            return {"ok": False, "reason": f"download immagine HTTP {ir.status_code}"}
+        from frappe.utils.file_manager import save_file
+        f = save_file(f"{doc.name}.jpg", ir.content, doc.doctype, doc.name, is_private=0)
+        doc.db_set("photo", f.file_url)
+        frappe.db.commit()
+        return {"ok": True, "photo": f.file_url, "notice": nid}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "fetch_interpol_photo")
+        return {"ok": False, "reason": "errore proxy/fetch"}
+
+
+@frappe.whitelist()
+def fetch_interpol_photos_bulk(limit: int = 100):
+    """Backfill mugshot Interpol via proxy residenziale (best-effort)."""
+    if not _proxies():
+        return {"ok": 0, "failed": 0, "reason": "proxy residenziale non configurato"}
+    limit = int(limit)
+    ok = fail = 0
+    names = frappe.get_all("Tracking Target",
+                           {"source": "Interpol Red Notice", "photo": ["is", "not set"]},
+                           pluck="name")[:limit]
+    for n in names:
+        r = fetch_interpol_photo(n)
+        ok += 1 if r.get("ok") else 0
+        fail += 0 if r.get("ok") else 1
+    return {"ok": ok, "failed": fail, "processed": len(names)}
+
+
 @frappe.whitelist()
 def fetch_photos_bulk(source: str = None, limit: int = 100):
     """Recupera le foto mancanti (best-effort) per i target con pagina sorgente."""

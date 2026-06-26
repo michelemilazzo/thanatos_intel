@@ -39,6 +39,21 @@ frappe.ui.form.on("Tracking Target", {
 			}, __("OSINT"));
 		}
 
+		if (!frm.doc.photo && frm.doc.source === "Interpol Red Notice") {
+			frm.add_custom_button(__("Interpol Photo (proxy)"), () => {
+				frappe.dom.freeze(__("Fetching via residential proxy..."));
+				frappe.call({
+					method: "thanatos_intel.thanatos_tracking.most_wanted.fetch_interpol_photo",
+					args: { target: frm.doc.name },
+				}).then((r) => {
+					frappe.dom.unfreeze();
+					const m = r.message || {};
+					if (m.ok) frm.reload_doc();
+					else frappe.show_alert({ message: m.reason || __("No photo"), indicator: "orange" });
+				}).catch(() => frappe.dom.unfreeze());
+			}, __("OSINT"));
+		}
+
 		frm.add_custom_button(__("Add Lead"), () => {
 			frappe.new_doc("Tracking Lead", { target: frm.doc.name });
 		});
