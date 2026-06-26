@@ -36,6 +36,8 @@
       body{padding-top:46px !important}
       /* Nascondi la vecchia .tnav dentro le Page (cockpit ne aveva una) */
       .layout-main-section .tnav, .page-body .tnav{display:none !important}
+      /* SOLO viste Lista: toolbar Frappe sotto la top-nav (non tocca le Page custom) */
+      .page:has(.frappe-list) .page-head{top:46px !important}
     `;
     document.head.appendChild(css);
   }
