@@ -6,9 +6,8 @@ frappe.listview_settings["Tracking Target"] = {
 				frappe.dom.unfreeze();
 				const m = r.message || {};
 				if (m.results) {
-					const tot = m.total_imported;
 					frappe.msgprint({
-						title: __("Import All — {0} imported", [tot]),
+						title: __("Import All — {0} imported", [m.total_imported]),
 						message: m.results.map((x) => `${x.source}: ${x.error ? "ERR" : x.imported}`).join("<br>"),
 					});
 				} else {
@@ -22,7 +21,11 @@ frappe.listview_settings["Tracking Target"] = {
 			}).catch(() => frappe.dom.unfreeze());
 		};
 
-		listview.page.add_inner_button(__("Import Source"), () => {
+		// Tutte le azioni nel menu standard "..." (niente inner-button che si sovrappongono)
+		listview.page.add_menu_item(__("Cerca ricercato"), () =>
+			frappe.set_route("most-wanted-search"));
+
+		listview.page.add_menu_item(__("Import — scegli fonte"), () => {
 			frappe.call("thanatos_intel.thanatos_tracking.most_wanted.list_sources").then((r) => {
 				const sources = r.message || [];
 				frappe.prompt(
@@ -36,17 +39,20 @@ frappe.listview_settings["Tracking Target"] = {
 					__("Import Most Wanted Source"), __("Import")
 				);
 			});
-		}, __("Most Wanted"));
+		});
 
-		listview.page.add_inner_button(__("Import Interpol"), () =>
-			run("thanatos_intel.thanatos_tracking.most_wanted.import_interpol", { limit: 0 }, "Interpol"),
-			__("Most Wanted"));
+		listview.page.add_menu_item(__("Import Interpol"), () =>
+			run("thanatos_intel.thanatos_tracking.most_wanted.import_interpol", { limit: 0 }, "Interpol"));
 
-		listview.page.add_inner_button(__("Import Europol"), () =>
-			run("thanatos_intel.thanatos_tracking.most_wanted.import_europol", { limit: 0 }, "Europol"),
-			__("Most Wanted"));
+		listview.page.add_menu_item(__("Import Europol"), () =>
+			run("thanatos_intel.thanatos_tracking.most_wanted.import_europol", { limit: 0 }, "Europol"));
 
-		listview.page.add_inner_button(__("Fetch Photos (missing)"), () => {
+		listview.page.add_menu_item(__("Import TUTTE le fonti"), () => {
+			frappe.confirm(__("Import all configured wanted lists? This may create thousands of records."),
+				() => run("thanatos_intel.thanatos_tracking.most_wanted.import_all", { limit_per: 0 }, "all sources"));
+		});
+
+		listview.page.add_menu_item(__("Recupera foto mancanti"), () => {
 			frappe.prompt(
 				[{ fieldname: "limit", label: __("Max"), fieldtype: "Int", default: 100 }],
 				(v) => {
@@ -57,36 +63,10 @@ frappe.listview_settings["Tracking Target"] = {
 					}).then((r) => {
 						frappe.dom.unfreeze();
 						const m = r.message || {};
-						frappe.show_alert({ message: __("Photos: {0} ok, {1} failed", [m.ok, m.failed]),
-							indicator: "blue" });
+						frappe.show_alert({ message: __("Photos: {0} ok, {1} failed", [m.ok, m.failed]), indicator: "blue" });
 						listview.refresh();
 					}).catch(() => frappe.dom.unfreeze());
 				}, __("Fetch Missing Photos"), __("Fetch"));
-		}, __("Most Wanted"));
-
-		listview.page.add_inner_button(__("Fetch Interpol Photos (proxy)"), () => {
-			frappe.prompt(
-				[{ fieldname: "limit", label: __("Max"), fieldtype: "Int", default: 100 }],
-				(v) => {
-					frappe.dom.freeze(__("Fetching Interpol mugshots via proxy..."));
-					frappe.call({
-						method: "thanatos_intel.thanatos_tracking.most_wanted.fetch_interpol_photos_bulk",
-						args: { limit: v.limit || 100 },
-					}).then((r) => {
-						frappe.dom.unfreeze();
-						const m = r.message || {};
-						frappe.show_alert({
-							message: m.reason ? m.reason : __("Interpol photos: {0} ok, {1} failed", [m.ok, m.failed]),
-							indicator: m.reason ? "orange" : "blue",
-						});
-						listview.refresh();
-					}).catch(() => frappe.dom.unfreeze());
-				}, __("Fetch Interpol Photos"), __("Fetch"));
-		}, __("Most Wanted"));
-
-		listview.page.add_inner_button(__("Import ALL sources"), () => {
-			frappe.confirm(__("Import all configured wanted lists? This may create thousands of records."),
-				() => run("thanatos_intel.thanatos_tracking.most_wanted.import_all", { limit_per: 0 }, "all sources"));
-		}, __("Most Wanted"));
+		});
 	},
 };
