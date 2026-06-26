@@ -1,6 +1,31 @@
+function mwsLightbox(src, name) {
+	const esc = frappe.utils.escape_html;
+	const $ov = $(`
+		<div style="position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:zoom-out;">
+			<img src="${esc(src)}" style="max-width:90vw;max-height:82vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);">
+			<div style="color:#fff;margin-top:12px;font-size:15px;">${esc(name || "")}</div>
+		</div>`);
+	$ov.on("click", () => $ov.remove());
+	$(document).on("keydown.mwsbox", (e) => { if (e.key === "Escape") { $ov.remove(); $(document).off("keydown.mwsbox"); } });
+	$("body").append($ov);
+}
+
 frappe.ui.form.on("Tracking Target", {
 	refresh(frm) {
 		if (frm.is_new()) return;
+
+		if (frm.doc.photo) {
+			setTimeout(() => {
+				$(frm.wrapper).find('.form-sidebar img, [data-fieldname="photo"] .attach-image-display, [data-fieldname="photo"] img')
+					.css("cursor", "zoom-in")
+					.off("click.mwsbox")
+					.on("click.mwsbox", (e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						mwsLightbox(frm.doc.photo, frm.doc.target_name);
+					});
+			}, 300);
+		}
 
 		const call = (method, freeze, onOk) => {
 			frappe.dom.freeze(freeze);
