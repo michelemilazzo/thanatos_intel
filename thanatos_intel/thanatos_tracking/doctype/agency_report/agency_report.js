@@ -27,6 +27,27 @@ frappe.ui.form.on("Agency Report", {
 			});
 		});
 
+		frm.add_custom_button(__("Invia email all'agenzia"), () => {
+			if (!frm.doc.recipient_email) {
+				frappe.msgprint(__("Imposta prima l'email destinataria (campo 'Send To') o configurala in Agency Reporting Settings."));
+				return;
+			}
+			frappe.confirm(
+				__("Inviare la segnalazione a <b>{0}</b>?", [frappe.utils.escape_html(frm.doc.recipient_email)]),
+				() => {
+					frappe.dom.freeze(__("Invio..."));
+					frm.call("send_email").then((r) => {
+						frappe.dom.unfreeze();
+						const m = r.message || {};
+						if (m.ok) {
+							frappe.show_alert({ message: __("Inviata a {0}", [m.sent_to]), indicator: "green" });
+							frm.reload_doc();
+						}
+					}).catch(() => frappe.dom.unfreeze());
+				}
+			);
+		}).removeClass("btn-default").addClass("btn-primary");
+
 		if (frm.doc.status !== "Submitted" && frm.doc.status !== "Closed") {
 			frm.add_custom_button(__("Segna come Inviata"), () => {
 				frm.set_value("status", "Submitted");

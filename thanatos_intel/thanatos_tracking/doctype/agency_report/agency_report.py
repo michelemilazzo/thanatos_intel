@@ -25,8 +25,32 @@ class AgencyReport(Document):
         if not self.reporter:
             self.reporter = frappe.session.user
         self.submission_channel = CHANNELS.get(self.agency, "")
+        from thanatos_intel.thanatos_tracking.doctype.agency_reporting_settings.agency_reporting_settings import email_for
+        self.agency_email = email_for(self.agency)
+        if not self.recipient_email and self.agency_email:
+            self.recipient_email = self.agency_email
         if self.status == "Submitted" and not self.submitted_on:
             self.submitted_on = now_datetime()
+
+    @frappe.whitelist()
+    def send_email(self):
+        """Invia la segnalazione formattata all'email destinataria (azione confermata)."""
+        if not self.recipient_email:
+            frappe.throw("Imposta un'email destinataria (Send To).")
+        out = self.build_text()
+        cc = frappe.db.get_single_value("Agency Reporting Settings", "default_cc")
+        subject = f"[Thanatos Intelligence] Report — {self.subject_name or self.name} ({self.agency})"
+        frappe.sendmail(
+            recipients=[self.recipient_email],
+            cc=[cc] if cc else None,
+            subject=subject,
+            message=f"<pre style='font-family:monospace;white-space:pre-wrap;'>{frappe.utils.escape_html(out['text'])}</pre>",
+            reference_doctype=self.doctype,
+            reference_name=self.name,
+        )
+        self.db_set("status", "Submitted")
+        self.db_set("submitted_on", now_datetime())
+        return {"ok": True, "sent_to": self.recipient_email}
 
     @frappe.whitelist()
     def build_text(self):

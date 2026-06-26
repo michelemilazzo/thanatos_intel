@@ -1,0 +1,23 @@
+{
+  "doctype": "DocType",
+  "name": "Agency Reporting Settings",
+  "module": "Thanatos Tracking",
+  "issingle": 1,
+  "fields": [
+    {"fieldname": "intro", "fieldtype": "HTML", "options": "<p class='text-muted'>Indirizzi email ufficiali/nazionali per le segnalazioni. Inseriscili tu: FBI/Europol/Interpol non hanno un'email pubblica di tip generica, quindi qui metti i recapiti corretti (es. ufficio FBI, NCB Interpol nazionale, polizia). Lasciati vuoti = nessun pre-riempimento.</p>"},
+    {"fieldname": "sb_emails", "fieldtype": "Section Break", "label": "Indirizzi per agenzia"},
+    {"fieldname": "fbi_email", "fieldtype": "Data", "label": "FBI — Email", "options": "Email"},
+    {"fieldname": "europol_email", "fieldtype": "Data", "label": "Europol — Email", "options": "Email"},
+    {"fieldname": "interpol_email", "fieldtype": "Data", "label": "Interpol (NCB) — Email", "options": "Email"},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "national_police_email", "fieldtype": "Data", "label": "National Police — Email", "options": "Email"},
+    {"fieldname": "other_email", "fieldtype": "Data", "label": "Other — Email", "options": "Email"},
+    {"fieldname": "sb_send", "fieldtype": "Section Break", "label": "Invio"},
+    {"fieldname": "default_cc", "fieldtype": "Data", "label": "CC predefinito", "options": "Email"},
+    {"fieldname": "sender_name", "fieldtype": "Data", "label": "Firma mittente", "default": "Thanatos Intelligence"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1}
+  ]
+}
