@@ -81,6 +81,32 @@ def enrich(target=None):
 
 
 @frappe.whitelist()
+def translate_record(target=None, lang="it"):
+    """Traduce la descrizione (e i campi testuali) del target via libretranslate."""
+    import requests
+    doc = frappe.get_doc("Tracking Target", target)
+    text = doc.description or ""
+    if not text.strip():
+        return {"ok": False, "reason": "nessuna descrizione da tradurre"}
+    base = (frappe.conf.get("libretranslate_url") or "http://10.10.0.4:5000").rstrip("/")
+    try:
+        r = requests.post(base + "/translate", timeout=30, json={
+            "q": text, "source": "auto", "target": lang, "format": "html",
+        })
+        if not r.ok:
+            return {"ok": False, "reason": f"libretranslate HTTP {r.status_code}"}
+        out = (r.json() or {}).get("translatedText")
+        if not out:
+            return {"ok": False, "reason": "traduzione vuota"}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "translate_record")
+        return {"ok": False, "reason": "errore libretranslate"}
+    doc.db_set("description_it", out)
+    frappe.db.commit()
+    return {"ok": True}
+
+
+@frappe.whitelist()
 def ai_suggest(target=None):
     """Chiede all'AI i prossimi passi investigativi sul target."""
     doc = frappe.get_doc("Tracking Target", target)

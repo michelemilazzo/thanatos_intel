@@ -54,6 +54,21 @@ frappe.ui.form.on("Tracking Target", {
 			}, __("OSINT"));
 		}
 
+		if (frm.doc.description) {
+			frm.add_custom_button(__("Traduci (IT)"), () => {
+				frappe.dom.freeze(__("Traduzione..."));
+				frappe.call({
+					method: "thanatos_intel.thanatos_tracking.doctype.tracking_target.tracking_target.translate_record",
+					args: { target: frm.doc.name },
+				}).then((r) => {
+					frappe.dom.unfreeze();
+					const m = r.message || {};
+					if (m.ok) frm.reload_doc();
+					else frappe.show_alert({ message: m.reason || __("Errore"), indicator: "orange" });
+				}).catch(() => frappe.dom.unfreeze());
+			}, __("OSINT"));
+		}
+
 		frm.add_custom_button(__("Add Lead"), () => {
 			frappe.new_doc("Tracking Lead", { target: frm.doc.name });
 		});

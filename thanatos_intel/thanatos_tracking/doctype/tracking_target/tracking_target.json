@@ -41,6 +41,7 @@
     {"fieldname": "source_url", "fieldtype": "Data", "label": "Source URL"},
     {"fieldname": "sb_desc", "fieldtype": "Section Break", "label": "Description"},
     {"fieldname": "description", "fieldtype": "Text Editor", "label": "Description"},
+    {"fieldname": "description_it", "fieldtype": "Text Editor", "label": "Descrizione (IT)", "read_only": 1, "depends_on": "description_it"},
     {"fieldname": "sb_osint", "fieldtype": "Section Break", "label": "OSINT Enrichment", "collapsible": 1},
     {"fieldname": "risk_score", "fieldtype": "Int", "label": "Risk Score", "read_only": 1},
     {"fieldname": "last_enriched", "fieldtype": "Datetime", "label": "Last Enriched", "read_only": 1},
