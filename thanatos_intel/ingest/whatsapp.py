@@ -375,8 +375,7 @@ def _handle_call_events(data: dict, wa_number: dict | None):
                     # gamba cliente: accetta sul media server (registra + dirotta all'operatore)
                     try:
                         from thanatos_intel.api.wa_calling import forward_incoming_call
-                        res = forward_incoming_call(call_id, pnid, frm, sdp, wa_number)
-                        frappe.log_error(frappe.as_json(res)[:500], "WA call accept")
+                        forward_incoming_call(call_id, pnid, frm, sdp, wa_number)
                     except Exception:
                         frappe.log_error(frappe.get_traceback(), "WA call forward")
                     try:
@@ -389,9 +388,12 @@ def _handle_call_events(data: dict, wa_number: dict | None):
                     assigned = caller.get("assigned_name") or ""
                     assignee = caller.get("assigned_to") or (wa_number.auto_assign_to if wa_number else None) or "Administrator"
                     ref = caller.get("lead") or ""
+                    _opnum = frappe.db.get_value("WhatsApp Number", wa_number.get("phone_number"), "call_forward_number") if wa_number else ""
+                    _opname = frappe.db.get_value("Investigator", {"phone": _opnum}, "full_name") if _opnum else ""
+                    op_label = (f"{_opname} ({_opnum})" if _opname else (_opnum or "operatore"))
                     msg = (f"Da: <b>{who}</b>{org}<br>Numero: {frm}"
                            + (f"<br>Assegnato a: {assigned}" if assigned else "")
-                           + "<br>In dirottamento all'operatore")
+                           + f"<br>In dirottamento a: <b>{op_label}</b>")
                     try:
                         frappe.publish_realtime("centralino_incoming_call",
                                                 {"call_id": call_id, "from": frm, "caller": caller}, after_commit=False)
