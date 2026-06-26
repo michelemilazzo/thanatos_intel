@@ -138,6 +138,7 @@ def _handoff(lead_name, wa_doc):
         lead = frappe.get_doc("Intel Lead", lead_name)
         if not lead.assigned_to:
             lead.db_set("assigned_to", assignee, notify=False)
+        lead.db_set("bot_handed_off", 1, notify=False)
         frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "wa_bot handoff assign")
@@ -162,6 +163,9 @@ def generate_reply(lead_name, wa_number, to_number):
     wa_doc = _wa_doc(wa_number)
     if not wa_doc or not int(wa_doc.get("ai_bot_enabled") or 0):
         return {"ok": False, "reason": "bot disabled"}
+    # dopo un handoff il bot tace: la conversazione e' dell'operatore umano
+    if int(frappe.db.get_value("Intel Lead", lead_name, "bot_handed_off") or 0):
+        return {"ok": True, "skipped": "handed off to operator"}
     from thanatos_intel.ai.doc_ingest import _gateway
 
     system = (wa_doc.get("ai_bot_system_prompt") or "").strip() or _SYS
