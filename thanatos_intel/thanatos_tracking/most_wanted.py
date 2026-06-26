@@ -151,6 +151,8 @@ _IMG_PATTERNS = [
     r'<meta[^>]+(?:property|name)=["\'](?:og:image|twitter:image|twitter:image:src)["\'][^>]+content=["\']([^"\']+)["\']',
     r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+(?:property|name)=["\'](?:og:image|twitter:image|twitter:image:src)["\']',
     r'<link[^>]+rel=["\']image_src["\'][^>]+href=["\']([^"\']+)["\']',
+    # Europol eumostwanted.eu: foto fuggitivo in <img src=...wanted_pictures...>
+    r'<img[^>]+src=["\']([^"\']*wanted_pictures[^"\']+)["\']',
 ]
 
 
