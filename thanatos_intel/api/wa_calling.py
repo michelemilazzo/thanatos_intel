@@ -55,7 +55,7 @@ def _announce_text(op_num):
             langs = (inv[0].languages or "").strip()
     lingua = f"L'operatore le rispondera in {langs}. " if langs else ""
     return ("Benvenuto a Thanatos Investigazioni. La informiamo che, ai sensi della "
-            "normativa vigente, questa chiamata sara registrata. "
+            "normativa vigente, questa chiamata potrebbe essere registrata. "
             f"{lingua}Resti in linea, la mettiamo in contatto con un operatore.")
 
 
