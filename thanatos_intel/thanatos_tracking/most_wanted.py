@@ -360,6 +360,29 @@ def fetch_photos_bulk(source: str = None, limit: int = 100):
 
 
 @frappe.whitelist()
+def search_targets(query: str, limit: int = 50):
+    """Cerca un ricercato per nome/alias/ref. Ritorna le schede corrispondenti."""
+    if not frappe.has_permission("Tracking Target", "read"):
+        frappe.throw("Not permitted", frappe.PermissionError)
+    q = (query or "").strip()
+    if len(q) < 2:
+        return []
+    like = f"%{q}%"
+    return frappe.db.sql(
+        """
+        SELECT name, target_name, aliases, nationality, date_of_birth,
+               source, status, classification, priority, photo, wanted_for
+        FROM `tabTracking Target`
+        WHERE target_name LIKE %(like)s OR aliases LIKE %(like)s OR source_ref LIKE %(like)s
+        ORDER BY (target_name LIKE %(start)s) DESC, target_name
+        LIMIT %(limit)s
+        """,
+        {"like": like, "start": f"{q}%", "limit": int(limit)},
+        as_dict=True,
+    )
+
+
+@frappe.whitelist()
 def list_sources():
     """Fonti disponibili per il selettore desk."""
     return [{"key": k, "label": v[0]} for k, v in DATASETS.items()]

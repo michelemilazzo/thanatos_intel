@@ -1,0 +1,14 @@
+{
+ "doctype": "Page",
+ "name": "most-wanted-search",
+ "page_name": "most-wanted-search",
+ "title": "Most Wanted Search",
+ "module": "Thanatos Tracking",
+ "standard": "Yes",
+ "system_page": 0,
+ "roles": [
+  {"role": "Investigation Manager"},
+  {"role": "Investigator"},
+  {"role": "System Manager"}
+ ]
+}
