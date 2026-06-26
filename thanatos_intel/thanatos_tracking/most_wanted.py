@@ -210,6 +210,23 @@ def fetch_photo(target: str):
 INTERPOL_IMAGES_API = "https://ws-public.interpol.int/notices/v1/red/{nid}/images"
 _NOTICE_RE = re.compile(r"(20\d{2})[/-](\d{3,})")
 
+# Il WAF Interpol blocca 403 senza header browser + Referer/Origin del sito ufficiale,
+# anche da IP residenziale. Con questi header (+ proxy residenziale) risponde 200.
+_INTERPOL_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"),
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.interpol.int/",
+    "Origin": "https://www.interpol.int",
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+}
+
 
 def _proxies():
     """Proxy residenziale dedicato ai mugshot Interpol (WAF blocca IP datacenter).
@@ -245,8 +262,7 @@ def fetch_interpol_photo(target: str):
         return {"ok": False, "reason": "notice id non trovato"}
     try:
         r = requests.get(INTERPOL_IMAGES_API.format(nid=nid),
-                         headers={"user-agent": UA, "accept": "application/json"},
-                         proxies=proxies, timeout=30)
+                         headers=_INTERPOL_HEADERS, proxies=proxies, timeout=30)
         if r.status_code != 200:
             return {"ok": False, "reason": f"images API HTTP {r.status_code}"}
         imgs = (r.json() or {}).get("_embedded", {}).get("images", [])
@@ -255,7 +271,7 @@ def fetch_interpol_photo(target: str):
         href = (imgs[0].get("_links", {}).get("self") or {}).get("href")
         if not href:
             return {"ok": False, "reason": "link immagine assente"}
-        ir = requests.get(href, headers={"user-agent": UA}, proxies=proxies, timeout=30)
+        ir = requests.get(href, headers=_INTERPOL_HEADERS, proxies=proxies, timeout=30)
         if ir.status_code != 200 or not ir.content:
             return {"ok": False, "reason": f"download immagine HTTP {ir.status_code}"}
         from frappe.utils.file_manager import save_file
