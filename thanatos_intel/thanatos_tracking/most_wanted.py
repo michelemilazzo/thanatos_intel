@@ -277,7 +277,7 @@ def fetch_interpol_photos_bulk(limit: int = 100):
     ok = fail = 0
     names = frappe.get_all("Tracking Target",
                            {"source": "Interpol Red Notice", "photo": ["is", "not set"]},
-                           pluck="name")[:limit]
+                           pluck="name")[:limit or None]
     for n in names:
         r = fetch_interpol_photo(n)
         ok += 1 if r.get("ok") else 0
@@ -294,7 +294,7 @@ def fetch_photos_bulk(source: str = None, limit: int = 100):
     if source:
         filters["source"] = source
     ok = fail = 0
-    for n in frappe.get_all("Tracking Target", filters, pluck="name")[:limit]:
+    for n in frappe.get_all("Tracking Target", filters, pluck="name")[:limit or None]:
         r = fetch_photo(n)
         ok += 1 if r.get("ok") else 0
         fail += 0 if r.get("ok") else 1
