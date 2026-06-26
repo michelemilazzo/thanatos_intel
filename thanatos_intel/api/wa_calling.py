@@ -27,15 +27,61 @@ def forward_incoming_call(call_id, pnid, frm, sdp, wa_number=None):
     token = get_decrypted_password("WhatsApp Number", name, "meta_access_token")
     base = frappe.utils.get_url()
     op_num = (frappe.db.get_value("WhatsApp Number", name, "call_forward_number") or "").strip()
-    announce_text = _announce_text(op_num)
+    op_nums = _operator_chain(op_num)
+    announce_text = _announce_text(op_num or (op_nums[0] if op_nums else ""))
     r = requests.post(
         f"{_media_url()}/incoming",
         json={"call_id": call_id, "pnid": pnid, "from": frm, "sdp": sdp,
               "token": token, "frappe_url": base, "operator_number": op_num,
-              "announce_text": announce_text},
+              "operator_numbers": op_nums, "announce_text": announce_text},
         timeout=20,
     )
     return r.json()
+
+
+def _operator_chain(primary):
+    """Lista ordinata di numeri operatore: primario + investigatori 'Available'
+    con telefono. Usata per il dirottamento a cascata se uno non risponde."""
+    chain = []
+    p = (primary or "").strip()
+    if p:
+        chain.append(p)
+    for inv in frappe.get_all("Investigator", filters={"availability": "Available"},
+                              fields=["phone"]):
+        ph = (inv.get("phone") or "").strip()
+        if ph and ph not in chain:
+            chain.append(ph)
+    return chain
+
+
+def _resolve_caller(number):
+    """Identifica il chiamante da rubrica (Intelligence Contact) e Intel Lead:
+    nome/azienda + a quale operatore e' assegnato."""
+    res = {"name": "", "org": "", "contact": "", "lead": "", "assigned_to": "", "assigned_name": ""}
+    if not number:
+        return res
+    n = number if number.startswith("+") else "+" + number
+    bare = number.lstrip("+")
+    c = frappe.db.get_value("Intelligence Contact", {"whatsapp": ["in", [n, bare]]},
+                            ["name", "full_name", "linked_entity"], as_dict=True)         or frappe.db.get_value("Intelligence Contact", {"phone": ["in", [n, bare]]},
+                               ["name", "full_name", "linked_entity"], as_dict=True)
+    if c:
+        res["contact"] = c.name
+        if c.full_name and not c.full_name.startswith("Contatto WhatsApp"):
+            res["name"] = c.full_name
+        if c.linked_entity:
+            res["org"] = c.linked_entity
+    lead = frappe.db.get_value("Intel Lead", {"source_identifier": ["in", [n, bare]]},
+                               ["name", "source_name", "assigned_to"], as_dict=True,
+                               order_by="last_message_at desc")
+    if lead:
+        res["lead"] = lead.name
+        if not res["name"] and lead.source_name:
+            res["name"] = lead.source_name
+        if lead.assigned_to:
+            res["assigned_to"] = lead.assigned_to
+            res["assigned_name"] = frappe.db.get_value("User", lead.assigned_to, "full_name") or lead.assigned_to
+    return res
 
 
 def _announce_text(op_num):

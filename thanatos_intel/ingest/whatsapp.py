@@ -352,12 +352,24 @@ def _handle_call_events(data: dict, wa_number: dict | None):
                         frappe.log_error(frappe.as_json(res)[:500], "WA call accept")
                     except Exception:
                         frappe.log_error(frappe.get_traceback(), "WA call forward")
-                    assignee = (wa_number.auto_assign_to if wa_number else None) or "Administrator"
+                    try:
+                        from thanatos_intel.api.wa_calling import _resolve_caller
+                        caller = _resolve_caller(frm)
+                    except Exception:
+                        caller = {}
+                    who = caller.get("name") or "Sconosciuto"
+                    org = (" · " + caller["org"]) if caller.get("org") else ""
+                    assigned = caller.get("assigned_name") or ""
+                    assignee = caller.get("assigned_to") or (wa_number.auto_assign_to if wa_number else None) or "Administrator"
+                    ref = caller.get("lead") or ""
+                    msg = (f"Da: <b>{who}</b>{org}<br>Numero: {frm}"
+                           + (f"<br>Assegnato a: {assigned}" if assigned else "")
+                           + "<br>In dirottamento all'operatore")
                     try:
                         frappe.publish_realtime("centralino_incoming_call",
-                                                {"call_id": call_id, "from": frm}, after_commit=False)
+                                                {"call_id": call_id, "from": frm, "caller": caller}, after_commit=False)
                         _notify(assignee, "📞 Chiamata WhatsApp in arrivo",
-                                f"Chiamata da {frm} — in dirottamento all'operatore", None, "blue")
+                                msg, ref, "blue")
                     except Exception:
                         pass
                     continue
