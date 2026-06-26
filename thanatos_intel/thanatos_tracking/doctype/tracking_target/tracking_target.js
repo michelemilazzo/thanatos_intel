@@ -63,6 +63,14 @@ frappe.ui.form.on("Tracking Target", {
 		frm.page.add_menu_item(__("Add Lead"), () =>
 			frappe.new_doc("Tracking Lead", { target: frm.doc.name }));
 
+		frm.page.add_menu_item(__("Segnala ad agenzia"), () =>
+			frappe.new_doc("Agency Report", {
+				target: frm.doc.name, subject_name: frm.doc.target_name,
+				agency: (frm.doc.source || "").includes("FBI") ? "FBI"
+					: (frm.doc.source || "").includes("Europol") ? "Europol"
+					: (frm.doc.source || "").includes("Interpol") ? "Interpol" : "",
+			}));
+
 		if (!frm.doc.photo && frm.doc.source === "Interpol Red Notice") {
 			frm.page.add_menu_item(__("Interpol Photo (proxy)"), () =>
 				call("thanatos_intel.thanatos_tracking.most_wanted.fetch_interpol_photo",

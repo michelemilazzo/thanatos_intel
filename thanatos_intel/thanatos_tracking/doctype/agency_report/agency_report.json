@@ -1,0 +1,39 @@
+{
+  "doctype": "DocType",
+  "name": "Agency Report",
+  "module": "Thanatos Tracking",
+  "autoname": "format:RPT-{YYYY}-{#####}",
+  "title_field": "subject_name",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "subject_name", "fieldtype": "Data", "label": "Subject", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "agency", "fieldtype": "Select", "label": "Report To", "options": "FBI\nEuropol\nInterpol\nNational Police\nOther", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "target", "fieldtype": "Link", "label": "Tracking Target", "options": "Tracking Target", "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "report_type", "fieldtype": "Select", "label": "Type", "options": "Sighting\nLocation Information\nIdentity Match\nGeneral Tip\nOther", "default": "Sighting", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Status", "options": "Draft\nReady\nSubmitted\nAcknowledged\nClosed", "default": "Draft", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "confidence", "fieldtype": "Select", "label": "Confidence", "options": "Low\nMedium\nHigh", "default": "Medium"},
+    {"fieldname": "sb_info", "fieldtype": "Section Break", "label": "Report"},
+    {"fieldname": "summary", "fieldtype": "Data", "label": "Summary"},
+    {"fieldname": "details", "fieldtype": "Text Editor", "label": "Details"},
+    {"fieldname": "sb_where", "fieldtype": "Section Break", "label": "Where / When"},
+    {"fieldname": "sighting_location", "fieldtype": "Data", "label": "Location"},
+    {"fieldname": "sighting_country", "fieldtype": "Data", "label": "Country"},
+    {"fieldname": "col_2", "fieldtype": "Column Break"},
+    {"fieldname": "sighting_datetime", "fieldtype": "Datetime", "label": "Observed At"},
+    {"fieldname": "sb_reporter", "fieldtype": "Section Break", "label": "Reporter & Submission"},
+    {"fieldname": "reporter", "fieldtype": "Link", "label": "Reporter", "options": "User"},
+    {"fieldname": "followup_contact", "fieldtype": "Data", "label": "Follow-up Contact"},
+    {"fieldname": "col_3", "fieldtype": "Column Break"},
+    {"fieldname": "submission_channel", "fieldtype": "Data", "label": "Official Channel", "read_only": 1},
+    {"fieldname": "submission_ref", "fieldtype": "Data", "label": "Submission Ref / Tip ID"},
+    {"fieldname": "submitted_on", "fieldtype": "Datetime", "label": "Submitted On"},
+    {"fieldname": "sb_resp", "fieldtype": "Section Break", "label": "Response"},
+    {"fieldname": "response_notes", "fieldtype": "Small Text", "label": "Response Notes"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}
