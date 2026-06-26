@@ -79,15 +79,10 @@ a[href*="thanatos-intel"] .icon-container > svg {
 
 
 
-/* PCU: toolbar bottoni form — i bottoni vanno a capo invece di essere ritagliati/nascosti.
-   NIENTE overflow:auto qui: creava un clipping context che tagliava i dropdown. */
-.page-actions {
-  overflow: visible !important;
-  max-width: none !important;
-  flex-wrap: wrap !important;
-  row-gap: 4px;
-  justify-content: flex-end;
-}
+/* PCU: toolbar bottoni form — evita overflow su Investigation Case e simili */
+.page-actions { overflow-x: auto !important; max-width: 80vw; flex-wrap: nowrap; }
+.page-actions::-webkit-scrollbar { height: 4px; }
+.page-actions::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
 .page-actions .btn-group > .btn,
 .page-actions > .btn {
   font-size: 12px !important;
@@ -95,52 +90,6 @@ a[href*="thanatos-intel"] .icon-container > svg {
   white-space: nowrap;
 }
 .page-actions .menu-btn-group .dropdown-menu { min-width: 220px; }
-/* I menu a tendina delle azioni devono stare SOPRA la sidebar destra del form */
-.page-actions .dropdown-menu,
-.inner-group-button .dropdown-menu,
-.custom-btn-group .dropdown-menu {
-  z-index: 1060 !important;
-}
 
 /* PCU floating fab — z-index sotto modali ma sopra altro */
 #pcu-g-fab { z-index: 9999 !important; }
-
-/* --- Leggibilità pulsanti azione (problema generale: btn-default troppo chiari) --- */
-.page-actions .btn-default,
-.page-actions .btn-group > .btn-default,
-.page-actions .standard-actions .btn-default {
-  border: 1px solid #c4c9d2 !important;
-  color: #1f272e !important;
-  background-color: #fff !important;
-  font-weight: 500 !important;
-  box-shadow: 0 1px 2px rgba(16,24,40,.06) !important;
-}
-.page-actions .btn-default:hover,
-.page-actions .btn-group > .btn-default:hover {
-  background-color: #f2f1ec !important;
-  border-color: #b8923f !important;
-  color: #0A0E1A !important;
-}
-/* Gruppi custom (es. OSINT) — vivono nell'inner toolbar, FUORI da .page-actions.
-   Toggle con riempimento oro pieno per essere ben visibile. */
-.inner-group-button > .btn-default,
-.custom-btn-group > .btn-default {
-  background-color: #b8923f !important;
-  border: 1px solid #9c7a2e !important;
-  color: #fff !important;
-  font-weight: 600 !important;
-  box-shadow: 0 1px 2px rgba(16,24,40,.12) !important;
-}
-.inner-group-button > .btn-default:hover,
-.custom-btn-group > .btn-default:hover,
-.inner-group-button.show > .btn-default,
-.custom-btn-group.show > .btn-default {
-  background-color: #9c7a2e !important;
-  color: #fff !important;
-}
-.inner-group-button > .btn-default svg.icon,
-.custom-btn-group > .btn-default svg.icon { fill: #fff !important; stroke: #fff !important; }
-.custom-btn-group-label { color: #fff !important; }
-/* Icona dropdown sempre visibile */
-.page-actions .btn .caret,
-.page-actions .btn .dropdown-arrow { opacity: .9 !important; }
