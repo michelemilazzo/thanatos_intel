@@ -335,21 +335,29 @@ def _handle_call_events(data: dict, wa_number: dict | None):
                 session = call.get("session", {}) or {}
                 sdp = session.get("sdp", "")
 
-                # CONNECT con SDP → accetta sul media server (audio live + registrazione)
-                if event == "connect" and sdp and pnid:
+                # CONNECT con SDP: prima verifica se è la gamba operatore che risponde
+                if event == "connect" and sdp:
+                    try:
+                        from thanatos_intel.api.wa_calling import operator_answer as _op_ans
+                        if _op_ans(call_id, sdp):
+                            continue  # operatore agganciato → bridge attivo
+                    except Exception:
+                        frappe.log_error(frappe.get_traceback(), "WA operator_answer")
+                    if not pnid:
+                        continue
+                    # gamba cliente: accetta sul media server (registra + dirotta all'operatore)
                     try:
                         from thanatos_intel.api.wa_calling import forward_incoming_call
                         res = forward_incoming_call(call_id, pnid, frm, sdp, wa_number)
                         frappe.log_error(frappe.as_json(res)[:500], "WA call accept")
                     except Exception:
                         frappe.log_error(frappe.get_traceback(), "WA call forward")
-                    # notifica operatore: chiamata in arrivo (può unirsi dal Centralino)
                     assignee = (wa_number.auto_assign_to if wa_number else None) or "Administrator"
                     try:
                         frappe.publish_realtime("centralino_incoming_call",
                                                 {"call_id": call_id, "from": frm}, after_commit=False)
                         _notify(assignee, "📞 Chiamata WhatsApp in arrivo",
-                                f"Chiamata da {frm} — rispondi dal Centralino", None, "blue")
+                                f"Chiamata da {frm} — in dirottamento all'operatore", None, "blue")
                     except Exception:
                         pass
                     continue

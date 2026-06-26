@@ -26,13 +26,26 @@ def forward_incoming_call(call_id, pnid, frm, sdp, wa_number=None):
         return {"ok": False, "error": "numero non trovato"}
     token = get_decrypted_password("WhatsApp Number", name, "meta_access_token")
     base = frappe.utils.get_url()
+    op_num = (frappe.db.get_value("WhatsApp Number", name, "call_forward_number") or "").strip()
     r = requests.post(
         f"{_media_url()}/incoming",
         json={"call_id": call_id, "pnid": pnid, "from": frm, "sdp": sdp,
-              "token": token, "frappe_url": base},
+              "token": token, "frappe_url": base, "operator_number": op_num},
         timeout=20,
     )
     return r.json()
+
+
+def operator_answer(call_id, sdp):
+    """Inoltra al media server la SDP answer dell'operatore (gamba in uscita).
+    Ritorna True se quel call_id era una gamba operatore nota (gestita)."""
+    import requests
+    try:
+        r = requests.post(f"{_media_url()}/operator/answer",
+                          json={"operator_call_id": call_id, "sdp": sdp}, timeout=15)
+        return r.status_code == 200 and bool(r.json().get("ok"))
+    except Exception:
+        return False
 
 
 @frappe.whitelist()
