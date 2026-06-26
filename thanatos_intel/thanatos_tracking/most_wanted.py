@@ -284,6 +284,48 @@ def fetch_interpol_photo(target: str):
         return {"ok": False, "reason": "errore proxy/fetch"}
 
 
+def fetch_interpol_photos_scheduled():
+    """Job schedulato robusto: completa il backfill mugshot Interpol a piccoli lotti
+    e mantiene aggiornate le nuove notice. Idempotente, resiliente, anti-overlap.
+
+    Si auto-ferma quando non resta nulla da scaricare; riprende solo le mancanti.
+    Stop di sicurezza se il proxy cade / fondi esauriti (errori consecutivi).
+    """
+    import time
+
+    if not _proxies():
+        return
+    if frappe.cache().get_value("interpol_photo_job_lock"):
+        return  # run precedente ancora attivo
+    frappe.cache().set_value("interpol_photo_job_lock", 1, expires_in_sec=1200)
+    try:
+        names = frappe.get_all(
+            "Tracking Target",
+            {"source": "Interpol Red Notice", "photo": ["is", "not set"]},
+            pluck="name",
+        )
+        if not names:
+            return
+        deadline = time.monotonic() + 600  # max ~10 min per esecuzione
+        consecutive_err = 0
+        for n in names:
+            if time.monotonic() > deadline:
+                break
+            r = fetch_interpol_photo(n)
+            if r.get("ok"):
+                consecutive_err = 0
+            else:
+                consecutive_err += 1
+                if consecutive_err >= 8:  # proxy giu' / fondi finiti -> stop
+                    frappe.log_error(
+                        f"Interpol photo job stop: {consecutive_err} errori ({r.get('reason')})",
+                        "interpol photo job")
+                    break
+            time.sleep(0.3)  # gentile col proxy/WAF
+    finally:
+        frappe.cache().delete_value("interpol_photo_job_lock")
+
+
 @frappe.whitelist()
 def fetch_interpol_photos_bulk(limit: int = 100):
     """Backfill mugshot Interpol via proxy residenziale (best-effort)."""

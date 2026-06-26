@@ -188,7 +188,8 @@ doc_events={
  },
 }
 scheduler_events={
- 'cron':{'0 7 * * *':['thanatos_intel.news.ingestion.daily_publish']},
+ 'cron':{'0 7 * * *':['thanatos_intel.news.ingestion.daily_publish'],
+         '*/15 * * * *':['thanatos_intel.thanatos_tracking.most_wanted.fetch_interpol_photos_scheduled']},
  'all':[],
  'hourly':['thanatos_intel.news.ingestion.hourly_ingest',
            'thanatos_intel.thanatos_core.currency.converter.fetch_rates',
