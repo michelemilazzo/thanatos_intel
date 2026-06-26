@@ -44,6 +44,14 @@ def apply_ron_erp(doc, method=None):
     """Sales Invoice / Quotation ERPNext: company currency EUR → totali in RON (base_*)."""
     if not doc.meta.has_field("custom_grand_total_ron"):
         return
+    import frappe
+    if frappe.db.get_value("Company", doc.get("company"), "country") != "Romania":
+        for _f in ("custom_eur_ron_rate", "custom_grand_total_ron", "custom_net_total_ron"):
+            if doc.meta.has_field(_f):
+                doc.set(_f, 0)
+        if doc.meta.has_field("custom_ron_ccy"):
+            doc.set("custom_ron_ccy", None)
+        return
     rate = ron_rate("EUR")  # company currency = EUR
     doc.custom_eur_ron_rate = rate
     if doc.meta.has_field("custom_ron_ccy"):
