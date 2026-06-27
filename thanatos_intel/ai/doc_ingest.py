@@ -16,12 +16,25 @@ from frappe.utils import now_datetime
 from thanatos_intel.ai.ocr_service import ocr_file
 
 EXTRACT_SYSTEM = (
-    "Sei un analista investigativo di Thanatos Intel. Ricevi il testo OCR di un documento. "
-    "Rispondi SOLO con JSON valido, nessun testo fuori dal JSON, con questa struttura: "
+    "Sei un analista forense documentale di Thanatos Intel (agenzia ISO). Ricevi il testo "
+    "OCR di un documento e i suoi metadati forensi. Analizza il documento e VALUTANE "
+    "L'AUTENTICITA'. Rispondi SOLO con JSON valido, nessun testo fuori dal JSON, struttura: "
     '{"document_type": "passport|id_card|company_doc|financial_doc|contract|generic", '
     '"language": "iso", "summary": "sintesi in italiano (max 60 parole)", '
     '"entities": [{"name":"", "type":"person|company|address|account|other", "role":""}], '
-    '"key_fields": {}, "dates": [], "risk_flags": ["eventuali anomalie/red flag"]}'
+    '"key_fields": {}, "dates": [], "risk_flags": ["eventuali anomalie/red flag"], '
+    '"authenticity": "autentico|dubbio|manomesso|contraffatto|non_determinabile", '
+    '"authenticity_confidence": 0.0, '
+    '"authenticity_indicators": ["indizi concreti a supporto del verdetto"]}\n'
+    "REGOLE AUTENTICITA' (sii prudente, ISO): valuta coerenza interna (date/importi/nomi/"
+    "P.IVA), presenza e plausibilita' di numeri di protocollo/visti/firme, congruenza tra i "
+    "metadati forniti (produttore, date creazione/modifica, firma digitale, revisioni "
+    "incrementali) e il contenuto. Segnala: date di modifica successive sospette, piu' "
+    "revisioni incrementali, produttori da editing (Photoshop, GIMP), assenza di firma "
+    "digitale dove attesa, font/allineamenti incoerenti, importi/totali che non quadrano. "
+    "NON dichiarare 'autentico' senza elementi positivi: in assenza di indizi usa "
+    "'non_determinabile'; se ci sono anomalie usa 'dubbio'; usa 'manomesso'/'contraffatto' "
+    "solo con indizi forti. authenticity_confidence in [0,1]."
 )
 
 
@@ -103,11 +116,98 @@ def _normalize(parsed):
     return parsed
 
 
-def _create_evidence(file_url, case, parsed, ocr):
+_AUTH_MAP = {"autentico": "Autentico", "dubbio": "Dubbio", "manomesso": "Manomesso",
+             "contraffatto": "Contraffatto", "non_determinabile": "Non determinabile"}
+
+
+def _ensure_evidence_authfields():
+    """Crea (idempotente) i campi forensi su Investigation Evidence. Pipeline ISO."""
+    from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+    specs = [
+        {"fieldname": "authenticity", "label": "Autenticità", "fieldtype": "Select",
+         "options": "\nAutentico\nDubbio\nManomesso\nContraffatto\nNon determinabile",
+         "insert_after": "evidence_type"},
+        {"fieldname": "authenticity_confidence", "label": "Confidenza autenticità",
+         "fieldtype": "Float", "insert_after": "authenticity"},
+        {"fieldname": "authenticity_indicators", "label": "Indicatori autenticità",
+         "fieldtype": "Small Text", "insert_after": "authenticity_confidence"},
+        {"fieldname": "forensics_json", "label": "Metadati forensi", "fieldtype": "Small Text",
+         "insert_after": "authenticity_indicators"},
+    ]
+    for s in specs:
+        if not frappe.db.exists("Custom Field", f"Investigation Evidence-{s['fieldname']}"):
+            try:
+                create_custom_field("Investigation Evidence", s)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "ensure authfields")
+
+
+def _sha256(path):
+    import hashlib
+    try:
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(65536), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except Exception:
+        return ""
+
+
+def _doc_forensics(file_url):
+    """Metadati forensi di base: nativo/scansione, date metadati PDF, firma digitale,
+    produttore, revisioni incrementali, hash SHA-256."""
+    import os
+    info = {}
+    try:
+        fd = frappe.get_doc("File", {"file_url": file_url})
+        path = fd.get_full_path()
+        info["file_ext"] = os.path.splitext(path)[1].lower()
+        info["size_bytes"] = os.path.getsize(path)
+        info["sha256"] = _sha256(path)
+        if info["file_ext"] == ".pdf":
+            try:
+                from pypdf import PdfReader
+                r = PdfReader(path)
+                meta = r.metadata or {}
+                info["pdf_producer"] = str(meta.get("/Producer", "") or "")
+                info["pdf_creator"] = str(meta.get("/Creator", "") or "")
+                info["pdf_created"] = str(meta.get("/CreationDate", "") or "")
+                info["pdf_modified"] = str(meta.get("/ModDate", "") or "")
+                info["num_pages"] = len(r.pages)
+                has_sig = False
+                try:
+                    root = r.trailer["/Root"]
+                    if "/AcroForm" in root:
+                        for f in (root["/AcroForm"].get("/Fields", []) or []):
+                            obj = f.get_object()
+                            if obj.get("/FT") == "/Sig" and obj.get("/V"):
+                                has_sig = True
+                                break
+                except Exception:
+                    pass
+                info["has_digital_signature"] = has_sig
+                with open(path, "rb") as fh:
+                    info["incremental_updates"] = max(0, fh.read().count(b"%%EOF") - 1)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "doc forensics pdf")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "doc forensics")
+    return info
+
+
+def _create_evidence(file_url, case, parsed, ocr, forensics=None):
+    forensics = forensics or {}
+    parsed = parsed or {}
+    auth_raw = (parsed.get("authenticity") or "non_determinabile").lower().replace(" ", "_")
+    auth = _AUTH_MAP.get(auth_raw, "Non determinabile")
+    indicators = parsed.get("authenticity_indicators") or []
     note_lines = []
     if parsed:
         note_lines.append("— Sintesi AI —")
         note_lines.append(parsed.get("summary") or "")
+        note_lines.append(f"Autenticità: {auth}"
+                          + (f" — {'; '.join(indicators)}" if indicators else ""))
         if parsed.get("risk_flags"):
             note_lines.append("Red flag: " + "; ".join(parsed["risk_flags"]))
         if parsed.get("key_fields"):
@@ -116,11 +216,17 @@ def _create_evidence(file_url, case, parsed, ocr):
     ev = frappe.get_doc({
         "doctype": "Investigation Evidence",
         "investigation_case": case,
-        "evidence_name": (parsed or {}).get("document_type", "Documento") + " — AI ingest",
+        "evidence_name": (parsed.get("document_type") or "Documento") + " — AI ingest",
         "evidence_type": "Document",
         "attached_file": file_url,
         "acquisition_date": now_datetime(),
         "source": "MMOS AI ingest",
+        "hash_value": forensics.get("sha256") or "",
+        "custody_status": "Verified" if auth == "Autentico" else "Received",
+        "authenticity": auth,
+        "authenticity_confidence": parsed.get("authenticity_confidence") or 0,
+        "authenticity_indicators": "; ".join(indicators)[:500],
+        "forensics_json": json.dumps(forensics, ensure_ascii=False)[:500],
         "notes": "\n".join([l for l in note_lines if l]),
     })
     ev.flags.ignore_mandatory = True
@@ -169,6 +275,9 @@ def ingest_document(file_url, investigation_case, document_type="generic"):
     if not file_url or not investigation_case:
         frappe.throw(_("file_url e investigation_case sono obbligatori"))
 
+    _ensure_evidence_authfields()
+    forensics = _doc_forensics(file_url)
+
     try:
         ocr = ocr_file(file_url, document_type) or {}
     except Exception:
@@ -183,16 +292,18 @@ def ingest_document(file_url, investigation_case, document_type="generic"):
     parsed, ai = None, None
     if text:
         from thanatos_intel.ai.case_architect import _resp_text
-        ai = _gateway(f"Testo del documento:\n\n{text[:12000]}",
+        fblock = "\n".join(f"{k}: {v}" for k, v in forensics.items() if k != "sha256")
+        ai = _gateway(f"Metadati forensi del file:\n{fblock}\n\nTesto del documento:\n\n{text[:12000]}",
                       system=EXTRACT_SYSTEM, task_type="extract")
         parsed = _normalize(_extract_json(_resp_text(ai)))
 
-    evidence = _create_evidence(file_url, investigation_case, parsed, ocr)
+    evidence = _create_evidence(file_url, investigation_case, parsed, ocr, forensics)
     _meter(ai, investigation_case)
     return {
         "ok": True,
         "evidence": evidence,
         "extracted": parsed or {},
+        "authenticity": _AUTH_MAP.get((parsed or {}).get("authenticity", ""), "Non determinabile"),
         "ocr": {"provider": ocr.get("provider"), "confidence": ocr.get("confidence")},
         "ai_available": bool(ai),
     }

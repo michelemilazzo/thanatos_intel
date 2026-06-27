@@ -354,11 +354,26 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
             ex = r.get("extracted") or {}
             results.append({"file": d.file_name, "summary": ex.get("summary", ""),
                             "flags": ex.get("risk_flags") or [],
+                            "entities": ex.get("entities") or [],
+                            "authenticity": r.get("authenticity") or "Non determinabile",
                             "evidence": r.get("evidence")})
         except Exception:
             frappe.log_error(frappe.get_traceback(), f"operator ingest {d.file_name}")
-            results.append({"file": d.file_name, "summary": "(errore analisi)", "flags": []})
+            results.append({"file": d.file_name, "summary": "(errore analisi)", "flags": [],
+                            "entities": [], "authenticity": "Non determinabile"})
         frappe.db.commit()
+
+    # anagrafica ISO: registra TUTTE le parti come entità + crea l'anagrafica cliente
+    all_entities = [e for r in results for e in (r.get("entities") or [])]
+    n_parties = 0
+    try:
+        n_parties = _register_parties(case.name, all_entities)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "operator register_parties")
+    try:
+        _ensure_case_client(case.name, lead_name, sender)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "operator ensure_client")
 
     op_user = _operator_user(operator)
     try:
@@ -372,16 +387,25 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
         frappe.log_error(frappe.get_traceback(), "operator link case")
 
     n_flags = sum(len(r.get("flags") or []) for r in results)
+    suspect = [r for r in results if r.get("authenticity") in ("Dubbio", "Manomesso", "Contraffatto")]
     lines = [f"✅ Pratica aperta: *{case.name}*",
              f"{title}",
              f"Tipo: {ctype or 'n/d'} · {len(results)} documenti analizzati"]
     if n_flags:
         lines.append(f"⚠️ {n_flags} red flag rilevati")
+    if suspect:
+        lines.append(f"\U0001F50E {len(suspect)} documenti con autenticità non confermata "
+                     "(dubbio/manomesso/contraffatto)")
+    if n_parties:
+        lines.append(f"\U0001F465 {n_parties} parti identificate e schedate (entità)")
     lines.append("\U0001F4E6 documenti archiviati nel box del caso")
     lines.append("")
+    _AICON = {"Autentico": "✅", "Dubbio": "❓", "Manomesso": "⚠️",
+              "Contraffatto": "⛔", "Non determinabile": "▫️"}
     for r in results[:12]:
         s = (r.get("summary") or "").strip().replace("\n", " ")
-        lines.append(f"\U0001F4C4 {r['file']}: {s[:140]}" if s else f"\U0001F4C4 {r['file']}")
+        ic = _AICON.get(r.get("authenticity"), "▫️")
+        lines.append(f"{ic} {r['file']}: {s[:130]}" if s else f"{ic} {r['file']}")
     if len(results) > 12:
         lines.append(f"… e altri {len(results) - 12} documenti")
     lines.append("")
@@ -390,6 +414,71 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
 
     _notify_desk(lead_name, case.name, op_user, len(results), n_flags)
     return {"ok": True, "case": case.name, "documents": len(results), "flags": n_flags}
+
+
+_ENTITY_TYPE = {"person": "Person", "company": "Company"}
+
+
+def _register_parties(case_name, entities):
+    """Schedatura ISO: ogni parte (persona/azienda) diventa una Investigation Entity
+    collegata al caso (Case Entity). Dedup per nome+tipo. Ritorna n. nuove parti."""
+    case = frappe.get_doc("Investigation Case", case_name)
+    linked = {ce.entity for ce in (case.get("case_entities") or [])}
+    seen, created = set(), 0
+    for e in entities or []:
+        etype = _ENTITY_TYPE.get((e.get("type") or "").lower())
+        name = (e.get("name") or "").strip()
+        key = (etype, name.lower())
+        if not etype or len(name) < 3 or key in seen:
+            continue
+        seen.add(key)
+        ent = frappe.db.get_value("Investigation Entity",
+                                  {"full_name": name, "entity_type": etype}, "name")
+        if not ent:
+            doc = frappe.get_doc({"doctype": "Investigation Entity", "entity_type": etype,
+                                  "full_name": name, "primary_identifier": name,
+                                  "status": "Active"})
+            doc.flags.ignore_mandatory = True
+            doc.insert(ignore_permissions=True)
+            ent = doc.name
+        if ent not in linked:
+            case.append("case_entities", {"entity": ent, "entity_type": etype,
+                                          "role_in_case": "Subject",
+                                          "notes": (e.get("role") or "")[:140]})
+            linked.add(ent)
+            created += 1
+    if created:
+        case.save(ignore_permissions=True)
+        frappe.db.commit()
+    return created
+
+
+def _ensure_case_client(case_name, lead_name, sender):
+    """Crea/collega l'anagrafica cliente del caso con KYC/KYB da completare.
+    Se il mittente è un operatore (caso aperto per conto terzi) crea un placeholder
+    «da identificare»; altrimenti usa i dati del lead. ISO: il cliente va sempre
+    identificato (KYC/KYB)."""
+    case = frappe.get_doc("Investigation Case", case_name)
+    if case.get("client"):
+        return case.client
+    is_operator = bool(find_operator(sender))
+    src_name = frappe.db.get_value("Intel Lead", lead_name, "source_name") or ""
+    phone = "" if is_operator else (frappe.db.get_value("Intel Lead", lead_name,
+                                                        "source_identifier") or "")
+    cl = frappe.db.get_value("Investigation Client", {"phone": phone}, "name") if phone else None
+    if not cl:
+        cname = (src_name if (src_name and not is_operator)
+                 else f"Cliente da identificare ({case_name})")
+        doc = frappe.get_doc({"doctype": "Investigation Client", "client_name": cname[:140],
+                              "client_type": "Company", "phone": phone,
+                              "onboarding_status": "Pending KYC",
+                              "kyc_status": "Not Started", "kyb_status": "Not Started"})
+        doc.flags.ignore_mandatory = True
+        doc.insert(ignore_permissions=True)
+        cl = doc.name
+    case.db_set("client", cl, notify=False)
+    frappe.db.commit()
+    return cl
 
 
 def _reply(wa_phone, to_number, lead_name, body):
