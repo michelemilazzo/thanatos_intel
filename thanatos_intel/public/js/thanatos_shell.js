@@ -30,8 +30,8 @@
     cleanupLegacy();
     injectCSS();
     if (document.querySelector('.tnav-cockpit-btn')) return; // già presente
-    const targets = ['.desk-sidebar', '.layout-side-section .sidebar-items',
-                     '.standard-sidebar', '.layout-side-section', '#sidebar'];
+    const targets = ['.sidebar-items', '.body-sidebar-top', '.body-sidebar',
+                     '.standard-items-sections', '.desk-sidebar', '#sidebar'];
     let host = null;
     for (const s of targets){ host = document.querySelector(s); if (host) break; }
     if (!host) return;
