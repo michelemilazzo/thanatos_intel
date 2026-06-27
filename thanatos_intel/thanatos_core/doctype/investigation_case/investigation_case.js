@@ -40,6 +40,44 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('File'));
 
+            frm.add_custom_button(__('Genera delega AdE'), () => {
+                const dl = new frappe.ui.Dialog({
+                    title: __('Delega Agenzia delle Entrate'),
+                    fields: [
+                        { fieldname: 'delegato_nome', fieldtype: 'Data', label: 'Delegato / Studio (intermediario)', reqd: 1 },
+                        { fieldname: 'delegato_cf', fieldtype: 'Data', label: 'C.F. delegato' },
+                        { fieldname: 'legale_rappresentante', fieldtype: 'Data', label: 'Legale rappresentante del cliente' },
+                        { fieldname: 'lr_cf', fieldtype: 'Data', label: 'C.F. legale rappresentante' },
+                        { fieldname: 'lr_nato_a', fieldtype: 'Data', label: 'Nato a' },
+                        { fieldname: 'lr_nato_il', fieldtype: 'Data', label: 'Nato il' },
+                        { fieldname: 'sv_fatture', fieldtype: 'Check', label: 'Consultazione/acquisizione fatture elettroniche', default: 1 },
+                        { fieldname: 'sv_cassetto', fieldtype: 'Check', label: 'Cassetto fiscale', default: 1 },
+                        { fieldname: 'durata_anni', fieldtype: 'Int', label: 'Durata (anni)', default: 4 }
+                    ],
+                    primary_action_label: __('Genera PDF'),
+                    primary_action(v) {
+                        dl.hide();
+                        const servizi = [];
+                        if (v.sv_fatture) servizi.push('fatture');
+                        if (v.sv_cassetto) servizi.push('cassetto');
+                        frappe.call({
+                            method: 'thanatos_intel.reporting.delega_ade.genera_delega',
+                            args: { case: frm.doc.name, delegato_nome: v.delegato_nome, delegato_cf: v.delegato_cf,
+                                    legale_rappresentante: v.legale_rappresentante, lr_cf: v.lr_cf,
+                                    lr_nato_a: v.lr_nato_a, lr_nato_il: v.lr_nato_il,
+                                    durata_anni: v.durata_anni, servizi: JSON.stringify(servizi) },
+                            freeze: true, freeze_message: __('Genero la delega...'),
+                            callback(r) {
+                                const m = r.message || {};
+                                if (m.file_url) { frappe.show_alert({ message: __('Delega generata.'), indicator: 'green' }, 6); window.open(m.file_url, '_blank'); }
+                                frm.reload_doc();
+                            }
+                        });
+                    }
+                });
+                dl.show();
+            }, __('File'));
+
             frm.add_custom_button(__('Genera Fascicolo'), () => {
                 frappe.call({
                     method: 'thanatos_intel.reporting.fascicolo.genera_fascicolo',
