@@ -78,6 +78,19 @@ frappe.ui.form.on('Investigation Case', {
                 dl.show();
             }, __('File'));
 
+            frm.add_custom_button(__('Formulario investigativo'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.reporting.formulario.genera_formulario',
+                    args: { case: frm.doc.name },
+                    freeze: true, freeze_message: __('Genero il formulario...'),
+                    callback(r) {
+                        const m = r.message || {};
+                        if (m.file_url) { frappe.show_alert({ message: __('Formulario generato.'), indicator: 'green' }, 6); window.open(m.file_url, '_blank'); }
+                        frm.reload_doc();
+                    }
+                });
+            }, __('File'));
+
             frm.add_custom_button(__('Genera Fascicolo'), () => {
                 frappe.call({
                     method: 'thanatos_intel.reporting.fascicolo.genera_fascicolo',

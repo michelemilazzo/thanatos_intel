@@ -48,7 +48,7 @@ def _table(rows, widths):
     return t
 
 
-def _cover_and_sections(case, client, entities, docs, cessioni, screening, steps):
+def _cover_and_sections(case, client, entities, docs, cessioni, screening, steps, activities=None):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
@@ -129,6 +129,19 @@ def _cover_and_sections(case, client, entities, docs, cessioni, screening, steps
         srows.append([P(str(s["seq"])), P(frappe.utils.escape_html(s["label"])[:80]), P(s["status"])])
     S.append(_table(srows, [16, 360, 74]))
 
+    # Attività e accertamenti (screening, doppia cessione, domande, analisi documenti)
+    if activities:
+        S.append(H(f"7. Attività investigative e accertamenti ({len(activities)})"))
+        for a in activities:
+            txt = (a.get("description") or "").strip()
+            if not txt:
+                continue
+            head = f"<b>[{a.get('type') or 'Nota'}] {a.get('date') or ''}</b>"
+            S.append(Paragraph(head, ParagraphStyle("ah", parent=ss["Normal"], fontSize=8.5,
+                              textColor=colors.HexColor(GOLD), spaceBefore=6, spaceAfter=1)))
+            S.append(Paragraph(frappe.utils.escape_html(txt).replace("\n", "<br/>"),
+                              ParagraphStyle("at", parent=ss["Normal"], fontSize=8.2, leading=11)))
+
     S.append(Spacer(1, 12))
     S.append(Paragraph(
         "Catena di custodia: ogni documento è identificato dal proprio digest SHA-256, "
@@ -197,8 +210,11 @@ def genera_fascicolo(case_name):
     cessioni = _recent_activity(case_name, "DOPPIA CESSIONE")
     screening = _recent_activity(case_name, "Screening automatico parti") or \
         _recent_activity(case_name, "VERIFICA PARTI")
+    activities = [{"date": str(a.activity_date or "")[:16], "type": a.activity_type,
+                   "description": a.description}
+                  for a in (case.get("case_activities") or []) if (a.description or "").strip()]
 
-    cover = _cover_and_sections(case, client, entities, docs, cessioni, screening, steps)
+    cover = _cover_and_sections(case, client, entities, docs, cessioni, screening, steps, activities)
 
     writer = PdfWriter()
     for pg in PdfReader(io.BytesIO(cover)).pages:
