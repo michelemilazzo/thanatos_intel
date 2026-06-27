@@ -428,7 +428,10 @@ def _register_parties(case_name, entities):
     for e in entities or []:
         etype = _ENTITY_TYPE.get((e.get("type") or "").lower())
         name = (e.get("name") or "").strip()
-        key = (etype, name.lower())
+        norm = re.sub(r"[^\w\s]", "", name.lower())
+        norm = re.sub(r"\b(s\s*r\s*l|srl|spa|s\s*p\s*a|snc|sas|srls)\b", "", norm)
+        norm = re.sub(r"\s+", " ", norm).strip()
+        key = (etype, norm)
         if not etype or len(name) < 3 or key in seen:
             continue
         seen.add(key)
@@ -469,13 +472,19 @@ def _ensure_case_client(case_name, lead_name, sender):
     if not cl:
         cname = (src_name if (src_name and not is_operator)
                  else f"Cliente da identificare ({case_name})")
-        doc = frappe.get_doc({"doctype": "Investigation Client", "client_name": cname[:140],
-                              "client_type": "Company", "phone": phone,
-                              "onboarding_status": "Pending KYC",
-                              "kyc_status": "Not Started", "kyb_status": "Not Started"})
-        doc.flags.ignore_mandatory = True
-        doc.insert(ignore_permissions=True)
-        cl = doc.name
+        # Investigation Client si autonamina sull'email → sempre una email valida
+        email = (f"wa-{_digits(phone)}@lead.thanatos.agency" if phone
+                 else f"caso-{case_name.lower()}@daidentificare.thanatos.agency")
+        if frappe.db.exists("Investigation Client", email):
+            cl = email
+        else:
+            doc = frappe.get_doc({"doctype": "Investigation Client", "client_name": cname[:140],
+                                  "client_type": "Company", "email": email, "phone": phone,
+                                  "onboarding_status": "Pending KYC",
+                                  "kyc_status": "Not Started", "kyb_status": "Not Started"})
+            doc.flags.ignore_mandatory = True
+            doc.insert(ignore_permissions=True)
+            cl = doc.name
     case.db_set("client", cl, notify=False)
     frappe.db.commit()
     return cl
