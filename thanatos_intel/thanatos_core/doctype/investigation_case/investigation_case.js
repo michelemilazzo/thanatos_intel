@@ -25,7 +25,7 @@ frappe.ui.form.on('Investigation Case', {
 
         if (!frm.is_new() && frm.doc.drive_folder) {
             frm.add_custom_button(__('Apri Drive'), () => {
-                window.open('/drive?entity=' + frm.doc.drive_folder, '_blank');
+                window.open('/drive/folder/' + frm.doc.drive_folder, '_blank');
             }, __('File'));
 
             frm.add_custom_button(__('Organizza in Drive'), () => {
