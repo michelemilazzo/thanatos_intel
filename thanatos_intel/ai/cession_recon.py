@@ -47,7 +47,16 @@ def _extract_one(text):
 
 
 @frappe.whitelist()
-def detect_double_cession(case, wa_phone=None, sender=None, lead_name=None):
+def detect_double_cession_async(case):
+    """Avvia il rilevatore in background (l'OCR di molti documenti supera il timeout
+    web). L'esito finisce nelle attività del caso + notifica all'operatore."""
+    frappe.enqueue("thanatos_intel.ai.cession_recon.detect_double_cession",
+                   queue="long", timeout=1800, case=case, notify_user=frappe.session.user)
+    return {"queued": True}
+
+
+@frappe.whitelist()
+def detect_double_cession(case, wa_phone=None, sender=None, lead_name=None, notify_user=None):
     evs = frappe.get_all("Investigation Evidence", filters={"investigation_case": case},
                          fields=["attached_file"], limit=0)
     cessions, declarations = [], []
@@ -78,36 +87,51 @@ def detect_double_cession(case, wa_phone=None, sender=None, lead_name=None):
                 "type": (d.get("credit_type") or "").strip(),
                 "total": _num(d.get("declared_total_eur"))})
 
-    flags, groups = [], {}
-    for c in cessions:
-        key = (c["cedente"].lower(), (c["code"] or c["type"]).lower())
-        groups.setdefault(key, []).append(c)
+    def _norm(n):
+        import re as _re
+        n = _re.sub(r"[^\w\s]", "", (n or "").lower())
+        n = _re.sub(r"\b(s\s*r\s*l|srl|srls|spa|s\s*p\s*a|snc|sas)\b", "", n)
+        return _re.sub(r"\s+", " ", n).strip()
 
-    findings = []
-    for key, lst in groups.items():
+    # Raggruppa per CEDENTE: lo stesso credito (DTA cod.6834) è descritto in modi
+    # diversi nei documenti, quindi la chiave è il venditore, non l'etichetta.
+    groups = {}
+    for c in cessions:
+        groups.setdefault(_norm(c["cedente"]), []).append(c)
+    global_plaf = max([d["total"] for d in declarations] or [0])
+
+    flags, findings = [], []
+    for ced, lst in groups.items():
         total_ceded = sum(x["nominal"] for x in lst)
-        cessionari = sorted({x["cessionario"] for x in lst if x["cessionario"]})
-        plaf_candidates = [d["total"] for d in declarations
-                           if (d["code"] and d["code"] == key[1])
-                           or (d["type"] and d["type"].lower() == key[1])]
-        plaf = max(plaf_candidates) if plaf_candidates else 0
-        findings.append({"cedente": lst[0]["cedente"], "credito": key[1],
+        _cdict = {}
+        for x in lst:
+            if x["cessionario"]:
+                _cdict.setdefault(_norm(x["cessionario"]), x["cessionario"])
+        cessionari = sorted(_cdict.values())
+        codes = {(x["code"] or x["type"]).lower() for x in lst if (x["code"] or x["type"])}
+        matchplaf = [d["total"] for d in declarations
+                     if (d["code"] or d["type"]).lower() in codes]
+        plaf = max(matchplaf) if matchplaf else global_plaf
+        findings.append({"cedente": lst[0]["cedente"], "credito": ", ".join(sorted(codes)) or "n/d",
                          "n_cessioni": len(lst), "cessionari": cessionari,
                          "total_ceded": total_ceded, "plafond": plaf})
         if len(cessionari) > 1:
-            flags.append(f"⚠️ Stesso credito «{key[1]}» di {lst[0]['cedente']} ceduto a "
-                         f"{len(cessionari)} cessionari diversi: {', '.join(cessionari)}")
+            flags.append(f"⚠️ {lst[0]['cedente']} cede lo stesso credito a "
+                         f"{len(cessionari)} cessionari diversi: {', '.join(cessionari)} "
+                         f"(verificare che le tranche non si sovrappongano)")
         if plaf and total_ceded > plaf * 1.001:
             flags.append(f"⛔ Cessioni totali ({total_ceded:,.0f}€) SUPERANO il plafond "
-                         f"dichiarato ({plaf:,.0f}€) per «{key[1]}»")
+                         f"dichiarato ({plaf:,.0f}€) — credito ceduto oltre il disponibile")
+        # stessa cessione (cessionario + importo) ripetuta su più documenti
         seen = {}
         for x in lst:
-            k2 = (x["cessionario"].lower(), round(x["nominal"]))
+            k2 = (_norm(x["cessionario"]), round(x["nominal"]))
             seen.setdefault(k2, []).append(x["file"])
         for k2, files in seen.items():
             if len(files) > 1 and k2[1]:
-                flags.append(f"❓ Stessa cessione ({k2[1]:,.0f}€ a {k2[0]}) documentata in "
-                             f"piu' file: {', '.join(files)}")
+                flags.append(f"❓ Stessa cessione ({k2[1]:,.0f}€ → {k2[0]}) documentata in "
+                             f"{len(files)} file: {', '.join(files)} (verificare se è un "
+                             f"doppione o due cessioni distinte dello stesso importo)")
 
     verdict = "ALLARME" if any(f.startswith("⛔") for f in flags) else (
         "ATTENZIONE" if flags else "Nessuna anomalia evidente")
@@ -137,6 +161,26 @@ def detect_double_cession(case, wa_phone=None, sender=None, lead_name=None):
         try:
             from thanatos_intel.ingest.operator_console import _reply
             _reply(wa_phone, sender, lead_name, "\n".join(lines)[:3500])
+        except Exception:
+            pass
+
+    if notify_user:
+        ind = "red" if verdict == "ALLARME" else ("orange" if flags else "green")
+        try:
+            frappe.publish_realtime("msgprint", {
+                "message": f"<b>Doppia cessione ({case}): {verdict}</b><br>"
+                           + "<br>".join(flags[:5]), "indicator": ind}, user=notify_user)
+        except Exception:
+            pass
+        try:
+            frappe.get_doc({"doctype": "Notification Log",
+                            "subject": f"Doppia cessione: {verdict}",
+                            "email_content": "\n".join(lines[:8])[:600],
+                            "for_user": notify_user, "type": "Alert",
+                            "document_type": "Investigation Case", "document_name": case,
+                            "from_user": frappe.session.user or "Administrator"}).insert(
+                ignore_permissions=True)
+            frappe.db.commit()
         except Exception:
             pass
 

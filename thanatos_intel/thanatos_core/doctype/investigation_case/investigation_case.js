@@ -162,19 +162,10 @@ frappe.ui.form.on('Investigation Case', {
 
             frm.add_custom_button(__('Verifica doppia cessione'), () => {
                 frappe.call({
-                    method: 'thanatos_intel.ai.cession_recon.detect_double_cession',
+                    method: 'thanatos_intel.ai.cession_recon.detect_double_cession_async',
                     args: { case: frm.doc.name },
-                    freeze: true, freeze_message: __('Analisi cessioni in corso...'),
                     callback(r) {
-                        const m = r.message || {};
-                        const flags = (m.flags || []);
-                        frappe.msgprint({
-                            title: __('Doppia cessione') + ' — ' + (m.verdict || '-'),
-                            indicator: (m.verdict === 'ALLARME') ? 'red' : (flags.length ? 'orange' : 'green'),
-                            message: (flags.length ? flags.map(frappe.utils.escape_html).join('<br>') : __('Nessuna anomalia evidente.')) +
-                                     '<br><br><small>' + (m.cessions || []).length + ' cessioni, ' + (m.declarations || []).length + ' dichiarazioni. Dettaglio nelle attivita del caso.</small>'
-                        });
-                        frm.reload_doc();
+                        frappe.show_alert({ message: __('Analisi cessioni avviata: l\'esito comparira nelle attivita del caso e riceverai una notifica.'), indicator: 'blue' }, 8);
                     }
                 });
             }, __('Intelligence'));
