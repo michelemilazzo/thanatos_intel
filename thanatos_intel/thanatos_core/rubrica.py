@@ -57,10 +57,11 @@ def client_detail(client):
                    "title": title, "tag": x.status, "dt": "Investigation Case", "ref": x.name})
 
     for a in _all("Investigation Appointment", filters={"linked_client": client},
-                  fields=["name", "title", "appointment_type", "appointment_date", "status"],
+                  fields=["name", "title", "appointment_type", "appointment_date", "status", "outcome"],
                   order_by="appointment_date desc", limit=50):
+        _tag = a.status + ((" · esito: " + a.outcome) if a.get("outcome") else "")
         tl.append({"when": str(a.appointment_date or ""), "icon": "📅", "kind": a.appointment_type or "Appuntamento",
-                   "title": a.title or a.name, "tag": a.status, "dt": "Investigation Appointment", "ref": a.name})
+                   "title": a.title or a.name, "tag": _tag, "dt": "Investigation Appointment", "ref": a.name})
 
     for cl in _all("Call Log", filters={"linked_client": client},
                    fields=["name", "called_at", "direction", "caller_name", "outcome"],

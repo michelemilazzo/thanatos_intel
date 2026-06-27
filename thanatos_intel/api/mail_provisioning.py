@@ -163,6 +163,16 @@ def provision(user=None, mailbox=None, full_name=None, quota_mb=1024):
         sync_one(mailbox)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "provision sync_one")
+    # crea/aggiorna l'identita' MMOS ID (email=casella) -> SSO automatico, no mappa manuale
+    try:
+        import subprocess
+        subprocess.run(["/home/frappe/bench-cli/.venv/bin/bench", "-b", "mmos-id",
+                        "--site", "id.onekeyco.com", "execute",
+                        "mmos_brand.sso_provision.ensure_sso_user",
+                        "--kwargs", frappe.as_json({"email": mailbox})],
+                       timeout=90, capture_output=True)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "provision ensure_sso_user")
 
     frappe.logger().info(f"[mail_provisioning] {mailbox} created={created} webmail-enabled by {frappe.session.user}")
     return {"mailbox": mailbox, "account_created": created, "webmail_enabled": True}
