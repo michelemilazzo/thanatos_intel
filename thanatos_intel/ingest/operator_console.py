@@ -44,6 +44,9 @@ _HELP_RE = re.compile(r"\b(aiuto|help|comandi|cosa puoi fare)\b", re.I)
 _REPROCESS_RE = re.compile(
     r"(rilegg|ri-?legg|ri-?process|riprov.{0,12}ocr|ri-?fai.{0,10}ocr|"
     r"\bleggi\b.{0,14}(allegat|document)|ocr.{0,14}divers)", re.I)
+_QUESTIONS_RE = re.compile(
+    r"(domand.{0,14}(document|allegat|reperti|cas)|fai.{0,8}le domand|"
+    r"poni.{0,14}domand|investigatore digitale|domande investigative)", re.I)
 
 
 def handle_operator_message(lead_name, wa_phone, sender, text, operator):
@@ -73,6 +76,19 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
                        wa_phone=wa_phone, sender=sender)
         _reply(wa_phone, sender, lead_name,
                "\U0001F501 Rileggo i documenti del caso con l'OCR, le mando l'esito tra poco.")
+        return
+    if _QUESTIONS_RE.search(t):
+        case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Non c'e' ancora un caso collegato a questa chat. Prima «apri un caso».")
+            return
+        frappe.enqueue("thanatos_intel.ai.doc_questions.generate_questions",
+                       queue="long", timeout=1200, case=case, lead_name=lead_name,
+                       wa_phone=wa_phone, sender=sender, post=1)
+        _reply(wa_phone, sender, lead_name,
+               "\U0001F575️ Da investigatore digitale: preparo le domande per ogni "
+               "documento, gliele mando tra poco.")
         return
     if _HELP_RE.search(t):
         _reply(wa_phone, sender, lead_name,

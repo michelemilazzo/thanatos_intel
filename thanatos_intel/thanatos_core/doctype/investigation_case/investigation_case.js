@@ -175,6 +175,16 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('Intelligence'));
 
+            frm.add_custom_button(__('Domande investigative'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.ai.doc_questions.generate_questions_async',
+                    args: { case: frm.doc.name },
+                    callback(r) {
+                        frappe.show_alert({ message: __('Investigatore digitale: genero le domande per ogni documento; le trovi nelle attivita del caso.'), indicator: 'blue' }, 8);
+                    }
+                });
+            }, __('Intelligence'));
+
             frm.add_custom_button(__('Verifica doppia cessione'), () => {
                 frappe.call({
                     method: 'thanatos_intel.ai.cession_recon.detect_double_cession_async',
