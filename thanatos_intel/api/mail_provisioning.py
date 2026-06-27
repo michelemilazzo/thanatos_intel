@@ -145,24 +145,24 @@ def provision(user=None, mailbox=None, full_name=None, quota_mb=1024):
             frappe.throw(f"Creazione casella fallita: {r.status_code} {r.text[:200]}")
         created = True
 
-    # app-password dedicata alla webmail: PRESERVA i secret esistenti (password
-    # principale + eventuali app-password), aggiungendo solo la nuova. Stalwart su
-    # 'secrets' fa SET-replace anche con addItem in alcune versioni -> usare read+set.
-    cur = requests.get(f"{url}/api/principal/{quote(mailbox, safe='')}", auth=auth, timeout=15)
-    existing = []
-    if cur.status_code == 200:
-        existing = ((cur.json().get("data") or {}).get("secrets") or [])
+    # MODELLO single-managed: una sola password gestita per casella, identica per
+    # password-login, SSO webmail e Email Account Frappe (Stalwart onora solo il 1o secret bcrypt).
     app_pw = _secrets.token_urlsafe(18)
-    new_secrets = list(existing) + [_bcrypt(app_pw)]
     r = requests.patch(
         f"{url}/api/principal/{quote(mailbox, safe='')}", auth=auth, timeout=20,
-        json=[{"action": "set", "field": "secrets", "value": new_secrets}])
+        json=[{"action": "set", "field": "secrets", "value": [_bcrypt(app_pw)]}])
     if r.status_code >= 400:
-        frappe.throw(f"Impostazione app-password fallita: {r.status_code} {r.text[:200]}")
+        frappe.throw(f"Impostazione password fallita: {r.status_code} {r.text[:200]}")
     requests.get(f"{url}/api/reload", auth=auth, timeout=15)
 
     _write_secret(mailbox, app_pw)
     _write_vault(mailbox, app_pw)
+    # propaga all'Email Account Frappe (se esiste)
+    try:
+        from thanatos_intel.mail_sync import sync_one
+        sync_one(mailbox)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "provision sync_one")
 
     frappe.logger().info(f"[mail_provisioning] {mailbox} created={created} webmail-enabled by {frappe.session.user}")
     return {"mailbox": mailbox, "account_created": created, "webmail_enabled": True}
