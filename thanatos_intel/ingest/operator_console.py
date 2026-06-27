@@ -41,6 +41,9 @@ _OPEN_CASE_RE = re.compile(
     re.I,
 )
 _HELP_RE = re.compile(r"\b(aiuto|help|comandi|cosa puoi fare)\b", re.I)
+_REPROCESS_RE = re.compile(
+    r"(rilegg|ri-?legg|ri-?process|riprov.{0,12}ocr|ri-?fai.{0,10}ocr|"
+    r"\bleggi\b.{0,14}(allegat|document)|ocr.{0,14}divers)", re.I)
 
 
 def handle_operator_message(lead_name, wa_phone, sender, text, operator):
@@ -58,6 +61,18 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
         _reply(wa_phone, sender, lead_name,
                "\U0001F6E0️ Ricevuto. Sto elaborando gli allegati e apro la "
                "pratica: le mando l'esito tra poco.")
+        return
+    if _REPROCESS_RE.search(t):
+        case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Non c'e' ancora un caso collegato a questa chat. Prima «apri un caso».")
+            return
+        frappe.enqueue("thanatos_intel.ingest.operator_console.reprocess_case_docs",
+                       queue="long", timeout=1800, case=case, lead_name=lead_name,
+                       wa_phone=wa_phone, sender=sender)
+        _reply(wa_phone, sender, lead_name,
+               "\U0001F501 Rileggo i documenti del caso con l'OCR, le mando l'esito tra poco.")
         return
     if _HELP_RE.search(t):
         _reply(wa_phone, sender, lead_name,
@@ -398,3 +413,74 @@ def _notify_desk(lead_name, case, operator, ndocs, nflags):
                 lead_name, "orange" if nflags else "green")
     except Exception:
         pass
+
+
+def _has_summary(notes):
+    return bool(notes and "Sintesi AI" in notes and len(notes) > 80)
+
+
+def _reprocess_evidence(ev):
+    """Ri-OCR + ri-estrae un reperto e aggiorna note/nome in place.
+    Ritorna (ok, summary)."""
+    import json
+    from thanatos_intel.ai.ocr_service import ocr_file
+    from thanatos_intel.ai.doc_ingest import (_gateway, _extract_json, _normalize,
+                                              _read_text_fallback, EXTRACT_SYSTEM)
+    from thanatos_intel.ai.case_architect import _resp_text
+    fu = ev.get("attached_file")
+    if not fu:
+        return False, ""
+    try:
+        ocr = ocr_file(fu, "generic") or {}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "reprocess ocr")
+        ocr = {}
+    text = (ocr.get("raw_text") or "").strip() or (_read_text_fallback(fu) or "").strip()
+    if not text:
+        return False, ""
+    ai = _gateway(f"Testo del documento:\n\n{text[:12000]}", system=EXTRACT_SYSTEM,
+                  task_type="extract")
+    parsed = _normalize(_extract_json(_resp_text(ai)))
+    if not parsed:
+        return False, ""
+    note_lines = ["— Sintesi AI —", parsed.get("summary") or ""]
+    if parsed.get("risk_flags"):
+        note_lines.append("Red flag: " + "; ".join(parsed["risk_flags"]))
+    if parsed.get("key_fields"):
+        note_lines.append("Campi: " + json.dumps(parsed["key_fields"], ensure_ascii=False))
+    note_lines.append(f"OCR provider: {ocr.get('provider')} · confidenza: {ocr.get('confidence')}")
+    frappe.db.set_value("Investigation Evidence", ev["name"], {
+        "notes": "\n".join(x for x in note_lines if x),
+        "evidence_name": (parsed.get("document_type", "Documento") or "Documento") + " — AI ingest",
+    })
+    frappe.db.commit()
+    return True, (parsed.get("summary") or "")
+
+
+@frappe.whitelist()
+def reprocess_case_docs(case, lead_name=None, wa_phone=None, sender=None, only_failed=1):
+    """Ri-legge i documenti di un caso con l'OCR (utile dopo che è stato corretto un
+    documento o aggiunto un motore OCR). Default: solo i reperti senza sintesi."""
+    only_failed = int(only_failed)
+    evs = frappe.get_all("Investigation Evidence", filters={"investigation_case": case},
+                         fields=["name", "evidence_name", "notes", "attached_file"], limit=0)
+    todo = [e for e in evs if (not only_failed) or not _has_summary(e.get("notes"))]
+    done, still = 0, 0
+    summaries = []
+    for e in todo:
+        ok, summ = _reprocess_evidence(e)
+        if ok:
+            done += 1
+            if summ:
+                summaries.append((e.get("attached_file") or "").split("/files/")[-1] + ": "
+                                 + summ.replace("\n", " ")[:120])
+        else:
+            still += 1
+    if wa_phone and sender and lead_name:
+        lines = [f"\U0001F501 Riletti {done}/{len(todo)} documenti del caso {case}."]
+        if still:
+            lines.append(f"⚠️ {still} ancora illeggibili (scansione di bassa qualità).")
+        for s in summaries[:8]:
+            lines.append("\U0001F4C4 " + s)
+        _reply(wa_phone, sender, lead_name, "\n".join(lines))
+    return {"ok": True, "reprocessed": done, "still_failed": still}
