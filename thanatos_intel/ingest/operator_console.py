@@ -198,20 +198,67 @@ def _classify_case(doc_names, case_types):
     return _extract_json(_resp_text(resp)) or {}
 
 
-def _attach_to_case(file_row, case):
+_BOX_CASES = "/mnt/thanatos-box/Cases"
+_MIME = {"pdf": "application/pdf", "png": "image/png", "jpg": "image/jpeg",
+         "jpeg": "image/jpeg", "webp": "image/webp", "tiff": "image/tiff",
+         "tif": "image/tiff", "txt": "text/plain",
+         "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+
+
+def _ensure_case_box(case):
+    """Garantisce che la cartella Drive del caso viva nel box dedicato
+    (/mnt/thanatos-box/Cases/<CASE>), sostituendo la dir locale con un symlink.
+    Idempotente. Ritorna il path box o None."""
+    import os
+    import shutil
+    folder = frappe.db.get_value("Investigation Case", case, "drive_folder")
+    rel = frappe.db.get_value("Drive File", folder, "path") if folder else None
+    if not rel:
+        return None
+    local = frappe.get_site_path("private", "files", rel.rstrip("/"))
+    box = os.path.join(_BOX_CASES, case)
     try:
-        if frappe.db.exists("File", {"file_url": file_row.file_url,
-                                     "attached_to_doctype": "Investigation Case",
-                                     "attached_to_name": case}):
-            return
-        is_priv = frappe.db.get_value("File", file_row.name, "is_private")
-        frappe.get_doc({
-            "doctype": "File", "file_url": file_row.file_url,
-            "file_name": file_row.file_name, "is_private": is_priv,
-            "attached_to_doctype": "Investigation Case", "attached_to_name": case,
-        }).insert(ignore_permissions=True)
+        if os.path.islink(local):
+            return os.path.realpath(local)
+        if not os.path.isdir("/mnt/thanatos-box"):
+            return None
+        os.makedirs(box, exist_ok=True)
+        if os.path.isdir(local):
+            for entry in os.listdir(local):
+                s, d = os.path.join(local, entry), os.path.join(box, entry)
+                if not os.path.exists(d):
+                    shutil.move(s, d)
+            shutil.rmtree(local, ignore_errors=True)
+        os.makedirs(os.path.dirname(local), exist_ok=True)
+        os.symlink(box, local)
+        return box
     except Exception:
-        frappe.log_error(frappe.get_traceback(), "operator attach_to_case")
+        frappe.log_error(frappe.get_traceback(), "operator _ensure_case_box")
+        return None
+
+
+def archive_lead_docs_to_case(case, lead_name):
+    """Archivia i documenti del lead nella cartella Drive del caso (box dedicato),
+    sottocartella '01 Documenti'. Una sola copia fisica nel box. Idempotente."""
+    import os
+    from thanatos_intel.reporting.case_reports import _put_in_drive, _client_name
+    _ensure_case_box(case)
+    client = _client_name(frappe.get_doc("Investigation Case", case))
+    n = 0
+    for d in _lead_documents(lead_name):
+        src = frappe.get_site_path("private", "files", (d.file_url or "").split("/files/")[-1])
+        if not os.path.exists(src):
+            continue
+        ext = (d.file_name or "").rsplit(".", 1)[-1].lower()
+        mime = _MIME.get(ext, "application/octet-stream")
+        try:
+            with open(src, "rb") as fh:
+                _put_in_drive(case, d.file_name, fh.read(), mime, client,
+                              subfolder="01 Documenti")
+            n += 1
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"operator archive doc {d.file_name}")
+    return n
 
 
 @frappe.whitelist()
@@ -245,9 +292,14 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
     case.insert(ignore_permissions=True)
     frappe.db.commit()
 
+    # archivia i documenti nella cartella Drive del caso (box dedicato)
+    try:
+        archive_lead_docs_to_case(case.name, lead_name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "operator archive_lead_docs")
+
     results = []
     for d in docs:
-        _attach_to_case(d, case.name)
         try:
             r = ingest_document(file_url=d.file_url, investigation_case=case.name,
                                 document_type="generic") or {}
@@ -277,6 +329,7 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
              f"Tipo: {ctype or 'n/d'} · {len(results)} documenti analizzati"]
     if n_flags:
         lines.append(f"⚠️ {n_flags} red flag rilevati")
+    lines.append("\U0001F4E6 documenti archiviati nel box del caso")
     lines.append("")
     for r in results[:12]:
         s = (r.get("summary") or "").strip().replace("\n", " ")
