@@ -244,6 +244,15 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('Intelligence'));
 
+            frm.add_custom_button(__('✅ Checklist avanzamento'), () => {
+                frappe.call({ method: 'thanatos_intel.ai.case_orchestrator.case_progress', args: { case: frm.doc.name, record: 0 },
+                    callback(r) { const m = r.message || {}; frappe.msgprint({ title: __('Avanzamento') + ' ' + (m.done||0) + '/' + (m.total||0) + ' (' + (m.pct||0) + '%)', indicator: (m.pct>=80?'green':(m.pct>=50?'orange':'red')), message: '<pre style="white-space:pre-wrap;font-size:12px">' + frappe.utils.escape_html(m.text||'') + '</pre>' }); } });
+            }, __('Intelligence'));
+            frm.add_custom_button(__('▶ Analisi completa (tutto)'), () => {
+                frappe.call({ method: 'thanatos_intel.ai.case_orchestrator.run_full_analysis_async', args: { case: frm.doc.name },
+                    callback(r) { frappe.show_alert({ message: __('Pipeline avviata: screening, doppia cessione, domande, riconciliazione, fascicolo. Esito + checklist nelle attivita.'), indicator: 'blue' }, 9); } });
+            }, __('Intelligence'));
+
             frm.add_custom_button(__('Verifica camerale (P.IVA)'), () => {
                 const d = new frappe.ui.Dialog({
                     title: __('Verifica camerale Registro Imprese'),

@@ -428,6 +428,14 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
     lines.append(f"\U0001F517 {get_url('/app/investigation-case/' + case.name)}")
     _reply(wa_phone, sender, lead_name, "\n".join(lines))
 
+    # automazione: lancia l'intera pipeline analitica in background (screening, doppia
+    # cessione, domande, riconciliazione fatture, fascicolo, checklist)
+    try:
+        frappe.enqueue("thanatos_intel.ai.case_orchestrator.run_full_analysis",
+                       queue="long", timeout=2400, case=case.name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "enqueue full analysis")
+
     _notify_desk(lead_name, case.name, op_user, len(results), n_flags)
     return {"ok": True, "case": case.name, "documents": len(results), "flags": n_flags}
 
