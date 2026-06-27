@@ -76,6 +76,19 @@ def _write_secret(mailbox, app_pw):
         pass
 
 
+def _write_vault(mailbox, password):
+    """Scrive la password nel vault (mostrato da /secrets) per tenere tutto in sync."""
+    vp = "/home/frappe/.secrets/integrations.json"
+    try:
+        v = json.load(open(vp))
+        sm = v.setdefault("stalwart_mailboxes", {"label": "Caselle Stalwart", "category": "mail", "fields": {}})
+        key = mailbox.replace("@", "_").replace(".", "_")
+        sm.setdefault("fields", {})[key] = {"label": mailbox, "type": "password", "value": password}
+        json.dump(v, open(vp, "w"), indent=2)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "mail_provisioning _write_vault")
+
+
 @frappe.whitelist()
 def preview(user=None, mailbox=None):
     """Dry-run: mostra cosa farebbe il provisioning, senza creare nulla."""
@@ -149,6 +162,7 @@ def provision(user=None, mailbox=None, full_name=None, quota_mb=1024):
     requests.get(f"{url}/api/reload", auth=auth, timeout=15)
 
     _write_secret(mailbox, app_pw)
+    _write_vault(mailbox, app_pw)
 
     frappe.logger().info(f"[mail_provisioning] {mailbox} created={created} webmail-enabled by {frappe.session.user}")
     return {"mailbox": mailbox, "account_created": created, "webmail_enabled": True}
