@@ -30,6 +30,10 @@ def after_migrate():
         from thanatos_intel.patches.appointment_outcome import apply as _ao; _ao()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "ensure_appointment_outcome")
+    try:
+        from thanatos_intel.patches.contact_fields import apply as _cf; _cf()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ensure_contact_fields")
 
 
 def _ensure_client_address_fields():

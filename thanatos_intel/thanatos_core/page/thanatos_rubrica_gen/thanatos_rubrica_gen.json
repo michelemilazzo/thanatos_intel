@@ -1,0 +1,5 @@
+{"content":null,"creation":"2026-06-27 00:00:00","doctype":"Page","icon":"users","idx":0,
+ "modified":"2026-06-27 00:00:00","modified_by":"Administrator","module":"Thanatos Core",
+ "name":"thanatos-rubrica-gen","owner":"Administrator","page_name":"thanatos-rubrica-gen",
+ "roles":[{"role":"System Manager"},{"role":"Thanatos Operator"},{"role":"Thanatos Manager"},{"role":"Thanatos Director"},{"role":"Thanatos Analyst"}],
+ "standard":"Yes","system_page":0,"title":"👥 Rubrica generale"}
