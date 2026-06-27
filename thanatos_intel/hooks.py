@@ -27,7 +27,7 @@ app_docs='https://thanatos.agency'
 app_country='IT'
 
 app_logo_url='/assets/thanatos_intel/images/thanatos-icon-192.png'
-app_include_css=['/assets/thanatos_intel/css/desk_chrome.css?v=20260624d']
+app_include_css=['/assets/thanatos_intel/css/desk_chrome.css?v=20260627a']
 app_include_js=['/assets/thanatos_intel/js/bootstrap_jq.js?v=20260624d',
                 '/assets/thanatos_intel/js/desk_chrome.js?v=20260624d',
                 '/assets/thanatos_intel/js/fx_widget.js?v=20260624d',
@@ -35,7 +35,7 @@ app_include_js=['/assets/thanatos_intel/js/bootstrap_jq.js?v=20260624d',
                 '/assets/thanatos_intel/js/vies_autofill.js?v=20260624d',
                 '/assets/thanatos_intel/js/call_logger.js?v=20260624d',
                 '/assets/thanatos_intel/js/cockpit_land.js?v=20260624d',
-                '/assets/thanatos_intel/js/thanatos_shell.js?v=20260626e',
+                '/assets/thanatos_intel/js/thanatos_shell.js?v=20260627a',
 ]
 web_include_css=['/assets/thanatos_intel/css/thanatos_web.css?v=20260624d']
 web_include_js=['/assets/thanatos_intel/js/fx_widget.js?v=20260624d', '/assets/thanatos_intel/js/thanatos_login.js?v=20260624d', '/assets/thanatos_intel/js/thanatos_intro.js?v=20260624d']
