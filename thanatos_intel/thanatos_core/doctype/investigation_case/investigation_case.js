@@ -159,6 +159,25 @@ frappe.ui.form.on('Investigation Case', {
                     }
                 });
             }, __('Intelligence'));
+
+            frm.add_custom_button(__('Verifica doppia cessione'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.ai.cession_recon.detect_double_cession',
+                    args: { case: frm.doc.name },
+                    freeze: true, freeze_message: __('Analisi cessioni in corso...'),
+                    callback(r) {
+                        const m = r.message || {};
+                        const flags = (m.flags || []);
+                        frappe.msgprint({
+                            title: __('Doppia cessione') + ' — ' + (m.verdict || '-'),
+                            indicator: (m.verdict === 'ALLARME') ? 'red' : (flags.length ? 'orange' : 'green'),
+                            message: (flags.length ? flags.map(frappe.utils.escape_html).join('<br>') : __('Nessuna anomalia evidente.')) +
+                                     '<br><br><small>' + (m.cessions || []).length + ' cessioni, ' + (m.declarations || []).length + ' dichiarazioni. Dettaglio nelle attivita del caso.</small>'
+                        });
+                        frm.reload_doc();
+                    }
+                });
+            }, __('Intelligence'));
         }
 
         // ---- Comunicazioni al cliente (template email, dentro Thanatos) ----
