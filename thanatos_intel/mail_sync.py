@@ -118,39 +118,63 @@ def sync_one(email=None):
 
 @frappe.whitelist()
 def status():
-    """Prospetto salute per casella @thanatos.agency: vault / Email Account / SSO / auth + verdetto."""
+    """Salute per OGNI casella @thanatos.agency (lista reale da Stalwart): vault/Email Account/SSO/auth + uso + verdetto."""
     _guard()
     flds = _load_vault().get("stalwart_mailboxes", {}).get("fields", {})
     try:
         sso = set(json.load(open("/etc/thanatos/webmail_secrets.json")).keys())
     except Exception:
         sso = set()
-    eas = {e.email_id: e.name for e in frappe.get_all("Email Account",
-           filters={"email_id": ["like", "%@" + DOMAIN]}, fields=["name", "email_id"])}
-    boxes = set(eas) | {b for b in (k.replace("_thanatos_agency", "@thanatos.agency")
-                                    for k in flds if k.endswith("_thanatos_agency")) if "@" in b}
+    # Email Account per casella (con in/out)
+    eas = {}
+    for e in frappe.get_all("Email Account", filters={"email_id": ["like", "%@" + DOMAIN]},
+                            fields=["name", "email_id", "enable_incoming", "enable_outgoing"]):
+        eas[e.email_id] = e
+    # lista REALE da Stalwart
+    boxes = []
+    try:
+        from thanatos_intel.api.mail_provisioning import _stalwart
+        from urllib.parse import quote  # noqa
+        import requests
+        url, auth = _stalwart()
+        r = requests.get(url + "/api/principal", params={"types": "individual", "limit": 500}, auth=auth, timeout=20)
+        items = (r.json().get("data") or {}).get("items") or r.json().get("data") or []
+        for it in items:
+            nm = it.get("name") or ""
+            if nm.endswith("@" + DOMAIN):
+                boxes.append(nm)
+    except Exception:
+        pass
+    # unione con vault/EA per non perdere nulla
+    boxes = sorted(set(boxes) | set(eas) | {b for b in (k.replace("_thanatos_agency", "@thanatos.agency")
+                   for k in flds if k.endswith("_thanatos_agency")) if "@" in b})
     out = []
-    for b in sorted(boxes):
+    for b in boxes:
         vpw = _field_value(flds.get(_key(b)))
-        ea_name = eas.get(b)
+        ea = eas.get(b)
         ea_pw = None
-        if ea_name:
+        if ea:
             try:
-                ea_pw = frappe.get_doc("Email Account", ea_name).get_password("password", raise_exception=False)
+                ea_pw = frappe.get_doc("Email Account", ea.name).get_password("password", raise_exception=False)
             except Exception:
                 ea_pw = None
         auth = _imap_ok(b, vpw) if vpw else False
         if not vpw:
             verdict = "NO-VAULT"
         elif not auth:
-            verdict = "BROKEN"          # la pw del vault non autentica su Stalwart
-        elif ea_name and ea_pw != vpw:
-            verdict = "DRIFT"           # Email Account fuori sync col vault
+            verdict = "BROKEN"
+        elif ea and ea_pw != vpw:
+            verdict = "DRIFT"
         else:
             verdict = "OK"
-        out.append({"mailbox": b, "in_vault": bool(vpw), "email_account": ea_name or "-",
-                    "ea_in_sync": (ea_pw == vpw) if ea_name else None,
-                    "webmail_sso": b in sso, "auth_ok": auth, "verdict": verdict})
+        uso = []
+        if ea:
+            if ea.enable_incoming: uso.append("in")
+            if ea.enable_outgoing: uso.append("out")
+        if b in sso: uso.append("webmail/SSO")
+        out.append({"mailbox": b, "in_vault": bool(vpw), "email_account": (ea.name if ea else "-"),
+                    "ea_in_sync": (ea_pw == vpw) if ea else None, "webmail_sso": b in sso,
+                    "auth_ok": auth, "uso": ", ".join(uso) or "—", "verdict": verdict})
     return out
 
 

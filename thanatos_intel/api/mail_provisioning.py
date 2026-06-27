@@ -166,3 +166,100 @@ def provision(user=None, mailbox=None, full_name=None, quota_mb=1024):
 
     frappe.logger().info(f"[mail_provisioning] {mailbox} created={created} webmail-enabled by {frappe.session.user}")
     return {"mailbox": mailbox, "account_created": created, "webmail_enabled": True}
+import json, os, secrets as _secrets
+from urllib.parse import quote
+import requests
+
+APP_VAULT_KEY = "stalwart_app_passwords"
+
+
+def _appsec(label, apppw):
+    return "$app$" + label + "$" + _bcrypt(apppw)
+
+
+def _label_of(sec):
+    parts = str(sec).split("$")
+    return parts[2] if str(sec).startswith("$app$") and len(parts) > 3 else None
+
+
+def _get_secrets(url, auth, mailbox):
+    r = requests.get(f"{url}/api/principal/{quote(mailbox, safe='')}", auth=auth, timeout=15)
+    if r.status_code == 200 and (r.json().get("data")):
+        return r.json()["data"].get("secrets") or []
+    return []
+
+
+def _set_secrets(url, auth, mailbox, secs):
+    r = requests.patch(f"{url}/api/principal/{quote(mailbox, safe='')}", auth=auth, timeout=20,
+                       json=[{"action": "set", "field": "secrets", "value": secs}])
+    if r.status_code >= 400:
+        frappe.throw(f"Stalwart: {r.status_code} {r.text[:200]}")
+    requests.get(f"{url}/api/reload", auth=auth, timeout=15)
+
+
+def _app_vault_write(mailbox, label, apppw):
+    vp = "/home/frappe/.secrets/integrations.json"
+    try:
+        v = json.load(open(vp))
+        s = v.setdefault(APP_VAULT_KEY, {"label": "App-password caselle (client esterni)", "category": "mail", "fields": {}})
+        k = mailbox.replace("@", "_").replace(".", "_") + "__" + label
+        s.setdefault("fields", {})[k] = {"label": f"{mailbox} · {label}", "type": "password", "value": apppw}
+        json.dump(v, open(vp, "w"), indent=2)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "app_vault_write")
+
+
+def _app_vault_del(mailbox, label):
+    vp = "/home/frappe/.secrets/integrations.json"
+    try:
+        v = json.load(open(vp))
+        k = mailbox.replace("@", "_").replace(".", "_") + "__" + label
+        (v.get(APP_VAULT_KEY, {}).get("fields", {})).pop(k, None)
+        json.dump(v, open(vp, "w"), indent=2)
+    except Exception:
+        pass
+
+
+@frappe.whitelist()
+def list_app_passwords(mailbox=None):
+    _guard()
+    mailbox = (mailbox or "").strip().lower()
+    url, auth = _stalwart()
+    labels = [l for l in (_label_of(s) for s in _get_secrets(url, auth, mailbox)) if l]
+    return {"mailbox": mailbox, "labels": labels}
+
+
+@frappe.whitelist()
+def create_app_password(mailbox=None, label="outlook"):
+    """Crea una app-password $app$ (client esterni: Outlook/Thunderbird/telefono).
+    Coesiste con la password principale; non la rompe. Ritorna la pw UNA VOLTA."""
+    _guard()
+    mailbox = (mailbox or "").strip().lower()
+    label = "".join(c for c in (label or "outlook") if c.isalnum() or c in "-_").lower()[:24] or "outlook"
+    if not mailbox.endswith("@" + DOMAIN):
+        frappe.throw(f"La casella deve essere @{DOMAIN}.")
+    url, auth = _stalwart()
+    secs = _get_secrets(url, auth, mailbox)
+    if not secs:
+        frappe.throw("Casella inesistente: crea/provisiona prima la casella.")
+    secs = [s for s in secs if _label_of(s) != label]  # sostituisci se stesso label
+    apppw = _secrets.token_urlsafe(15)
+    secs.append(_appsec(label, apppw))
+    _set_secrets(url, auth, mailbox, secs)
+    _app_vault_write(mailbox, label, apppw)
+    return {"mailbox": mailbox, "label": label, "app_password": apppw,
+            "imap": "mailmx.onekeyco.com  ·  993 SSL", "smtp": "mailmx.onekeyco.com  ·  587 STARTTLS"}
+
+
+@frappe.whitelist()
+def revoke_app_password(mailbox=None, label=None):
+    _guard()
+    mailbox = (mailbox or "").strip().lower()
+    url, auth = _stalwart()
+    secs = _get_secrets(url, auth, mailbox)
+    new = [s for s in secs if _label_of(s) != label]
+    if len(new) == len(secs):
+        return {"mailbox": mailbox, "label": label, "status": "not-found"}
+    _set_secrets(url, auth, mailbox, new)
+    _app_vault_del(mailbox, label)
+    return {"mailbox": mailbox, "label": label, "status": "revoked"}

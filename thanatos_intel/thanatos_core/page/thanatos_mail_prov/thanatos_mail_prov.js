@@ -40,10 +40,21 @@ frappe.pages['thanatos-mail-prov'].on_page_load = function(wrapper){
              <button class="btn btn-default btn-sm" id="mp-heal">Riallinea</button></div>
       </div>
       <div style="overflow:auto"><table class="table table-sm" id="mp-status" style="font-size:12px;margin:0">
-        <thead><tr><th>Casella</th><th>Vault</th><th>Email Account</th><th>SSO</th><th>Auth</th><th>Stato</th></tr></thead>
+        <thead><tr><th>Casella</th><th>Uso</th><th>Vault</th><th>Email Account</th><th>SSO</th><th>Auth</th><th>Stato</th></tr></thead>
         <tbody><tr><td colspan="6" class="mp-empty">Caricamento…</td></tr></tbody>
       </table></div>
       <div class="mp-muted" id="mp-status-note" style="font-size:11px;color:var(--text-muted,#888);margin-top:8px"></div>
+    </div>
+    <div class="mp-box">
+      <h3 style="font-size:14px;margin:0 0 6px">App-password per client esterni (Outlook / Thunderbird / telefono)</h3>
+      <div class="mp-muted" style="font-size:12px;color:var(--text-muted,#888);margin-bottom:12px">Credenziale dedicata e revocabile, separata dalla password principale: il client esterno non va "fuori password" se cambi la principale.</div>
+      <div class="mp-row">
+        <div class="mp-f"><label>Casella</label><input id="ap-mbox" placeholder="nome@thanatos.agency"></div>
+        <div class="mp-f"><label>Etichetta (device/app)</label><input id="ap-label" placeholder="outlook" value="outlook"></div>
+        <button class="btn btn-primary" id="ap-gen">Genera app-password</button>
+      </div>
+      <div id="ap-result" style="margin-top:12px"></div>
+      <div id="ap-list" style="margin-top:12px"></div>
     </div>
   </div>`);
 
@@ -89,22 +100,22 @@ frappe.pages['thanatos-mail-prov'].on_page_load = function(wrapper){
   }
   function yn(b){ return b===true?'✓':(b===false?'—':'·'); }
   function loadStatus(){
-    var tb=$('#mp-status tbody'); tb.html('<tr><td colspan="6" class="mp-empty">Caricamento…</td></tr>');
+    var tb=$('#mp-status tbody'); tb.html('<tr><td colspan="7" class="mp-empty">Caricamento…</td></tr>');
     frappe.call({method:'thanatos_intel.mail_sync.status'}).then(function(r){
       var rows=r.message||[]; tb.empty();
       var broken=0,drift=0;
       rows.forEach(function(x){
         if(x.verdict==='BROKEN')broken++; if(x.verdict==='DRIFT')drift++;
-        tb.append('<tr><td>'+frappe.utils.escape_html(x.mailbox)+'</td><td>'+yn(x.in_vault)+'</td><td>'+
+        tb.append('<tr><td>'+frappe.utils.escape_html(x.mailbox)+'</td><td style="color:var(--text-muted,#888)">'+frappe.utils.escape_html(x.uso||'—')+'</td><td>'+yn(x.in_vault)+'</td><td>'+
           (x.email_account&&x.email_account!=='-'?(x.ea_in_sync?'✓':'≠'):'—')+'</td><td>'+yn(x.webmail_sso)+'</td><td>'+
           yn(x.auth_ok)+'</td><td>'+badge(x.verdict)+'</td></tr>');
       });
-      if(!rows.length) tb.html('<tr><td colspan="6" class="mp-empty">Nessuna casella.</td></tr>');
+      if(!rows.length) tb.html('<tr><td colspan="7" class="mp-empty">Nessuna casella.</td></tr>');
       var note='';
       if(broken) note+='<b style="color:#c0392b">'+broken+' casella/e BROKEN</b>: la password non autentica su Stalwart → reimposta dal pannello sopra (o dalla console) per riallineare.';
       if(drift) note+=' · '+drift+' in DRIFT: usa Riallinea.';
       $('#mp-status-note').html(note);
-    }).catch(function(){ tb.html('<tr><td colspan="6" class="mp-empty">Errore.</td></tr>'); });
+    }).catch(function(){ tb.html('<tr><td colspan="7" class="mp-empty">Errore.</td></tr>'); });
   }
   $('#mp-refresh').on('click', loadStatus);
   $('#mp-heal').on('click', function(){
@@ -114,6 +125,37 @@ frappe.pages['thanatos-mail-prov'].on_page_load = function(wrapper){
       frappe.show_alert({message:f.length?(f.length+' caselle elaborate'):'Tutto già allineato',indicator:'green'});
       loadStatus();
     }).catch(function(){ b.disabled=false; });
+  });
+  function apList(mb){
+    if(!mb){ $('#ap-list').empty(); return; }
+    frappe.call({method:'thanatos_intel.api.mail_provisioning.list_app_passwords',args:{mailbox:mb}}).then(function(r){
+      var L=(r.message&&r.message.labels)||[]; var $l=$('#ap-list').empty();
+      if(!L.length){ $l.html('<span class="mp-empty">Nessuna app-password per questa casella.</span>'); return; }
+      $l.append('<div class="mp-muted" style="font-size:12px;margin-bottom:6px">App-password attive:</div>');
+      L.forEach(function(lb){
+        var row=$('<span class="mp-tag">🔑 '+frappe.utils.escape_html(lb)+' <a href="#" style="color:#c0392b;margin-left:6px">revoca</a></span> ');
+        row.find('a').on('click',function(e){e.preventDefault();
+          if(!confirm('Revocare app-password "'+lb+'"?'))return;
+          frappe.call({method:'thanatos_intel.api.mail_provisioning.revoke_app_password',args:{mailbox:mb,label:lb}}).then(function(){apList(mb);});
+        });
+        $l.append(row);
+      });
+    });
+  }
+  $('#ap-mbox').on('change', function(){ apList((this.value||'').trim().toLowerCase()); });
+  $('#ap-gen').on('click', function(){
+    var mb=($('#ap-mbox').val()||'').trim().toLowerCase(), lb=($('#ap-label').val()||'outlook').trim();
+    if(!mb){ $('#ap-result').html('<span style="color:#c0392b">Inserisci la casella.</span>'); return; }
+    var b=this; b.disabled=true;
+    frappe.call({method:'thanatos_intel.api.mail_provisioning.create_app_password',args:{mailbox:mb,label:lb},freeze:true})
+      .then(function(r){ b.disabled=false; var m=r.message;
+        $('#ap-result').html(
+          '<div class="mp-box" style="background:var(--bg-color,#f7f8fa);margin:0">'+
+          '<div style="font-size:12px;color:var(--text-muted,#888);margin-bottom:6px">App-password generata (copiala ora, non sarà più mostrata):</div>'+
+          '<div style="font-family:monospace;font-size:15px;font-weight:700;user-select:all">'+frappe.utils.escape_html(m.app_password)+'</div>'+
+          '<div style="font-size:12px;margin-top:10px"><b>Outlook/IMAP</b>: '+m.imap+' · utente: '+frappe.utils.escape_html(m.mailbox)+'<br><b>SMTP</b>: '+m.smtp+'</div></div>');
+        apList(mb);
+      }).catch(function(e){ b.disabled=false; $('#ap-result').html('<span style="color:#c0392b">'+(e.message||'Errore')+'</span>'); });
   });
   loadEnabled();
   loadStatus();
