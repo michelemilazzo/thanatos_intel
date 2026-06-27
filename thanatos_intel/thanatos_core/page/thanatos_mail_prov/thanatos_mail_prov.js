@@ -33,6 +33,18 @@ frappe.pages['thanatos-mail-prov'].on_page_load = function(wrapper){
       <h3 style="font-size:14px;margin:0 0 12px">Caselle abilitate alla webmail</h3>
       <div class="mp-list" id="mp-enabled"><span class="mp-empty">Caricamento…</span></div>
     </div>
+    <div class="mp-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="font-size:14px;margin:0">Stato sincronia caselle</h3>
+        <div><button class="btn btn-default btn-sm" id="mp-refresh">Aggiorna</button>
+             <button class="btn btn-default btn-sm" id="mp-heal">Riallinea</button></div>
+      </div>
+      <div style="overflow:auto"><table class="table table-sm" id="mp-status" style="font-size:12px;margin:0">
+        <thead><tr><th>Casella</th><th>Vault</th><th>Email Account</th><th>SSO</th><th>Auth</th><th>Stato</th></tr></thead>
+        <tbody><tr><td colspan="6" class="mp-empty">Caricamento…</td></tr></tbody>
+      </table></div>
+      <div class="mp-muted" id="mp-status-note" style="font-size:11px;color:var(--text-muted,#888);margin-top:8px"></div>
+    </div>
   </div>`);
 
   const $user=$('#mp-user'), $mbox=$('#mp-mbox'), $plan=$('#mp-plan'), $msg=$('#mp-msg'), $go=$('#mp-go');
@@ -71,5 +83,38 @@ frappe.pages['thanatos-mail-prov'].on_page_load = function(wrapper){
       a.forEach(m=>$e.append('<span class="mp-tag">✉️ '+frappe.utils.escape_html(m)+'</span>'));
     });
   }
+  function badge(v){
+    var c={OK:'#2e7d32','DRIFT':'#b9770e','BROKEN':'#c0392b','NO-VAULT':'#7a8294'}[v]||'#7a8294';
+    return '<span style="color:'+c+';font-weight:600">'+v+'</span>';
+  }
+  function yn(b){ return b===true?'✓':(b===false?'—':'·'); }
+  function loadStatus(){
+    var tb=$('#mp-status tbody'); tb.html('<tr><td colspan="6" class="mp-empty">Caricamento…</td></tr>');
+    frappe.call({method:'thanatos_intel.mail_sync.status'}).then(function(r){
+      var rows=r.message||[]; tb.empty();
+      var broken=0,drift=0;
+      rows.forEach(function(x){
+        if(x.verdict==='BROKEN')broken++; if(x.verdict==='DRIFT')drift++;
+        tb.append('<tr><td>'+frappe.utils.escape_html(x.mailbox)+'</td><td>'+yn(x.in_vault)+'</td><td>'+
+          (x.email_account&&x.email_account!=='-'?(x.ea_in_sync?'✓':'≠'):'—')+'</td><td>'+yn(x.webmail_sso)+'</td><td>'+
+          yn(x.auth_ok)+'</td><td>'+badge(x.verdict)+'</td></tr>');
+      });
+      if(!rows.length) tb.html('<tr><td colspan="6" class="mp-empty">Nessuna casella.</td></tr>');
+      var note='';
+      if(broken) note+='<b style="color:#c0392b">'+broken+' casella/e BROKEN</b>: la password non autentica su Stalwart → reimposta dal pannello sopra (o dalla console) per riallineare.';
+      if(drift) note+=' · '+drift+' in DRIFT: usa Riallinea.';
+      $('#mp-status-note').html(note);
+    }).catch(function(){ tb.html('<tr><td colspan="6" class="mp-empty">Errore.</td></tr>'); });
+  }
+  $('#mp-refresh').on('click', loadStatus);
+  $('#mp-heal').on('click', function(){
+    var b=this; b.disabled=true;
+    frappe.call({method:'thanatos_intel.mail_sync.heal',freeze:true,freeze_message:'Riallineo…'}).then(function(r){
+      b.disabled=false; var f=(r.message&&r.message.fixed)||[];
+      frappe.show_alert({message:f.length?(f.length+' caselle elaborate'):'Tutto già allineato',indicator:'green'});
+      loadStatus();
+    }).catch(function(){ b.disabled=false; });
+  });
   loadEnabled();
+  loadStatus();
 };

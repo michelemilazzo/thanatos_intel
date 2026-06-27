@@ -8,6 +8,8 @@ Modello: la password si propaga AL MOMENTO DEL CAMBIO (no pull ciechi da vault p
   console/pannello dopo un cambio).
 """
 import json
+import imaplib
+
 import frappe
 
 VAULT = "/home/frappe/.secrets/integrations.json"
@@ -37,6 +39,21 @@ def _load_vault():
 
 def _save_vault(v):
     json.dump(v, open(VAULT, "w"), indent=2)
+
+
+IMAP_HOST = "mailmx.onekeyco.com"
+
+
+def _imap_ok(email, pw):
+    if not pw:
+        return False
+    try:
+        M = imaplib.IMAP4_SSL(IMAP_HOST, 993)
+        M.login(email, pw)
+        M.logout()
+        return True
+    except Exception:
+        return False
 
 
 def _ea_for(email):
@@ -101,7 +118,7 @@ def sync_one(email=None):
 
 @frappe.whitelist()
 def status():
-    """Prospetto: per ogni casella @thanatos.agency, presenza in vault / Email Account / store SSO."""
+    """Prospetto salute per casella @thanatos.agency: vault / Email Account / SSO / auth + verdetto."""
     _guard()
     flds = _load_vault().get("stalwart_mailboxes", {}).get("fields", {})
     try:
@@ -110,9 +127,59 @@ def status():
         sso = set()
     eas = {e.email_id: e.name for e in frappe.get_all("Email Account",
            filters={"email_id": ["like", "%@" + DOMAIN]}, fields=["name", "email_id"])}
+    boxes = set(eas) | {b for b in (k.replace("_thanatos_agency", "@thanatos.agency")
+                                    for k in flds if k.endswith("_thanatos_agency")) if "@" in b}
     out = []
-    boxes = set(eas) | {k.replace("_thanatos_agency", "@thanatos.agency") for k in flds if k.endswith("_thanatos_agency")}
     for b in sorted(boxes):
-        out.append({"mailbox": b, "in_vault": _key(b) in flds,
-                    "email_account": eas.get(b, "-"), "webmail_sso": b in sso})
+        vpw = _field_value(flds.get(_key(b)))
+        ea_name = eas.get(b)
+        ea_pw = None
+        if ea_name:
+            try:
+                ea_pw = frappe.get_doc("Email Account", ea_name).get_password("password", raise_exception=False)
+            except Exception:
+                ea_pw = None
+        auth = _imap_ok(b, vpw) if vpw else False
+        if not vpw:
+            verdict = "NO-VAULT"
+        elif not auth:
+            verdict = "BROKEN"          # la pw del vault non autentica su Stalwart
+        elif ea_name and ea_pw != vpw:
+            verdict = "DRIFT"           # Email Account fuori sync col vault
+        else:
+            verdict = "OK"
+        out.append({"mailbox": b, "in_vault": bool(vpw), "email_account": ea_name or "-",
+                    "ea_in_sync": (ea_pw == vpw) if ea_name else None,
+                    "webmail_sso": b in sso, "auth_ok": auth, "verdict": verdict})
     return out
+
+
+@frappe.whitelist()
+def heal():
+    """Riallinea in sicurezza: se il vault autentica -> allinea l'Email Account al vault;
+    se il vault e' rotto ma l'Email Account autentica -> semina il vault dall'Email Account."""
+    _guard()
+    fixed = []
+    for row in status():
+        b = row["mailbox"]
+        if row["verdict"] == "DRIFT" and row["email_account"] != "-":
+            r = sync_one(b)
+            fixed.append({"mailbox": b, "action": "ea<-vault", "status": r.get("status")})
+        elif row["verdict"] == "BROKEN" and row["email_account"] != "-":
+            # il vault non autentica: prova a seminare dal Email Account (se questa autentica)
+            try:
+                ea_pw = frappe.get_doc("Email Account", row["email_account"]).get_password("password", raise_exception=False)
+            except Exception:
+                ea_pw = None
+            if ea_pw and _imap_ok(b, ea_pw):
+                v = _load_vault()
+                v.setdefault("stalwart_mailboxes", {}).setdefault("fields", {})[_key(b)] = {
+                    "label": b, "type": "password", "value": ea_pw}
+                _save_vault(v)
+                if b in (json.load(open("/etc/thanatos/webmail_secrets.json")) if __import__("os").path.exists("/etc/thanatos/webmail_secrets.json") else {}):
+                    sp = "/etc/thanatos/webmail_secrets.json"
+                    d = json.load(open(sp)); d[b] = ea_pw; json.dump(d, open(sp, "w"))
+                fixed.append({"mailbox": b, "action": "vault<-ea (seed)", "status": "healed"})
+            else:
+                fixed.append({"mailbox": b, "action": "none", "status": "needs-manual-reset"})
+    return {"fixed": fixed}
