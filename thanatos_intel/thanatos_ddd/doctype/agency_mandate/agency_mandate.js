@@ -1,5 +1,51 @@
+const AM_METHOD = 'thanatos_intel.thanatos_ddd.doctype.agency_mandate.agency_mandate';
+
+function _amPreviewBody(frm, force) {
+    if (frm.doc.mandate_body && !force) return;
+    const keys = ['billing_entity', 'ddd_case', 'investigation_case', 'applicant', 'applicant_name',
+        'subject_matter', 'territorial_scope', 'fee_total', 'currency', 'no_guarantee_clause',
+        'osint_authorization', 'doc_verification_authorization', 'third_party_contact_authorization',
+        'governing_law'];
+    const vals = {};
+    keys.forEach(k => { vals[k] = frm.doc[k]; });
+    frappe.call({
+        method: AM_METHOD + '.preview_body',
+        args: { values: JSON.stringify(vals) },
+        callback(r) {
+            if (r.message && r.message.mandate_body) {
+                frm.set_value('mandate_body', r.message.mandate_body);
+            }
+        }
+    });
+}
+
+function _amAutofillFromCase(frm) {
+    if (!frm.doc.investigation_case) return;
+    frappe.call({
+        method: AM_METHOD + '.autofill_from_case',
+        args: { investigation_case: frm.doc.investigation_case },
+        callback(r) {
+            const v = r.message || {};
+            Object.keys(v).forEach(k => { if (!frm.doc[k]) frm.set_value(k, v[k]); });
+            _amPreviewBody(frm);  // genera il corpo se ancora vuoto
+        }
+    });
+}
+
 frappe.ui.form.on('Agency Mandate', {
+    investigation_case(frm) { _amAutofillFromCase(frm); },
+    applicant(frm) { _amPreviewBody(frm); },
+    billing_entity(frm) { _amPreviewBody(frm); },
+
     refresh(frm) {
+        // Genera/anteprima corpo dal template (funziona anche su nuovo, senza salvare)
+        if (frm.is_new() || frm.doc.status === 'Draft') {
+            frm.add_custom_button(__('Genera corpo (anteprima)'), () => {
+                _amPreviewBody(frm, true);
+                frappe.show_alert({ message: __('Corpo generato dal template. Rivedi e salva.'), indicator: 'blue' }, 5);
+            }, __('Firma'));
+        }
+
         // Genera PDF
         if (!frm.is_new() && frm.doc.status === 'Draft') {
             frm.add_custom_button(__('Genera PDF mandato'), () => {
@@ -17,53 +63,45 @@ frappe.ui.form.on('Agency Mandate', {
             }, __('Firma'));
         }
 
-        // Invia per firma (MMOS Sign — metodo default)
+        // Invia per firma (MMOS Sign)
         if (!frm.is_new() && frm.doc.mandate_pdf && frm.doc.status !== 'Signed') {
             frm.add_custom_button(__('Invia per firma (MMOS Sign) ✍'), () => {
-                frappe.confirm(
-                    'Inviare il mandato in firma con MMOS Sign?',
-                    () => {
-                        frappe.show_alert({ message: 'Invio in corso...', indicator: 'blue' });
-                        frappe.call({
-                            method: 'thanatos_intel.thanatos_ddd.signature_methods.dispatch',
-                            args: { mandate: frm.doc.name, method: 'MMOS_SIGN' },
-                            callback(r) {
-                                if (r.message && r.message.status === 'sent') {
-                                    frappe.show_alert({ message: 'Inviato! Link firma: ' + (r.message.sign_url || ''), indicator: 'green' });
-                                    frm.reload_doc();
-                                } else {
-                                    frappe.msgprint({ title: 'Errore', message: r.message?.error || 'Errore invio firma', indicator: 'red' });
-                                }
+                frappe.confirm('Inviare il mandato in firma con MMOS Sign?', () => {
+                    frappe.show_alert({ message: 'Invio in corso...', indicator: 'blue' });
+                    frappe.call({
+                        method: 'thanatos_intel.thanatos_ddd.signature_methods.dispatch',
+                        args: { mandate: frm.doc.name, method: 'MMOS_SIGN' },
+                        callback(r) {
+                            if (r.message && r.message.status === 'sent') {
+                                frappe.show_alert({ message: 'Inviato! Link firma: ' + (r.message.sign_url || ''), indicator: 'green' });
+                                frm.reload_doc();
+                            } else {
+                                frappe.msgprint({ title: 'Errore', message: r.message?.error || 'Errore invio firma', indicator: 'red' });
                             }
-                        });
-                    }
-                );
+                        }
+                    });
+                });
             }, __('Firma'));
         }
 
-        // Rigenera corpo dal template
+        // Rigenera corpo dal template (su salvato, sovrascrive)
         if (!frm.is_new() && frm.doc.status === 'Draft') {
             frm.add_custom_button(__('Rigenera bozza'), () => {
-                frappe.confirm(
-                    'Sovrascrivere il corpo del mandato con il template originale? Le modifiche manuali andranno perse.',
-                    () => {
-                        frappe.call({
-                            method: 'thanatos_intel.thanatos_ddd.doctype.agency_mandate.agency_mandate.regenerate_body',
-                            args: { mandate_name: frm.doc.name },
-                            freeze: true,
-                            freeze_message: 'Rigenerazione in corso…',
-                            callback(r) {
-                                if (r.message && r.message.ok) {
-                                    frappe.show_alert({ message: 'Bozza rigenerata dal template', indicator: 'blue' });
-                                    frm.reload_doc();
-                                }
+                frappe.confirm('Sovrascrivere il corpo del mandato con il template originale? Le modifiche manuali andranno perse.', () => {
+                    frappe.call({
+                        method: AM_METHOD + '.regenerate_body',
+                        args: { mandate_name: frm.doc.name },
+                        freeze: true, freeze_message: 'Rigenerazione in corso…',
+                        callback(r) {
+                            if (r.message && r.message.ok) {
+                                frappe.show_alert({ message: 'Bozza rigenerata dal template', indicator: 'blue' });
+                                frm.reload_doc();
                             }
-                        });
-                    }
-                );
+                        }
+                    });
+                });
             }, __('Firma'));
         }
-
 
         // ── Email → bozza webmail ──
         if (!frm.is_new()) {

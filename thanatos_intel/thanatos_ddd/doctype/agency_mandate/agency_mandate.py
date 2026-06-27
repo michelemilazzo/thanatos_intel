@@ -28,3 +28,34 @@ def regenerate_body(mandate_name: str) -> dict:
     doc.save(ignore_permissions=True)
     frappe.db.commit()
     return {"ok": True, "mandate_body": doc.mandate_body}
+
+
+@frappe.whitelist()
+def preview_body(values) -> dict:
+    """Renderizza il corpo dal template usando i valori CORRENTI del form (anche non
+    salvati). Non salva: serve all'operatore per rivedere prima di produrre il PDF."""
+    import json
+    if isinstance(values, str):
+        values = json.loads(values or "{}")
+    doc = frappe.new_doc("Agency Mandate")
+    for k, v in (values or {}).items():
+        if v not in (None, ""):
+            try:
+                doc.set(k, v)
+            except Exception:
+                pass
+    return {"mandate_body": _render_body(doc)}
+
+
+@frappe.whitelist()
+def autofill_from_case(investigation_case) -> dict:
+    """Ricava i campi del mandato dal caso investigativo + cliente collegato."""
+    case = frappe.get_doc("Investigation Case", investigation_case)
+    out = {}
+    if case.get("client"):
+        out["applicant_name"] = frappe.db.get_value("Investigation Client", case.client, "client_name") or ""
+    out["subject_matter"] = (case.get("summary") or case.get("description") or "").strip()[:500] or (
+        f"Attività investigativa, di due diligence e verifica documentale nell'ambito del caso {case.name}.")
+    out["osint_authorization"] = 1
+    out["doc_verification_authorization"] = 1
+    return out

@@ -16,6 +16,11 @@
 {%- if doc.applicant -%}
   {%- set applicant = frappe.get_doc("Applicant Profile", doc.applicant) -%}
 {%- endif -%}
+{%- set inv_client = {} -%}
+{%- if not doc.applicant and doc.investigation_case -%}
+  {%- set _cli = frappe.db.get_value("Investigation Case", doc.investigation_case, "client") -%}
+  {%- if _cli -%}{%- set inv_client = frappe.get_doc("Investigation Client", _cli) -%}{%- endif -%}
+{%- endif -%}
 
 <!-- PARTI -->
 <div class="parties-box">
@@ -35,6 +40,11 @@
       {% if applicant.dob %} · nato/a il {{ frappe.utils.formatdate(applicant.dob, "dd/MM/yyyy") }}{% endif %}
     </p>
     {% if applicant.phone %}<p class="small">Tel: {{ applicant.phone }}</p>{% endif %}
+    {% elif inv_client %}
+    <p class="party-name">{{ inv_client.client_name }}</p>
+    <p class="small">{% if inv_client.vat_number %}P.IVA/C.F.: {{ inv_client.vat_number }}{% endif %}{% if inv_client.res_city %} · {{ inv_client.res_city }}{% endif %}</p>
+    {% elif doc.applicant_name %}
+    <p class="party-name">{{ doc.applicant_name }}</p>
     {% else %}
     <p>—</p>
     {% endif %}
