@@ -160,3 +160,39 @@ def _read_text_fallback(file_url):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "doc_ingest fallback")
         return ""
+
+
+@frappe.whitelist()
+def ingest_document(file_url, investigation_case, document_type="generic"):
+    """Orchestratore: OCR + estrazione AI + reperto in catena di custodia.
+    Usato dal bottone sul caso e dal canale operatore WhatsApp."""
+    if not file_url or not investigation_case:
+        frappe.throw(_("file_url e investigation_case sono obbligatori"))
+
+    try:
+        ocr = ocr_file(file_url, document_type) or {}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ingest_document ocr")
+        ocr = {}
+    text = (ocr.get("raw_text") or "").strip()
+    if not text:
+        text = (_read_text_fallback(file_url) or "").strip()
+        if text:
+            ocr.setdefault("provider", "text-extract")
+
+    parsed, ai = None, None
+    if text:
+        from thanatos_intel.ai.case_architect import _resp_text
+        ai = _gateway(f"Testo del documento:\n\n{text[:12000]}",
+                      system=EXTRACT_SYSTEM, task_type="extract")
+        parsed = _normalize(_extract_json(_resp_text(ai)))
+
+    evidence = _create_evidence(file_url, investigation_case, parsed, ocr)
+    _meter(ai, investigation_case)
+    return {
+        "ok": True,
+        "evidence": evidence,
+        "extracted": parsed or {},
+        "ocr": {"provider": ocr.get("provider"), "confidence": ocr.get("confidence")},
+        "ai_available": bool(ai),
+    }

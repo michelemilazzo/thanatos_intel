@@ -13,6 +13,25 @@ from frappe.utils.password import get_decrypted_password
 _GRAPH = "https://graph.facebook.com/v21.0"
 
 
+def _target_msg(lead_name, wa_message_id):
+    """Trova il messaggio inbound da aggiornare: per wa_message_id se noto,
+    altrimenti l'ultimo inbound del lead."""
+    if wa_message_id:
+        rows = frappe.db.sql(
+            """SELECT name, content FROM `tabIntel Lead Message`
+               WHERE parent=%s AND wa_message_id=%s LIMIT 1""",
+            (lead_name, wa_message_id), as_dict=True,
+        )
+        if rows:
+            return rows
+    return frappe.db.sql(
+        """SELECT name, content FROM `tabIntel Lead Message`
+           WHERE parent=%s AND direction='Inbound'
+           ORDER BY sent_at DESC LIMIT 1""",
+        (lead_name,), as_dict=True,
+    )
+
+
 def _resolve_token(wa_phone: str | None) -> tuple[str, str]:
     """Restituisce (access_token, wa_doc_name) del numero Meta da usare."""
     name = wa_phone
@@ -116,7 +135,8 @@ def _transcribe(content: bytes) -> str:
         raise
 
 
-def process_voice_note(lead_name: str, media_id: str, wa_phone: str | None = None):
+def process_voice_note(lead_name: str, media_id: str, wa_phone: str | None = None,
+                       wa_message_id: str = "", notify_bot: bool = True):
     """Background job: scarica, allega e trascrive la nota vocale."""
     try:
         token, _ = _resolve_token(wa_phone)
@@ -144,12 +164,7 @@ def process_voice_note(lead_name: str, media_id: str, wa_phone: str | None = Non
         label = f"🎤 {text}" if text else "🎤 [nota vocale ricevuta — trascrizione non disponibile]"
 
         # aggiorna l'ultimo messaggio inbound del lead
-        msg = frappe.db.sql(
-            """SELECT name FROM `tabIntel Lead Message`
-               WHERE parent=%s AND direction='Inbound'
-               ORDER BY sent_at DESC LIMIT 1""",
-            (lead_name,), as_dict=True,
-        )
+        msg = _target_msg(lead_name, wa_message_id)
         if msg:
             frappe.db.set_value("Intel Lead Message", msg[0].name, {
                 "content": label,
@@ -164,7 +179,7 @@ def process_voice_note(lead_name: str, media_id: str, wa_phone: str | None = Non
         frappe.db.commit()
 
         # bot AI risponde alla nota vocale trascritta
-        if text:
+        if text and notify_bot:
             try:
                 from thanatos_intel.ingest.wa_bot import trigger_for_lead
                 trigger_for_lead(lead_name, wa_phone)
@@ -182,7 +197,8 @@ _MEDIA_META = {
 
 
 def process_media_attachment(lead_name: str, media_id: str, media_type: str,
-                             filename: str = "", wa_phone: str | None = None):
+                             filename: str = "", wa_phone: str | None = None,
+                             wa_message_id: str = "", notify_bot: bool = True):
     """Background job: scarica e allega un media (immagine/video/documento) all'Intel Lead."""
     try:
         token, _ = _resolve_token(wa_phone)
@@ -204,12 +220,7 @@ def process_media_attachment(lead_name: str, media_id: str, media_type: str,
 
         label = f"{icon} {fname}" if filename else f"{icon} [{word}]"
 
-        msg = frappe.db.sql(
-            """SELECT name, content FROM `tabIntel Lead Message`
-               WHERE parent=%s AND direction='Inbound'
-               ORDER BY sent_at DESC LIMIT 1""",
-            (lead_name,), as_dict=True,
-        )
+        msg = _target_msg(lead_name, wa_message_id)
         if msg:
             # se c'era una didascalia, la conserva
             cap = (msg[0].content or "").strip()
@@ -226,10 +237,11 @@ def process_media_attachment(lead_name: str, media_id: str, media_type: str,
         frappe.db.commit()
 
         # bot AI prende atto del media ricevuto e prosegue la conversazione
-        try:
-            from thanatos_intel.ingest.wa_bot import trigger_for_lead
-            trigger_for_lead(lead_name, wa_phone)
-        except Exception:
-            frappe.log_error(frappe.get_traceback(), f"wa_bot media {lead_name}")
+        if notify_bot:
+            try:
+                from thanatos_intel.ingest.wa_bot import trigger_for_lead
+                trigger_for_lead(lead_name, wa_phone)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"wa_bot media {lead_name}")
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"process_media_attachment {lead_name}")

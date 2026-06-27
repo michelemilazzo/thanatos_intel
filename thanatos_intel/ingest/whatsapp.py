@@ -45,7 +45,8 @@ def _check_token(token: str, wa_number: dict | None) -> bool:
 
 
 def _create_lead(source_id: str, source_name: str, content: str,
-                 media_url: str = "", wa_number: dict | None = None) -> str:
+                 media_url: str = "", wa_number: dict | None = None,
+                 wa_message_id: str = "") -> str:
     from thanatos_intel.thanatos_core.doctype.intel_lead.intel_lead import find_or_create_lead
     return find_or_create_lead(
         source_identifier=source_id,
@@ -54,6 +55,7 @@ def _create_lead(source_id: str, source_name: str, content: str,
         source_type="WhatsApp",
         media_url=media_url,
         wa_number=wa_number,
+        wa_message_id=wa_message_id,
     )
 
 
@@ -196,8 +198,24 @@ def webhook():
             content=m["content"],
             media_url=m["media_url"],
             wa_number=wa_number,
+            wa_message_id=m.get("wa_message_id", ""),
         )
         created.append(name)
+
+        _wa_phone = wa_number.phone_number if wa_number else None
+
+        # Canale operatore: se il mittente è un investigatore noto, niente bot/auto-reply
+        # cliente — i suoi messaggi sono comandi operativi (es. "apri un caso").
+        from thanatos_intel.ingest.operator_console import find_operator, handle_operator_message
+        _operator = find_operator(m["source_id"])
+        if _operator:
+            _dispatch_media(name, m, _wa_phone, notify_bot=False)
+            try:
+                handle_operator_message(name, _wa_phone, m["source_id"],
+                                        m.get("content", ""), _operator)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "operator console")
+            continue
 
         # Risposta automatica: bot AI se abilitato sul numero, altrimenti messaggio fisso
         try:
@@ -226,27 +244,33 @@ def webhook():
             frappe.log_error(frappe.get_traceback(), 'WA auto-reply dispatch')
 
         # Media in arrivo → scarica + allega (audio anche trascritto)
-        if m.get("media_id"):
-            _wa_phone = wa_number.phone_number if wa_number else None
-            # feedback immediato "sta scrivendo..." mentre trascrive/analizza (media typing)
-            if _wa_phone and frappe.db.get_value("WhatsApp Number", _wa_phone, "ai_bot_enabled"):
-                _mark_read_typing(_wa_phone, m.get("wa_message_id"))
-            if m.get("media_type") == "audio":
-                frappe.enqueue(
-                    "thanatos_intel.ingest.voice_notes.process_voice_note",
-                    queue="long", timeout=600,
-                    lead_name=name, media_id=m["media_id"], wa_phone=_wa_phone,
-                )
-            elif m.get("media_type") in ("image", "video", "document"):
-                frappe.enqueue(
-                    "thanatos_intel.ingest.voice_notes.process_media_attachment",
-                    queue="long", timeout=600,
-                    lead_name=name, media_id=m["media_id"],
-                    media_type=m["media_type"], filename=m.get("media_filename", ""),
-                    wa_phone=_wa_phone,
-                )
+        if _wa_phone and frappe.db.get_value("WhatsApp Number", _wa_phone, "ai_bot_enabled"):
+            _mark_read_typing(_wa_phone, m.get("wa_message_id"))
+        _dispatch_media(name, m, _wa_phone, notify_bot=True)
 
     return {"created": created, "count": len(created)}
+
+
+def _dispatch_media(name, m, wa_phone, notify_bot=True):
+    """Scarica e allega il media entrante (audio→trascrizione, doc/img/video→allegato)."""
+    if not m.get("media_id"):
+        return
+    if m.get("media_type") == "audio":
+        frappe.enqueue(
+            "thanatos_intel.ingest.voice_notes.process_voice_note",
+            queue="long", timeout=600,
+            lead_name=name, media_id=m["media_id"], wa_phone=wa_phone,
+            wa_message_id=m.get("wa_message_id", ""), notify_bot=notify_bot,
+        )
+    elif m.get("media_type") in ("image", "video", "document"):
+        frappe.enqueue(
+            "thanatos_intel.ingest.voice_notes.process_media_attachment",
+            queue="long", timeout=600,
+            lead_name=name, media_id=m["media_id"],
+            media_type=m["media_type"], filename=m.get("media_filename", ""),
+            wa_phone=wa_phone, wa_message_id=m.get("wa_message_id", ""),
+            notify_bot=notify_bot,
+        )
 
 
 

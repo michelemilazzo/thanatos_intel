@@ -41,7 +41,7 @@ class IntelLead(frappe.model.document.Document):
 
 def find_or_create_lead(source_identifier: str, source_name: str, content: str,
                         source_type: str = "WhatsApp", media_url: str = "",
-                        wa_number: dict | None = None) -> str:
+                        wa_number: dict | None = None, wa_message_id: str = "") -> str:
     """
     Cerca un lead aperto dallo stesso mittente nelle ultime N ore.
     Se esiste, aggiunge il messaggio al thread; altrimenti crea un nuovo lead.
@@ -65,7 +65,7 @@ def find_or_create_lead(source_identifier: str, source_name: str, content: str,
             "sent_at": now_datetime(),
             "content": content or "(nessun testo)",
             "status": "Letto",
-            "wa_message_id": "",
+            "wa_message_id": wa_message_id or "",
             "media_url": media_url or "",
         })
         doc.db_set("last_message_at", now_datetime(), notify=False)
@@ -104,6 +104,7 @@ def find_or_create_lead(source_identifier: str, source_name: str, content: str,
             "sent_at": now_datetime(),
             "content": content or "(nessun testo)",
             "status": "Letto",
+            "wa_message_id": wa_message_id or "",
             "media_url": media_url or "",
         }],
     })
