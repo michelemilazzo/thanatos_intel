@@ -15,6 +15,14 @@ def _digits(n):
     return re.sub(r"\D", "", n or "")
 
 
+def _operator_user(operator):
+    """Risolve l'Investigator nel suo User (campo platform_user). Fallback Administrator.
+    Serve per i campi Link→User (promoted_by, notifiche), che NON accettano il nome
+    dell'Investigator."""
+    u = frappe.db.get_value("Investigator", operator, "platform_user") if operator else None
+    return u or "Administrator"
+
+
 def find_operator(number):
     """Ritorna il nome dell'Investigator se il numero corrisponde a un operatore."""
     d = _digits(number)
@@ -53,12 +61,100 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
         return
     if _HELP_RE.search(t):
         _reply(wa_phone, sender, lead_name,
-               "Comandi operatore:\n• invia i documenti, poi scrivi "
-               "«*elabora gli allegati ed apri un caso*» → creo la "
-               "pratica con i reperti gia' analizzati (OCR + AI).")
+               "Sono il tuo assistente operativo. Puoi:\n"
+               "• farmi domande su casi, lead e documenti\n"
+               "• inviare i documenti e scrivere «*elabora gli allegati ed apri un "
+               "caso*» → apro la pratica con i reperti gia' analizzati (OCR + AI)\n"
+               "• chiedermi la sintesi di un caso (es. «riassumi CASE-2026-0026»)")
         return
-    # nessun comando: messaggio operatore registrato e basta (lo legge dal Centralino)
+    # messaggio operatore libero → assistente AI operativo (co-pilota), in background
+    frappe.enqueue(
+        "thanatos_intel.ingest.operator_console.operator_assistant_reply",
+        queue="short", timeout=200,
+        lead_name=lead_name, wa_phone=wa_phone, sender=sender, text=t, operator=operator,
+    )
     return
+
+
+_OP_SYS = (
+    "Sei l'assistente operativo interno di Thanatos Intel (agenzia investigativa, sede "
+    "Romania, GDPR/Legea 329-2003). Parli su WhatsApp con un OPERATORE interno "
+    "(investigatore/manager), NON con un cliente: dagli del tu, tono diretto e concreto, "
+    "niente disclaimer commerciali ne' presentazioni dell'agenzia. Aiutalo nel lavoro: "
+    "rispondi su casi/lead, riassumi documenti e pratiche, suggerisci i prossimi passi "
+    "investigativi, redigi note/testi. Usa SOLO le informazioni nel contesto fornito; se "
+    "un dato non c'e', dillo e indica come ottenerlo. Ricorda all'operatore, quando "
+    "pertinente, che inviando documenti e scrivendo «elabora gli allegati ed apri un caso» "
+    "apri una pratica con i reperti analizzati. Risposte brevi e operative (max ~120 "
+    "parole), in italiano."
+)
+
+
+def _case_brief(case):
+    c = frappe.db.get_value("Investigation Case", case,
+                            ["case_title", "case_type", "status", "summary"],
+                            as_dict=True) or {}
+    evs = frappe.get_all("Investigation Evidence", filters={"investigation_case": case},
+                         fields=["evidence_name", "notes"], limit=20)
+    lines = [f"Caso {case}: {c.get('case_title')} [{c.get('status')}] "
+             f"tipo {c.get('case_type')}"]
+    if c.get("summary"):
+        lines.append("Sintesi: " + c["summary"])
+    if evs:
+        lines.append(f"Reperti ({len(evs)}):")
+        for e in evs[:12]:
+            note = (e.notes or "").replace("\n", " ").strip()
+            lines.append(f"  • {e.evidence_name}: {note[:140]}")
+    return "\n".join(lines)
+
+
+def _operator_context(operator, lead_name, text):
+    parts = []
+    codename = frappe.db.get_value("Investigator", operator, "codename")
+    parts.append("Operatore: " + operator + (f" ({codename})" if codename else ""))
+    refs = []
+    lc = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+    if lc:
+        refs.append(lc)
+    for tok in re.findall(r"CASE-\d{4}-\d+", text or "", re.I):
+        tok = tok.upper()
+        if tok not in refs and frappe.db.exists("Investigation Case", tok):
+            refs.append(tok)
+    for cn in refs[:3]:
+        parts.append(_case_brief(cn))
+    rec = frappe.get_all("Investigation Case",
+                         fields=["name", "case_title", "status", "case_type"],
+                         order_by="modified desc", limit=8)
+    if rec:
+        parts.append("Casi recenti:\n" + "\n".join(
+            f"- {c.name} [{c.status}] {c.case_type or ''}: {c.case_title}" for c in rec))
+    return "\n\n".join(parts)
+
+
+@frappe.whitelist()
+def operator_assistant_reply(lead_name, wa_phone, sender, text, operator):
+    """Co-pilota AI per l'operatore: risponde su WhatsApp con supporto operativo
+    fondato sul contesto reale (casi, lead, reperti)."""
+    from thanatos_intel.ai.doc_ingest import _gateway
+    from thanatos_intel.ai.case_architect import _resp_text
+    ctx = _operator_context(operator, lead_name, text)
+    msg = (f"Contesto operativo:\n{ctx}\n\n"
+           f"Messaggio dell'operatore: «{text}»\n\nRispondi all'operatore.")
+    resp = _gateway(msg, system=_OP_SYS, task_type="chat", session_id=f"op-{operator}")
+    out = (_resp_text(resp) or "").strip()
+    if not out:
+        out = "Ricevuto. (assistente AI momentaneamente non disponibile)"
+    _reply(wa_phone, sender, lead_name, out)
+    try:
+        usage = (resp or {}).get("usage") or {}
+        if usage.get("tokens_in") or usage.get("tokens_out"):
+            from thanatos_intel.billing.ai_meter import record_usage
+            record_usage(client=None, model=(resp or {}).get("model", "default"),
+                         tokens_in=usage.get("tokens_in", 0),
+                         tokens_out=usage.get("tokens_out", 0), reference=lead_name)
+    except Exception:
+        pass
+    return {"ok": True}
 
 
 _DOC_EXT = (".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg", ".webp", ".txt", ".tiff", ".tif")
@@ -164,12 +260,13 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
             results.append({"file": d.file_name, "summary": "(errore analisi)", "flags": []})
         frappe.db.commit()
 
+    op_user = _operator_user(operator)
     try:
         lead = frappe.get_doc("Intel Lead", lead_name)
         lead.db_set("linked_case", case.name, notify=False)
         lead.db_set("status", "Promosso a Caso", notify=False)
         lead.db_set("promoted_at", now_datetime(), notify=False)
-        lead.db_set("promoted_by", operator or frappe.session.user, notify=False)
+        lead.db_set("promoted_by", op_user, notify=False)
         frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "operator link case")
@@ -190,7 +287,7 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
     lines.append(f"\U0001F517 {get_url('/app/investigation-case/' + case.name)}")
     _reply(wa_phone, sender, lead_name, "\n".join(lines))
 
-    _notify_desk(lead_name, case.name, operator, len(results), n_flags)
+    _notify_desk(lead_name, case.name, op_user, len(results), n_flags)
     return {"ok": True, "case": case.name, "documents": len(results), "flags": n_flags}
 
 
