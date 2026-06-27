@@ -40,6 +40,21 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('File'));
 
+            frm.add_custom_button(__('Genera Fascicolo'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.reporting.fascicolo.genera_fascicolo',
+                    args: { case_name: frm.doc.name },
+                    freeze: true, freeze_message: __('Composizione fascicolo del caso...'),
+                    callback(r) {
+                        const m = r.message || {};
+                        frappe.show_alert({ message: __('Fascicolo pronto: {0} documenti, {1} pagine.', [m.documents, m.pages]), indicator: 'green' }, 8);
+                        if (m.file_url) { window.open(m.file_url, '_blank'); }
+                        else if (m.drive_url) { window.open(m.drive_url, '_blank'); }
+                        frm.reload_doc();
+                    }
+                });
+            }, __('File'));
+
             frm.add_custom_button(__('Genera fascicolo con custodia'), () => {
                 frappe.call({
                     method: 'thanatos_intel.reporting.custody.generate_custody_dossier',
