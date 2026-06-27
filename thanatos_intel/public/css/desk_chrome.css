@@ -79,10 +79,15 @@ a[href*="thanatos-intel"] .icon-container > svg {
 
 
 
-/* PCU: toolbar bottoni form — evita overflow su Investigation Case e simili */
-.page-actions { overflow-x: auto !important; max-width: 80vw; flex-wrap: nowrap; }
-.page-actions::-webkit-scrollbar { height: 4px; }
-.page-actions::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+/* Toolbar azioni: NON ritagliare i bottoni/menu (niente overflow:auto, che creava
+   un clipping context e tagliava i dropdown). Se non entrano, vanno a capo. */
+.page-actions {
+  overflow: visible !important;
+  max-width: none !important;
+  flex-wrap: wrap !important;
+  row-gap: 4px;
+  justify-content: flex-end;
+}
 .page-actions .btn-group > .btn,
 .page-actions > .btn {
   font-size: 12px !important;
