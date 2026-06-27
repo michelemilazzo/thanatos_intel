@@ -237,24 +237,57 @@ def _ensure_case_box(case):
         return None
 
 
+def _consolidate_to_box(local, box_copy):
+    """Ri-punta il file/symlink locale del lead alla copia nel box del caso e rimuove
+    la vecchia copia orfana (es. attachments/intel_lead/...). Una sola copia fisica."""
+    import os
+    try:
+        if not (box_copy and os.path.isfile(box_copy)):
+            return
+        old_target = os.path.realpath(local) if os.path.islink(local) else None
+        if old_target == box_copy:
+            return  # già consolidato
+        # sicurezza: stessa dimensione prima di sostituire
+        cur = local if os.path.exists(local) else None
+        if cur and os.path.getsize(os.path.realpath(local)) != os.path.getsize(box_copy):
+            return
+        if os.path.lexists(local):
+            os.remove(local)
+        os.symlink(box_copy, local)
+        # rimuovi la copia box orfana (solo sotto /mnt/thanatos-box/attachments/)
+        if (old_target and old_target != box_copy
+                and old_target.startswith("/mnt/thanatos-box/attachments/")
+                and os.path.isfile(old_target)):
+            os.remove(old_target)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "operator _consolidate_to_box")
+
+
 def archive_lead_docs_to_case(case, lead_name):
     """Archivia i documenti del lead nella cartella Drive del caso (box dedicato),
-    sottocartella '01 Documenti'. Una sola copia fisica nel box. Idempotente."""
+    sottocartella '01 Documenti'. Dopo l'archiviazione consolida: una sola copia
+    fisica nel box del caso, l'allegato del lead diventa symlink a quella copia,
+    le copie orfane (attachments/intel_lead) vengono rimosse. Idempotente."""
     import os
     from thanatos_intel.reporting.case_reports import _put_in_drive, _client_name
     _ensure_case_box(case)
     client = _client_name(frappe.get_doc("Investigation Case", case))
     n = 0
     for d in _lead_documents(lead_name):
-        src = frappe.get_site_path("private", "files", (d.file_url or "").split("/files/")[-1])
-        if not os.path.exists(src):
+        local = frappe.get_site_path("private", "files", (d.file_url or "").split("/files/")[-1])
+        if not os.path.exists(local):
             continue
         ext = (d.file_name or "").rsplit(".", 1)[-1].lower()
         mime = _MIME.get(ext, "application/octet-stream")
         try:
-            with open(src, "rb") as fh:
-                _put_in_drive(case, d.file_name, fh.read(), mime, client,
-                              subfolder="01 Documenti")
+            with open(local, "rb") as fh:
+                drive_name = _put_in_drive(case, d.file_name, fh.read(), mime, client,
+                                           subfolder="01 Documenti")
+            if drive_name:
+                rel = frappe.db.get_value("Drive File", drive_name, "path")
+                box_copy = os.path.realpath(
+                    frappe.get_site_path("private", "files", rel)) if rel else None
+                _consolidate_to_box(local, box_copy)
             n += 1
         except Exception:
             frappe.log_error(frappe.get_traceback(), f"operator archive doc {d.file_name}")
