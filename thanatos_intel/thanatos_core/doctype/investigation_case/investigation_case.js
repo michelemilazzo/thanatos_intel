@@ -175,6 +175,35 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('Intelligence'));
 
+            frm.add_custom_button(__('Verifica camerale (P.IVA)'), () => {
+                const d = new frappe.ui.Dialog({
+                    title: __('Verifica camerale Registro Imprese'),
+                    fields: [{ fieldname: 'piva', fieldtype: 'Data', label: 'Partita IVA', reqd: 1 }],
+                    primary_action_label: __('Verifica'),
+                    primary_action(v) {
+                        d.hide();
+                        frappe.call({
+                            method: 'thanatos_intel.osint.registro_imprese.verifica_impresa',
+                            args: { piva: v.piva, investigation_case: frm.doc.name },
+                            freeze: true, freeze_message: __('Verifica in corso...'),
+                            callback(r) {
+                                const m = r.message || {};
+                                const c = m.checks || {};
+                                let msg = '<b>P.IVA:</b> ' + (m.piva || '-') + '<br>'
+                                    + '<b>Checksum:</b> ' + ((c.piva_checksum||{}).valid ? 'valido' : 'NON valido') + '<br>'
+                                    + '<b>VIES:</b> ' + JSON.stringify((c.vies||{}).valid) + '<br>';
+                                if (m.company) { msg += '<b>Denominazione:</b> ' + frappe.utils.escape_html(m.company.denominazione||'-') + '<br><b>Stato:</b> ' + frappe.utils.escape_html(m.company.stato||'-'); }
+                                else if (m.manual_link) { msg += '<a href="' + m.manual_link + '" target="_blank">Apri visura su registroimprese.it (SPID)</a> e carica il PDF sul caso.'; }
+                                if ((m.flags||[]).length) { msg += '<br><b style="color:#c0392b">Flag:</b> ' + m.flags.map(frappe.utils.escape_html).join('; '); }
+                                frappe.msgprint({ title: __('Verifica camerale'), indicator: (m.flags||[]).length ? 'orange' : 'green', message: msg });
+                                frm.reload_doc();
+                            }
+                        });
+                    }
+                });
+                d.show();
+            }, __('Intelligence'));
+
             frm.add_custom_button(__('Domande investigative'), () => {
                 frappe.call({
                     method: 'thanatos_intel.ai.doc_questions.generate_questions_async',
