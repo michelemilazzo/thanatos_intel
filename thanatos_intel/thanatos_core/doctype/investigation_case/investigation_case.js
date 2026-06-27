@@ -175,6 +175,24 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('Intelligence'));
 
+            frm.add_custom_button(__('Fatture: ingerisci e riconcilia'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.integrations.fatturapa.reconcile_invoices',
+                    args: { case: frm.doc.name },
+                    freeze: true, freeze_message: __('Parsing XML + riconciliazione...'),
+                    callback(r) {
+                        const m = r.message || {};
+                        const flags = (m.flags || []);
+                        frappe.msgprint({
+                            title: __('Riconciliazione fatture') + ' — ' + (m.verdict || '-'),
+                            indicator: (m.verdict === 'ALLARME') ? 'red' : (flags.length ? 'orange' : 'green'),
+                            message: '<b>Dichiarate:</b> ' + (m.declared||0) + ' · <b>Reali (XML):</b> ' + (m.real||0) + ' · <b>mancanti:</b> ' + (m.missing||0) + '<br><br>' + (flags.length ? flags.map(frappe.utils.escape_html).join('<br>') : __('Nessuna discrepanza.'))
+                        });
+                        frm.reload_doc();
+                    }
+                });
+            }, __('Intelligence'));
+
             frm.add_custom_button(__('Verifica camerale (P.IVA)'), () => {
                 const d = new frappe.ui.Dialog({
                     title: __('Verifica camerale Registro Imprese'),
