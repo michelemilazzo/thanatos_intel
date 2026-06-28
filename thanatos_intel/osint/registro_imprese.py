@@ -16,6 +16,7 @@ from frappe.utils import now_datetime
 from thanatos_intel.integrations.company_screen import validate_piva
 
 _OPENAPI = "https://company.openapi.com"
+_OPENAPI_SANDBOX = "https://test.company.openapi.com"
 
 
 def _digits(piva):
@@ -28,11 +29,12 @@ def manual_link(piva):
 
 def _fetch_openapi(piva, token):
     import requests
+    base = _OPENAPI_SANDBOX if frappe.conf.get("openapi_sandbox") else _OPENAPI
     try:
-        r = requests.get(f"{_OPENAPI}/IT-{piva}",
-                         headers={"Authorization": f"Bearer {token}"}, timeout=30)
+        r = requests.get(f"{base}/IT-advanced/{piva}",
+                         headers={"Authorization": f"Bearer {token}"}, timeout=40)
         if r.status_code != 200:
-            return None, f"openapi HTTP {r.status_code}"
+            return None, f"openapi HTTP {r.status_code}: {(r.text or '')[:120]}"
         body = r.json() or {}
         data = body.get("data")
         rec = (data[0] if isinstance(data, list) and data else
@@ -43,23 +45,54 @@ def _fetch_openapi(piva, token):
 
 
 def _norm_company(rec):
-    """Normalizza i campi salienti dal record provider (best-effort, tollerante)."""
+    """Normalizza i campi salienti dalla Company API openapi.it (IT-advanced)."""
     g = lambda *keys: next((rec.get(k) for k in keys if rec.get(k)), None)
-    amm = rec.get("administrators") or rec.get("amministratori") or rec.get("management") or []
+    # sede
+    sede = ""
+    addr = (rec.get("address") or {}).get("registeredOffice") or rec.get("address") or {}
+    if isinstance(addr, dict):
+        sede = ", ".join(x for x in [addr.get("streetName"), addr.get("town"),
+                                     addr.get("province"), addr.get("zipCode")] if x)
+    elif isinstance(addr, str):
+        sede = addr
+    # forma
+    dlf = rec.get("detailedLegalForm") or {}
+    forma = dlf.get("description") if isinstance(dlf, dict) else (dlf or g("legalForm", "forma_giuridica"))
+    # bilancio / capitale
+    bs = (rec.get("balanceSheets") or {}).get("last") or {}
+    capitale = bs.get("shareCapital") or g("shareCapital", "capitale_sociale", "capitale")
+    # ateco
+    ateco = ""
+    ac = rec.get("atecoClassification") or {}
+    if isinstance(ac, dict):
+        ateco = (ac.get("ateco") or {}).get("code") or ac.get("code") or ""
+    ateco = ateco or g("atecoCode", "ateco")
+    # soci (shareHolders)
+    soci = rec.get("shareHolders") or rec.get("shareholders") or []
+    if isinstance(soci, list):
+        soci = [(s.get("companyName") or s.get("name") or
+                 ((s.get("lastName", "") + " " + s.get("firstName", "")).strip()) or str(s))
+                + (f" ({s.get('percentShare')}%)" if s.get("percentShare") else "")
+                for s in soci if s][:12]
+    # amministratori (se presenti)
+    amm = rec.get("managers") or rec.get("administrators") or rec.get("corporateBodies") or []
     if isinstance(amm, list):
-        amm = [a.get("name") or a.get("nome") or a.get("denominazione") or str(a)
-               for a in amm if a][:8]
+        amm = [a.get("name") or ((a.get("lastName", "") + " " + a.get("firstName", "")).strip())
+               or str(a) for a in amm if a][:8]
     return {
-        "denominazione": g("companyName", "denominazione", "ragione_sociale", "name"),
+        "denominazione": g("companyName", "denominazione", "name"),
         "stato": g("activityStatus", "stato", "status"),
-        "forma": g("legalForm", "forma_giuridica", "naturaGiuridica"),
-        "capitale": g("shareCapital", "capitale_sociale", "capitale"),
-        "sede": g("address", "sede", "indirizzo"),
+        "forma": forma,
+        "capitale": capitale,
+        "sede": sede,
         "pec": g("pec", "pecEmail"),
-        "ateco": g("atecoCode", "ateco", "codice_ateco"),
-        "rea": g("rea", "reaCode"),
-        "iscrizione": g("registrationDate", "data_iscrizione"),
+        "ateco": ateco,
+        "rea": g("reaCode", "rea"),
+        "iscrizione": g("registrationDate", "startDate", "data_iscrizione"),
+        "soci": soci,
         "amministratori": amm,
+        "bilancio": ({"anno": bs.get("year"), "fatturato": bs.get("turnover"),
+                      "dipendenti": bs.get("employees"), "pn": bs.get("netWorth")} if bs else {}),
     }
 
 
@@ -88,6 +121,12 @@ def _evidence(case, out):
                      f"ATECO: {c.get('ateco') or '-'}")
         if c.get("amministratori"):
             lines.append("Amministratori: " + ", ".join(map(str, c["amministratori"])))
+        if c.get("soci"):
+            lines.append("Soci: " + ", ".join(map(str, c["soci"])))
+        b = c.get("bilancio") or {}
+        if b.get("fatturato") is not None:
+            lines.append(f"Bilancio {b.get('anno')}: fatturato {b.get('fatturato')}, "
+                         f"dipendenti {b.get('dipendenti')}, PN {b.get('pn')}")
     else:
         lines.append(f"Visura da scaricare (SPID): {out.get('manual_link')}")
     if out.get("flags"):
