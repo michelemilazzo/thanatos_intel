@@ -1,0 +1,91 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import portal_nav, thanatos_footer %}
+{% block title %}{{ title }}{% endblock %}
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2742;}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:#E8E9F0;font-family:-apple-system,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:780px;margin:0 auto;padding:32px 24px 70px}
+h1{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#fff;margin:0 0 4px}
+.sub{color:var(--grey);font-size:13px;margin:0 0 22px}
+.box{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:18px}
+h2{font-size:15px;color:var(--gold);margin:0 0 10px;font-family:Georgia,serif;font-weight:400;letter-spacing:.5px}
+table{border-collapse:collapse;width:100%;margin:4px 0}
+th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;font-size:13px}
+th{background:#0A0E1A;color:var(--grey);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+.k{font-family:monospace;color:var(--gold);font-weight:700}
+ol{margin:6px 0 6px 18px}ol li{margin:6px 0;font-size:13.5px;line-height:1.5}
+.note{background:rgba(200,169,110,.08);border:1px solid rgba(200,169,110,.35);border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.6}
+.note.warn{background:rgba(208,90,90,.08);border-color:rgba(208,90,90,.4)}
+.you{background:#0A0E1A;border:1px dashed var(--gold);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:14px}
+.btn{background:var(--gold);color:#0A0E1A;border:none;border-radius:6px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;padding:11px 18px;cursor:pointer}
+.btn:hover{background:#B8975A}
+@media print{
+  body{background:#fff;color:#111}.shell{max-width:100%;padding:0}
+  .box{background:#fff;border:1px solid #ccc}h1,h2{color:#0A0E1A}.k{color:#8a6d1f}
+  .px-nav,.thanatos-footer,.noprint,nav{display:none !important}
+  .note{background:#faf6ee;border-color:#e0d4b8}.you{border-color:#8a6d1f}
+}
+</style>
+{% endblock %}
+{% block content %}
+{{ portal_nav('guida') }}
+<div class="shell">
+  <h1>Configurazione email</h1>
+  <p class="sub">Configura la tua casella Thanatos su Outlook, telefono o altri programmi di posta.</p>
+  <button class="btn noprint" onclick="window.print()" style="margin-bottom:16px">🖨 Stampa / Salva PDF</button>
+
+  {% if user_mailbox %}<div class="you">La tua casella: <span class="k">{{ user_mailbox }}</span></div>{% endif %}
+
+  <div class="box">
+    <div class="note"><b>Importante:</b> usa la <b>app-password</b> fornita dall'amministratore (NON la password con cui accedi alla webmail). È dedicata al programma di posta: resta valida anche se la password principale cambia, ed è revocabile singolarmente.</div>
+  </div>
+
+  <div class="box">
+    <h2>Parametri del server</h2>
+    <table>
+      <tr><th>Funzione</th><th>Server</th><th>Porta</th><th>Sicurezza</th></tr>
+      <tr><td>Posta in arrivo (IMAP)</td><td class="k">mailmx.onekeyco.com</td><td class="k">993</td><td>SSL/TLS</td></tr>
+      <tr><td>Posta in uscita (SMTP)</td><td class="k">mailmx.onekeyco.com</td><td class="k">587</td><td>STARTTLS</td></tr>
+    </table>
+    <table style="margin-top:8px">
+      <tr><th>Campo</th><th>Valore</th></tr>
+      <tr><td>Nome utente</td><td>{% if user_mailbox %}<span class="k">{{ user_mailbox }}</span>{% else %}il tuo indirizzo completo (es. <span class="k">nome@thanatos.agency</span>){% endif %}</td></tr>
+      <tr><td>Password</td><td>la <b>app-password</b> ricevuta dall'amministratore</td></tr>
+      <tr><td>Autenticazione SMTP</td><td>sì, stesse credenziali della posta in arrivo</td></tr>
+    </table>
+  </div>
+
+  <div class="box">
+    <h2>Outlook (desktop)</h2>
+    <ol>
+      <li>Outlook → <b>File → Aggiungi account</b>, inserisci l'indirizzo e scegli configurazione <b>manuale / IMAP</b>.</li>
+      <li>Compila i server in arrivo/uscita con i parametri sopra.</li>
+      <li>Password = la <b>app-password</b>. Spunta "Il server in uscita richiede l'autenticazione".</li>
+      <li>Concludi: Outlook verifica e l'account è pronto.</li>
+    </ol>
+  </div>
+
+  <div class="box">
+    <h2>iPhone / iPad</h2>
+    <ol>
+      <li>Impostazioni → <b>Mail → Account → Aggiungi account → Altro → Aggiungi account Mail</b>.</li>
+      <li>Nome, indirizzo e <b>app-password</b>; tipo <b>IMAP</b>.</li>
+      <li>Server in arrivo e in uscita: <span class="k">mailmx.onekeyco.com</span>.</li>
+    </ol>
+    <h2 style="margin-top:14px">Android</h2>
+    <ol>
+      <li>App Email → Aggiungi account → <b>Altro / IMAP</b>.</li>
+      <li>Indirizzo + <b>app-password</b>; in arrivo <span class="k">993</span> SSL, in uscita <span class="k">587</span> STARTTLS.</li>
+    </ol>
+  </div>
+
+  <div class="box">
+    <h2>Webmail (senza configurare nulla)</h2>
+    <p style="font-size:13.5px;line-height:1.6;margin:0">Dal browser: <a href="https://webmail.thanatos.agency" class="k" style="text-decoration:none">webmail.thanatos.agency</a> — accedi con la tua casella, oppure con <b>"Accedi con MMOS ID"</b> (single sign-on, per le caselle abilitate).</p>
+  </div>
+
+  <div class="note warn"><b>Se la posta smette di funzionare</b> dopo un cambio password: chiedi all'amministratore una nuova <b>app-password</b> e aggiornala nel programma. Non serve toccare la password principale.</div>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}
