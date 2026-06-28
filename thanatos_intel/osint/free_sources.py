@@ -835,3 +835,37 @@ def lookup_mapillary(location: str) -> dict:
     except Exception as e:
         return {"error": str(e)[:200], "source": "mapillary"}
 
+
+
+@frappe.whitelist()
+def tracing_links(address: str) -> dict:
+    """Deep-link a tool di tracciamento visuale per un indirizzo (chain-aware).
+    Gratuiti: Arkham, MetaSleuth, OXT, walletexplorer, explorer nativi."""
+    a = (address or "").strip()
+    if not a:
+        return {"error": "invalid_address"}
+    al = a.lower()
+    if a.startswith("0x") and len(a) == 42:
+        chain = "eth"; links = {
+            "Arkham": f"https://intel.arkm.com/explorer/address/{a}",
+            "MetaSleuth": f"https://metasleuth.io/result/eth/{a}",
+            "Breadcrumbs": f"https://www.breadcrumbs.app/explorer?address={a}&blockchain=ethereum",
+            "Etherscan": f"https://etherscan.io/address/{a}",
+        }
+    elif a.startswith("T") and len(a) == 34:
+        chain = "tron"; links = {
+            "Arkham": f"https://intel.arkm.com/explorer/address/{a}",
+            "MetaSleuth": f"https://metasleuth.io/result/tron/{a}",
+            "Tronscan": f"https://tronscan.org/#/address/{a}",
+        }
+    elif al.startswith(("bc1", "tb1", "1", "3")):
+        chain = "btc"; links = {
+            "Arkham": f"https://intel.arkm.com/explorer/address/{a}",
+            "MetaSleuth": f"https://metasleuth.io/result/btc/{a}",
+            "OXT": f"https://oxt.me/address/{a}",
+            "WalletExplorer": f"https://www.walletexplorer.com/address/{a}",
+            "mempool.space": f"https://mempool.space/address/{a}",
+        }
+    else:
+        return {"error": "chain_non_riconosciuta", "address": a}
+    return {"address": a, "chain": chain, "links": links}
