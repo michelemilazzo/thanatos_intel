@@ -589,6 +589,13 @@ def _relazione_text(case):
                  "delega del cliente → cassetto/fatture AdE + tracciamento dei bonifici (€800.000); valutazione "
                  "denuncia (truffa/falso/fatture inesistenti) e azione civile/recupero verso cedente, intermediari "
                  "e asseveratori (escussione RC).")
+    ass = act("INDENNIZZO ASSICURATIVO")
+    if ass:
+        parts.append("*8. Indennizzo assicurativo*\n" + ass)
+    mnd = frappe.db.get_value("Agency Mandate", {"investigation_case": case}, "name")
+    parts.append("*9. Atti predisposti (in allegato)*\nMandato d'incarico"
+                 + (f" {mnd}" if mnd else "") + " (bozza), preventivo € 26.000, dossier cliente, "
+                 "fascicolo integrale, formulario investigativo e delega AdE.")
     return parts
 
 
@@ -612,7 +619,15 @@ def send_case_report_wa(case, lead_name, wa_phone, sender, include_pdf=1):
     docs_sent = 0
     if int(include_pdf):
         import os
-        for like, label in [("DOSSIER CLIENTE", "Dossier cliente"), ("PROFORMA", "Preventivo"),
+
+        def _send_path(path, fname, label):
+            if not (path and os.path.exists(path)):
+                return False
+            with open(path, "rb") as fh:
+                return send_document_wa(wa_phone, sender, fh.read(), fname, label, lead_name)
+
+        for like, label in [("DOSSIER CLIENTE", "Dossier cliente"), ("PROFORMA", "Preventivo (€26.000)"),
+                            ("FORMULARIO", "Formulario investigativo"), ("DELEGA AdE", "Delega AdE"),
                             ("FASCICOLO", "Fascicolo integrale")]:
             fr = frappe.db.get_value("File", {"attached_to_doctype": "Investigation Case",
                                               "attached_to_name": case, "file_name": ["like", f"%{like}%"]},
@@ -620,10 +635,22 @@ def send_case_report_wa(case, lead_name, wa_phone, sender, include_pdf=1):
             if not fr:
                 continue
             path = frappe.get_site_path("private", "files", (fr.file_url or "").split("/files/")[-1])
-            if not os.path.exists(path):
-                continue
-            with open(path, "rb") as fh:
-                if send_document_wa(wa_phone, sender, fh.read(), fr.file_name, label, lead_name):
+            if _send_path(path, fr.file_name, label):
+                docs_sent += 1
+        # mandato d'incarico (PDF generato dal doc Agency Mandate)
+        mnd = frappe.db.get_value("Agency Mandate", {"investigation_case": case}, "name")
+        if mnd:
+            pdf_url = frappe.db.get_value("Agency Mandate", mnd, "mandate_pdf")
+            if not pdf_url:
+                try:
+                    from thanatos_intel.thanatos_ddd.pdf.mandate import generate_mandate_pdf
+                    generate_mandate_pdf(mnd)
+                    pdf_url = frappe.db.get_value("Agency Mandate", mnd, "mandate_pdf")
+                except Exception:
+                    frappe.log_error(frappe.get_traceback(), "wa mandate pdf")
+            if pdf_url:
+                path = frappe.get_site_path("private", "files", (pdf_url or "").split("/files/")[-1])
+                if _send_path(path, f"Mandato {mnd}.pdf", "Mandato d'incarico (bozza)"):
                     docs_sent += 1
     return {"ok": True, "messaggi": sent, "documenti": docs_sent}
 
