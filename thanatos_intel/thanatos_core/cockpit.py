@@ -203,6 +203,31 @@ def get_cockpit_data():
         {"label": "Fatture", "count": _count("Sales Invoice"), "doctype": "Sales Invoice"},
     ]
 
+    # ── Mail connectors (per l'utente corrente) ──
+    mail_connectors = []
+    try:
+        import json as _j, os as _os
+        _store = "/etc/thanatos/mail_connectors"
+        _ukey = user.replace("@", "_").replace(".", "_")
+        _p = _os.path.join(_store, _ukey + ".json")
+        if _os.path.exists(_p):
+            for c in (_j.load(open(_p)) or []):
+                mail_connectors.append({
+                    "id": c.get("id"), "label": c.get("label") or c.get("email", ""),
+                    "email": c.get("email", ""), "enabled": c.get("enabled", True),
+                    "last_sync": (c.get("last_sync_at") or "")[:16],
+                    "error": c.get("last_error") or "", "synced": c.get("synced_count", 0),
+                })
+    except Exception:
+        pass
+
+    # suggerimenti connettori rotti
+    broken_conns = [c for c in mail_connectors if c.get("error") and c.get("enabled")]
+    if broken_conns:
+        sugg.insert(0, {"icon": "📡", "sev": "warn",
+                        "text": f"{len(broken_conns)} connettore/i email con errori di sync",
+                        "route": None})
+
     return {
         "user": user,
         "fullname": get_fullname(user),
@@ -215,6 +240,7 @@ def get_cockpit_data():
         "casi_per_stato": casi_per_stato,
         "flow": flow,
         "nav": _nav_links(),
+        "mail_connectors": mail_connectors,
     }
 
 
