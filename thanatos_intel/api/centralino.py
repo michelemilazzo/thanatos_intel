@@ -169,3 +169,24 @@ def get_call_logs(search=""):
         rows = [r for r in rows if s in (r.get("caller_name") or "").lower()
                 or s in (r.get("caller_number") or "")]
     return rows
+
+
+@frappe.whitelist()
+def stream_call_audio(call_log):
+    """Serve la registrazione audio (file fisico) in streaming, con check permessi
+    sul Call Log. Evita il mismatch File-doc/audio_file."""
+    import os
+    from werkzeug.wrappers import Response
+    cl = frappe.get_doc("Call Log", call_log)  # solleva PermissionError se non autorizzato
+    url = (cl.audio_file or "").strip()
+    if not url:
+        frappe.throw("Nessuna registrazione audio per questa chiamata.")
+    fname = url.split("/")[-1]
+    path = frappe.get_site_path("private", "files", fname)
+    if not os.path.exists(path):
+        frappe.throw("File audio non trovato.")
+    with open(path, "rb") as f:
+        content = f.read()
+    return Response(content, mimetype="audio/ogg",
+                    headers={"Content-Disposition": 'inline; filename="%s.ogg"' % call_log,
+                             "Accept-Ranges": "bytes"})

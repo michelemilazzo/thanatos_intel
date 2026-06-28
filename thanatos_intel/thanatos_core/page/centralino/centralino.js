@@ -198,8 +198,10 @@ class CentralinoPage {
         $(`[data-call="${name}"]`).addClass("active");
         $("#ctlno-chat-area").html('<div class="ctlno-loading">Caricamento...</div>');
         frappe.db.get_doc("Call Log", name).then(d => {
+            const src = "/api/method/thanatos_intel.api.centralino.stream_call_audio?call_log=" + encodeURIComponent(name);
             const audio = d.audio_file
-                ? `<audio controls preload="none" style="width:100%;margin:12px 0" src="${esc(d.audio_file)}"></audio>`
+                ? `<audio controls preload="metadata" style="width:100%;margin:12px 0" src="${src}"></audio>
+                   <div><a class="ctlno-call-link" href="${src}" download="${esc(name)}.ogg">⬇ Scarica registrazione</a></div>`
                 : '<div class="ctlno-call-meta">Nessuna registrazione audio.</div>';
             const tr = d.transcript_text ? esc(d.transcript_text) : "(trascrizione non disponibile)";
             const who = esc(d.caller_name || d.caller_number || "Sconosciuto");
