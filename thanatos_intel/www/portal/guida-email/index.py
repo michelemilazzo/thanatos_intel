@@ -8,11 +8,6 @@ def get_context(context):
         frappe.local.flags.redirect_location = "/login?redirect-to=/portal/guida-email"
         raise frappe.Redirect
     user = frappe.session.user
-    # casella suggerita: se l'utente è già @thanatos.agency usala, altrimenti lascia placeholder
-    mailbox = user if user.endswith("@thanatos.agency") else ""
-    if not mailbox:
-        # prova a trovare una casella collegata all'utente (Investigation Client / Contact)
-        mailbox = frappe.db.get_value("Investigation Client", {"platform_user": user}, "email") or ""
-    context.user_mailbox = mailbox
+    context.user_mailbox = user if str(user).endswith("@thanatos.agency") else ""
     context.title = "Guida configurazione email — Thanatos"
     return context
