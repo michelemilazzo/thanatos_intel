@@ -163,17 +163,8 @@ def generate_reply(lead_name, wa_number, to_number):
     wa_doc = _wa_doc(wa_number)
     if not wa_doc or not int(wa_doc.get("ai_bot_enabled") or 0):
         return {"ok": False, "reason": "bot disabled"}
-    # dopo un handoff il bot tace per lasciar gestire l'operatore; ma se nessuno
-    # risponde da 30+ min, il bot RIPRENDE (per non abbandonare il cliente).
-    if int(frappe.db.get_value("Intel Lead", lead_name, "bot_handed_off") or 0):
-        from frappe.utils import add_to_date, get_datetime
-        last_out = frappe.db.get_value(
-            "Intel Lead Message", {"parent": lead_name, "direction": "Outbound"},
-            "sent_at", order_by="sent_at desc")
-        if last_out and get_datetime(last_out) > add_to_date(now_datetime(), minutes=-30):
-            return {"ok": True, "skipped": "handed off to operator"}
-        frappe.db.set_value("Intel Lead", lead_name, "bot_handed_off", 0, update_modified=False)
-        frappe.db.commit()
+    # il bot risponde SEMPRE; bot_handed_off serve solo a NON ri-avvisare l'operatore
+    already_ho = int(frappe.db.get_value("Intel Lead", lead_name, "bot_handed_off") or 0)
     from thanatos_intel.ai.doc_ingest import _gateway
 
     system = (wa_doc.get("ai_bot_system_prompt") or "").strip() or _SYS
@@ -181,9 +172,9 @@ def generate_reply(lead_name, wa_number, to_number):
     last = _last_inbound(lead_name)
     want_human = _wants_human(last)
 
-    if want_human:
-        clean = ("Certo, la metto subito in contatto con un nostro operatore. "
-                 "Resti pure su WhatsApp, la ricontattiamo a breve.")
+    if want_human and not already_ho:
+        clean = ("Certo, avviso subito un nostro operatore che la ricontattera'. "
+                 "Intanto sono qui: mi dica pure di cosa ha bisogno e cerco di aiutarla.")
         send_text(wa_doc, to_number, clean, lead_name)
         _handoff(lead_name, wa_doc)
         return {"ok": True, "handoff": True, "reason": "human requested"}
@@ -224,7 +215,7 @@ def generate_reply(lead_name, wa_number, to_number):
     except Exception:
         pass
 
-    if handoff:
+    if handoff and not already_ho:
         _handoff(lead_name, wa_doc)
     return {"ok": True, "handoff": handoff}
 
