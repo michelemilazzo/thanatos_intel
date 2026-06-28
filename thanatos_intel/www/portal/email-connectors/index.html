@@ -60,6 +60,12 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 .warn-box{background:rgba(200,169,110,.07);border:1px solid rgba(200,169,110,.2);border-radius:8px;
   padding:14px 16px;font-size:12px;color:#c8b070;line-height:1.6;margin-bottom:16px}
 .warn-box b{color:var(--gold)}
+.btn-ms{background:#2F2F2F;color:#fff;border:1px solid #444}
+.btn-ms:hover{background:#1a1a1a;border-color:var(--gold)}
+.ms-icon{width:18px;height:18px;vertical-align:middle}
+.banner{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none}
+.banner.ok{background:rgba(72,200,120,.12);border:1px solid rgba(72,200,120,.3);color:var(--ok)}
+.banner.err{background:rgba(224,82,82,.12);border:1px solid rgba(224,82,82,.3);color:var(--danger)}
 /* spinner */
 .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
   border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
@@ -77,6 +83,26 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
   <div class="hero">
     <h1>Connettori Email</h1>
     <p>Collega account Gmail, Outlook o IMAP alla tua casella Thanatos. Le mail vengono scaricate automaticamente ogni 10 minuti.</p>
+  </div>
+
+  <div id="main-banner" class="banner"></div>
+
+  <!-- Pulsante Microsoft OAuth -->
+  <div class="card" style="margin-bottom:20px">
+    <h2 style="margin-bottom:8px">Collega account Microsoft</h2>
+    <p style="color:var(--grey);font-size:13px;margin-bottom:16px">
+      Funziona con Outlook.com, Hotmail, Live, Office 365 e Exchange.<br>
+      Non richiede App Password — autorizzazione sicura via Microsoft.
+    </p>
+    <button class="btn btn-ms" onclick="connectMicrosoft()">
+      <svg class="ms-icon" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
+      Collega con Microsoft
+    </button>
   </div>
 
   <div class="warn-box">
@@ -262,5 +288,29 @@ async function delConn(id) {
 
 onProvider();
 loadConnectors();
+
+async function connectMicrosoft() {
+  const d = await api('microsoft_oauth_start', {method: 'POST', body: JSON.stringify({})});
+  if (d.ok && d.url) {
+    window.location.href = d.url;
+  } else {
+    flash('add-msg', d.exception || d.error || 'Errore avvio OAuth Microsoft', 'err');
+  }
+}
+
+// gestione banner da query string (?ok=microsoft / ?err=...)
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  const b = document.getElementById('main-banner');
+  if (p.get('ok') === 'microsoft') {
+    b.className = 'banner ok'; b.textContent = '✓ Account Microsoft collegato.'; b.style.display = 'block';
+    history.replaceState({}, '', '/portal/email-connectors');
+  } else if (p.get('err')) {
+    const msgs = {state_invalid: 'Sessione scaduta, riprova.', token_exchange: 'Scambio token fallito.',
+                  no_email: 'Impossibile leggere l'email dall'account Microsoft.', oauth_error: 'Autorizzazione negata.'};
+    b.className = 'banner err'; b.textContent = '✗ ' + (msgs[p.get('err')] || p.get('err')); b.style.display = 'block';
+    history.replaceState({}, '', '/portal/email-connectors');
+  }
+})();
 </script>
 {% endblock %}
