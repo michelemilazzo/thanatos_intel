@@ -87,6 +87,12 @@ STRATEGIA = [
     ("5. Difesa fiscale del cliente (cessionario)", [
         "Documentare la BUONA FEDE e la diligenza di Trading HU per neutralizzare il recupero AdE verso il cessionario; paradossalmente la relazione-disclaimer prova che la verifica era 'oggettivamente impossibile' per l'acquirente.",
     ]),
+    ("6. Indennizzo assicurativo", [
+        "RC professionale degli asseveratori (Fattorelli, Grube, Conte): azione/escussione delle polizze per asseverazioni negligenti o non veritiere (nesso causale → danno; polizza attiva alla data; quantum €800.000).",
+        "Acquisire i testi integrali delle polizze (massimali, esclusioni dolo/frode, retroattività, claims-made) e verificare IVASS/RUI delle compagnie (es. Arch Insurance EU DAC, DUAL).",
+        "Denuncia del sinistro + costituzione in mora degli asseveratori nei termini; attenzione: il DOLO è di norma escluso → la via per COLPA professionale dell'asseveratore è la più solida.",
+        "Verificare l'escrow/deposito notarile (Verbale di Deposito) per recupero diretto dei fondi.",
+    ]),
 ]
 
 

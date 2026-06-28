@@ -702,3 +702,45 @@ frappe.ui.form.on('Investigation Case', {
         }, __('File'));
     }
 });
+
+// ── Assistente AI del caso (chat che esegue gli strumenti) ──
+frappe.ui.form.on('Investigation Case', {
+    refresh(frm) {
+        if (frm.is_new() || !frm.fields_dict.ai_chat_panel) return;
+        const $w = frm.fields_dict.ai_chat_panel.$wrapper;
+        if ($w.data('built')) return; $w.data('built', true);
+        const chips = ['avanzamento', 'valuta assicurazione', 'genera dossier', 'proforma', 'doppia cessione', 'domande', 'analisi completa'];
+        $w.html(
+            '<div style="border:1px solid #e0d7c0;border-radius:10px;background:#fff;overflow:hidden">'
+            + '<div style="background:#0D1B3E;color:#C8A96E;font-weight:700;padding:8px 12px">🤖 Assistente AI del caso</div>'
+            + '<div id="aic-msgs" style="height:240px;overflow-y:auto;padding:10px 12px;font-size:13px;background:#faf8f2"></div>'
+            + '<div style="padding:6px 10px;border-top:1px solid #eee">'
+            + '<div id="aic-chips" style="margin-bottom:6px"></div>'
+            + '<div style="display:flex;gap:6px"><input id="aic-in" class="form-control input-sm" placeholder="Chiedi o comanda… (es. valuta assicurazione, verifica camerale 03293360966)" style="flex:1">'
+            + '<button id="aic-send" class="btn btn-primary btn-sm">Invia</button></div></div></div>');
+        const $msgs = $w.find('#aic-msgs');
+        function add(who, text) {
+            const me = who === 'me';
+            $msgs.append('<div style="margin-bottom:8px;text-align:' + (me ? 'right' : 'left') + '">'
+                + '<span style="display:inline-block;max-width:85%;padding:6px 10px;border-radius:10px;white-space:pre-wrap;'
+                + (me ? 'background:#0D1B3E;color:#fff' : 'background:#fff;border:1px solid #e0d7c0') + '">'
+                + frappe.utils.escape_html(text) + '</span></div>');
+            $msgs.scrollTop($msgs[0].scrollHeight);
+        }
+        function send(text) {
+            if (!text) return; add('me', text); $w.find('#aic-in').val('');
+            add('ai', '…');
+            frappe.call({ method: 'thanatos_intel.ai.case_assistant.case_ai_chat', args: { case: frm.doc.name, message: text },
+                callback(r) {
+                    $msgs.find('div:last').remove();
+                    const m = r.message || {}; add('ai', m.reply || '(nessuna risposta)');
+                    if (m.action) setTimeout(() => frm.reload_doc(), 1200);
+                } });
+        }
+        chips.forEach(ch => { $w.find('#aic-chips').append('<button class="btn btn-xs btn-default" style="margin:2px">' + ch + '</button>'); });
+        $w.find('#aic-chips button').on('click', function () { send($(this).text()); });
+        $w.find('#aic-send').on('click', () => send($w.find('#aic-in').val().trim()));
+        $w.find('#aic-in').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send($w.find('#aic-in').val().trim()); } });
+        add('ai', 'Ciao. Sono l’assistente del caso: posso eseguire gli strumenti (dossier, proforma, doppia cessione, domande, screening, verifica camerale, valutazione assicurativa, analisi completa) o rispondere alle tue domande. Scrivi un comando o usa i tasti rapidi.');
+    }
+});
