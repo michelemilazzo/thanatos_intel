@@ -602,3 +602,33 @@ frappe.ui.form.on("Investigation Case", {
         }, __("Azioni"));
     },
 });
+
+// ── Pannello Avanzamento investigazione (checklist auto dallo stato reale) ──
+frappe.ui.form.on('Investigation Case', {
+    refresh(frm) {
+        if (frm.is_new() || !frm.fields_dict.progress_panel) return;
+        frappe.call({
+            method: 'thanatos_intel.ai.case_orchestrator.case_progress',
+            args: { case: frm.doc.name, record: 0 },
+            callback(r) {
+                const m = r.message; if (!m) return;
+                const color = m.pct >= 80 ? '#27ae60' : (m.pct >= 50 ? '#e67e22' : '#c0392b');
+                let h = '<div style="padding:10px 14px;border:1px solid #e0d7c0;border-radius:10px;background:#faf8f2;margin:6px 0">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+                    + '<span style="font-weight:700;color:#0D1B3E">📋 Avanzamento investigazione</span>'
+                    + '<span style="font-weight:700;color:' + color + '">' + m.done + '/' + m.total + ' · ' + m.pct + '%</span></div>'
+                    + '<div style="height:9px;background:#eee;border-radius:5px;overflow:hidden;margin-bottom:10px"><div style="height:9px;width:' + m.pct + '%;background:' + color + '"></div></div>'
+                    + '<div style="column-count:2;column-gap:24px;font-size:13px;line-height:1.7">';
+                (m.items || []).forEach(function (it) {
+                    h += '<div>' + (it.done ? '✅' : '⬜') + ' ' + frappe.utils.escape_html(it.label)
+                        + (it.extra ? ' <span style="color:#999">— ' + frappe.utils.escape_html(it.extra) + '</span>' : '') + '</div>';
+                });
+                h += '</div>';
+                const ext = (m.todo_external || []).filter(function (t) { return !t.done; }).map(function (t) { return frappe.utils.escape_html(t.label); });
+                if (ext.length) h += '<div style="margin-top:8px;font-size:12.5px;color:#a33"><b>Da fare (sblocca la delega del cliente):</b> ' + ext.join(' · ') + '</div>';
+                h += '</div>';
+                frm.fields_dict.progress_panel.$wrapper.html(h);
+            }
+        });
+    }
+});
