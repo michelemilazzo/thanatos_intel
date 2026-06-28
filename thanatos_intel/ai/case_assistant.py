@@ -95,6 +95,11 @@ def case_ai_chat(case, message):
         return {"reply": reply, "action": action}
 
     # — strumenti che girano subito —
+    if re.search(r"collegament|\bgruppo\b|soci.*comun|rete societ|holding|parti correlate|chi c'?è dietro", t):
+        from thanatos_intel.ai.corporate_links import analizza_collegamenti
+        r = analizza_collegamenti(case)
+        return done("🕸️ Analisi collegamenti societari generata e registrata.\n" + (r.get("text") or "")[:900],
+                    "collegamenti")
     if re.search(r"assicuraz|indennizz|polizz|rc ", t):
         valuta_assicurazione(case)
         return done("🛡️ Valutazione assicurativa generata e registrata nelle attività del caso "

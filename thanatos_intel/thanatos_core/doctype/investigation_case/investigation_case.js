@@ -744,3 +744,16 @@ frappe.ui.form.on('Investigation Case', {
         add('ai', 'Ciao. Sono l’assistente del caso: posso eseguire gli strumenti (dossier, proforma, doppia cessione, domande, screening, verifica camerale, valutazione assicurativa, analisi completa) o rispondere alle tue domande. Scrivi un comando o usa i tasti rapidi.');
     }
 });
+
+// ── Bottone Collegamenti societari ──
+frappe.ui.form.on('Investigation Case', {
+    refresh(frm) {
+        if (frm.is_new()) return;
+        frm.add_custom_button(__('🕸️ Collegamenti societari'), () => {
+            frappe.call({ method: 'thanatos_intel.ai.corporate_links.analizza_collegamenti', args: { case: frm.doc.name },
+                freeze: true, freeze_message: __('Analisi rete societaria...'),
+                callback(r) { const m = r.message || {}; frappe.msgprint({ title: __('Collegamenti societari'), indicator: 'orange',
+                    message: '<pre style="white-space:pre-wrap;font-size:12px">' + frappe.utils.escape_html(m.text || '') + '</pre>' }); frm.reload_doc(); } });
+        }, __('Intelligence'));
+    }
+});

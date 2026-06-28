@@ -32,6 +32,7 @@ def _checklist(case):
         ("Anagrafica cliente", bool(c.get("client")), c.get("client") or "—"),
         ("Screening parti (VIES/sanzioni)", _has_activity(case, "Screening automatico parti") or _has_activity(case, "VERIFICA PARTI"), ""),
         ("Verifica camerale (Registro Imprese)", _has_activity(case, "Verifica camerale") or bool(frappe.db.exists("Investigation Evidence", {"investigation_case": case, "source": "Registro Imprese"})), ""),
+        ("Collegamenti societari / gruppo", _has_activity(case, "COLLEGAMENTI SOCIETARI"), ""),
         ("Rilevatore doppia cessione", _has_activity(case, "DOPPIA CESSIONE"), ""),
         ("Domande investigative", _has_activity(case, "DOMANDE INVESTIGATIVE"), ""),
         ("Riconciliazione fatture (XML)", _has_activity(case, "RICONCILIAZIONE FATTURE"), ""),
@@ -94,7 +95,9 @@ def run_full_analysis(case, notify_user=None):
     from thanatos_intel.integrations.fatturapa import reconcile_invoices
     from thanatos_intel.reporting.fascicolo import genera_fascicolo
 
+    from thanatos_intel.ai.corporate_links import analizza_collegamenti
     _try("screening parti", lambda: screen_case_parties(case))
+    _try("collegamenti societari", lambda: analizza_collegamenti(case))
     _try("doppia cessione", lambda: detect_double_cession(case))
     _try("domande investigative", lambda: generate_questions(case, post=0))
     _try("riconciliazione fatture", lambda: reconcile_invoices(case))
