@@ -514,6 +514,120 @@ def _ensure_case_client(case_name, lead_name, sender):
     return cl
 
 
+def send_document_wa(wa_phone, to_number, content, filename, caption, lead_name):
+    """Invia un PDF/documento via WhatsApp Cloud API (upload media + invio)."""
+    from frappe.utils.password import get_decrypted_password
+    import requests
+    from thanatos_intel.ingest.wa_bot import _wa_doc
+    wd = _wa_doc(wa_phone)
+    if not wd:
+        return False
+    pnid = wd.meta_phone_number_id
+    token = get_decrypted_password("WhatsApp Number", wd.name, "meta_access_token")
+    if not (pnid and token):
+        return False
+    to_clean = (to_number or "").lstrip("+").replace(" ", "").replace("-", "")
+    mime = ("application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            if filename.lower().endswith(".docx") else "application/pdf")
+    try:
+        up = requests.post(
+            f"https://graph.facebook.com/v21.0/{pnid}/media",
+            data={"messaging_product": "whatsapp"},
+            files={"file": (filename, content, mime)},
+            headers={"Authorization": f"Bearer {token}"}, timeout=120)
+        mid = (up.json() or {}).get("id")
+        if not mid:
+            frappe.log_error((up.text or "")[:500], "wa send_document upload")
+            return False
+        r = requests.post(
+            f"https://graph.facebook.com/v21.0/{pnid}/messages",
+            json={"messaging_product": "whatsapp", "recipient_type": "individual",
+                  "to": to_clean, "type": "document",
+                  "document": {"id": mid, "filename": filename, "caption": (caption or "")[:900]}},
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            timeout=30)
+        return r.status_code == 200 and bool((r.json() or {}).get("messages"))
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "wa send_document")
+        return False
+
+
+def _relazione_text(case):
+    c = frappe.get_doc("Investigation Case", case)
+    client = (frappe.db.get_value("Investigation Client", c.client, "client_name") if c.client else None) or "Cliente"
+    n_ev = frappe.db.count("Investigation Evidence", {"investigation_case": case})
+
+    def act(*needles):
+        rows = frappe.get_all("Case Activity", filters={"parent": case}, fields=["description"],
+                              order_by="activity_date asc", limit=0)
+        for r in rows:
+            d = (r.description or "")
+            if any(n.lower() in d.lower() for n in needles):
+                return d
+        return ""
+
+    parts = []
+    parts.append(f"📑 *RELAZIONE INVESTIGATIVA — {c.name}*\n{c.case_title}\nCliente: {client}\n")
+    parts.append("*1. Sintesi*\nIl cliente ha acquistato crediti d'imposta ceduti da BOMAX S.R.L. versando "
+                 "~€800.000. Le verifiche indicano gravi anomalie sulla genuinità dei crediti e dei documenti "
+                 "(l'AdE avrebbe già segnalato la non spettanza).")
+    dc = act("DOPPIA CESSIONE")
+    if dc:
+        parts.append("*2. Doppia cessione*\n" + dc)
+    ff = act("Fattorelli")
+    if ff:
+        parts.append("*3. Asseverazione Fattorelli (6869)*\n" + ff)
+    deb = act("DICHIARAZIONE FATTURE", "Debitori")
+    if deb:
+        parts.append("*4. Fatture/debitori*\n" + deb)
+    th = act("Contratto cessione DTA BOMAX")
+    if th:
+        parts.append("*5. Contratto del cliente (Trading HU)*\n" + th)
+    parts.append("*6. Documenti e custodia*\n" + f"{n_ev} reperti analizzati, con verdetto di autenticità e "
+                 "hash SHA-256 (catena di custodia). Dettaglio nel Dossier e nel Fascicolo allegati.")
+    parts.append("*7. Conclusioni*\nCrediti e fatture a base del DTA appaiono fabbricati/gonfiati. Prossimi passi: "
+                 "delega del cliente → cassetto/fatture AdE + tracciamento dei bonifici (€800.000); valutazione "
+                 "denuncia (truffa/falso/fatture inesistenti) e azione civile/recupero verso cedente, intermediari "
+                 "e asseveratori (escussione RC).")
+    return parts
+
+
+@frappe.whitelist()
+def send_case_report_wa(case, lead_name, wa_phone, sender, include_pdf=1):
+    """Invia su WhatsApp l'intera relazione del caso (testo a sezioni) + i PDF chiave."""
+    sections = _relazione_text(case)
+    # invio a sezioni, rispettando il limite WhatsApp
+    chunk = ""
+    sent = 0
+    for sec in sections:
+        piece = sec + "\n\n"
+        if len(chunk) + len(piece) > 3500:
+            _reply(wa_phone, sender, lead_name, chunk.strip())
+            sent += 1
+            chunk = ""
+        chunk += piece
+    if chunk.strip():
+        _reply(wa_phone, sender, lead_name, chunk.strip())
+        sent += 1
+    docs_sent = 0
+    if int(include_pdf):
+        import os
+        for like, label in [("DOSSIER CLIENTE", "Dossier cliente"), ("PROFORMA", "Preventivo"),
+                            ("FASCICOLO", "Fascicolo integrale")]:
+            fr = frappe.db.get_value("File", {"attached_to_doctype": "Investigation Case",
+                                              "attached_to_name": case, "file_name": ["like", f"%{like}%"]},
+                                     ["file_name", "file_url"], as_dict=True)
+            if not fr:
+                continue
+            path = frappe.get_site_path("private", "files", (fr.file_url or "").split("/files/")[-1])
+            if not os.path.exists(path):
+                continue
+            with open(path, "rb") as fh:
+                if send_document_wa(wa_phone, sender, fh.read(), fr.file_name, label, lead_name):
+                    docs_sent += 1
+    return {"ok": True, "messaggi": sent, "documenti": docs_sent}
+
+
 def _reply(wa_phone, to_number, lead_name, body):
     if not (wa_phone and to_number):
         return
