@@ -113,6 +113,42 @@ def run_full_analysis(case, notify_user=None):
 
 
 @frappe.whitelist()
+def document_walkthrough(case):
+    """Dati per il percorso guidato documento-per-documento: sintesi, autenticità,
+    hash, domande investigative (dall'ultima attività) e link, per ogni reperto."""
+    import re
+    evs = frappe.get_all("Investigation Evidence", filters={"investigation_case": case},
+                         fields=["evidence_name", "authenticity", "hash_value", "attached_file", "notes"],
+                         order_by="creation asc", limit=0)
+    qmap = {}
+    rows = frappe.get_all("Case Activity",
+                          filters={"parent": case, "description": ["like", "%DOMANDE INVESTIGATIVE%"]},
+                          fields=["description"], order_by="activity_date desc", limit=1)
+    if rows:
+        for block in rows[0].description.split("\U0001F4C4 ")[1:]:
+            lines = block.split("\n")
+            fn = re.sub(r"\s*\[.*?\]\s*$", "", lines[0].replace("*", "")).strip().lower()
+            qs = [l.strip() for l in lines[1:] if re.match(r"\s*\d+\.", l)]
+            if fn:
+                qmap[fn] = qs
+    docs = []
+    for i, e in enumerate(evs):
+        fn = (e.attached_file or e.evidence_name or "").split("/files/")[-1]
+        summ = ""
+        for ln in (e.notes or "").split("\n"):
+            ln = ln.strip()
+            if ln and not ln.startswith(("—", "Autenticità", "Red flag", "Campi", "OCR provider")):
+                summ = ln
+                break
+        ql = fn.lower()
+        qs = qmap.get(ql) or next((v for k, v in qmap.items() if k and (k in ql or ql in k)), [])
+        docs.append({"idx": i + 1, "name": fn, "authenticity": e.authenticity or "N/D",
+                     "hash": (e.hash_value or "")[:16], "file_url": e.attached_file or "",
+                     "summary": summ[:700], "questions": qs[:6]})
+    return {"total": len(docs), "docs": docs}
+
+
+@frappe.whitelist()
 def run_full_analysis_async(case):
     frappe.enqueue("thanatos_intel.ai.case_orchestrator.run_full_analysis", queue="long",
                    timeout=2400, case=case, notify_user=frappe.session.user)

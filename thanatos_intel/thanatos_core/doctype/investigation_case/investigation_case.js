@@ -632,3 +632,73 @@ frappe.ui.form.on('Investigation Case', {
         });
     }
 });
+
+// ── Revisione guidata documenti (avanti/indietro + domande) + dossier/proforma ──
+function _thanatosDocWalkthrough(frm) {
+    frappe.call({
+        method: 'thanatos_intel.ai.case_orchestrator.document_walkthrough',
+        args: { case: frm.doc.name },
+        freeze: true, freeze_message: 'Carico documenti...',
+        callback(r) {
+            const data = r.message;
+            if (!data || !data.total) { frappe.msgprint(__('Nessun documento sul caso.')); return; }
+            let idx = 0;
+            const dlg = new frappe.ui.Dialog({ title: __('Revisione guidata documenti'), size: 'large',
+                fields: [{ fieldtype: 'HTML', fieldname: 'body' }] });
+            const COL = { 'Autentico': '#27ae60', 'Dubbio': '#e67e22', 'Manomesso': '#c0392b',
+                'Contraffatto': '#c0392b', 'N/D': '#999', 'Non determinabile': '#999' };
+            function render() {
+                const dn = data.docs[idx];
+                const ac = COL[dn.authenticity] || '#999';
+                let h = '<div style="font-size:13px">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center">'
+                    + '<b>Documento ' + dn.idx + '/' + data.total + '</b>'
+                    + '<span style="background:' + ac + ';color:#fff;padding:2px 9px;border-radius:10px;font-size:11px">' + dn.authenticity + '</span></div>'
+                    + '<h4 style="margin:8px 0 4px">' + frappe.utils.escape_html(dn.name) + '</h4>'
+                    + '<p style="color:#444;line-height:1.5">' + frappe.utils.escape_html(dn.summary || '—') + '</p>'
+                    + '<div style="font-size:11px;color:#888">SHA-256: ' + (dn.hash || '—') + '</div>'
+                    + '<hr><b>Domande investigative</b><ol style="margin-top:4px;padding-left:18px">';
+                (dn.questions || []).forEach(function (q) {
+                    h += '<li style="margin-bottom:5px">' + frappe.utils.escape_html(q.replace(/^\s*\d+\.\s*/, '')) + '</li>';
+                });
+                if (!(dn.questions || []).length) h += '<li style="color:#888">(usa il bottone "Domande investigative" per generarle)</li>';
+                h += '</ol><div style="margin-top:12px;display:flex;gap:8px;align-items:center">'
+                    + '<button class="btn btn-default btn-sm" id="wt-prev">&larr; ' + __('Indietro') + '</button>'
+                    + '<button class="btn btn-default btn-sm" id="wt-next">' + __('Avanti') + ' &rarr;</button>'
+                    + (dn.file_url ? '<a class="btn btn-primary btn-sm" href="' + dn.file_url + '" target="_blank">' + __('Apri documento') + '</a>' : '')
+                    + '</div></div>';
+                dlg.fields_dict.body.$wrapper.html(h);
+                dlg.$wrapper.find('#wt-prev').prop('disabled', idx === 0).off('click').on('click', function () { if (idx > 0) { idx--; render(); } });
+                dlg.$wrapper.find('#wt-next').prop('disabled', idx === data.total - 1).off('click').on('click', function () { if (idx < data.total - 1) { idx++; render(); } });
+            }
+            render(); dlg.show();
+        }
+    });
+}
+
+frappe.ui.form.on('Investigation Case', {
+    refresh(frm) {
+        if (frm.is_new()) return;
+        frm.add_custom_button(__('🔎 Revisione guidata documenti'), () => _thanatosDocWalkthrough(frm), __('Intelligence'));
+        frm.add_custom_button(__('Dossier cliente (DOCX)'), () => {
+            frappe.call({ method: 'thanatos_intel.reporting.dossier_cliente.genera_dossier', args: { case: frm.doc.name },
+                freeze: true, freeze_message: __('Genero il dossier...'),
+                callback(r) { const m = r.message || {}; if (m.file_url) { frappe.show_alert({ message: __('Dossier DOCX generato.'), indicator: 'green' }, 6); window.open(m.file_url, '_blank'); } frm.reload_doc(); } });
+        }, __('File'));
+        frm.add_custom_button(__('Proforma / Preventivo'), () => {
+            const d = new frappe.ui.Dialog({ title: __('Proforma'), fields: [
+                { fieldname: 'hours_senior', fieldtype: 'Int', label: 'Ore senior', default: 40 },
+                { fieldname: 'hours_analyst', fieldtype: 'Int', label: 'Ore analista', default: 30 },
+                { fieldname: 'markup', fieldtype: 'Percent', label: 'Markup costi vivi (%)', default: 50 },
+                { fieldname: 'sconto', fieldtype: 'Percent', label: 'Sconto (%)', default: 0 } ],
+                primary_action_label: __('Genera'),
+                primary_action(v) { d.hide();
+                    frappe.call({ method: 'thanatos_intel.billing.proforma_cliente.genera_proforma',
+                        args: { case: frm.doc.name, hours_senior: v.hours_senior, hours_analyst: v.hours_analyst, markup: (v.markup || 50) / 100, sconto: v.sconto || 0 },
+                        freeze: true, freeze_message: __('Genero la proforma...'),
+                        callback(r) { const m = r.message || {}; if (m.file_url) { frappe.show_alert({ message: __('Proforma € {0} generata.', [Math.round(m.imponibile)]), indicator: 'green' }, 7); window.open(m.file_url, '_blank'); } frm.reload_doc(); } });
+                } });
+            d.show();
+        }, __('File'));
+    }
+});
