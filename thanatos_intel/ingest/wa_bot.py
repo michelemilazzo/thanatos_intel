@@ -163,9 +163,17 @@ def generate_reply(lead_name, wa_number, to_number):
     wa_doc = _wa_doc(wa_number)
     if not wa_doc or not int(wa_doc.get("ai_bot_enabled") or 0):
         return {"ok": False, "reason": "bot disabled"}
-    # dopo un handoff il bot tace: la conversazione e' dell'operatore umano
+    # dopo un handoff il bot tace per lasciar gestire l'operatore; ma se nessuno
+    # risponde da 30+ min, il bot RIPRENDE (per non abbandonare il cliente).
     if int(frappe.db.get_value("Intel Lead", lead_name, "bot_handed_off") or 0):
-        return {"ok": True, "skipped": "handed off to operator"}
+        from frappe.utils import add_to_date, get_datetime
+        last_out = frappe.db.get_value(
+            "Intel Lead Message", {"parent": lead_name, "direction": "Outbound"},
+            "sent_at", order_by="sent_at desc")
+        if last_out and get_datetime(last_out) > add_to_date(now_datetime(), minutes=-30):
+            return {"ok": True, "skipped": "handed off to operator"}
+        frappe.db.set_value("Intel Lead", lead_name, "bot_handed_off", 0, update_modified=False)
+        frappe.db.commit()
     from thanatos_intel.ai.doc_ingest import _gateway
 
     system = (wa_doc.get("ai_bot_system_prompt") or "").strip() or _SYS
