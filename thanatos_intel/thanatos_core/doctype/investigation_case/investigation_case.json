@@ -190,7 +190,7 @@
   {
    "fieldname": "monitor_alerts_html",
    "fieldtype": "HTML",
-   "options": "<p class='text-muted small'>Chi riceve gli alert di monitoraggio dei wallet di questo caso. Se vuoto, l'alert va alla casella ufficiale configurata (o all'investigatore assegnato). L'investigatore puo delegare: aggiungere righe per inviare a se stesso, al cliente, a un operatore del caso (tecnico, CTU, legale...) o a un'email personalizzata.</p>"
+   "options": "<p class=\"text-muted small\">Chi riceve gli alert di monitoraggio dei wallet di questo caso. Se vuoto, l’alert va alla casella ufficiale configurata (o all’investigatore assegnato). L’investigatore può delegare: aggiungere righe per inviare a sé stesso, al cliente, a un operatore del caso (tecnico, CTU, legale…) o a un’email personalizzata.</p>"
   },
   {
    "fieldname": "monitor_recipients",
@@ -307,7 +307,7 @@
   {
    "fieldname": "identity_tier_required",
    "fieldtype": "Select",
-   "label": "Identit\u00e0 richiesta",
+   "label": "Identità richiesta",
    "options": "Base\nKYC\nKYB\nKIT",
    "read_only": 1
   },
