@@ -34,6 +34,10 @@ def after_migrate():
         from thanatos_intel.patches.contact_fields import apply as _cf; _cf()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "ensure_contact_fields")
+    try:
+        from thanatos_intel.patches.fix_deprecated_status import apply as _fds; _fds()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "fix_deprecated_status")
 
 
 def _ensure_client_address_fields():
