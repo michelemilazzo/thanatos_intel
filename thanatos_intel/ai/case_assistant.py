@@ -48,6 +48,37 @@ def valuta_assicurazione(case):
     return {"ok": True, "text": txt}
 
 
+@frappe.whitelist()
+def crea_mandato(case):
+    """Crea l'Agency Mandate del caso (auto-compilato) se non esiste già."""
+    ex = frappe.db.get_value("Agency Mandate", {"investigation_case": case}, "name")
+    if ex:
+        return {"ok": True, "mandate": ex, "existing": True}
+    from thanatos_intel.thanatos_ddd.doctype.agency_mandate.agency_mandate import autofill_from_case
+    af = autofill_from_case(case) or {}
+    m = frappe.new_doc("Agency Mandate")
+    m.investigation_case = case
+    for k, v in af.items():
+        try:
+            m.set(k, v)
+        except Exception:
+            pass
+    be = frappe.db.get_value("Billing Entity", {"legal_name": ["like", "%THANATOS%"]}, "name") \
+        or frappe.db.get_value("Billing Entity", {}, "name")
+    if be:
+        m.billing_entity = be
+    try:
+        m.fee_total = 26000
+        m.currency = "EUR"
+    except Exception:
+        pass
+    m.status = "Draft"
+    m.flags.ignore_mandatory = True
+    m.insert(ignore_permissions=True)  # before_insert renderizza il corpo
+    frappe.db.commit()
+    return {"ok": True, "mandate": m.name}
+
+
 # ── Router intent → strumento ───────────────────────────────────────────────
 def _enq(method, **kw):
     frappe.enqueue(method, queue="long", timeout=2400, **kw)
@@ -113,12 +144,18 @@ def case_ai_chat(case, message):
                         f"{'ok' if (r['checks']['piva_checksum'].get('valid')) else 'NON valido'}, "
                         f"VIES {vies.get('valid')}.", "verifica_camerale")
         return done("Indicami la P.IVA (11 cifre) da verificare, es. «verifica camerale 03293360966».")
-    if re.search(r"invia.*whatsapp|manda.*relazion|relazione.*whatsapp", t):
-        lead = frappe.db.get_value("Intel Lead", {"linked_case": case}, "name")
+    if re.search(r"\bmandat", t):
+        r = crea_mandato(case)
+        return done(("📜 Mandato già presente: " + r["mandate"]) if r.get("existing")
+                    else f"📜 Mandato d'incarico creato e auto-compilato: {r['mandate']} (bozza, rivedi e genera PDF).",
+                    "mandato")
+    if re.search(r"invia.*whatsapp|manda.*relazion|relazione.*whatsapp|invia.*relazion", t):
+        lead = frappe.db.get_value("Intel Lead", {"linked_case": case}, ["name", "whatsapp_number", "source_identifier"], as_dict=True)
         if not lead:
             return done("Nessuna chat WhatsApp collegata al caso.")
-        return done("Per inviare la relazione su WhatsApp usa il comando dalla chat operatore "
-                    "o il bottone dedicato (evito invii doppi dalla chat del caso).")
+        from thanatos_intel.ingest.operator_console import send_case_report_wa
+        res = send_case_report_wa(case, lead.name, lead.whatsapp_number, lead.source_identifier, include_pdf=1)
+        return done(f"📲 Relazione inviata su WhatsApp: {res.get('messaggi')} messaggi + {res.get('documenti')} PDF.", "invia_wa")
 
     # — fallback conversazionale col contesto del caso —
     try:
