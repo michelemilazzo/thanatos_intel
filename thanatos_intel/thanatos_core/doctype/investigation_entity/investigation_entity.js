@@ -27,6 +27,18 @@ frappe.ui.form.on('Investigation Entity', {
 					}
 				});
 			}, __('Intelligence'));
+			frm.add_custom_button(__("Tracciamento visuale"), () => {
+				frappe.call({
+					method: "thanatos_intel.osint.free_sources.tracing_links",
+					args: { address: frm.doc.primary_identifier },
+					callback(r) {
+						const d = r.message || {};
+						if (d.error || !d.links) { frappe.msgprint(__("Chain non riconosciuta per questo indirizzo.")); return; }
+						const html = Object.entries(d.links).map(([k, u]) => `<a href="${u}" target="_blank" rel="noopener" class="btn btn-default btn-sm" style="margin:4px">${k} &#8599;</a>`).join("");
+						frappe.msgprint({ title: __("Tracciamento visuale {0}", [d.chain.toUpperCase()]), message: html, wide: true });
+					}
+				});
+			}, __("Intelligence"));
 		}
 		if (frm.doc.entity_type === 'Company') {
 			frm.add_custom_button(__('Genera Company Profile (KYB)'), () => {
