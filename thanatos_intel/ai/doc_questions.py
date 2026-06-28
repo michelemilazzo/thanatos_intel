@@ -38,8 +38,13 @@ def _questions_for(fname, auth, summary):
 
 @frappe.whitelist()
 def generate_questions(case, lead_name=None, wa_phone=None, sender=None, post=1, notify_user=None):
+    try:
+        from thanatos_intel.ai.doc_ingest import _ensure_evidence_authfields
+        _ensure_evidence_authfields()
+    except Exception:
+        pass
     evs = frappe.get_all("Investigation Evidence", filters={"investigation_case": case},
-                         fields=["evidence_name", "notes", "authenticity", "attached_file"],
+                         fields=["name", "evidence_name", "notes", "authenticity", "attached_file"],
                          order_by="creation asc", limit=0)
     blocks = []
     for e in evs:
@@ -47,6 +52,13 @@ def generate_questions(case, lead_name=None, wa_phone=None, sender=None, post=1,
         qs = _questions_for(fn, e.authenticity or "N/D", _summary_of(e.notes))
         if qs:
             blocks.append((fn, e.authenticity or "N/D", qs))
+            # salva le domande SUL reperto (per il percorso guidato per-documento)
+            try:
+                frappe.db.set_value("Investigation Evidence", e.name, "investigative_questions",
+                                    "\n".join(f"{i}. {q}" for i, q in enumerate(qs, 1)))
+            except Exception:
+                pass
+    frappe.db.commit()
 
     lines = ["🕵️ DOMANDE INVESTIGATIVE PER DOCUMENTO (investigatore digitale)"]
     for fn, auth, qs in blocks:

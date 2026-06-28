@@ -133,6 +133,8 @@ def _ensure_evidence_authfields():
          "fieldtype": "Small Text", "insert_after": "authenticity_confidence"},
         {"fieldname": "forensics_json", "label": "Metadati forensi", "fieldtype": "Small Text",
          "insert_after": "authenticity_indicators"},
+        {"fieldname": "investigative_questions", "label": "Domande investigative",
+         "fieldtype": "Long Text", "insert_after": "forensics_json"},
     ]
     for s in specs:
         if not frappe.db.exists("Custom Field", f"Investigation Evidence-{s['fieldname']}"):

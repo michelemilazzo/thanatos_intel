@@ -117,9 +117,12 @@ def document_walkthrough(case):
     """Dati per il percorso guidato documento-per-documento: sintesi, autenticità,
     hash, domande investigative (dall'ultima attività) e link, per ogni reperto."""
     import re
+    has_q = frappe.db.has_column("Investigation Evidence", "investigative_questions")
+    fields = ["evidence_name", "authenticity", "hash_value", "attached_file", "notes"]
+    if has_q:
+        fields.append("investigative_questions")
     evs = frappe.get_all("Investigation Evidence", filters={"investigation_case": case},
-                         fields=["evidence_name", "authenticity", "hash_value", "attached_file", "notes"],
-                         order_by="creation asc", limit=0)
+                         fields=fields, order_by="creation asc", limit=0)
     qmap = {}
     rows = frappe.get_all("Case Activity",
                           filters={"parent": case, "description": ["like", "%DOMANDE INVESTIGATIVE%"]},
@@ -141,10 +144,14 @@ def document_walkthrough(case):
                 summ = ln
                 break
         ql = fn.lower()
-        qs = qmap.get(ql) or next((v for k, v in qmap.items() if k and (k in ql or ql in k)), [])
+        stored = (e.get("investigative_questions") or "") if has_q else ""
+        if stored.strip():
+            qs = [l.strip() for l in stored.split("\n") if l.strip()]
+        else:
+            qs = qmap.get(ql) or next((v for k, v in qmap.items() if k and (k in ql or ql in k)), [])
         docs.append({"idx": i + 1, "name": fn, "authenticity": e.authenticity or "N/D",
                      "hash": (e.hash_value or "")[:16], "file_url": e.attached_file or "",
-                     "summary": summ[:700], "questions": qs[:6]})
+                     "summary": summ[:700], "questions": qs[:8]})
     return {"total": len(docs), "docs": docs}
 
 

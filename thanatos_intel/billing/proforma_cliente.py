@@ -45,10 +45,10 @@ def compute_costs(case, hours_senior=40, hours_analyst=30, n_visure=None,
 
 # onorario a fasi (value-based) — congruo all'esposizione del cliente
 FASI = [
-    ("Fase 1 — Screening rapido e semaforo (esistenza credito, doppia cessione, asseveratori)", 3500),
-    ("Fase 2 — Due diligence completa (cedente, catena cessionari, fatture, congruità)", 6500),
-    ("Fase 3 — Acquisizione e riscontro cassetto/fatture via delega + riconciliazione", 4000),
-    ("Fase 4 — Dossier probatorio + verdetto + supporto a denuncia/recupero", 5000),
+    ("Fase 1 — Screening rapido e semaforo (esistenza credito, doppia cessione, asseveratori)", 4500),
+    ("Fase 2 — Due diligence completa (cedente, catena cessionari, fatture, congruità)", 9000),
+    ("Fase 3 — Acquisizione e riscontro cassetto/fatture via delega + riconciliazione + tracciamento bonifici", 5500),
+    ("Fase 4 — Dossier probatorio + verdetto + supporto a denuncia/recupero (escussione RC)", 7000),
 ]
 
 
