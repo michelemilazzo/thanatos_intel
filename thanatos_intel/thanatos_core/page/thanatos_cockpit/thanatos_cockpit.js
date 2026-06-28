@@ -45,6 +45,8 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 			['👥', 'CRM', () => window.open('/crm', '_blank')],
 			['🎫', 'Helpdesk', () => window.open('/helpdesk', '_blank')],
 			['✉️', 'Webmail', () => window.open('https://webmail.thanatos.agency', '_blank')],
+			['📬', 'Provisioning Mail', () => go('thanatos-mail-prov')],
+			['👥', 'Rubrica generale', () => go('thanatos-rubrica-gen')],
 			['💳', 'Billing', () => go('List', 'Sales Invoice')],
 		];
 
