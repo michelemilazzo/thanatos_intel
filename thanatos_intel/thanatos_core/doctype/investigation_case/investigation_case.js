@@ -1,7 +1,5 @@
 frappe.ui.form.on('Investigation Case', {
     refresh(frm) {
-        ThanatosPipeline.render(frm, 'get_case_pipeline');
-
         // Badge stato caso
         const colors = {
             'Open': 'blue', 'In Progress': 'yellow', 'Completed': 'green',
@@ -524,7 +522,7 @@ frappe.ui.form.on('Investigation Case', {
         }
     },
     after_save(frm) {
-        ThanatosPipeline.render(frm, 'get_case_pipeline');
+        if (window.ThanatosCockpit) ThanatosCockpit.render(frm);
     }
 });
 
@@ -551,114 +549,191 @@ frappe.ui.form.on('Case Assignment', {
 });
 
 
-// ── Percorso guidato passo-passo (wizard sul Blueprint) ──────────────────────
+// ── COCKPIT del caso (unico): fasi + stepper sul motore + prossima azione ────
+// Sostituisce i 3 avanzamenti sovrapposti (Pipeline pratica, Percorso guidato,
+// Avanzamento investigazione). Reso nel campo progress_panel, in cima alla form.
+window.ThanatosCockpit = {
+	PHASES: [
+		{ key: 'intake', label: '1 · Intake', kw: ['mandat', 'incaric', 'kyc', 'kyb', 'client', 'apri', 'pratica', 'identific', 'accett', 'triage'] },
+		{ key: 'parti', label: '2 · Parti', kw: ['document', 'parti', 'entità', 'entita', 'ingest', 'raccolt', 'anagrafic', 'autenticit'] },
+		{ key: 'verifiche', label: '3 · Verifiche', kw: ['verifica', 'visura', 'camerale', 'due diligence', 'screening', 'soci', 'ubo', 'sanzion', 'blacklist', 'cessionari', 'catena', 'assever', 'congru', 'esistenz', 'vies', 'kyc/kyb'] },
+		{ key: 'analisi', label: '4 · Analisi', kw: ['analisi', 'doppia cession', 'riconcil', 'contratt', 'escrow', 'rischio', 'parere', 'legale', 'quantific', 'antifrode'] },
+		{ key: 'esito', label: '5 · Esito', kw: ['report', 'dossier', 'fascicolo', 'verdetto', 'go / no', 'go/no', 'chiusur', 'fattura', 'consegna'] }
+	],
+	phaseIndexOf(label, idx, total) {
+		const l = (label || '').toLowerCase();
+		for (let i = 0; i < this.PHASES.length; i++) {
+			if (this.PHASES[i].kw.some(k => l.indexOf(k) >= 0)) return i;
+		}
+		return Math.min(4, Math.floor(idx * 5 / Math.max(1, total)));
+	},
+	render(frm) {
+		if (frm.is_new()) return;
+		this.injectCss();
+		if (!frm.dashboard || !frm.dashboard.add_section) return;
+		$('#thanatos-cockpit').closest('.form-dashboard-section').remove();
+		frm.dashboard.add_section('<div id="thanatos-cockpit"><div class="ck-mut">Carico cockpit…</div></div>', __('Cockpit pratica'));
+		const self = this;
+		frappe.call('thanatos_intel.workflow.api.board', { case_name: frm.doc.name })
+			.then(r => {
+				const $w = $('#thanatos-cockpit').last();
+				if ($w.length) self.draw(frm, $w, r.message || {});
+			})
+			.catch(() => $('#thanatos-cockpit').last().html('<div class="ck-mut">Cockpit non disponibile.</div>'));
+	},
+	draw(frm, $w, b) {
+		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+		if (!b.has_workflow) {
+			if (frm.doc.blueprint) {
+				$w.html('<div class="ck-card"><div class="ck-row"><span class="ck-mut">Percorso non ancora avviato.</span> '
+					+ '<button class="btn btn-sm btn-primary ck-start">▶ Avvia pratica</button></div></div>');
+				$w.find('.ck-start').on('click', () => frappe.call('thanatos_intel.workflow.engine.start',
+					{ case_name: frm.doc.name }).then(() => { frappe.show_alert({ message: 'Pratica avviata', indicator: 'green' }); frm.reload_doc(); }));
+			} else {
+				$w.html('<div class="ck-card ck-mut">Scegli un <b>Blueprint</b> (tab Workflow) per avviare la pratica guidata passo-passo.</div>');
+			}
+			return;
+		}
+		const steps = b.steps || [];
+		const total = steps.length;
+		const allDone = total > 0 && b.done >= total;
+		const notStarted = !b.active && b.done === 0 && !steps.some(s => s.status === 'current');
+		// fase di ogni step + fase corrente
+		let curPhase = 0;
+		steps.forEach((s, i) => { s._ph = this.phaseIndexOf(s.label, i, total); if (s.status === 'current') curPhase = s._ph; });
+		const cur = steps.find(s => s.status === 'current');
+		if (allDone) curPhase = 4;
+		// stato per fase
+		const phState = this.PHASES.map((p, pi) => {
+			const ps = steps.filter(s => s._ph === pi);
+			if (!ps.length) return pi < curPhase ? 'done' : (pi === curPhase ? 'current' : 'todo');
+			if (ps.every(s => s.status === 'done')) return 'done';
+			if (pi === curPhase || ps.some(s => s.status === 'current')) return 'current';
+			return pi < curPhase ? 'done' : 'todo';
+		});
+
+		// ── fascia 5 fasi ──
+		let h = '<div class="ck-card">';
+		h += '<div class="ck-ribbon">';
+		this.PHASES.forEach((p, pi) => {
+			h += `<div class="ck-seg ck-${phState[pi]}"><span class="ck-seg-dot"></span><span class="ck-seg-lbl">${esc(p.label)}</span></div>`;
+		});
+		h += '</div>';
+		// barra unica
+		h += `<div class="ck-prog"><div class="ck-bar"><div class="ck-bar-f" style="width:${b.pct || 0}%"></div></div>`
+			+ `<span class="ck-pct">${b.done}/${b.total} step · ${b.pct || 0}%</span></div>`;
+
+		// ── prossima azione (step corrente) ──
+		if (cur) {
+			const wait = cur.actor === 'client';
+			h += `<div class="ck-next"><div class="ck-next-h">Prossima azione · ${esc(this.PHASES[cur._ph].label)}</div>`
+				+ `<div class="ck-next-b"><span class="ck-next-lbl">${esc(cur.label)}</span>`
+				+ `<span class="ck-chip">${wait ? 'Cliente' : 'Operatore'}</span>`
+				+ (cur.mode === 'GATE' ? '<span class="ck-chip ck-gate">GATE</span>' : '')
+				+ '</div><div class="ck-next-act">'
+				+ (wait ? '<span class="ck-wait">⏳ In attesa del cliente</span>'
+					: `<button class="btn btn-sm btn-primary ck-done" data-seq="${cur.seq}">✓ Completa step</button>`)
+				+ ` <button class="btn btn-sm btn-default ck-ai">🤖 Cosa faccio ora?</button></div>`
+				+ '<div class="ck-aiout" style="display:none"></div></div>';
+		} else if (allDone) {
+			h += '<div class="ck-next ck-done-all">✓ Tutti gli step completati.</div>';
+		} else if (notStarted) {
+			h += '<div class="ck-next"><div class="ck-next-h">Prossima azione</div>'
+				+ '<div class="ck-next-b"><span class="ck-next-lbl">Pratica non ancora avviata</span></div>'
+				+ '<div class="ck-next-act"><button class="btn btn-sm btn-primary ck-start">▶ Avvia pratica</button>'
+				+ ' <button class="btn btn-sm btn-default ck-ai">🤖 Cosa faccio ora?</button></div>'
+				+ '<div class="ck-aiout" style="display:none"></div></div>';
+		} else {
+			h += '<div class="ck-next"><div class="ck-next-h">Prossima azione</div>'
+				+ '<div class="ck-next-act"><button class="btn btn-sm btn-default ck-ai">🤖 Cosa faccio ora?</button></div>'
+				+ '<div class="ck-aiout" style="display:none"></div></div>';
+		}
+
+		// ── elenco completo (collassato) ──
+		h += '<details class="ck-all"><summary>Tutti gli step</summary><div class="ck-steps">';
+		steps.forEach(s => {
+			const ic = s.status === 'done' ? '✓' : (s.status === 'current' ? '▶' : '○');
+			h += `<div class="ck-step ck-${s.status}"><span class="ck-ic">${ic}</span><span class="ck-lbl">${esc(s.label)}</span>`
+				+ `<span class="ck-chip">${s.actor === 'client' ? 'Cliente' : 'Operatore'}</span>`
+				+ (s.mode === 'GATE' ? '<span class="ck-chip ck-gate">GATE</span>' : '') + '</div>';
+		});
+		h += '</div></details></div>';
+		$w.html(h);
+
+		$w.find('.ck-start').on('click', () => frappe.call('thanatos_intel.workflow.engine.start',
+			{ case_name: frm.doc.name }).then(() => { frappe.show_alert({ message: 'Pratica avviata', indicator: 'green' }); frm.reload_doc(); }));
+		$w.find('.ck-done').on('click', function () {
+			const seq = $(this).data('seq');
+			frappe.prompt([{ fieldtype: 'Small Text', label: 'Nota (opzionale)', fieldname: 'note' }], (v) => {
+				frappe.call('thanatos_intel.workflow.api.complete_gate', { case_name: frm.doc.name, seq: seq, note: v.note || '' })
+					.then(() => { frappe.show_alert({ message: 'Step completato', indicator: 'green' }); frm.reload_doc(); });
+			}, 'Completa step', 'Conferma');
+		});
+		$w.find('.ck-ai').on('click', function () {
+			const $o = $w.find('.ck-aiout').show().html('<div class="ck-mut">🤖 Sto pensando…</div>');
+			frappe.call('thanatos_intel.workflow.ai_concierge.suggest_next', { case_name: frm.doc.name })
+				.then(r => { const m = r.message || {}; $o.html(m.ok
+					? '<div class="ck-ai-card">🤖 ' + esc(m.suggestion).replace(/\n/g, '<br>') + '</div>'
+					: '<div class="ck-mut">' + esc(m.error || 'AI non disponibile.') + '</div>'); })
+				.catch(() => $o.html('<div class="ck-mut">AI non disponibile.</div>'));
+		});
+	},
+	injectCss() {
+		if (document.getElementById('ck-css')) return;
+		const css = `
+		.ck-card{border:1px solid var(--border-color);border-radius:12px;background:var(--card-bg);padding:14px 16px;margin:6px 0 4px}
+		.ck-mut{color:var(--text-muted);font-size:13px}
+		.ck-row{display:flex;align-items:center;gap:12px}
+		.ck-ribbon{display:flex;gap:6px;margin-bottom:12px}
+		.ck-seg{flex:1;display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-color);min-width:0}
+		.ck-seg-dot{width:9px;height:9px;border-radius:50%;background:var(--border-color);flex:none}
+		.ck-seg-lbl{font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+		.ck-seg.ck-done .ck-seg-dot{background:#29CD42}
+		.ck-seg.ck-done .ck-seg-lbl{color:var(--text-color)}
+		.ck-seg.ck-current{border-color:#C8A96E;box-shadow:inset 0 -2px 0 #C8A96E}
+		.ck-seg.ck-current .ck-seg-dot{background:#C8A96E}
+		.ck-seg.ck-current .ck-seg-lbl{color:var(--text-color);font-weight:500}
+		.ck-prog{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+		.ck-bar{flex:1;height:8px;background:var(--bg-color);border:1px solid var(--border-color);border-radius:4px;overflow:hidden}
+		.ck-bar-f{height:100%;background:#C8A96E;transition:width .3s}
+		.ck-pct{font-size:12px;color:var(--text-muted);white-space:nowrap}
+		.ck-next{margin-top:14px;border:1px solid #C8A96E;border-radius:10px;padding:12px 14px;background:var(--bg-color)}
+		.ck-next-h{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#C8A96E;margin-bottom:6px}
+		.ck-next-b{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+		.ck-next-lbl{font-size:14px;font-weight:500;color:var(--text-color)}
+		.ck-next-act{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+		.ck-done-all{margin-top:14px;border:1px solid #29CD42;color:#1a8a2e;border-radius:10px;padding:10px 14px;font-size:13px}
+		.ck-wait{font-size:12px;color:#ECAD4B}
+		.ck-chip{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border:1px solid var(--border-color);padding:2px 7px;border-radius:10px;white-space:nowrap}
+		.ck-gate{color:#ECAD4B;border-color:#ECAD4B}
+		.ck-aiout{margin-top:10px}
+		.ck-ai-card{background:var(--card-bg);border:1px solid #C8A96E;border-radius:8px;padding:12px;font-size:13px;color:var(--text-color);line-height:1.5}
+		.ck-all{margin-top:12px}
+		.ck-all summary{cursor:pointer;font-size:12px;color:var(--text-muted);user-select:none}
+		.ck-steps{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+		.ck-step{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--border-color);border-radius:6px}
+		.ck-step.ck-current{border-color:#C8A96E;box-shadow:inset 3px 0 0 #C8A96E}
+		.ck-step.ck-done{opacity:.55}
+		.ck-ic{width:18px;text-align:center;font-weight:700;color:#C8A96E}
+		.ck-step.ck-done .ck-ic{color:#29CD42}
+		.ck-lbl{flex:1;font-size:13px;color:var(--text-color)}
+		`;
+		$('<style id="ck-css">').text(css).appendTo(document.head);
+	}
+};
+
+// Render del cockpit + declutter (nasconde pannelli ridondanti, collassa sezioni)
 frappe.ui.form.on('Investigation Case', {
 	refresh(frm) {
 		if (frm.is_new()) return;
-		tcw_inject_css();
-		if (!frm.dashboard || !frm.dashboard.add_section) return;
-		frm.dashboard.add_section(
-			'<div class="tcw-guide" id="tcw-guide"><div class="tcw-mut">Carico percorso guidato…</div></div>',
-			__('Percorso guidato'));
-		const $w = (frm.dashboard.wrapper && frm.dashboard.wrapper.find) ? frm.dashboard.wrapper.find('#tcw-guide')
-		         : (frm.dashboard.parent ? $(frm.dashboard.parent).find('#tcw-guide') : null);
-		if ($w && $w.length) tcw_load(frm, $w);
-	},
-});
-
-function tcw_load(frm, $c) {
-	frappe.call('thanatos_intel.workflow.api.board', { case_name: frm.doc.name })
-		.then(r => tcw_render(frm, $c, r.message || {}))
-		.catch(() => $c.html('<div class="tcw-mut">Percorso non disponibile.</div>'));
-}
-
-function tcw_render(frm, $c, b) {
-	const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
-
-	if (!b.has_workflow) {
-		if (frm.doc.blueprint) {
-			$c.html('<div class="tcw-row"><span class="tcw-mut">Percorso non ancora avviato.</span> </div>');
-			$('<button class="btn btn-xs btn-primary">▶ Avvia percorso guidato</button>')
-				.appendTo($c.find('.tcw-row')).on('click', () => {
-					frappe.call('thanatos_intel.workflow.engine.start', { case_name: frm.doc.name })
-						.then(() => { frappe.show_alert({ message: 'Percorso avviato', indicator: 'green' }); frm.reload_doc(); });
-				});
-		} else {
-			$c.html('<div class="tcw-mut">Nessun Blueprint impostato. Scegli un <b>Blueprint</b> per attivare il percorso guidato passo-passo.</div>');
-		}
-		return;
+		ThanatosCockpit.render(frm);
+		['case_timeline', 'ai_suggest', 'progress_panel'].forEach(f => { if (frm.fields_dict[f]) frm.set_df_property(f, 'hidden', 1); });
+		['sb_assignments', 'sb_entities', 'sb_activities', 'sb_integrations', 'sb_monitor', 'sb_outcome', 'sb_engagement', 'wf_section'].forEach(s => {
+			const fld = frm.fields_dict[s];
+			if (fld) { frm.set_df_property(s, 'collapsible', 1); try { fld.collapse && fld.collapse(true); } catch (e) {} }
+		});
 	}
-
-	let h = `<div class="tcw-prog">
-		<div class="tcw-bar"><div class="tcw-bar-f" style="width:${b.pct || 0}%"></div></div>
-		<span class="tcw-pct">${b.done}/${b.total} · ${b.pct || 0}%</span>
-		<button class="btn btn-xs btn-default tcw-ai">🤖 Cosa faccio ora?</button></div>`;
-	h += '<div class="tcw-steps">';
-	(b.steps || []).forEach(s => {
-		const ic = s.status === 'done' ? '✓' : (s.status === 'current' ? '▶' : '○');
-		const actor = s.actor === 'client' ? 'Cliente' : 'Operatore';
-		h += `<div class="tcw-step tcw-${s.status}">
-			<span class="tcw-ic">${ic}</span>
-			<span class="tcw-lbl">${esc(s.label)}</span>
-			<span class="tcw-chip">${actor}</span>
-			${s.mode === 'GATE' ? '<span class="tcw-chip tcw-gate">GATE</span>' : ''}
-			${s.status === 'current' ? tcw_action_btn(s) : ''}</div>`;
-	});
-	h += '</div><div class="tcw-aiout" style="display:none"></div>';
-	$c.html(h);
-
-	$c.find('[data-complete]').on('click', function () {
-		const seq = $(this).data('complete');
-		frappe.prompt([{ fieldtype: 'Small Text', label: 'Nota (opzionale)', fieldname: 'note' }], (v) => {
-			frappe.call('thanatos_intel.workflow.api.complete_gate',
-				{ case_name: frm.doc.name, seq: seq, note: v.note || '' })
-				.then(() => { frappe.show_alert({ message: 'Step completato', indicator: 'green' }); frm.reload_doc(); });
-		}, 'Completa step', 'Conferma');
-	});
-
-	$c.find('.tcw-ai').on('click', function () {
-		const $o = $c.find('.tcw-aiout').show().html('<div class="tcw-mut">🤖 Sto pensando…</div>');
-		frappe.call('thanatos_intel.workflow.ai_concierge.suggest_next', { case_name: frm.doc.name })
-			.then(r => {
-				const m = r.message || {};
-				$o.html(m.ok
-					? '<div class="tcw-ai-card">🤖 ' + esc(m.suggestion).replace(/\n/g, '<br>') + '</div>'
-					: '<div class="tcw-mut">' + esc(m.error || 'AI non disponibile al momento.') + '</div>');
-			})
-			.catch(() => $o.html('<div class="tcw-mut">AI non disponibile.</div>'));
-	});
-}
-
-function tcw_action_btn(s) {
-	if (s.actor === 'client') return '<span class="tcw-wait">⏳ In attesa del cliente</span>';
-	return `<button class="btn btn-xs btn-primary" data-complete="${s.seq}">✓ Completa</button>`;
-}
-
-function tcw_inject_css() {
-	if (document.getElementById('tcw-css')) return;
-	const css = `
-	.tcw-guide{padding:4px 2px}
-	.tcw-mut{color:var(--text-muted);font-size:13px;padding:4px 2px}
-	.tcw-row{display:flex;align-items:center;gap:10px;padding:4px 2px}
-	.tcw-prog{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-	.tcw-bar{flex:1;height:8px;background:var(--bg-color);border-radius:4px;overflow:hidden;border:1px solid var(--border-color)}
-	.tcw-bar-f{height:100%;background:#C8A96E;transition:width .3s}
-	.tcw-pct{font-size:12px;color:var(--text-muted);white-space:nowrap}
-	.tcw-steps{display:flex;flex-direction:column;gap:4px}
-	.tcw-step{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border-color);border-radius:6px;background:var(--card-bg)}
-	.tcw-step.tcw-current{border-color:#C8A96E;box-shadow:inset 3px 0 0 #C8A96E;background:var(--bg-color)}
-	.tcw-step.tcw-done{opacity:.6}
-	.tcw-ic{width:20px;text-align:center;font-weight:700;color:#C8A96E}
-	.tcw-done .tcw-ic{color:#29CD42}
-	.tcw-lbl{flex:1;font-size:13px;color:var(--text-color)}
-	.tcw-chip{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border:1px solid var(--border-color);padding:2px 7px;border-radius:10px;white-space:nowrap}
-	.tcw-gate{color:#ECAD4B;border-color:#ECAD4B}
-	.tcw-wait{font-size:11px;color:#ECAD4B;white-space:nowrap}
-	.tcw-aiout{margin-top:10px}
-	.tcw-ai-card{background:var(--card-bg);border:1px solid #C8A96E;border-radius:8px;padding:12px;font-size:13px;color:var(--text-color);line-height:1.5}
-	`;
-	$('<style id="tcw-css">').text(css).appendTo(document.head);
-}
+});
 
 // --- Genera fattura ARES (azione one-click) ---
 frappe.ui.form.on("Investigation Case", {
@@ -696,36 +771,6 @@ frappe.ui.form.on("Investigation Case", {
             d.show();
         }, __("Azioni"));
     },
-});
-
-// ── Pannello Avanzamento investigazione (checklist auto dallo stato reale) ──
-frappe.ui.form.on('Investigation Case', {
-    refresh(frm) {
-        if (frm.is_new() || !frm.fields_dict.progress_panel) return;
-        frappe.call({
-            method: 'thanatos_intel.ai.case_orchestrator.case_progress',
-            args: { case: frm.doc.name, record: 0 },
-            callback(r) {
-                const m = r.message; if (!m) return;
-                const color = m.pct >= 80 ? '#27ae60' : (m.pct >= 50 ? '#e67e22' : '#c0392b');
-                let h = '<div style="padding:10px 14px;border:1px solid #e0d7c0;border-radius:10px;background:#faf8f2;margin:6px 0">'
-                    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-                    + '<span style="font-weight:700;color:#0D1B3E">📋 Avanzamento investigazione</span>'
-                    + '<span style="font-weight:700;color:' + color + '">' + m.done + '/' + m.total + ' · ' + m.pct + '%</span></div>'
-                    + '<div style="height:9px;background:#eee;border-radius:5px;overflow:hidden;margin-bottom:10px"><div style="height:9px;width:' + m.pct + '%;background:' + color + '"></div></div>'
-                    + '<div style="column-count:2;column-gap:24px;font-size:13px;line-height:1.7">';
-                (m.items || []).forEach(function (it) {
-                    h += '<div>' + (it.done ? '✅' : '⬜') + ' ' + frappe.utils.escape_html(it.label)
-                        + (it.extra ? ' <span style="color:#999">— ' + frappe.utils.escape_html(it.extra) + '</span>' : '') + '</div>';
-                });
-                h += '</div>';
-                const ext = (m.todo_external || []).filter(function (t) { return !t.done; }).map(function (t) { return frappe.utils.escape_html(t.label); });
-                if (ext.length) h += '<div style="margin-top:8px;font-size:12.5px;color:#a33"><b>Da fare (sblocca la delega del cliente):</b> ' + ext.join(' · ') + '</div>';
-                h += '</div>';
-                frm.fields_dict.progress_panel.$wrapper.html(h);
-            }
-        });
-    }
 });
 
 // ── Revisione guidata documenti (avanti/indietro + domande) + dossier/proforma ──
