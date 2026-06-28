@@ -153,3 +153,19 @@ def _emit(lead_name, event_type, extra=None):
     if extra:
         payload.update(extra)
     frappe.publish_realtime("centralino_update", payload, after_commit=True)
+
+
+@frappe.whitelist()
+def get_call_logs(search=""):
+    """Storico chiamate WhatsApp registrate (per la scheda Chiamate del Centralino)."""
+    rows = frappe.get_all(
+        "Call Log",
+        fields=["name", "called_at", "caller_name", "caller_number", "outcome",
+                "duration_seconds", "duration_minutes", "audio_file",
+                "transcription_status", "linked_case", "handled_by"],
+        order_by="called_at desc", limit=80)
+    s = (search or "").strip().lower()
+    if s:
+        rows = [r for r in rows if s in (r.get("caller_name") or "").lower()
+                or s in (r.get("caller_number") or "")]
+    return rows

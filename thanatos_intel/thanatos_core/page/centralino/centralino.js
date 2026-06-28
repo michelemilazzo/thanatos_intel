@@ -38,6 +38,7 @@ class CentralinoPage {
       <button class="ctlno-filter" data-f="mine">Mie</button>
       <button class="ctlno-filter" data-f="unassigned">Non assegnate</button>
       <button class="ctlno-filter" data-f="closed">Chiuse</button>
+      <button class="ctlno-filter" data-f="calls">📞 Chiamate</button>
     </div>
     <div class="ctlno-header-right">
       <button class="ctlno-deviazione" id="ctlno-deviazione" title="Impostazioni deviazione chiamate">⚙ Deviazione</button>
@@ -113,11 +114,15 @@ class CentralinoPage {
             const name = $(e.currentTarget).data("name");
             this.openConversation(name);
         });
+        $(root).on("click", ".ctlno-call-item", (e) => {
+            this.openCall($(e.currentTarget).data("call"));
+        });
     }
 
     // ── Conversations list ────────────────────────────────────────────────────
 
     loadConversations() {
+        if (this.filter === "calls") { this._loadCalls(); return; }
         const filter_type = this.filter === "closed" ? "all" : this.filter;
         frappe.call({
             method: "thanatos_intel.api.centralino.get_conversations",
@@ -146,6 +151,67 @@ class CentralinoPage {
         if (this.activeLead) {
             $(`[data-name="${this.activeLead}"]`).addClass("active");
         }
+    }
+
+    _loadCalls() {
+        if (!document.getElementById("ctlno-call-css")) {
+            $("head").append(`<style id="ctlno-call-css">
+              .ctlno-call-item{padding:10px 14px;border-bottom:1px solid var(--border-color);cursor:pointer}
+              .ctlno-call-item:hover,.ctlno-call-item.active{background:var(--bg-color)}
+              .ctlno-ci-top{display:flex;justify-content:space-between;font-size:13px}
+              .ctlno-ci-name{font-weight:600}.ctlno-ci-time{color:#888;font-size:11px}
+              .ctlno-ci-sub{font-size:11px;color:#888;margin-top:2px}
+              .ctlno-call-detail{padding:20px;max-width:820px}
+              .ctlno-call-h{font-size:18px;font-weight:600}.ctlno-call-h span{color:#888;font-size:13px;font-weight:400;margin-left:8px}
+              .ctlno-call-meta{color:#888;font-size:12px;margin:4px 0 8px}
+              .ctlno-call-tr-h{font-weight:600;margin:14px 0 6px;color:#C8A96E}
+              .ctlno-call-tr{white-space:pre-wrap;line-height:1.6;font-size:13px;background:var(--card-bg,#fff);border:1px solid var(--border-color);border-radius:8px;padding:12px}
+              .ctlno-call-link{display:inline-block;margin-top:12px;color:#C8A96E}
+            </style>`);
+        }
+        frappe.call({ method: "thanatos_intel.api.centralino.get_call_logs",
+            args: { search: this.search },
+            callback: (r) => this._renderCallList(r.message || []) });
+    }
+
+    _renderCallList(rows) {
+        if (!rows.length) { $("#ctlno-list").html('<div class="ctlno-empty-list">Nessuna chiamata registrata</div>'); return; }
+        $("#ctlno-list").html(rows.map(c => this._callItemHtml(c)).join(""));
+        if (this.activeCall) $(`[data-call="${this.activeCall}"]`).addClass("active");
+    }
+
+    _callItemHtml(c) {
+        const esc = frappe.utils.escape_html;
+        const who = esc(c.caller_name || c.caller_number || "Sconosciuto");
+        const when = c.called_at ? frappe.datetime.prettyDate(c.called_at) : "";
+        const dur = (c.duration_minutes || 0) + "m " + (c.duration_seconds || 0) + "s";
+        const rec = c.audio_file ? "🔴" : "";
+        return `<div class="ctlno-call-item" data-call="${c.name}">
+            <div class="ctlno-ci-top"><span class="ctlno-ci-name">📞 ${who}</span><span class="ctlno-ci-time">${esc(when)}</span></div>
+            <div class="ctlno-ci-sub">${esc(c.outcome || "")} · ${dur} ${rec}</div></div>`;
+    }
+
+    openCall(name) {
+        const esc = frappe.utils.escape_html;
+        this.activeCall = name;
+        $(".ctlno-call-item").removeClass("active");
+        $(`[data-call="${name}"]`).addClass("active");
+        $("#ctlno-chat-area").html('<div class="ctlno-loading">Caricamento...</div>');
+        frappe.db.get_doc("Call Log", name).then(d => {
+            const audio = d.audio_file
+                ? `<audio controls preload="none" style="width:100%;margin:12px 0" src="${esc(d.audio_file)}"></audio>`
+                : '<div class="ctlno-call-meta">Nessuna registrazione audio.</div>';
+            const tr = d.transcript_text ? esc(d.transcript_text) : "(trascrizione non disponibile)";
+            const who = esc(d.caller_name || d.caller_number || "Sconosciuto");
+            $("#ctlno-chat-area").html(`<div class="ctlno-call-detail">
+                <div class="ctlno-call-h">📞 ${who}<span>${esc(d.caller_number || "")}</span></div>
+                <div class="ctlno-call-meta">${esc(d.outcome || "")} · ${(d.duration_minutes || 0)}m ${(d.duration_seconds || 0)}s · ${d.called_at ? frappe.datetime.str_to_user(d.called_at) : ""}</div>
+                ${audio}
+                <div class="ctlno-call-tr-h">Trascrizione</div>
+                <div class="ctlno-call-tr">${tr}</div>
+                ${d.linked_case ? `<a class="ctlno-call-link" href="/app/investigation-case/${d.linked_case}" target="_blank">Apri caso ${esc(d.linked_case)}</a>` : ""}
+            </div>`);
+        });
     }
 
     _convItemHtml(c) {
