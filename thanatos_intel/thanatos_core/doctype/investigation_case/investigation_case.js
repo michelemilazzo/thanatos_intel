@@ -23,6 +23,29 @@ frappe.ui.form.on('Investigation Case', {
             }, __("Azioni"));
         }
 
+        if (!frm.is_new()) {
+            frm.add_custom_button(__("Tracciamento visuale"), () => {
+                frappe.call({
+                    method: "thanatos_intel.osint.free_sources.case_tracing_links",
+                    args: { case: frm.doc.name },
+                    freeze: true, freeze_message: __("Raccolta wallet del caso…"),
+                    callback(r) {
+                        const m = r.message || {};
+                        if (m.error) { frappe.msgprint(__("Errore: {0}", [m.error])); return; }
+                        if (!m.count) { frappe.msgprint(__("Nessun wallet collegato a questo caso.")); return; }
+                        let html = "";
+                        (m.wallets || []).forEach(w => {
+                            const btns = Object.keys(w.links).map(k =>
+                                `<a href="${w.links[k]}" target="_blank" rel="noopener" class="btn btn-default btn-sm" style="margin:2px">${k} ↗</a>`
+                            ).join(" ");
+                            html += `<div style="margin-bottom:12px"><div style="font-family:monospace;font-size:12px;word-break:break-all"><b>${w.chain.toUpperCase()}</b> · ${w.address}${w.role ? " · "+w.role : ""}</div><div style="margin-top:6px">${btns}</div></div>`;
+                        });
+                        frappe.msgprint({ title: __("Tracciamento visuale · {0} wallet", [m.count]), message: html, wide: true });
+                    }
+                });
+            }, __("Intelligence"));
+        }
+
         if (!frm.is_new() && frm.doc.drive_folder) {
             frm.add_custom_button(__('Apri Drive'), () => {
                 window.open('/drive/folder/' + frm.doc.drive_folder, '_blank');

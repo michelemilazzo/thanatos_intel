@@ -869,3 +869,29 @@ def tracing_links(address: str) -> dict:
     else:
         return {"error": "chain_non_riconosciuta", "address": a}
     return {"address": a, "chain": chain, "links": links}
+
+
+@frappe.whitelist()
+def case_tracing_links(case: str) -> dict:
+    """Raccoglie i wallet collegati a un Investigation Case e restituisce i
+    deep-link di tracciamento visuale per ciascuno (chain-aware)."""
+    if not case or not frappe.db.exists("Investigation Case", case):
+        return {"error": "case_non_trovato"}
+    doc = frappe.get_doc("Investigation Case", case)
+    seen = set()
+    wallets = []
+    for row in (doc.case_entities or []):
+        if not row.entity:
+            continue
+        et, addr = frappe.db.get_value(
+            "Investigation Entity", row.entity, ["entity_type", "primary_identifier"]
+        ) or (None, None)
+        if et != "Wallet" or not addr or addr in seen:
+            continue
+        seen.add(addr)
+        res = tracing_links(addr)
+        if "links" in res:
+            res["entity"] = row.entity
+            res["role"] = row.role_in_case
+            wallets.append(res)
+    return {"case": case, "count": len(wallets), "wallets": wallets}
