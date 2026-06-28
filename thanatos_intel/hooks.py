@@ -207,6 +207,7 @@ scheduler_events={
           'thanatos_intel.notifications.client_alerts.check_kyc_onboarding_consistency',
           'thanatos_intel.notifications.client_alerts.daily_pending_payment_reminder',
           'thanatos_intel.notifications.client_alerts.daily_operator_digest',
+          'thanatos_intel.notifications.onboarding_completion.daily_completion_reminder',
           'thanatos_intel.gsc.fetch_rankings'],
  'daily_long':[],
  'weekly':['thanatos_intel.thanatos_core.compliance_ops.policy_review_check'],

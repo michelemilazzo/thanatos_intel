@@ -148,7 +148,7 @@
   {
    "fieldname": "service_credit",
    "fieldtype": "Currency",
-   "label": "Credito servizi (\u20ac)",
+   "label": "Credito servizi (€)",
    "read_only": 1,
    "description": "Bonus segnalazioni spendibile sui servizi"
   },
@@ -249,6 +249,13 @@
    "fieldname": "onboarding_completed_at",
    "fieldtype": "Datetime",
    "label": "Onboarding Completed"
+  },
+  {
+   "fieldname": "last_completion_reminder",
+   "fieldtype": "Datetime",
+   "label": "Last Completion Reminder",
+   "read_only": 1,
+   "hidden": 0
   },
   {
    "fieldname": "sb_attribution",
