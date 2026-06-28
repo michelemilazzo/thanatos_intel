@@ -94,6 +94,63 @@ def case_ai_chat(case, message):
     def done(reply, action=None):
         return {"reply": reply, "action": action}
 
+    # — catalogo strumenti dati a disposizione —
+    if re.search(r"che strumenti|quali strumenti|catalogo|strumenti.*disposiz|fonti dati|cosa puoi cercar|che dati puoi|che banche dati|elenco strument", t):
+        from thanatos_intel.osint.openapi_client import strumenti
+        s = strumenti()
+        lines = [f"🧰 Strumenti dati a disposizione — {s['totale_servizi']} servizi · "
+                 f"ambiente **{s['ambiente']}** · {'connesso' if s['connesso'] else 'NON connesso'}", ""]
+        for f in s["famiglie"]:
+            lines.append(f"**{f['famiglia']}** ({f['pattern']}, {f['fascia']}) — {f['uso']}")
+            lines.append("   · " + ", ".join(f["strumenti"]))
+        return done("\n".join(lines)[:1800], "strumenti")
+
+    # — soci + titolari effettivi (UBO) —
+    mp = re.search(r"(\d{11})", t)
+    if re.search(r"\bsoci\b|titolari effettiv|\bubo\b|compagine|beneficiari effettiv|assetto proprietar|chi possiede|chi controlla", t):
+        if mp:
+            from thanatos_intel.osint.openapi_client import soci_titolari
+            r = soci_titolari(mp.group(1), investigation_case=case)
+            soci = "; ".join(f"{x['nome']} ({x['quota']}%)" for x in r.get("soci") or []) or "—"
+            ubo = "; ".join(f"{x['nome']} [{x['cf']}]" for x in r.get("ubo") or []) or "—"
+            return done(f"👥 P.IVA {mp.group(1)}\n**Soci:** {soci}\n**Titolari effettivi (UBO):** {ubo}", "soci_ubo")
+        return done("Indicami la P.IVA (11 cifre), es. «soci e UBO 12485671007».")
+
+    # — screening reputazionale KYC (PEP / sanzioni / adverse media) su un nominativo —
+    mk = re.search(r"(?:pep|sanzion|adverse|reputaz|screening kyc|kyc)\s+(?:su |di |per )?(.+)", t)
+    if re.search(r"\bpep\b|adverse media|reputazion|screening kyc|\bkyc\b", t):
+        nome = (mk.group(1).strip() if mk else "").strip(" ?.")
+        if nome and len(nome) > 2:
+            mode = ("sanction_list" if "sanzion" in t else "adverse_media" if "adverse" in t
+                    else "full" if "kyc" in t and "pep" not in t else "pep")
+            from thanatos_intel.osint.openapi_client import screening_kyc
+            r = screening_kyc(nome, mode=mode, investigation_case=case)
+            if r.get("error"):
+                return done(f"⚠️ Screening {mode}: {r['error']}")
+            hl = "; ".join(h["nome"] for h in (r.get("hits") or [])[:8]) or "nessun match"
+            return done(f"🛂 Screening **{mode}** «{nome}»: {r.get('match', 0)} match — {hl}", "kyc")
+        return done("Indicami il nominativo, es. «screening PEP Mario Rossi» o «sanzioni Acme Ltd».")
+
+    # — negatività (protesti / pregiudizievoli) —
+    if re.search(r"negativit|protest|pregiudizievol|pignorament", t):
+        cf = re.search(r"\b([A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z])\b", message or "")
+        idv = (cf.group(1).upper() if cf else (mp.group(1) if mp else None))
+        if idv:
+            from thanatos_intel.osint.openapi_client import negativita
+            r = negativita(idv, investigation_case=case)
+            return done(f"⚖️ Negatività {idv}: {r.get('status')} — esito {r.get('esito')}", "negativita")
+        return done("Indicami CF (persona) o P.IVA (impresa), es. «negatività RSSMRA80A01H501U».")
+
+    # — patrimoniale persona (beni intestati) —
+    if re.search(r"patrimonial|beni intestat|patrimonio di|cosa possiede", t):
+        cf = re.search(r"\b([A-Za-z]{6}\d{2}[A-Za-z]\d{2}[A-Za-z]\d{3}[A-Za-z])\b", message or "")
+        nm = re.search(r"patrimonial[a-z]*\s+(?:di |su |per )?([A-Za-zÀ-ÿ']+)\s+([A-Za-zÀ-ÿ']+)", message or "", re.I)
+        if cf and nm:
+            from thanatos_intel.osint.openapi_client import patrimoniale
+            r = patrimoniale(nm.group(1), nm.group(2), cf.group(1).upper(), investigation_case=case)
+            return done(f"🏦 Patrimoniale {nm.group(1)} {nm.group(2)} [{cf.group(1).upper()}]: {r.get('status')}", "patrimoniale")
+        return done("Servono nome, cognome e CF, es. «patrimoniale Mario Rossi RSSMRA80A01H501U».")
+
     # — strumenti che girano subito —
     if re.search(r"suggerisci.*serviz|che verifich|preventivo dati|quali dati|servizi.*dati|verifiche.*serv|cosa.*comprare|quali visure", t):
         from thanatos_intel.ai.data_services import preventivo_servizi

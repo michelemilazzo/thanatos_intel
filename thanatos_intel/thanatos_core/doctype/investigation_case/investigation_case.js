@@ -305,6 +305,78 @@ frappe.ui.form.on('Investigation Case', {
                 d.show();
             }, __('Intelligence'));
 
+            frm.add_custom_button(__('👥 Soci & Titolari effettivi (UBO)'), () => {
+                const d = new frappe.ui.Dialog({
+                    title: __('Soci e titolari effettivi'),
+                    fields: [{ fieldname: 'piva', fieldtype: 'Data', label: 'Partita IVA', reqd: 1 }],
+                    primary_action_label: __('Cerca'),
+                    primary_action(v) {
+                        d.hide();
+                        frappe.call({
+                            method: 'thanatos_intel.osint.openapi_client.soci_titolari',
+                            args: { piva: v.piva, investigation_case: frm.doc.name },
+                            freeze: true, freeze_message: __('Interrogazione openapi…'),
+                            callback(r) {
+                                const m = r.message || {};
+                                const soci = (m.soci||[]).map(s => frappe.utils.escape_html(s.nome) + ' (' + s.quota + '%)').join('; ') || '—';
+                                const ubo = (m.ubo||[]).map(u => frappe.utils.escape_html(u.nome) + ' [' + (u.cf||'') + ']').join('; ') || '—';
+                                frappe.msgprint({ title: __('Soci & UBO'), indicator: 'blue',
+                                    message: '<b>P.IVA:</b> ' + (m.piva||'-') + '<br><b>Soci:</b> ' + soci + '<br><b>Titolari effettivi (UBO):</b> ' + ubo });
+                                frm.reload_doc();
+                            }
+                        });
+                    }
+                });
+                d.show();
+            }, __('Intelligence'));
+
+            frm.add_custom_button(__('🛂 Screening KYC (PEP/Sanzioni)'), () => {
+                const d = new frappe.ui.Dialog({
+                    title: __('Screening reputazionale KYC'),
+                    fields: [
+                        { fieldname: 'query', fieldtype: 'Data', label: 'Nominativo / Ragione sociale', reqd: 1 },
+                        { fieldname: 'mode', fieldtype: 'Select', label: 'Tipo', default: 'pep',
+                          options: 'pep\nsanction_list\nadverse_media\nfull' }
+                    ],
+                    primary_action_label: __('Esegui'),
+                    primary_action(v) {
+                        d.hide();
+                        frappe.call({
+                            method: 'thanatos_intel.osint.openapi_client.screening_kyc',
+                            args: { query: v.query, mode: v.mode, investigation_case: frm.doc.name },
+                            freeze: true, freeze_message: __('Screening in corso…'),
+                            callback(r) {
+                                const m = r.message || {};
+                                if (m.error) { frappe.msgprint({ title: __('Screening'), indicator: 'red', message: m.error }); return; }
+                                const hl = (m.hits||[]).map(h => frappe.utils.escape_html(h.nome||'') + ' (' + (h.tipo||'') + ')').join('<br>') || 'nessun match';
+                                frappe.msgprint({ title: __('Screening ' + v.mode), indicator: (m.match ? 'orange' : 'green'),
+                                    message: '<b>«' + frappe.utils.escape_html(v.query) + '»</b> — ' + (m.match||0) + ' match<br>' + hl });
+                                frm.reload_doc();
+                            }
+                        });
+                    }
+                });
+                d.show();
+            }, __('Intelligence'));
+
+            frm.add_custom_button(__('🧰 Strumenti dati (openapi)'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.osint.openapi_client.strumenti',
+                    callback(r) {
+                        const s = r.message || {};
+                        let msg = '<p><b>' + (s.totale_servizi||0) + ' servizi</b> · ambiente <b>' + (s.ambiente||'') + '</b> · '
+                            + (s.connesso ? '<span style="color:#27ae60">connesso</span>' : '<span style="color:#c0392b">non connesso</span>') + '</p>';
+                        (s.famiglie||[]).forEach(f => {
+                            msg += '<p style="margin:6px 0"><b>' + frappe.utils.escape_html(f.famiglia) + '</b> '
+                                + '<span style="color:#888">(' + f.pattern + ', ' + f.fascia + ')</span><br>'
+                                + '<span style="color:#555">' + frappe.utils.escape_html((f.strumenti||[]).join(' · ')) + '</span><br>'
+                                + '<i style="color:#888">' + frappe.utils.escape_html(f.uso||'') + '</i></p>';
+                        });
+                        frappe.msgprint({ title: __('Strumenti dati a disposizione'), message: msg, wide: true });
+                    }
+                });
+            }, __('Intelligence'));
+
             frm.add_custom_button(__('Domande investigative'), () => {
                 frappe.call({
                     method: 'thanatos_intel.ai.doc_questions.generate_questions_async',

@@ -109,10 +109,47 @@ def costruisci_cluster(case):
                              "a": (tra[1] if len(tra) > 1 else "")[:140],
                              "tipo": (l.get("tipo") or "")[:60],
                              "evidenza": (l.get("evidenza") or "")[:140]})
+    # Arricchimento certificato: soci + titolari effettivi (UBO) reali da openapi
+    doc._ownership = _arricchisci_ownership(doc, c)
     cur = set(x.strip() for x in (doc.related_cases or "").split(",") if x.strip())
     cur.add(case)
     doc.related_cases = ", ".join(sorted(cur))
     doc.flags.ignore_mandatory = True
     doc.save(ignore_permissions=True)
     frappe.db.commit()
-    return {"ok": True, "gruppo": doc.name, "membri": len(doc.members), "links": len(doc.links)}
+    return {"ok": True, "gruppo": doc.name, "membri": len(doc.members),
+            "links": len(doc.links), "ownership": getattr(doc, "_ownership", 0)}
+
+
+def _arricchisci_ownership(doc, case_doc):
+    """Per ogni società del caso con P.IVA nota, aggiunge al cluster i collegamenti
+    di proprietà reali (socio→società con quota, UBO→società) da openapi.it.
+    In sandbox usa i dati sample; in produzione le quote effettive."""
+    try:
+        from thanatos_intel.osint import openapi_client as oc
+    except Exception:
+        return 0
+    added = 0
+    for ce in (case_doc.get("case_entities") or []):
+        et = frappe.db.get_value("Investigation Entity", ce.entity,
+                                 ["full_name", "entity_type", "primary_identifier"], as_dict=True)
+        if not et or et.entity_type != "Company":
+            continue
+        piva = "".join(ch for ch in (et.primary_identifier or "") if ch.isdigit())
+        if len(piva) != 11:
+            continue
+        try:
+            r = oc.soci_titolari(piva)
+        except Exception:
+            continue
+        soc = et.full_name or piva
+        for s in r.get("soci") or []:
+            q = f" {s['quota']}%" if s.get("quota") is not None else ""
+            doc.append("links", {"da": (s.get("nome") or "")[:140], "a": soc[:140],
+                                 "tipo": f"socio{q}"[:60], "evidenza": (s.get("cf") or "openapi")[:140]})
+            added += 1
+        for u in r.get("ubo") or []:
+            doc.append("links", {"da": (u.get("nome") or "")[:140], "a": soc[:140],
+                                 "tipo": "titolare effettivo (UBO)", "evidenza": (u.get("cf") or "openapi")[:140]})
+            added += 1
+    return added
