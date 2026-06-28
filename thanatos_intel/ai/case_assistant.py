@@ -95,6 +95,10 @@ def case_ai_chat(case, message):
         return {"reply": reply, "action": action}
 
     # — strumenti che girano subito —
+    if re.search(r"suggerisci.*serviz|che verifich|preventivo dati|quali dati|servizi.*dati|verifiche.*serv|cosa.*comprare|quali visure", t):
+        from thanatos_intel.ai.data_services import preventivo_servizi
+        r = preventivo_servizi(case)
+        return done(r.get("text", "")[:1000], "preventivo_servizi")
     if re.search(r"collegament|\bgruppo\b|soci.*comun|rete societ|holding|parti correlate|chi c'?è dietro", t):
         from thanatos_intel.ai.corporate_links import analizza_collegamenti
         r = analizza_collegamenti(case)
