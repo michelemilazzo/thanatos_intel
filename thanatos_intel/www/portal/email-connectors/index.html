@@ -1,0 +1,266 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, portal_nav %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--dark:#0A0E1A;--gold:#C8A96E;--gold-soft:rgba(200,169,110,.15);
+  --grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--border:#1F2842;--danger:#e05252;--ok:#48c878}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:760px;margin:0 auto;padding:28px 24px 80px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+.hero{padding-bottom:18px;border-bottom:1px solid var(--border);margin-bottom:28px}
+.hero h1{font-family:Georgia,serif;font-weight:400;font-size:28px;color:#FFF;margin:0 0 6px}
+.hero p{margin:0;color:var(--grey);font-size:13px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px}
+.card h2{font-family:Georgia,serif;font-size:16px;font-weight:400;color:#fff;margin:0 0 16px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:6px;font-size:13px;
+  font-weight:600;cursor:pointer;border:none;letter-spacing:.5px;transition:opacity .15s;text-decoration:none}
+.btn-gold{background:var(--gold);color:#0A0E1A}
+.btn-gold:hover{opacity:.85}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+.btn-danger:hover{background:rgba(224,82,82,.1)}
+.btn-ghost{background:transparent;color:#E8E9F0;border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.msg{margin-top:12px;padding:10px 14px;border-radius:6px;font-size:12px;display:none}
+.msg.ok{background:rgba(72,200,120,.12);border:1px solid rgba(72,200,120,.3);color:var(--ok)}
+.msg.err{background:rgba(224,82,82,.12);border:1px solid rgba(224,82,82,.3);color:var(--danger)}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;
+  color:var(--grey);margin-bottom:6px}
+.form-row input,.form-row select{width:100%;background:#0d1428;border:1px solid var(--border);
+  border-radius:6px;padding:9px 12px;color:#E8E9F0;font-size:13px;outline:none}
+.form-row input:focus,.form-row select:focus{border-color:var(--gold)}
+.form-row select option{background:#111729}
+.form-row.two{display:grid;grid-template-columns:1fr auto;gap:10px}
+.provider-hint{background:rgba(200,169,110,.07);border:1px solid rgba(200,169,110,.2);
+  border-radius:6px;padding:10px 14px;font-size:12px;color:#c8b070;margin-bottom:14px;display:none}
+.provider-hint a{color:var(--gold)}
+/* connector cards */
+.conn-list{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.conn-card{background:#0d1428;border:1px solid var(--border);border-radius:8px;padding:16px}
+.conn-header{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.conn-icon{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;
+  justify-content:center;font-size:18px;background:rgba(200,169,110,.1)}
+.conn-info{flex:1;min-width:0}
+.conn-label{font-size:14px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conn-email{font-size:11px;color:var(--grey);margin-top:2px}
+.conn-badge{font-size:10px;letter-spacing:.8px;text-transform:uppercase;padding:3px 8px;
+  border-radius:10px;font-weight:600;flex-shrink:0}
+.conn-badge.ok{background:rgba(72,200,120,.12);color:var(--ok);border:1px solid rgba(72,200,120,.25)}
+.conn-badge.err{background:rgba(224,82,82,.1);color:var(--danger);border:1px solid rgba(224,82,82,.25)}
+.conn-badge.off{background:rgba(122,130,148,.1);color:var(--grey);border:1px solid var(--border)}
+.conn-meta{font-size:11px;color:var(--grey);margin-bottom:10px;padding-left:44px}
+.conn-actions{display:flex;gap:8px;padding-left:44px;flex-wrap:wrap}
+.warn-box{background:rgba(200,169,110,.07);border:1px solid rgba(200,169,110,.2);border-radius:8px;
+  padding:14px 16px;font-size:12px;color:#c8b070;line-height:1.6;margin-bottom:16px}
+.warn-box b{color:var(--gold)}
+/* spinner */
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header() }}
+{{ portal_nav('email-connectors') }}
+
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> › Email Esterni</div>
+
+  <div class="hero">
+    <h1>Connettori Email</h1>
+    <p>Collega account Gmail, Outlook o IMAP alla tua casella Thanatos. Le mail vengono scaricate automaticamente ogni 10 minuti.</p>
+  </div>
+
+  <div class="warn-box">
+    <b>Gmail</b>: abilita la verifica in 2 passaggi e genera una <b>Password per le app</b> (Google Account → Sicurezza → Password per le app). Non usare la password Google normale.<br>
+    <b>Outlook business / Office 365</b>: usa l'indirizzo email e la password dell'account aziendale (IMAP deve essere abilitato dall'admin IT).<br>
+    <b>Outlook personale</b>: Microsoft ha rimosso l'accesso IMAP con password base. Usa l'inoltro automatico verso la tua casella Thanatos.
+  </div>
+
+  <!-- lista connettori -->
+  <div id="conn-list" class="conn-list" style="display:none"></div>
+  <div id="no-conn" style="color:var(--grey);font-size:13px;margin-bottom:20px;display:none">
+    Nessun account esterno collegato.
+  </div>
+
+  <!-- aggiungi -->
+  <div class="card">
+    <h2>Aggiungi account esterno</h2>
+    <div class="form-row">
+      <label>Provider</label>
+      <select id="provider" onchange="onProvider()">
+        <option value="gmail">Gmail</option>
+        <option value="outlook_business">Outlook / Office 365</option>
+        <option value="yahoo">Yahoo Mail</option>
+        <option value="imap">IMAP generico</option>
+      </select>
+    </div>
+    <div id="hint-gmail" class="provider-hint">
+      Serve la <b>Password per le app</b> Google, non la password normale.<br>
+      <a href="https://support.google.com/accounts/answer/185833" target="_blank" rel="noopener">Come crearla →</a>
+    </div>
+    <div id="hint-imap" class="provider-hint">
+      Inserisci host IMAP, porta e credenziali del tuo provider.
+    </div>
+    <div id="imap-fields" style="display:none">
+      <div class="form-row two">
+        <div>
+          <label>Host IMAP</label>
+          <input type="text" id="imap_host" placeholder="imap.example.com">
+        </div>
+        <div>
+          <label>Porta</label>
+          <input type="number" id="imap_port" value="993" style="width:90px">
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Indirizzo email</label>
+      <input type="email" id="ext-email" placeholder="tu@gmail.com">
+    </div>
+    <div class="form-row">
+      <label>Password (o App Password)</label>
+      <input type="password" id="ext-pw" placeholder="••••••••••••••••">
+    </div>
+    <div class="form-row">
+      <label>Etichetta (opzionale)</label>
+      <input type="text" id="ext-label" placeholder="es. Gmail personale">
+    </div>
+    <button class="btn btn-gold" onclick="addConnector()">
+      <span id="add-spin" style="display:none" class="spin"></span>
+      Collega account
+    </button>
+    <div id="add-msg" class="msg"></div>
+  </div>
+</div>
+
+<script>
+const api = (path, opts) =>
+  fetch('/api/method/thanatos_intel.api.mail_connectors.' + path, {
+    headers: {'X-Frappe-CSRF-Token': frappe.csrf_token, 'Content-Type': 'application/json'},
+    ...opts
+  }).then(r => r.json()).then(d => d.message !== undefined ? d.message : d);
+
+const ICONS = {gmail:'📧', outlook_business:'📨', yahoo:'✉️', imap:'🔌'};
+
+function onProvider() {
+  const v = document.getElementById('provider').value;
+  document.getElementById('hint-gmail').style.display = v === 'gmail' ? 'block' : 'none';
+  document.getElementById('hint-imap').style.display = v === 'imap' ? 'block' : 'none';
+  document.getElementById('imap-fields').style.display = v === 'imap' ? 'block' : 'none';
+}
+
+function flash(id, text, type) {
+  const el = document.getElementById(id);
+  el.className = 'msg ' + type;
+  el.textContent = text;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+async function loadConnectors() {
+  const d = await api('list_connectors');
+  const list = document.getElementById('conn-list');
+  const none = document.getElementById('no-conn');
+  if (!d.connectors || !d.connectors.length) {
+    list.style.display = 'none';
+    none.style.display = 'block';
+    return;
+  }
+  none.style.display = 'none';
+  list.style.display = 'flex';
+  list.innerHTML = d.connectors.map(c => {
+    const icon = ICONS[c.provider] || '📬';
+    let badge, badgeLabel;
+    if (!c.enabled) { badge = 'off'; badgeLabel = 'Disabilitato'; }
+    else if (c.last_error) { badge = 'err'; badgeLabel = 'Errore'; }
+    else if (c.last_sync_at) { badge = 'ok'; badgeLabel = 'Attivo'; }
+    else { badge = 'ok'; badgeLabel = 'In attesa'; }
+    const syncInfo = c.last_sync_at
+      ? `Ultima sync: ${new Date(c.last_sync_at).toLocaleString('it-IT')} · ${c.synced_count || 0} mail importate`
+      : 'Mai sincronizzato';
+    const errLine = c.last_error ? `<br><span style="color:var(--danger)">${c.last_error}</span>` : '';
+    return `
+    <div class="conn-card" id="cc-${c.id}">
+      <div class="conn-header">
+        <div class="conn-icon">${icon}</div>
+        <div class="conn-info">
+          <div class="conn-label">${c.label || c.email}</div>
+          <div class="conn-email">${c.email} → ${c.target_mailbox}</div>
+        </div>
+        <span class="conn-badge ${badge}">${badgeLabel}</span>
+      </div>
+      <div class="conn-meta">${syncInfo}${errLine}</div>
+      <div class="conn-actions">
+        <button class="btn btn-ghost btn-sm" onclick="syncNow('${c.id}', this)">Sincronizza ora</button>
+        <button class="btn btn-ghost btn-sm" onclick="testConn('${c.id}', this)">Test connessione</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleConn('${c.id}', ${c.enabled}, this)">${c.enabled ? 'Disabilita' : 'Abilita'}</button>
+        <button class="btn btn-danger btn-sm" onclick="delConn('${c.id}')">Rimuovi</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addConnector() {
+  const provider = document.getElementById('provider').value;
+  const email = document.getElementById('ext-email').value.trim();
+  const pw = document.getElementById('ext-pw').value;
+  const label = document.getElementById('ext-label').value.trim();
+  const host = document.getElementById('imap_host').value.trim();
+  const port = document.getElementById('imap_port').value;
+  if (!email || !pw) { flash('add-msg','Email e password obbligatori.','err'); return; }
+  document.getElementById('add-spin').style.display = 'inline-block';
+  const body = {provider, email, password: pw, label};
+  if (provider === 'imap') { body.imap_host = host; body.imap_port = port; }
+  try {
+    const d = await api('add_connector', {method:'POST', body: JSON.stringify(body)});
+    if (d.ok) {
+      flash('add-msg',`Account collegato. Le mail arriveranno in ${d.target}.`,'ok');
+      document.getElementById('ext-email').value = '';
+      document.getElementById('ext-pw').value = '';
+      document.getElementById('ext-label').value = '';
+      loadConnectors();
+    } else {
+      flash('add-msg', d.exception || d.error || 'Errore sconosciuto.', 'err');
+    }
+  } catch(e) { flash('add-msg', String(e), 'err'); }
+  document.getElementById('add-spin').style.display = 'none';
+}
+
+async function syncNow(id, btn) {
+  const orig = btn.textContent; btn.textContent = '…'; btn.disabled = true;
+  const d = await api('sync_now', {method:'POST', body: JSON.stringify({connector_id: id})});
+  btn.textContent = d.ok ? `✓ ${d.synced} mail` : '✗ errore';
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; loadConnectors(); }, 3000);
+}
+
+async function testConn(id, btn) {
+  const orig = btn.textContent; btn.textContent = '…'; btn.disabled = true;
+  const d = await api('test_connector', {method:'POST', body: JSON.stringify({connector_id: id})});
+  btn.textContent = d.ok ? '✓ OK' : '✗ ' + (d.error || 'errore');
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 4000);
+}
+
+async function toggleConn(id, enabled, btn) {
+  const d = await api('toggle_connector', {method:'POST', body: JSON.stringify({connector_id: id, enabled: !enabled})});
+  if (d.ok) loadConnectors();
+}
+
+async function delConn(id) {
+  if (!confirm('Rimuovere questo account?')) return;
+  const d = await api('delete_connector', {method:'POST', body: JSON.stringify({connector_id: id})});
+  if (d.ok) loadConnectors();
+}
+
+onProvider();
+loadConnectors();
+</script>
+{% endblock %}

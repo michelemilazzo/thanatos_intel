@@ -75,3 +75,44 @@ def analizza_collegamenti(case):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "analizza_collegamenti")
     return {"ok": True, "text": text, "parsed": parsed}
+
+
+@frappe.whitelist()
+def costruisci_cluster(case):
+    """Costruisce/aggiorna un Corporate Group (cluster stile Arkham) dal caso:
+    membri = entità del caso, collegamenti = dall'analisi. Riusabile cross-caso."""
+    r = analizza_collegamenti(case)
+    parsed = r.get("parsed") or {}
+    g = parsed.get("gruppo") or {}
+    gstr = json.dumps(g, ensure_ascii=False).lower()
+    grp = "Gruppo HU/Zhao" if ("zhao" in gstr or "hu " in gstr) else f"Gruppo caso {case}"
+    if frappe.db.exists("Corporate Group", grp):
+        doc = frappe.get_doc("Corporate Group", grp)
+        doc.set("members", [])
+        doc.set("links", [])
+    else:
+        doc = frappe.new_doc("Corporate Group")
+        doc.group_name = grp
+    doc.group_kind = "Gruppo familiare" if "famil" in gstr else "Rete/Cluster"
+    doc.risk_level = "Alto"
+    doc.summary = (g.get("descrizione") or r.get("text") or "")[:1000]
+    c = frappe.get_doc("Investigation Case", case)
+    seen = set()
+    for ce in (c.get("case_entities") or []):
+        if ce.entity in seen:
+            continue
+        seen.add(ce.entity)
+        doc.append("members", {"entity": ce.entity, "ruolo": (ce.notes or ce.role_in_case or "")[:140]})
+    for l in (parsed.get("collegamenti") or [])[:30]:
+        tra = l.get("tra") or []
+        doc.append("links", {"da": (tra[0] if tra else "")[:140],
+                             "a": (tra[1] if len(tra) > 1 else "")[:140],
+                             "tipo": (l.get("tipo") or "")[:60],
+                             "evidenza": (l.get("evidenza") or "")[:140]})
+    cur = set(x.strip() for x in (doc.related_cases or "").split(",") if x.strip())
+    cur.add(case)
+    doc.related_cases = ", ".join(sorted(cur))
+    doc.flags.ignore_mandatory = True
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"ok": True, "gruppo": doc.name, "membri": len(doc.members), "links": len(doc.links)}

@@ -99,6 +99,11 @@ def case_ai_chat(case, message):
         from thanatos_intel.ai.data_services import preventivo_servizi
         r = preventivo_servizi(case)
         return done(r.get("text", "")[:1000], "preventivo_servizi")
+    if re.search(r"cluster|censisci.*grupp|modello grupp|costruisci.*grupp|crea.*grupp", t):
+        from thanatos_intel.ai.corporate_links import costruisci_cluster
+        r = costruisci_cluster(case)
+        return done(f"🕸️ Cluster «{r['gruppo']}» costruito/aggiornato: {r['membri']} membri, "
+                    f"{r['links']} collegamenti. Aprilo dal doctype Corporate Group.", "cluster")
     if re.search(r"collegament|\bgruppo\b|soci.*comun|rete societ|holding|parti correlate|chi c'?è dietro", t):
         from thanatos_intel.ai.corporate_links import analizza_collegamenti
         r = analizza_collegamenti(case)

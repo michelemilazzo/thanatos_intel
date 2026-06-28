@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "creation": "2026-06-28 08:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "group_name",
+  "group_kind",
+  "risk_level",
+  "summary",
+  "sb1",
+  "members",
+  "sb2",
+  "links",
+  "sb3",
+  "related_cases"
+ ],
+ "fields": [
+  {
+   "fieldname": "group_name",
+   "label": "Nome gruppo",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "group_kind",
+   "label": "Tipo",
+   "fieldtype": "Select",
+   "options": "Gruppo societario\nGruppo familiare\nRete/Cluster\nSospetto",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "risk_level",
+   "label": "Rischio",
+   "fieldtype": "Select",
+   "options": "\nBasso\nMedio\nAlto\nCritico",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "summary",
+   "label": "Sintesi",
+   "fieldtype": "Text"
+  },
+  {
+   "fieldname": "sb1",
+   "label": "",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "members",
+   "label": "Membri (societ\u00e0 e persone)",
+   "fieldtype": "Table",
+   "options": "Corporate Group Member"
+  },
+  {
+   "fieldname": "sb2",
+   "label": "",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "links",
+   "label": "Collegamenti",
+   "fieldtype": "Table",
+   "options": "Corporate Group Link"
+  },
+  {
+   "fieldname": "sb3",
+   "label": "",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "related_cases",
+   "label": "Casi collegati",
+   "fieldtype": "Small Text"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-28 08:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "Corporate Group",
+ "owner": "Administrator",
+ "naming_rule": "",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 0,
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Investigation Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Investigator",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "autoname": "field:group_name",
+ "title_field": "group_name"
+}

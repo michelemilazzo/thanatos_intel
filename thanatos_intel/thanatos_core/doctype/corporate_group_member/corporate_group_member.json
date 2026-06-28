@@ -1,0 +1,69 @@
+{
+ "actions": [],
+ "creation": "2026-06-28 08:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "entity",
+  "entity_name",
+  "entity_type",
+  "ruolo",
+  "quota",
+  "note"
+ ],
+ "fields": [
+  {
+   "fieldname": "entity",
+   "label": "Entit\u00e0",
+   "fieldtype": "Link",
+   "options": "Investigation Entity",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "entity_name",
+   "label": "Nome",
+   "fieldtype": "Data",
+   "fetch_from": "entity.full_name",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "entity_type",
+   "label": "Tipo",
+   "fieldtype": "Data",
+   "fetch_from": "entity.entity_type",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "ruolo",
+   "label": "Ruolo nel gruppo",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "quota",
+   "label": "Quota %",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "note",
+   "label": "Note",
+   "fieldtype": "Small Text"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-28 08:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "Corporate Group Member",
+ "owner": "Administrator",
+ "naming_rule": "",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "permissions": []
+}

@@ -757,3 +757,16 @@ frappe.ui.form.on('Investigation Case', {
         }, __('Intelligence'));
     }
 });
+
+// ── Bottone Costruisci cluster gruppo ──
+frappe.ui.form.on('Investigation Case', {
+    refresh(frm) {
+        if (frm.is_new()) return;
+        frm.add_custom_button(__('🕸️ Costruisci cluster gruppo'), () => {
+            frappe.call({ method: 'thanatos_intel.ai.corporate_links.costruisci_cluster', args: { case: frm.doc.name },
+                freeze: true, freeze_message: __('Costruzione cluster...'),
+                callback(r) { const m = r.message || {}; if (m.gruppo) { frappe.show_alert({ message: __('Cluster {0}: {1} membri, {2} collegamenti', [m.gruppo, m.membri, m.links]), indicator: 'green' }, 8);
+                    frappe.set_route('Form', 'Corporate Group', m.gruppo); } } });
+        }, __('Intelligence'));
+    }
+});

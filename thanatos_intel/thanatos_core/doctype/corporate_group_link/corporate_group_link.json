@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "creation": "2026-06-28 08:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "da",
+  "tipo",
+  "a",
+  "evidenza"
+ ],
+ "fields": [
+  {
+   "fieldname": "da",
+   "label": "Da",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "tipo",
+   "label": "Tipo legame",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "a",
+   "label": "A",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "evidenza",
+   "label": "Evidenza",
+   "fieldtype": "Small Text",
+   "in_list_view": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-06-28 08:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "Corporate Group Link",
+ "owner": "Administrator",
+ "naming_rule": "",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "permissions": []
+}
