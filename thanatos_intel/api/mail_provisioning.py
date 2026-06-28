@@ -94,8 +94,8 @@ def preview(user=None, mailbox=None):
     """Dry-run: mostra cosa farebbe il provisioning, senza creare nulla."""
     _guard()
     mailbox = (mailbox or "").strip().lower()
-    if not mailbox.endswith("@" + DOMAIN):
-        frappe.throw(f"La casella deve essere @{DOMAIN}.")
+    if "@" not in mailbox:
+        frappe.throw("Indirizzo non valido.")
     url, auth = _stalwart()
     exists = _account_exists(url, auth, mailbox)
     webmail_enabled = mailbox in _enabled_set()
@@ -126,8 +126,8 @@ def provision(user=None, mailbox=None, full_name=None, quota_mb=1024):
     """ESECUZIONE REALE: crea casella (se manca) + app-password webmail. Solo System Manager."""
     _guard()
     mailbox = (mailbox or "").strip().lower()
-    if not mailbox.endswith("@" + DOMAIN):
-        frappe.throw(f"La casella deve essere @{DOMAIN}.")
+    if "@" not in mailbox:
+        frappe.throw("Indirizzo non valido.")
     url, auth = _stalwart()
 
     created = False
@@ -245,8 +245,8 @@ def create_app_password(mailbox=None, label="outlook"):
     _guard()
     mailbox = (mailbox or "").strip().lower()
     label = "".join(c for c in (label or "outlook") if c.isalnum() or c in "-_").lower()[:24] or "outlook"
-    if not mailbox.endswith("@" + DOMAIN):
-        frappe.throw(f"La casella deve essere @{DOMAIN}.")
+    if "@" not in mailbox:
+        frappe.throw("Indirizzo non valido.")
     url, auth = _stalwart()
     secs = _get_secrets(url, auth, mailbox)
     if not secs:
