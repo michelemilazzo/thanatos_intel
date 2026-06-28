@@ -62,6 +62,31 @@ def _nav_links():
     items = [{"label": l, "to": d, "kind": "DocType"} for l, d in comp if frappe.db.exists("DocType", d)]
     if items:
         nav.append({"title": "Compliance / ISMS (ISO)", "items": items})
+    # gruppo "Sezioni" in cima: i link della ex barra di navigazione raggruppati nel Cockpit
+    sezioni = [
+        ("\U0001f4ac Comunicazioni", "comunicazioni", "page"),
+        ("\U0001f4de Centralino", "centralino", "page"),
+        ("\U0001f4c2 Casi", "Investigation Case", "DocType"),
+        ("\U0001fa6a DD", "Diplomatic Eligibility Case", "DocType"),
+        ("\U0001f4dc Mandati", "Agency Mandate", "DocType"),
+        ("\U0001f58a Firme", "Signature Request", "DocType"),
+        ("\U0001f4b6 Billing", "Diplomatic Proforma", "DocType"),
+        ("\U0001f465 Rubrica", "Customer", "DocType"),
+        ("\U0001f50d Intelligence", "OSINT Job", "DocType"),
+        ("\U0001f6e1 Antifrode", "Blacklist Entry", "DocType"),
+        ("\U0001f4cb Compliance", "Risk Score", "DocType"),
+        ("\U0001f50e SEO", "SEO Keyword", "DocType"),
+        ("\U0001f916 AI", "thanatos-ai-architect", "page"),
+        ("\U0001f4e7 Webmail", "/mail", "http"),
+        ("\U0001f310 Sito", "https://thanatos.agency", "http"),
+    ]
+    sez_items = []
+    for label, to, kind in sezioni:
+        if kind == "DocType" and not frappe.db.exists("DocType", to):
+            continue
+        sez_items.append({"label": label, "to": to, "kind": kind})
+    if sez_items:
+        nav.insert(0, {"title": "\U0001f3af Sezioni", "items": sez_items})
     return nav
 
 
