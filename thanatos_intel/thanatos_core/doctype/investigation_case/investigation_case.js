@@ -586,7 +586,21 @@ window.ThanatosCockpit = {
 				$w.find('.ck-start').on('click', () => frappe.call('thanatos_intel.workflow.engine.start',
 					{ case_name: frm.doc.name }).then(() => { frappe.show_alert({ message: 'Pratica avviata', indicator: 'green' }); frm.reload_doc(); }));
 			} else {
-				$w.html('<div class="ck-card ck-mut">Scegli un <b>Blueprint</b> (tab Workflow) per avviare la pratica guidata passo-passo.</div>');
+				$w.html('<div class="ck-card"><span class="ck-mut">Nessun <b>Blueprint di servizio</b> selezionato: scegline uno per avviare la pratica guidata passo-passo.</span> '
+					+ '<button class="btn btn-sm btn-primary ck-pick-bp" style="margin-left:8px">' + __('Scegli Blueprint') + '</button></div>');
+				$w.find('.ck-pick-bp').on('click', () => {
+					const d = new frappe.ui.Dialog({
+						title: __('Scegli Blueprint di servizio'),
+						fields: [{ fieldname: 'bp', fieldtype: 'Link', options: 'Service Blueprint', label: __('Blueprint'), reqd: 1 }],
+						primary_action_label: __('Imposta'),
+						primary_action(v) {
+							d.hide();
+							frm.set_value('blueprint', v.bp);
+							frm.save().then(() => { frappe.show_alert({ message: __('Blueprint impostato'), indicator: 'green' }); frm.reload_doc(); });
+						}
+					});
+					d.show();
+				});
 			}
 			return;
 		}
