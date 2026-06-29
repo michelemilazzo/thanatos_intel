@@ -889,31 +889,31 @@ window.ThanatosVerifiche = {
 		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Carico listino…</div>');
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
 		const caseName = (frm && frm.doc) ? frm.doc.name : null;
-		frappe.call('thanatos_intel.osint.tool_catalog.catalogo_due', { case: caseName }).then(r => {
-			const c = r.message || {}; const st = c.stats || {};
-			const row = it => '<div class="vf-cr" data-txt="' + esc((it.capacita + ' ' + it.categoria).toLowerCase()) + '" '
-				+ 'style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-bottom:1px solid #eee;' + (it.relevant ? 'background:#fff8e6' : '') + '">'
-				+ '<div style="flex:1;font-size:12.5px">' + (it.relevant ? '⭐ ' : '') + '<b>' + esc(it.capacita) + '</b> <span class="vf-mut">· ' + esc(it.categoria) + '</span>'
-				+ '<br><span class="vf-mut" style="font-size:11px">' + esc(it.sorgenti) + '</span></div>'
-				+ '<div style="white-space:nowrap">€ <input class="vf-z" data-id="' + it.id + '" type="number" step="0.01" min="0" value="' + it.prezzo + '" style="width:74px;padding:3px 5px;border:1px solid #ddd;border-radius:5px">'
-				+ (it.override ? ' <span title="prezzo personalizzato (Z)" style="color:#b8860b;font-weight:700">Z</span>' : '') + '</div>'
+		const load = () => frappe.call('thanatos_intel.osint.tool_catalog.catalogo_due', { case: caseName }).then(r => {
+			const c = r.message || {}; const rule = c.rule || { mode: 'multiplier', value: 1 };
+			const opt = (val, lbl) => '<option value="' + val + '"' + (rule.mode === val ? ' selected' : '') + '>' + lbl + '</option>';
+			const row = it => '<div class="vf-cr" data-txt="' + esc((it.capacita + ' ' + it.categoria).toLowerCase()) + '" style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-bottom:1px solid #eee;' + (it.relevant ? 'background:#fff8e6' : '') + '">'
+				+ '<div style="flex:1;font-size:12.5px">' + (it.relevant ? '⭐ ' : '') + (it.tipo === 'free' ? '🟢 ' : '🔵 ') + '<b>' + esc(it.capacita) + '</b> <span class="vf-mut">· ' + esc(it.categoria) + '</span><br><span class="vf-mut" style="font-size:11px">' + esc(it.sorgenti) + '</span></div>'
+				+ '<div class="vf-mut" style="font-size:11px;text-align:right;white-space:nowrap">listino<br>€ ' + (it.base).toFixed(2) + '</div>'
+				+ '<div style="white-space:nowrap;text-align:right;font-size:11px">rivendita<br>€ <input class="vf-z" data-id="' + it.id + '" type="number" step="0.01" min="0" value="' + it.rivendita + '" style="width:72px;padding:3px 5px;border:1px solid #ddd;border-radius:5px">' + (it.override ? ' <span title="prezzo personalizzato" style="color:#b8860b;font-weight:700">✎</span>' : '') + '</div>'
 				+ '<button class="btn btn-xs btn-default vf-addc" data-id="' + it.id + '" data-l="' + esc(it.capacita) + '">➕</button></div>';
-			const sect = (title, items, badge) => items.length ? ('<div style="margin-top:8px"><div style="font-weight:700;font-size:12px;margin-bottom:2px">' + badge + ' ' + title + '</div>'
-				+ items.sort((a, b) => (b.relevant ? 1 : 0) - (a.relevant ? 1 : 0)).map(row).join('') + '</div>') : '';
 			let h = '<div class="vf-res">'
+				+ '<div style="font-weight:700;font-size:12px;margin-bottom:4px">🔵 Listino ' + esc(c.listino_label || '') + '</div>'
+				+ '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap;font-size:12px">Rivendita cliente: '
+				+ '<select class="vf-rule-mode" style="padding:3px 5px;border:1px solid #ddd;border-radius:5px">' + opt('multiplier', '× Moltiplicatore') + opt('percent', '+ Percentuale %') + opt('fixed', '€ Prezzo fisso') + '</select>'
+				+ '<input class="vf-rule-val" type="number" step="0.01" value="' + (rule.value != null ? rule.value : 1) + '" style="width:80px;padding:3px 5px;border:1px solid #ddd;border-radius:5px">'
+				+ '<button class="btn btn-xs btn-primary vf-rule-apply">Applica a tutti</button>'
+				+ '<span class="vf-mut" style="font-size:11px">prezzi base su erp.onekeyco.com · modifica una cella per un prezzo su misura</span></div>'
 				+ '<input class="vf-cq" placeholder="🔎 cerca capacità…" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:6px">'
-				+ '<div class="vf-mut" style="margin-bottom:4px;font-size:11px">⭐ pertinente al caso (' + (st.pertinenti || 0) + ') · prezzo editabile = personalizzato per questo caso (Z) · ➕ usalo nel preventivo</div>'
-				+ sect('A pagamento (Listino Y)', c.paid || [], '🔵')
-				+ sect('Gratuiti — valore aggiunto (Listino X)', c.free || [], '🟢')
+				+ (c.voci || []).map(row).join('')
 				+ '</div>';
 			$o.html(h);
 			$o.find('.vf-cq').on('input', function () { const q = this.value.toLowerCase(); $o.find('.vf-cr').each(function () { $(this).toggle(!q || (String($(this).attr('data-txt')) || '').indexOf(q) >= 0); }); });
-			$o.find('.vf-z').on('change', function () {
-				frappe.call('thanatos_intel.osint.tool_catalog.set_service_price', { case: caseName, service_id: $(this).data('id'), prezzo: this.value })
-					.then(() => frappe.show_alert({ message: 'Prezzo aggiornato', indicator: 'green' }));
-			});
-			$o.find('.vf-addc').on('click', function () { frappe.show_alert({ message: '«' + $(this).data('l') + '» — includilo da “Preventivo & pagamento cliente”', indicator: 'blue' }); });
+			$o.find('.vf-z').on('change', function () { frappe.call('thanatos_intel.osint.tool_catalog.set_service_price', { case: caseName, service_id: $(this).data('id'), prezzo: this.value }).then(() => frappe.show_alert({ message: 'Prezzo rivendita aggiornato', indicator: 'green' })); });
+			$o.find('.vf-rule-apply').on('click', function () { frappe.call('thanatos_intel.osint.tool_catalog.set_resale_rule', { case: caseName, mode: $o.find('.vf-rule-mode').val(), value: $o.find('.vf-rule-val').val() }).then(() => { frappe.show_alert({ message: 'Regola rivendita applicata', indicator: 'green' }); load(); }); });
+			$o.find('.vf-addc').on('click', function () { frappe.show_alert({ message: '«' + $(this).data('l') + '» — includilo da "Preventivo & pagamento cliente"', indicator: 'blue' }); });
 		});
+		load();
 	},
 	freeForm(frm, $w) {
 		const self = this;

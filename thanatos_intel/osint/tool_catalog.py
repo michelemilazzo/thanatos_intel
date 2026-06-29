@@ -213,32 +213,55 @@ def _relevant_caps(case):
 
 @frappe.whitelist()
 def catalogo_due(case=None):
-    """Listino a due voci: X (dati gratuiti, valore aggiunto) e Y (a pagamento),
-    con pertinenza al caso e prezzo Z personalizzato (override per caso)."""
+    """Listino unico (base = listino ERP) + prezzo rivendita cliente calcolato
+    da una regola per-caso (moltiplicatore / percentuale / prezzo fisso) con
+    override per singola voce. Voci pertinenti al caso in cima."""
     overrides = {}
     if case:
         raw = frappe.db.get_value("Investigation Case", case, "service_price_overrides")
         overrides = frappe.parse_json(raw) if raw else {}
+    rule = overrides.get("_rule") or {"mode": "multiplier", "value": 1}
     rel = _relevant_caps(case)
-    free_list, paid_list = [], []
+
+    def _resale(base, slug):
+        ovr = overrides.get(slug)
+        if ovr is not None:
+            return round(float(ovr), 2), True
+        m = rule.get("mode", "multiplier")
+        val = float(rule.get("value", 1) or 0)
+        if m == "percent":
+            return round(base * (1 + val / 100.0), 2), False
+        if m == "fixed":
+            return round(val, 2), False
+        return round(base * val, 2), False
+
+    voci = []
     for c in CAPACITA:
         name = c["capacita"]
         slug = frappe.scrub(name)
-        y = _CAP_PREZZO_Y.get(name, 5.0)
-        is_free = c.get("consiglio") in ("free", "misto")
-        prezzo_def = round(y * 0.5, 2) if is_free else round(y, 2)
-        ovr = overrides.get(slug)
-        item = {"id": slug, "capacita": name, "categoria": c.get("categoria"),
-                "tipo": "free" if is_free else "paid",
-                "prezzo_default": prezzo_def,
-                "prezzo": ovr if ovr is not None else prezzo_def,
-                "override": ovr is not None,
-                "relevant": c.get("categoria") in rel,
-                "sorgenti": ", ".join((c.get("free") or []) + (c.get("paid") or []))}
-        (free_list if is_free else paid_list).append(item)
-    return {"free": free_list, "paid": paid_list,
-            "stats": {"free": len(free_list), "paid": len(paid_list),
-                      "pertinenti": len([1 for x in free_list + paid_list if x["relevant"]])}}
+        base = round(_CAP_PREZZO_Y.get(name, 5.0), 2)
+        riv, ovr = _resale(base, slug)
+        voci.append({"id": slug, "capacita": name, "categoria": c.get("categoria"),
+                     "tipo": "free" if c.get("consiglio") in ("free", "misto") else "paid",
+                     "base": base, "rivendita": riv, "override": ovr,
+                     "relevant": c.get("categoria") in rel,
+                     "sorgenti": ", ".join((c.get("free") or []) + (c.get("paid") or []))})
+    voci.sort(key=lambda x: (not x["relevant"], x["capacita"]))
+    label = frappe.utils.now_datetime().strftime("%m/%Y")
+    return {"voci": voci, "rule": rule, "listino_label": label,
+            "stats": {"totali": len(voci), "pertinenti": len([1 for x in voci if x["relevant"]])}}
+
+
+@frappe.whitelist()
+def set_resale_rule(case, mode, value):
+    """Regola di rivendita per-caso: moltiplicatore | percent | fixed."""
+    if not case or not frappe.has_permission("Investigation Case", "write", doc=case):
+        frappe.throw("Permessi insufficienti.")
+    raw = frappe.db.get_value("Investigation Case", case, "service_price_overrides")
+    data = frappe.parse_json(raw) if raw else {}
+    data["_rule"] = {"mode": mode, "value": round(float(value or 0), 2)}
+    frappe.db.set_value("Investigation Case", case, "service_price_overrides", frappe.as_json(data))
+    return {"ok": True, "rule": data["_rule"]}
 
 
 @frappe.whitelist()
