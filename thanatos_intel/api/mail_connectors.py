@@ -267,19 +267,22 @@ def _sync_connector_entry(c, user_key):
     if not delivery_pw:
         return 0, f"Nessuna app-password webmail per {target}. Esegui il provisioning."
 
-    # OAuth2 Microsoft: ignora pw, usa XOAUTH2
+    # OAuth2 Microsoft: usa XOAUTH2 via mmos_brand
     access_token = None
     if c.get("oauth_provider") == "microsoft":
-        access_token = _get_ms_access_token(c)
+        try:
+            from mmos_brand.oauth.microsoft import get_valid_token
+            access_token = get_valid_token(c, _decrypt, _encrypt)
+        except Exception as _e:
+            return 0, f"Token Microsoft: {_e}"
         if not access_token:
             return 0, "Token Microsoft scaduto o non rinnovabile. Ricollega l'account."
-        pw = None  # non usata
 
     try:
         M = imaplib.IMAP4_SSL(c["imap_host"], int(c["imap_port"]))
         if access_token:
-            xoauth2 = f"user={c['email']}\x01auth=Bearer {access_token}\x01\x01"
-            M.authenticate("XOAUTH2", lambda x: xoauth2.encode())
+            from mmos_brand.oauth.microsoft import imap_xoauth2_string
+            M.authenticate("XOAUTH2", lambda x: imap_xoauth2_string(c["email"], access_token))
         else:
             M.login(c["email"], pw)
     except Exception as e:
@@ -378,129 +381,64 @@ def _deliver_to_stalwart(target_mailbox, app_pw, raw_msg, source_email):
         return False
 
 
-# ── OAuth2 Microsoft ─────────────────────────────────────────────────────────
 
-MS_AUTH_URL  = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
-MS_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-MS_SCOPES    = "https://outlook.office.com/IMAP.AccessAsUser.All offline_access"
-MS_IMAP_HOST = "outlook.office365.com"
-OAUTH_STATES_FILE = "/etc/thanatos/oauth_states.json"
-
-
-def _ms_oauth_cfg():
-    vp = "/home/frappe/.secrets/integrations.json"
-    try:
-        v = json.load(open(vp))
-        ms = v.get("microsoft_oauth", {}).get("fields", {})
-        cid = (ms.get("client_id") or {}).get("value") if isinstance(ms.get("client_id"), dict) else ms.get("client_id", "")
-        cs  = (ms.get("client_secret") or {}).get("value") if isinstance(ms.get("client_secret"), dict) else ms.get("client_secret", "")
-        return (cid or "").strip(), (cs or "").strip()
-    except Exception:
-        return "", ""
-
-
-def _state_store_load():
-    try:
-        if os.path.exists(OAUTH_STATES_FILE):
-            return json.load(open(OAUTH_STATES_FILE)) or {}
-    except Exception:
-        pass
-    return {}
-
-
-def _state_store_save(d):
-    tmp = OAUTH_STATES_FILE + ".tmp"
-    with open(tmp, "w") as f:
-        json.dump(d, f)
-    os.replace(tmp, OAUTH_STATES_FILE)
-    try:
-        os.chmod(OAUTH_STATES_FILE, 0o640)
-    except Exception:
-        pass
-
-
-def _state_cleanup(d):
-    now = time.time()
-    return {k: v for k, v in d.items() if v.get("exp", 0) > now}
-
+# ── OAuth2 Microsoft (via mmos_brand.oauth.microsoft) ─────────────────────────
 
 @frappe.whitelist()
 def microsoft_oauth_start():
-    """Genera URL di autorizzazione Microsoft. Ritorna l'URL a cui redirigere il browser."""
+    """Avvia flusso OAuth2 Microsoft. Ritorna URL di autorizzazione."""
     _guard_user()
-    cid, _ = _ms_oauth_cfg()
+    from mmos_brand.oauth.microsoft import get_cfg, new_state, build_auth_url
+    cid, _ = get_cfg()
     if not cid:
-        frappe.throw("Client ID Microsoft non configurato. Contatta l'amministratore.")
-
+        frappe.throw("Client ID Microsoft non configurato (mmos_ms_oauth_client_id in site_config).")
     target = _target_mailbox()
     if not target:
         frappe.throw("Nessuna casella @thanatos.agency associata. Contatta l'amministratore.")
-
-    state = uuid.uuid4().hex
     redirect_uri = frappe.utils.get_url("/portal/oauth/microsoft-callback")
-
-    states = _state_cleanup(_state_store_load())
-    states[state] = {"user": frappe.session.user, "target": target, "exp": time.time() + 600}
-    _state_store_save(states)
-
-    import urllib.parse
-    params = {
-        "client_id": cid,
-        "response_type": "code",
-        "redirect_uri": redirect_uri,
-        "response_mode": "query",
-        "scope": MS_SCOPES,
-        "state": state,
-    }
-    url = MS_AUTH_URL + "?" + urllib.parse.urlencode(params)
-    return {"ok": True, "url": url}
+    state = new_state({"user": frappe.session.user, "target": target, "app": "thanatos"})
+    return {"ok": True, "url": build_auth_url(redirect_uri, state, cid)}
 
 
 @frappe.whitelist(allow_guest=True)
 def microsoft_oauth_finish(code=None, state=None, error=None, error_description=None):
-    """Callback OAuth2: scambia code per token, salva connettore, redirect."""
+    """Callback OAuth2: scambia code, salva connettore, redirect."""
     if error:
         frappe.local.flags.redirect_location = "/portal/email-connectors?err=" + (error or "oauth_error")
         raise frappe.Redirect
 
-    states = _state_cleanup(_state_store_load())
-    entry = states.pop(state, None) if state else None
-    _state_store_save(states)
-
+    from mmos_brand.oauth.microsoft import (
+        pop_state, get_cfg, exchange_code, resolve_email,
+    )
+    entry = pop_state(state) if state else None
     if not entry:
         frappe.local.flags.redirect_location = "/portal/email-connectors?err=state_invalid"
         raise frappe.Redirect
 
-    user = entry["user"]
+    user   = entry["user"]
     target = entry["target"]
-    cid, cs = _ms_oauth_cfg()
+    cid, cs = get_cfg()
     redirect_uri = frappe.utils.get_url("/portal/oauth/microsoft-callback")
 
-    import requests as _req
-    r = _req.post(MS_TOKEN_URL, data={
-        "client_id": cid, "client_secret": cs,
-        "code": code, "redirect_uri": redirect_uri,
-        "grant_type": "authorization_code",
-    }, timeout=20)
-
-    if r.status_code >= 400:
+    try:
+        tok = exchange_code(code, redirect_uri, cid, cs)
+    except Exception:
         frappe.local.flags.redirect_location = "/portal/email-connectors?err=token_exchange"
         raise frappe.Redirect
 
-    tok = r.json()
-    ms_email = _resolve_ms_email(tok.get("access_token", ""))
+    from mmos_brand.oauth.microsoft import IMAP_HOST
+    ms_email = resolve_email(tok.get("access_token", ""))
     if not ms_email:
         frappe.local.flags.redirect_location = "/portal/email-connectors?err=no_email"
         raise frappe.Redirect
 
-    # salva connettore
     connectors = _load(user)
     connectors = [c for c in connectors if c.get("email") != ms_email]
     connectors.append({
         "id": str(uuid.uuid4()),
         "provider": "outlook_oauth",
         "label": f"Microsoft — {ms_email}",
-        "imap_host": MS_IMAP_HOST,
+        "imap_host": IMAP_HOST,
         "imap_port": 993,
         "email": ms_email,
         "password_enc": "",
@@ -518,69 +456,5 @@ def microsoft_oauth_finish(code=None, state=None, error=None, error_description=
         "synced_count": 0,
     })
     _save(connectors, user)
-
     frappe.local.flags.redirect_location = "/portal/email-connectors?ok=microsoft"
     raise frappe.Redirect
-
-
-def _resolve_ms_email(access_token):
-    """Legge l'email dell'utente Microsoft dal token (JWT claims o Graph)."""
-    try:
-        # JWT: payload base64 (no verifica firma, solo lettura)
-        parts = access_token.split(".")
-        if len(parts) >= 2:
-            padded = parts[1] + "=="
-            payload = json.loads(base64.b64decode(padded.encode()).decode("utf-8", errors="replace"))
-            for key in ("preferred_username", "upn", "email", "unique_name"):
-                v = payload.get(key, "")
-                if v and "@" in v:
-                    return v.strip().lower()
-    except Exception:
-        pass
-    # fallback: Graph /me
-    try:
-        import requests as _req
-        r = _req.get("https://graph.microsoft.com/v1.0/me",
-                     headers={"Authorization": "Bearer " + access_token}, timeout=10)
-        if r.ok:
-            return (r.json().get("mail") or r.json().get("userPrincipalName") or "").strip().lower()
-    except Exception:
-        pass
-    return ""
-
-
-def _get_ms_access_token(connector):
-    """Restituisce access_token valido; refresha se scaduto o in scadenza entro 5 min."""
-    exp = connector.get("token_expires_at", 0)
-    if exp and time.time() < exp - 300:
-        try:
-            return _decrypt(connector["access_token_enc"])
-        except Exception:
-            pass
-
-    # refresh
-    cid, cs = _ms_oauth_cfg()
-    try:
-        refresh_tok = _decrypt(connector.get("refresh_token_enc", ""))
-    except Exception:
-        return None
-    if not refresh_tok:
-        return None
-
-    import requests as _req
-    r = _req.post(MS_TOKEN_URL, data={
-        "client_id": cid, "client_secret": cs,
-        "refresh_token": refresh_tok,
-        "grant_type": "refresh_token",
-        "scope": MS_SCOPES,
-    }, timeout=20)
-
-    if r.status_code >= 400:
-        return None
-
-    tok = r.json()
-    connector["access_token_enc"] = _encrypt(tok.get("access_token", ""))
-    if tok.get("refresh_token"):
-        connector["refresh_token_enc"] = _encrypt(tok["refresh_token"])
-    connector["token_expires_at"] = time.time() + int(tok.get("expires_in", 3600))
-    return tok.get("access_token")
