@@ -568,18 +568,14 @@ window.ThanatosCockpit = {
 		return Math.min(4, Math.floor(idx * 5 / Math.max(1, total)));
 	},
 	render(frm) {
-		if (frm.is_new()) return;
+		if (frm.is_new() || !frm.fields_dict.cockpit_panel) return;
 		this.injectCss();
-		if (!frm.dashboard || !frm.dashboard.add_section) return;
-		$('#thanatos-cockpit').closest('.form-dashboard-section').remove();
-		frm.dashboard.add_section('<div id="thanatos-cockpit"><div class="ck-mut">Carico cockpit…</div></div>', __('Cockpit pratica'));
+		const $w = frm.fields_dict.cockpit_panel.$wrapper;
+		$w.html('<div class="ck-mut">Carico cockpit…</div>');
 		const self = this;
 		frappe.call('thanatos_intel.workflow.api.board', { case_name: frm.doc.name })
-			.then(r => {
-				const $w = $('#thanatos-cockpit').last();
-				if ($w.length) self.draw(frm, $w, r.message || {});
-			})
-			.catch(() => $('#thanatos-cockpit').last().html('<div class="ck-mut">Cockpit non disponibile.</div>'));
+			.then(r => self.draw(frm, $w, r.message || {}))
+			.catch(() => $w.html('<div class="ck-mut">Cockpit non disponibile.</div>'));
 	},
 	draw(frm, $w, b) {
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
@@ -722,18 +718,159 @@ window.ThanatosCockpit = {
 	}
 };
 
-// Render del cockpit + declutter (nasconde pannelli ridondanti, collassa sezioni)
+// Render del cockpit + pannello verifiche + declutter (nasconde pannelli ridondanti)
 frappe.ui.form.on('Investigation Case', {
 	refresh(frm) {
 		if (frm.is_new()) return;
 		ThanatosCockpit.render(frm);
+		ThanatosVerifiche.render(frm);
 		['case_timeline', 'ai_suggest', 'progress_panel'].forEach(f => { if (frm.fields_dict[f]) frm.set_df_property(f, 'hidden', 1); });
-		['sb_assignments', 'sb_entities', 'sb_activities', 'sb_integrations', 'sb_monitor', 'sb_outcome', 'sb_engagement', 'wf_section'].forEach(s => {
-			const fld = frm.fields_dict[s];
-			if (fld) { frm.set_df_property(s, 'collapsible', 1); try { fld.collapse && fld.collapse(true); } catch (e) {} }
-		});
 	}
 });
+
+// ── Pannello "Strumenti dati (openapi)" nel tab Entità & Verifiche ───────────
+// Per-entità (società → visura/soci-UBO/KYC; persona → KYC/negatività/patrimoniale)
+// + catalogo e ricerca libera. Ogni run scrive un reperto sul caso.
+window.ThanatosVerifiche = {
+	OC: 'thanatos_intel.osint.openapi_client.',
+	render(frm) {
+		if (frm.is_new() || !frm.fields_dict.verifiche_panel) return;
+		this.injectCss();
+		const $w = frm.fields_dict.verifiche_panel.$wrapper;
+		$w.html('<div class="vf-mut">Carico entità…</div>');
+		const self = this;
+		frappe.call(this.OC + 'case_entities', { case: frm.doc.name })
+			.then(r => self.draw(frm, $w, (r.message || {}).entities || []))
+			.catch(() => $w.html('<div class="vf-mut">Strumenti non disponibili.</div>'));
+	},
+	draw(frm, $w, ents) {
+		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+		let h = '<div class="vf-card"><div class="vf-head">Strumenti dati per le entità del caso</div>';
+		if (!ents.length) {
+			h += '<div class="vf-mut">Nessuna entità nel caso. Aggiungile in "Entities Involved" qui sopra.</div>';
+		} else {
+			ents.forEach(e => {
+				const isCo = e.type === 'Company';
+				const tlabel = isCo ? 'Società' : (e.type === 'Person' ? 'Persona' : (e.type || 'Persona'));
+				h += `<div class="vf-row"><div class="vf-ent"><span class="vf-nm">${esc(e.full_name)}</span>`
+					+ `<span class="vf-chip">${tlabel}</span>`
+					+ (isCo ? `<span class="vf-id">${e.piva ? 'P.IVA ' + esc(e.piva) : '⚠ P.IVA mancante'}</span>` : (e.cf ? `<span class="vf-id">${esc(e.cf)}</span>` : '')) + '</div>'
+					+ '<div class="vf-acts">';
+				if (isCo) {
+					h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 KYC', 'kyc', e);
+				} else {
+					h += this.btn('🛂 KYC', 'kyc', e) + this.btn('⚖ Negatività', 'neg', e) + this.btn('🏦 Patrimoniale', 'patr', e);
+				}
+				h += '</div></div>';
+			});
+		}
+		h += '<div class="vf-foot"><button class="btn btn-xs btn-default vf-cat">🧰 Catalogo strumenti</button>'
+			+ '<button class="btn btn-xs btn-default vf-free">🔎 Ricerca libera</button></div>';
+		h += '<div class="vf-out" style="display:none"></div></div>';
+		$w.html(h);
+		const self = this;
+		$w.find('.vf-btn').on('click', function () { self.run(frm, $w, $(this).data('act'), $(this).data('idx'), ents); });
+		$w.find('.vf-cat').on('click', () => self.catalog($w));
+		$w.find('.vf-free').on('click', () => self.freeForm(frm, $w));
+	},
+	btn(label, act, e) {
+		return `<button class="btn btn-xs btn-default vf-btn" data-act="${act}" data-idx="${e.idx}">${label}</button>`;
+	},
+	run(frm, $w, act, idx, ents) {
+		const e = ents.find(x => String(x.idx) === String(idx));
+		if (!e) return;
+		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Interrogazione openapi…</div>');
+		const done = (html) => $o.html('<div class="vf-res">' + html + '</div>');
+		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+		const cb = (fmt) => ({ callback: r => done(fmt(r.message || {})), freeze: true, freeze_message: 'Interrogazione…' });
+		const args = { investigation_case: frm.doc.name };
+		if (act === 'visura') {
+			if (!e.piva) return done('⚠ Manca la P.IVA su questa entità.');
+			frappe.call(Object.assign({ method: 'thanatos_intel.osint.registro_imprese.verifica_impresa', args: Object.assign({ piva: e.piva }, args) }, cb(m => {
+				const c = m.company || {}; return '<b>' + esc(c.denominazione || e.full_name) + '</b><br>Stato: ' + esc(c.stato || '-') + ' · Capitale: ' + esc(c.capitale || '-') + ' · ATECO: ' + esc(c.ateco || '-');
+			})));
+		} else if (act === 'soci') {
+			if (!e.piva) return done('⚠ Manca la P.IVA su questa entità.');
+			frappe.call(Object.assign({ method: this.OC + 'soci_titolari', args: Object.assign({ piva: e.piva }, args) }, cb(m => {
+				const soci = (m.soci || []).map(s => esc(s.nome) + ' (' + s.quota + '%)').join('; ') || '—';
+				const ubo = (m.ubo || []).map(u => esc(u.nome) + ' [' + (u.cf || '') + ']').join('; ') || '—';
+				return '<b>Soci:</b> ' + soci + '<br><b>UBO:</b> ' + ubo;
+			})));
+		} else if (act === 'kyc') {
+			frappe.call(Object.assign({ method: this.OC + 'screening_kyc', args: Object.assign({ query: e.full_name, mode: 'pep' }, args) }, cb(m => {
+				if (m.error) return '⚠ ' + esc(m.error);
+				const hl = (m.hits || []).map(x => esc(x.nome)).join(', ') || 'nessun match';
+				return '<b>Screening PEP «' + esc(e.full_name) + '»:</b> ' + (m.match || 0) + ' match — ' + hl;
+			})));
+		} else if (act === 'neg') {
+			const idv = e.cf || e.piva;
+			if (!idv) return done('⚠ Manca CF/P.IVA.');
+			frappe.call(Object.assign({ method: this.OC + 'negativita', args: Object.assign({ cf_piva: idv }, args) }, cb(m => {
+				if (m.error) return '⚠ ' + esc(m.error);
+				return '<b>Negatività ' + esc(idv) + ':</b> ' + esc(m.status) + ' — ' + esc(JSON.stringify(m.esito || ''));
+			})));
+		} else if (act === 'patr') {
+			const parts = (e.full_name || '').trim().split(/\s+/);
+			frappe.prompt([
+				{ fieldtype: 'Data', fieldname: 'name', label: 'Nome', default: parts[0] || '', reqd: 1 },
+				{ fieldtype: 'Data', fieldname: 'surname', label: 'Cognome', default: parts.slice(1).join(' '), reqd: 1 },
+				{ fieldtype: 'Data', fieldname: 'cf', label: 'Codice Fiscale', default: e.cf || '', reqd: 1 }
+			], (v) => {
+				frappe.call(Object.assign({ method: this.OC + 'patrimoniale', args: Object.assign({ name: v.name, surname: v.surname, tax_code: v.cf }, args) }, cb(m => {
+					if (m.error) return '⚠ ' + esc(m.error);
+					return '<b>Patrimoniale ' + esc(v.name + ' ' + v.surname) + ':</b> ' + esc(m.status);
+				})));
+			}, 'Patrimoniale persona', 'Esegui');
+		}
+	},
+	catalog($w) {
+		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">…</div>');
+		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+		frappe.call(this.OC + 'strumenti').then(r => {
+			const s = r.message || {};
+			let h = '<div class="vf-res"><div class="vf-mut">' + (s.totale_servizi || 0) + ' servizi · ' + esc(s.ambiente) + ' · ' + (s.connesso ? 'connesso' : 'non connesso') + '</div>';
+			(s.famiglie || []).forEach(f => { h += '<div style="margin:6px 0"><b>' + esc(f.famiglia) + '</b> <span class="vf-mut">(' + esc(f.pattern) + ', ' + esc(f.fascia) + ')</span><br><span class="vf-mut">' + esc((f.strumenti || []).join(' · ')) + '</span></div>'; });
+			$o.html(h + '</div>');
+		});
+	},
+	freeForm(frm, $w) {
+		frappe.prompt([
+			{ fieldtype: 'Select', fieldname: 'tool', label: 'Strumento', reqd: 1, options: ['Visura camerale (P.IVA)', 'Soci & UBO (P.IVA)', 'Screening KYC (nome)', 'Negatività (CF/P.IVA)', 'Verifica IBAN', 'Veicolo (targa)'].join('\n') },
+			{ fieldtype: 'Data', fieldname: 'value', label: 'Valore (P.IVA / nome / CF / IBAN / targa)', reqd: 1 }
+		], (v) => {
+			const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Interrogazione…</div>');
+			const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+			const done = h => $o.html('<div class="vf-res">' + h + '</div>');
+			const a = { investigation_case: frm.doc.name };
+			const T = v.tool;
+			if (T.indexOf('Visura') === 0) frappe.call({ method: 'thanatos_intel.osint.registro_imprese.verifica_impresa', args: Object.assign({ piva: v.value }, a), callback: r => { const c = (r.message || {}).company || {}; done('<b>' + esc(c.denominazione || '-') + '</b> · ' + esc(c.stato || '-')); } });
+			else if (T.indexOf('Soci') === 0) frappe.call({ method: this.OC + 'soci_titolari', args: Object.assign({ piva: v.value }, a), callback: r => { const m = r.message || {}; done('Soci: ' + ((m.soci || []).map(s => esc(s.nome) + ' (' + s.quota + '%)').join('; ') || '—') + '<br>UBO: ' + ((m.ubo || []).map(u => esc(u.nome)).join('; ') || '—')); } });
+			else if (T.indexOf('Screening') === 0) frappe.call({ method: this.OC + 'screening_kyc', args: Object.assign({ query: v.value, mode: 'pep' }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : (m.match || 0) + ' match — ' + ((m.hits || []).map(x => esc(x.nome)).join(', ') || 'nessuno')); } });
+			else if (T.indexOf('Negatività') === 0) frappe.call({ method: this.OC + 'negativita', args: Object.assign({ cf_piva: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : esc(m.status) + ' — ' + esc(JSON.stringify(m.esito || ''))); } });
+			else if (T.indexOf('IBAN') >= 0) frappe.call({ method: this.OC + 'verifica_iban', args: Object.assign({ iban: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : 'Valido: ' + esc(m.valido) + ' · Banca: ' + esc(m.banca || '-')); } });
+			else if (T.indexOf('Veicolo') >= 0) frappe.call({ method: this.OC + 'veicolo', args: Object.assign({ targa: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : esc(JSON.stringify(m.dati || {}).slice(0, 300))); } });
+		}, 'Ricerca libera', 'Esegui');
+	},
+	injectCss() {
+		if (document.getElementById('vf-css')) return;
+		const css = `
+		.vf-card{border:1px solid var(--border-color);border-radius:12px;background:var(--card-bg);padding:12px 14px;margin:6px 0}
+		.vf-head{font-size:13px;font-weight:500;color:var(--text-color);margin-bottom:10px}
+		.vf-mut{color:var(--text-muted);font-size:12.5px}
+		.vf-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--border-color);flex-wrap:wrap}
+		.vf-row:first-of-type{border-top:0}
+		.vf-ent{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+		.vf-nm{font-size:13px;color:var(--text-color)}
+		.vf-chip{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border:1px solid var(--border-color);padding:2px 7px;border-radius:10px}
+		.vf-id{font-size:11.5px;color:var(--text-muted);font-family:monospace}
+		.vf-acts{display:flex;gap:6px;flex-wrap:wrap}
+		.vf-foot{margin-top:12px;display:flex;gap:8px}
+		.vf-out{margin-top:12px}
+		.vf-res{background:var(--bg-color);border:1px solid #C8A96E;border-radius:8px;padding:12px;font-size:13px;color:var(--text-color);line-height:1.6}
+		`;
+		$('<style id="vf-css">').text(css).appendTo(document.head);
+	}
+};
 
 // --- Genera fattura ARES (azione one-click) ---
 frappe.ui.form.on("Investigation Case", {

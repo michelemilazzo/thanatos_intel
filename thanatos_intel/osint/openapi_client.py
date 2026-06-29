@@ -273,6 +273,29 @@ CATALOGO = [
 
 
 @frappe.whitelist()
+def case_entities(case):
+    """Entità del caso con identificativi normalizzati, per i bottoni per-entità."""
+    import re
+    out = []
+    c = frappe.get_doc("Investigation Case", case)
+    for i, ce in enumerate(c.get("case_entities") or []):
+        et = frappe.db.get_value("Investigation Entity", ce.entity,
+                                 ["full_name", "entity_type", "primary_identifier"], as_dict=True)
+        if not et:
+            continue
+        ident = et.primary_identifier or ""
+        digits = "".join(ch for ch in ident if ch.isdigit())
+        piva = digits if len(digits) == 11 else None
+        cf = None
+        m = re.search(r"\b([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])\b", ident.upper())
+        if m:
+            cf = m.group(1)
+        out.append({"idx": i, "entity": ce.entity, "full_name": et.full_name or ce.entity,
+                    "type": et.entity_type, "piva": piva, "cf": cf})
+    return {"entities": out}
+
+
+@frappe.whitelist()
 def strumenti():
     """Catalogo di tutti gli strumenti openapi.it a disposizione + stato connessione."""
     return {

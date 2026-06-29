@@ -8,6 +8,21 @@
  "search_fields": "case_number,case_title,client",
  "fields": [
   {
+   "fieldname": "tab_cockpit",
+   "fieldtype": "Tab Break",
+   "label": "Cockpit"
+  },
+  {
+   "fieldname": "cockpit_panel",
+   "fieldtype": "HTML",
+   "label": ""
+  },
+  {
+   "fieldname": "tab_dati",
+   "fieldtype": "Tab Break",
+   "label": "Dati caso"
+  },
+  {
    "fieldname": "sb_identity",
    "fieldtype": "Section Break",
    "label": "Case Identity"
@@ -131,6 +146,11 @@
    "label": "Summary / AI Draft"
   },
   {
+   "fieldname": "tab_entita",
+   "fieldtype": "Tab Break",
+   "label": "Entità & Verifiche"
+  },
+  {
    "fieldname": "sb_assignments",
    "fieldtype": "Section Break",
    "label": "Case Assignments / Commissions",
@@ -153,6 +173,16 @@
    "fieldtype": "Table",
    "label": "Entities",
    "options": "Case Entity"
+  },
+  {
+   "fieldname": "verifiche_panel",
+   "fieldtype": "HTML",
+   "label": "Strumenti dati (openapi)"
+  },
+  {
+   "fieldname": "tab_docesito",
+   "fieldtype": "Tab Break",
+   "label": "Documenti & Esito"
   },
   {
    "fieldname": "sb_activities",
