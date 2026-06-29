@@ -768,6 +768,7 @@ window.ThanatosVerifiche = {
 		const missing = ents.filter(e => e.type === 'Company' && !e.piva).length;
 		h += '<div class="vf-foot">'
 			+ (missing ? '<button class="btn btn-xs btn-primary vf-resolve">🔗 Risolvi ' + missing + ' P.IVA mancanti</button>' : '')
+			+ '<button class="btn btn-xs btn-default vf-prev">🧾 Preventivo & pagamento cliente</button>'
 			+ '<button class="btn btn-xs btn-default vf-cat">🧰 Catalogo strumenti (free/paid)</button>'
 			+ '<button class="btn btn-xs btn-default vf-free">🔎 Ricerca libera</button></div>';
 		h += '<div class="vf-out" style="display:none"></div></div>';
@@ -776,6 +777,7 @@ window.ThanatosVerifiche = {
 		$w.find('.vf-btn').on('click', function () { self.run(frm, $w, $(this).data('act'), $(this).data('idx'), ents); });
 		$w.find('.vf-cat').on('click', () => self.catalog($w));
 		$w.find('.vf-free').on('click', () => self.freeForm(frm, $w));
+		$w.find('.vf-prev').on('click', () => self.preventivo(frm, $w));
 		$w.find('.vf-resolve').on('click', () => {
 			const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Risoluzione P.IVA mancanti (openapi)…</div>');
 			frappe.call({ method: self.OC + 'risolvi_pive_caso', args: { case: frm.doc.name }, freeze: true, freeze_message: 'Risoluzione P.IVA…', callback: r => {
@@ -904,6 +906,53 @@ window.ThanatosVerifiche = {
 			else if (T.indexOf('IPinfo') === 0) frappe.call({ method: CY + 'ipinfo', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>IPinfo ' + esc(m.ip) + '</b><br>Org/ASN: ' + esc(m.org || '-') + '<br>' + esc(m.citta || '-') + ', ' + esc(m.paese || '-') + ' · ' + esc(m.hostname || '-')) });
 			else if (T.indexOf('urlscan') === 0) frappe.call({ method: CY + 'urlscan', args: Object.assign({ target: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>urlscan ' + esc(m.target) + '</b><br>' + (m.scansioni || 0) + ' scansioni<br>' + (m.ultime || []).map(u => esc(u.url) + ' → ' + esc(u.ip || '-') + ' (' + esc(u.paese || '-') + ')').join('<br>')) });
 		}, 'Ricerca libera', 'Esegui');
+	},
+	preventivo(frm, $w) {
+		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+		frappe.call('thanatos_intel.billing.openapi_billing.listino').then(r => {
+			const lst = r.message || {}; const voci = lst.voci || [];
+			const rows = voci.map(v => `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">
+				<input type="checkbox" class="vf-pv-it" data-id="${v.id}" data-label="${esc(v.label)}">
+				<span style="flex:1">${esc(v.label)}</span>
+				<span style="color:var(--text-muted)">€ ${v.prezzo.toFixed(2)}</span></label>`).join('');
+			const d = new frappe.ui.Dialog({
+				title: 'Preventivo cliente (markup ×' + (lst.markup || 3) + ')',
+				fields: [
+					{ fieldtype: 'HTML', fieldname: 'list', options: '<div style="max-height:240px;overflow:auto">' + rows + '</div>' },
+					{ fieldtype: 'Data', fieldname: 'payer_email', label: 'Email destinatario (vuoto = email cliente del caso)' },
+					{ fieldtype: 'Check', fieldname: 'invia', label: 'Invia subito il link via email', default: 1 },
+					{ fieldtype: 'HTML', fieldname: 'out' }
+				],
+				primary_action_label: 'Genera preventivo & link',
+				primary_action(v) {
+					const items = [];
+					d.$wrapper.find('.vf-pv-it:checked').each(function () {
+						items.push({ id: $(this).data('id'), label: $(this).data('label') });
+					});
+					if (!items.length) { frappe.show_alert({ message: 'Seleziona almeno una voce', indicator: 'orange' }); return; }
+					frappe.call({
+						method: 'thanatos_intel.billing.openapi_billing.genera_preventivo',
+						args: { case: frm.doc.name, items: JSON.stringify(items), payer_email: v.payer_email || '', invia: v.invia ? 1 : 0 },
+						freeze: true, freeze_message: 'Genero preventivo e link Stripe…',
+						callback(r2) {
+							const m = r2.message || {};
+							let h = '<div style="margin-top:10px;border-top:1px solid var(--border-color);padding-top:10px">';
+							h += '<b>Totale cliente: € ' + (m.totale_cliente || 0).toFixed(2) + '</b> (' + (m.righe || []).length + ' voci)';
+							if (m.link) h += '<div style="margin-top:8px"><a href="' + m.link + '" target="_blank" class="btn btn-xs btn-primary">Apri link pagamento</a> '
+								+ '<button class="btn btn-xs btn-default vf-copy" data-l="' + esc(m.link) + '">Copia link</button></div>';
+							else if (m.link_error) h += '<div style="color:#c0392b;margin-top:6px">Link non generato: ' + esc(m.link_error) + '</div>';
+							if (m.inviato) h += '<div style="margin-top:6px;color:' + (m.inviato.ok ? '#1a8a2e' : '#c0392b') + '">'
+								+ (m.inviato.ok ? '✓ Inviato a ' + esc(m.inviato.to) : '⚠ Invio: ' + esc(m.inviato.error)) + '</div>';
+							h += '</div>';
+							d.fields_dict.out.$wrapper.html(h);
+							d.$wrapper.find('.vf-copy').on('click', function () { navigator.clipboard.writeText($(this).data('l')); frappe.show_alert({ message: 'Link copiato', indicator: 'green' }); });
+							frm.reload_doc();
+						}
+					});
+				}
+			});
+			d.show();
+		});
 	},
 	injectCss() {
 		if (document.getElementById('vf-css')) return;
