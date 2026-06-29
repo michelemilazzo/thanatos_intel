@@ -776,16 +776,25 @@ window.ThanatosVerifiche = {
 		} else {
 			ents.forEach(e => {
 				const isCo = e.type === 'Company';
-				const tlabel = isCo ? 'Società' : (e.type === 'Person' ? 'Persona' : (e.type || 'Persona'));
+				const TLABEL = { Company: 'Società', Person: 'Persona', Domain: 'Dominio', IP: 'IP', Wallet: 'Wallet', Email: 'Email', Phone: 'Telefono' };
+				const tlabel = TLABEL[e.type] || e.type || 'Entità';
 				h += `<div class="vf-row"><div class="vf-ent"><span class="vf-nm">${esc(e.full_name)}</span>`
 					+ `<span class="vf-chip">${tlabel}</span>`
-					+ (isCo ? `<span class="vf-id">${e.piva ? 'P.IVA ' + esc(e.piva) : '⚠ P.IVA mancante'}</span>` : (e.cf ? `<span class="vf-id">${esc(e.cf)}</span>` : '')) + '</div>'
+					+ (isCo ? `<span class="vf-id">${e.piva ? 'P.IVA ' + esc(e.piva) : '⚠ P.IVA mancante'}</span>` : (e.cf ? `<span class="vf-id">${esc(e.cf)}</span>` : (e.ident ? `<span class="vf-id">${esc(e.ident)}</span>` : ''))) + '</div>'
 					+ '<div class="vf-acts">';
 				if (isCo) {
 					if (!e.piva) h += this.btn('🔗 Trova P.IVA', 'piva', e) + this.btn('🌍 Estero', 'estero', e);
 					h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 Sanzioni/PEP', 'free', e);
-				} else {
+				} else if (e.type === 'Person') {
 					h += this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('⚖ Negatività', 'neg', e) + this.btn('🏦 Patrimoniale', 'patr', e);
+				} else if (e.type === 'Domain') {
+					h += this.btn('🛡 VirusTotal', 'vt', e) + this.btn('🔬 urlscan', 'urlscan', e) + this.btn('🛂 Sanzioni/PEP', 'free', e);
+				} else if (e.type === 'IP') {
+					h += this.btn('🛡 VirusTotal', 'vt', e) + this.btn('🚨 AbuseIPDB', 'abuse', e) + this.btn('📡 Shodan', 'shodan', e) + this.btn('📍 IPinfo', 'ipinfo', e);
+				} else if (e.type === 'Wallet') {
+					h += this.btn('🔗 Tracciamento', 'wallet', e);
+				} else {
+					h += this.btn('🛂 Sanzioni/PEP', 'free', e);
 				}
 				h += '</div></div>';
 			});
@@ -883,6 +892,22 @@ window.ThanatosVerifiche = {
 					return '<b>Patrimoniale ' + esc(v.name + ' ' + v.surname) + ':</b> ' + esc(m.status);
 				})));
 			}, 'Patrimoniale persona', 'Esegui');
+		} else if (act === 'vt') {
+			frappe.call(Object.assign({ method: 'thanatos_intel.osint.cyber_intel.virustotal', args: Object.assign({ target: e.ident }, args) }, cb(m => m.stub ? ('⚠ ' + esc(m.message)) : (m.error ? ('⚠ ' + esc(m.error)) : ('<b>VirusTotal ' + esc(m.target) + '</b><br>Malicious: ' + m.malicious + ' · Suspicious: ' + m.suspicious + ' · Reputation: ' + esc(m.reputation) + '<br>AS: ' + esc(m.as_owner || '-') + ' (' + esc(m.country || '-') + ')')))));
+		} else if (act === 'urlscan') {
+			frappe.call(Object.assign({ method: 'thanatos_intel.osint.cyber_intel.urlscan', args: Object.assign({ target: e.ident }, args) }, cb(m => m.stub ? ('⚠ ' + esc(m.message)) : (m.error ? ('⚠ ' + esc(m.error)) : ('<b>urlscan ' + esc(m.target) + '</b><br>' + (m.scansioni || 0) + ' scansioni')))));
+		} else if (act === 'abuse') {
+			frappe.call(Object.assign({ method: 'thanatos_intel.osint.cyber_intel.abuseipdb', args: Object.assign({ ip: e.ident }, args) }, cb(m => m.stub ? ('⚠ ' + esc(m.message)) : (m.error ? ('⚠ ' + esc(m.error)) : ('<b>AbuseIPDB ' + esc(m.ip) + '</b><br>Abuse score: ' + esc(m.abuse_score) + '% · ' + esc(m.segnalazioni) + ' segnalazioni<br>ISP: ' + esc(m.isp || '-') + ' (' + esc(m.paese || '-') + ')')))));
+		} else if (act === 'shodan') {
+			frappe.call(Object.assign({ method: 'thanatos_intel.osint.cyber_intel.shodan_host', args: Object.assign({ ip: e.ident }, args) }, cb(m => m.stub ? ('⚠ ' + esc(m.message)) : (m.error ? ('⚠ ' + esc(m.error)) : ('<b>Shodan ' + esc(m.ip) + '</b><br>Org: ' + esc(m.org || '-') + '<br>Porte: ' + esc((m.porte || []).join(', ') || '-'))))));
+		} else if (act === 'ipinfo') {
+			frappe.call(Object.assign({ method: 'thanatos_intel.osint.cyber_intel.ipinfo', args: Object.assign({ ip: e.ident }, args) }, cb(m => m.stub ? ('⚠ ' + esc(m.message)) : (m.error ? ('⚠ ' + esc(m.error)) : ('<b>IPinfo ' + esc(m.ip) + '</b><br>Org/ASN: ' + esc(m.org || '-') + '<br>' + esc(m.citta || '-') + ', ' + esc(m.paese || '-'))))));
+		} else if (act === 'wallet') {
+			frappe.call(Object.assign({ method: 'thanatos_intel.osint.free_sources.tracing_links', args: { address: e.ident } }, cb(m => {
+				if (!m.links) return '⚠ chain non riconosciuta per «' + esc(e.ident) + '»';
+				const lk = Object.keys(m.links).map(k => '<a href="' + m.links[k] + '" target="_blank" class="btn btn-xs btn-default" style="margin:2px">' + k + ' ↗</a>').join(' ');
+				return '<b>Tracciamento ' + esc((m.chain || '').toUpperCase()) + ' ' + esc(m.address) + '</b><br>' + lk;
+			})));
 		}
 	},
 	catalog($w, frm) {
