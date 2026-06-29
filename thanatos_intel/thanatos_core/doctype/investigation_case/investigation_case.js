@@ -925,6 +925,8 @@ window.ThanatosVerifiche = {
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
 		frappe.call('thanatos_intel.billing.openapi_billing.listino', { case: frm.doc.name }).then(r => {
 			const lst = r.message || {}; const voci = lst.voci || [];
+			const PAYMAP = { 'Cliente': 'cliente', 'Investigatore': 'investigatore', 'A carico di Thanatos': 'thanatos' };
+			const CHMAP = { 'Email': 'email', 'WhatsApp': 'whatsapp', 'Email + WhatsApp': 'both' };
 			const rows = voci.map(v => `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">
 				<input type="checkbox" class="vf-pv-it" data-id="${v.id}" data-label="${esc(v.label)}">
 				<span style="flex:1">${esc(v.label)}</span>
@@ -933,8 +935,11 @@ window.ThanatosVerifiche = {
 				title: 'Preventivo cliente',
 				fields: [
 					{ fieldtype: 'HTML', fieldname: 'list', options: '<div style="max-height:240px;overflow:auto">' + rows + '</div>' + '<div style="font-size:11px;color:var(--text-muted);margin-top:6px">Prezzi IVA esclusa' + (lst.iva_note ? ' · ' + esc(lst.iva_note) : '') + '</div>' },
-					{ fieldtype: 'Data', fieldname: 'payer_email', label: 'Email destinatario (vuoto = email cliente del caso)' },
-					{ fieldtype: 'Check', fieldname: 'invia', label: 'Invia subito il link via email', default: 1 },
+					{ fieldtype: 'Select', fieldname: 'payer', label: 'Chi paga', options: 'Cliente\nInvestigatore\nA carico di Thanatos', default: 'Cliente' },
+					{ fieldtype: 'Select', fieldname: 'channels', label: 'Invia tramite', options: 'Email\nWhatsApp\nEmail + WhatsApp', default: 'Email' },
+					{ fieldtype: 'Data', fieldname: 'email', label: 'Email destinatario' },
+					{ fieldtype: 'Data', fieldname: 'whatsapp', label: 'WhatsApp destinatario (+39…)' },
+					{ fieldtype: 'Check', fieldname: 'invia', label: 'Invia subito', default: 1 },
 					{ fieldtype: 'HTML', fieldname: 'out' }
 				],
 				primary_action_label: 'Genera preventivo & link',
@@ -946,7 +951,7 @@ window.ThanatosVerifiche = {
 					if (!items.length) { frappe.show_alert({ message: 'Seleziona almeno una voce', indicator: 'orange' }); return; }
 					frappe.call({
 						method: 'thanatos_intel.billing.openapi_billing.genera_preventivo',
-						args: { case: frm.doc.name, items: JSON.stringify(items), payer_email: v.payer_email || '', invia: v.invia ? 1 : 0 },
+						args: { case: frm.doc.name, items: JSON.stringify(items), payer: PAYMAP[v.payer] || 'cliente', channels: CHMAP[v.channels] || 'email', email: v.email || '', whatsapp: v.whatsapp || '', invia: v.invia ? 1 : 0 },
 						freeze: true, freeze_message: 'Genero preventivo e link Stripe…',
 						callback(r2) {
 							const m = r2.message || {};
@@ -958,8 +963,8 @@ window.ThanatosVerifiche = {
 							if (m.link) h += '<div style="margin-top:8px"><a href="' + m.link + '" target="_blank" class="btn btn-xs btn-primary">Apri link pagamento</a> '
 								+ '<button class="btn btn-xs btn-default vf-copy" data-l="' + esc(m.link) + '">Copia link</button></div>';
 							else if (m.link_error) h += '<div style="color:#c0392b;margin-top:6px">Link non generato: ' + esc(m.link_error) + '</div>';
-							if (m.inviato) h += '<div style="margin-top:6px;color:' + (m.inviato.ok ? '#1a8a2e' : '#c0392b') + '">'
-								+ (m.inviato.ok ? '✓ Inviato a ' + esc(m.inviato.to) : '⚠ Invio: ' + esc(m.inviato.error)) + '</div>';
+							if (m.a_carico) h += '<div style="margin-top:6px;color:#1a8a2e">✓ Costo a carico di ' + esc(m.a_carico) + ' — nessun addebito</div>';
+							['inviato_email','inviato_wa'].forEach(function(k){ var s2=m[k]; if(s2) h += '<div style="margin-top:4px;color:'+(s2.ok?'#1a8a2e':'#c0392b')+'">'+(k==='inviato_wa'?'WhatsApp':'Email')+': '+(s2.ok?'✓ inviato a '+esc(s2.to):'⚠ '+esc(s2.error))+'</div>'; });
 							h += '</div>';
 							d.fields_dict.out.$wrapper.html(h);
 							d.$wrapper.find('.vf-copy').on('click', function () { navigator.clipboard.writeText($(this).data('l')); frappe.show_alert({ message: 'Link copiato', indicator: 'green' }); });
@@ -967,6 +972,12 @@ window.ThanatosVerifiche = {
 						}
 					});
 				}
+			});
+			frappe.call('thanatos_intel.billing.openapi_billing.preventivo_contacts', { case: frm.doc.name }).then(rc => {
+				const CT = rc.message || {};
+				const fill = () => { const pp = PAYMAP[d.get_value('payer')] || 'cliente'; const c = CT[pp] || {}; d.set_value('email', c.email || ''); d.set_value('whatsapp', c.whatsapp || ''); };
+				if (d.fields_dict.payer) d.fields_dict.payer.df.onchange = fill;
+				fill();
 			});
 			d.show();
 		});
