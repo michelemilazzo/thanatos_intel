@@ -84,7 +84,8 @@ def genera_preventivo(case, items, payer_email=None, invia=0):
     # link di pagamento Stripe (one-off)
     desc = f"Verifiche dati caso {case} — " + ", ".join(r["label"] for r in righe)[:200]
     try:
-        out["link"] = _stripe_link(client, payer_email, tot_cli, desc, case)
+        out["link"] = _stripe_link(client, payer_email, tot_cli, desc, case,
+                                   round(tot_real, 2))
     except Exception as e:
         out["link_error"] = str(e)[:200]
 
@@ -107,16 +108,19 @@ def genera_preventivo(case, items, payer_email=None, invia=0):
     return out
 
 
-def _stripe_link(client, payer_email, amount_eur, desc, case):
+def _stripe_link(client, payer_email, amount_eur, desc, case, real_cost=0):
     from thanatos_intel.integrations.stripe_bridge import _get_stripe, get_or_create_stripe_customer, _success_url, _cancel_url
     stripe = _get_stripe()
+    meta = {"thanatos_case": case, "kind": "openapi_quote", "thanatos_client": client or "",
+            "openapi_cost": str(real_cost), "openapi_total": str(amount_eur)}
     kw = dict(
         mode="payment",
         line_items=[{"price_data": {"currency": "eur",
                                     "product_data": {"name": desc[:120] or "Verifiche dati"},
                                     "unit_amount": int(round(amount_eur * 100))}, "quantity": 1}],
         success_url=_success_url(), cancel_url=_cancel_url(),
-        metadata={"thanatos_case": case, "kind": "openapi_quote", "thanatos_client": client or ""},
+        payment_intent_data={"metadata": meta},
+        metadata=meta,
         locale="it",
     )
     if client:

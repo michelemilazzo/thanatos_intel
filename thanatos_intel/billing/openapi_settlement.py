@@ -1,0 +1,84 @@
+"""Settlement pay-per-use openapi (modello: Thanatos PIATTAFORMA, MMOS connected).
+
+Al pagamento del cliente (webhook checkout.session.completed, metadata.kind=openapi_quote):
+  1) PAGA SUBITO MMOS via Stripe Connect Transfer = costo openapi + (markup × mmos_markup_pct%).
+     Se manca `mmos_stripe_connect_account_id` → payout 'pending' (nessun trasferimento).
+  2) Emette la RICEVUTA Thanatos al cliente (ARES Sales Invoice, ERPNext).
+  3) Logga sul caso.
+
+Config site_config: mmos_stripe_connect_account_id (acct_...), mmos_markup_pct (% del markup a MMOS, default 0).
+"""
+import frappe
+from frappe.utils import now_datetime, flt
+
+
+def _mmos_share(cost, total):
+    pct = flt(frappe.conf.get("mmos_markup_pct") or 0)
+    markup = max(0.0, flt(total) - flt(cost))
+    return round(flt(cost) + markup * pct / 100.0, 2)
+
+
+@frappe.whitelist()
+def settle(session):
+    """session = dict Stripe checkout.session (dal webhook handle_event)."""
+    if isinstance(session, str):
+        import json
+        session = json.loads(session)
+    meta = session.get("metadata") or {}
+    case = meta.get("thanatos_case")
+    client = meta.get("thanatos_client") or None
+    cost = flt(meta.get("openapi_cost"))
+    total = flt(meta.get("openapi_total") or (flt(session.get("amount_total")) / 100.0))
+    res = {"case": case, "total": total, "cost": cost}
+
+    # 1) pagamento immediato a MMOS (Stripe Connect Transfer) — guardato
+    mmos_amt = _mmos_share(cost, total)
+    res["mmos_amount"] = mmos_amt
+    acct = frappe.conf.get("mmos_stripe_connect_account_id")
+    if acct and mmos_amt > 0:
+        try:
+            from thanatos_intel.integrations.stripe_bridge import _get_stripe
+            stripe = _get_stripe()
+            tr = stripe.Transfer.create(
+                amount=int(round(mmos_amt * 100)), currency="eur", destination=acct,
+                transfer_group=case or session.get("id"),
+                source_transaction=session.get("payment_intent") or None,
+                metadata={"thanatos_case": case or "", "kind": "openapi_mmos_settlement"})
+            res["mmos_transfer"] = tr.id
+        except Exception as e:
+            res["mmos_transfer_error"] = str(e)[:200]
+            frappe.log_error(frappe.get_traceback(), "openapi settle transfer")
+    else:
+        res["mmos_payout"] = "pending_no_account" if not acct else "skip_zero"
+
+    # 2) ricevuta Thanatos al cliente (ARES Sales Invoice) — elevata a Administrator
+    if client and total > 0:
+        prev = frappe.session.user
+        try:
+            from thanatos_intel.billing.ares_invoice import create_ares_invoice
+            customer = frappe.db.get_value("Investigation Client", client, "customer")
+            if customer:
+                frappe.set_user("Administrator")
+                res["invoice"] = create_ares_invoice(case, customer, total,
+                                                     description=f"Verifiche dati — caso {case}")
+        except Exception as e:
+            res["invoice_error"] = str(e)[:200]
+            frappe.log_error(frappe.get_traceback(), "openapi settle invoice")
+        finally:
+            frappe.set_user(prev)
+
+    # 3) log caso
+    try:
+        if case:
+            c = frappe.get_doc("Investigation Case", case)
+            c.append("case_activities", {"activity_date": now_datetime(), "activity_type": "Report",
+                     "description": (f"💳 Pagamento € {total:.2f} ricevuto. Ricevuta Thanatos: "
+                                     f"{res.get('invoice', '—')}. MMOS € {mmos_amt:.2f}: "
+                                     f"{res.get('mmos_transfer') or res.get('mmos_payout') or res.get('mmos_transfer_error')}")[:500],
+                     "operator": "Administrator"})
+            c.flags.ignore_mandatory = True
+            c.save(ignore_permissions=True)
+            frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "openapi settle log")
+    return res

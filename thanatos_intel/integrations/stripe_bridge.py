@@ -632,7 +632,11 @@ def handle_event(event: dict) -> dict:
         return _upsert_subscription_record(obj)
 
     if etype == "checkout.session.completed":
-        ue_name = (obj.get("metadata") or {}).get("thanatos_usage_event")
+        meta = obj.get("metadata") or {}
+        if meta.get("kind") == "openapi_quote":
+            from thanatos_intel.billing.openapi_settlement import settle
+            return settle(obj)
+        ue_name = meta.get("thanatos_usage_event")
         if ue_name and obj.get("mode") == "payment":
             return _fulfil_onetime(ue_name, obj)
         sub_id = obj.get("subscription")
