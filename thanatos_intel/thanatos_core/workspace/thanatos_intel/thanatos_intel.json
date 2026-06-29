@@ -68,6 +68,16 @@
    "type": "Link"
   },
   {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "📑 Dossier & Bacheca",
+   "link_count": 0,
+   "link_to": "thanatos-dossier",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
    "dependencies": "",
    "hidden": 0,
    "is_query_report": 0,
@@ -86,6 +96,16 @@
    "link_count": 0,
    "link_to": "Investigation Entity",
    "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "📎 Carica evidenza",
+   "link_count": 0,
+   "link_to": "evidence-upload",
+   "link_type": "Page",
    "onboard": 0,
    "type": "Link"
   },
@@ -672,6 +692,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "📊 SEO & Analytics",
+   "link_count": 0,
+   "link_to": "seo-analytics",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Strumenti & App",
    "link_count": 6,
    "link_type": "DocType",
@@ -848,6 +878,26 @@
    "link_count": 0,
    "link_to": "Risk Score",
    "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "📋 Aggiornamenti",
+   "link_count": 0,
+   "link_to": "thanatos-changelog",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "⚙️ Impostazioni sistema",
+   "link_count": 0,
+   "link_to": "thanatos-settings",
+   "link_type": "Page",
    "onboard": 0,
    "type": "Link"
   },
