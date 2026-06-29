@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from thanatos_intel.billing.billing_entity import get_default_billing_entity_name
 
 ITEM = "Servizio Investigativo"
 
@@ -22,9 +23,9 @@ def _accounts(company):
     }
 
 
-def _ensure_project(case, company, customer):
+def _ensure_project(case, company, customer, tag="THN"):
     title = frappe.db.get_value("Investigation Case", case, "case_title") or case
-    pname = (title[:90] + " [ARES]").strip()
+    pname = (title[:80] + " [" + (tag or "")[:30] + "]").strip()
     existing = frappe.db.get_value("Project", {"company": company, "project_name": pname}, "name")
     if existing:
         return existing
@@ -42,10 +43,15 @@ def _terms(be):
 
 
 @frappe.whitelist()
-def create_ares_invoice(case, customer, amount, description=None, billing_entity="ARES INVESTIGAZIONI SRL"):
+def create_ares_invoice(case, customer, amount, description=None, billing_entity=None):
     if not frappe.has_permission("Sales Invoice", "create"):
         frappe.throw(_("Permessi insufficienti per creare fatture."))
     amount = float(amount)
+    if not billing_entity:
+        billing_entity = frappe.db.get_value("Investigation Case", case, "billing_entity") \
+            or get_default_billing_entity_name()
+    if not billing_entity:
+        frappe.throw(_("Nessuna entita di fatturazione: imposta un default in Thanatos Billing Settings."))
     be = frappe.get_doc("Billing Entity", billing_entity)
     company = be.erp_company
     if not company:
@@ -59,7 +65,7 @@ def create_ares_invoice(case, customer, amount, description=None, billing_entity
     inv = frappe.new_doc("Sales Invoice")
     inv.company = company
     inv.customer = customer
-    inv.project = _ensure_project(case, company, customer)
+    inv.project = _ensure_project(case, company, customer, be.entity_name or be.legal_name or billing_entity)
     inv.currency = acc["currency"]
     inv.posting_date = frappe.utils.today()
     inv.debit_to = acc["debit_to"]

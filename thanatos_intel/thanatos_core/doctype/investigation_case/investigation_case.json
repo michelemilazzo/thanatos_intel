@@ -87,6 +87,13 @@
    "in_standard_filter": 1
   },
   {
+   "fieldname": "billing_entity",
+   "fieldtype": "Link",
+   "label": "Entita di fatturazione",
+   "options": "Billing Entity",
+   "description": "Chi emette la fattura per questo caso (vuoto = default piattaforma)"
+  },
+  {
    "fieldname": "assigned_investigator",
    "fieldtype": "Link",
    "label": "Assigned Investigator",

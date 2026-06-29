@@ -988,10 +988,12 @@ window.ThanatosVerifiche = {
 frappe.ui.form.on("Investigation Case", {
     refresh(frm) {
         if (frm.is_new()) return;
-        frm.add_custom_button(__("Genera fattura ARES"), () => {
+        frm.add_custom_button(__("Genera fattura"), () => {
             const d = new frappe.ui.Dialog({
-                title: __("Genera fattura ARES"),
+                title: __("Genera fattura"),
                 fields: [
+                    {fieldname: "billing_entity", fieldtype: "Link", options: "Billing Entity",
+                     label: __("Entità che fattura"), reqd: 1, default: frm.doc.billing_entity || ""},
                     {fieldname: "customer", fieldtype: "Link", options: "Customer",
                      label: __("Cliente (fatturazione)"), reqd: 1},
                     {fieldname: "amount", fieldtype: "Currency", label: __("Imponibile (EUR)"), reqd: 1},
@@ -1003,9 +1005,10 @@ frappe.ui.form.on("Investigation Case", {
                     frappe.call({
                         method: "thanatos_intel.billing.ares_invoice.create_ares_invoice",
                         args: {case: frm.doc.name, customer: values.customer,
-                               amount: values.amount, description: values.description},
+                               amount: values.amount, description: values.description,
+                               billing_entity: values.billing_entity},
                         freeze: true,
-                        freeze_message: __("Creazione fattura ARES..."),
+                        freeze_message: __("Creazione fattura..."),
                         callback(r) {
                             if (r.message) {
                                 d.hide();
@@ -1017,6 +1020,10 @@ frappe.ui.form.on("Investigation Case", {
                     });
                 },
             });
+            if (!d.get_value("billing_entity")) {
+                frappe.call("thanatos_intel.billing.billing_entity.resolve_billing_entity", { case: frm.doc.name })
+                    .then(r => { if (r.message) d.set_value("billing_entity", r.message); });
+            }
             d.show();
         }, __("Azioni"));
     },

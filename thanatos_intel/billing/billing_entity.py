@@ -27,3 +27,19 @@ def stamp_ddd_billing_entity(doc, method=None):
         name = get_ddd_billing_entity_name()
         if name:
             doc.billing_entity = name
+
+
+def get_default_billing_entity_name():
+    name = frappe.db.get_single_value("Thanatos Billing Settings", "default_billing_entity")
+    if not name:
+        name = frappe.db.get_value("Billing Entity", {"is_active": 1}, "name")
+    return name
+
+
+@frappe.whitelist()
+def resolve_billing_entity(case=None):
+    """Entita di fatturazione per un caso: campo del caso -> default piattaforma."""
+    name = None
+    if case:
+        name = frappe.db.get_value("Investigation Case", case, "billing_entity")
+    return name or get_default_billing_entity_name()
