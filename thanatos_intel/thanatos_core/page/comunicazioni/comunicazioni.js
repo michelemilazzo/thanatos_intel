@@ -140,6 +140,10 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
         <input id="cc-ref-name" type="text" placeholder="ID doc" style="flex:1">
       </div>
 
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-xs btn-default" id="cc-ai" type="button">✨ Scrivi con AI</button>
+        <button class="btn btn-xs btn-default" id="cc-sign" type="button">✍ Firma</button>
+      </div>
       <button class="cc-send" id="cc-send">📨 Invia ▸</button>
     </div>
 
@@ -400,6 +404,49 @@ frappe.pages['comunicazioni'].on_page_load = function(wrapper){
       $('#cc-body').val(''); $('#cc-subj').val(''); attachments=[]; render_attachments();
       load_conversations();
     }catch(e){ frappe.msgprint('Errore: '+e.message); }
+  });
+
+  // Firma: inserisci la firma del mittente nel testo
+  $('#cc-sign').on('click', async () => {
+    const r = await frappe.call({ method: 'thanatos_intel.api.comm_pane.get_signature', args: { from_email: $('#cc-from').val() } });
+    const sig = (r.message || '').trim();
+    if (!sig) return frappe.show_alert({ message: 'Nessuna firma configurata (impostala nel tuo profilo utente)', indicator: 'orange' });
+    const ta = $('#cc-body'); const cur = ta.val() || '';
+    if (cur.indexOf(sig) >= 0) return frappe.show_alert({ message: 'Firma già presente', indicator: 'blue' });
+    ta.val((cur ? cur + '\n\n' : '') + sig);
+  });
+
+  // AI: scrivi/migliora il messaggio
+  $('#cc-ai').on('click', () => {
+    const d = new frappe.ui.Dialog({
+      title: 'Scrivi con AI',
+      fields: [
+        { fieldtype: 'Small Text', fieldname: 'intent', label: 'Cosa vuoi comunicare (punti chiave)' },
+        { fieldtype: 'Select', fieldname: 'tone', label: 'Tono', options: 'Professionale\nCordiale\nFormale\nSintetico\nEmpatico', default: 'Professionale' },
+        { fieldtype: 'Select', fieldname: 'lang', label: 'Lingua', options: 'it\nen\nro\nbg\nde\nfr\nes', default: 'it' },
+        { fieldtype: 'Check', fieldname: 'improve', label: 'Migliora il testo già scritto (invece di crearne uno nuovo)' }
+      ],
+      primary_action_label: 'Genera',
+      primary_action(v) {
+        if (!v.intent && !(v.improve && ($('#cc-body').val() || '').trim()))
+          return frappe.msgprint('Scrivi i punti chiave, oppure spunta "Migliora" con del testo già presente.');
+        d.hide();
+        frappe.call({
+          method: 'thanatos_intel.api.comm_pane.ai_compose',
+          args: { intent: v.intent || '', current: $('#cc-body').val() || '', channel: $('#cc-ch').val(),
+                  tone: v.tone, lang: v.lang, improve: v.improve ? 1 : 0, subject: $('#cc-subj').val() || '' },
+          freeze: true, freeze_message: "L'AI sta scrivendo…",
+          callback(r) {
+            const m = r.message || {};
+            if (m.error) return frappe.msgprint('AI non disponibile: ' + m.error);
+            if (m.text) $('#cc-body').val(m.text);
+            if (m.subject && !($('#cc-subj').val() || '').trim()) $('#cc-subj').val(m.subject);
+            frappe.show_alert({ message: 'Bozza inserita', indicator: 'green' });
+          }
+        });
+      }
+    });
+    d.show();
   });
 
   // Dossier send

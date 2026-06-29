@@ -966,3 +966,38 @@ def search_full_text(query: str, limit: int = 50) -> list:
                         "snippet":(r.message_body or "")[:100], "ts": str(r.creation), "addr": addr})
     except Exception: pass
     return sorted(out, key=lambda x:x["ts"] or "", reverse=True)[:limit]
+
+
+@frappe.whitelist()
+def get_signature(from_email=None):
+    """Firma email del mittente (User.email_signature), come testo semplice."""
+    import re
+    user = None
+    if from_email:
+        user = frappe.db.get_value("User", {"email": from_email}, "name")
+    user = user or frappe.session.user
+    sig = frappe.db.get_value("User", user, "email_signature") or ""
+    return re.sub(r"<[^>]+>", "", sig).strip()
+
+
+@frappe.whitelist()
+def ai_compose(intent="", current="", channel="email", tone="Professionale", lang="it", improve=0, subject=""):
+    """Genera o migliora il testo di una comunicazione tramite il gateway AI."""
+    from thanatos_intel.ai.doc_ingest import _gateway
+    from thanatos_intel.ai.case_architect import _resp_text
+    improve = int(improve or 0)
+    sys = ("Sei un assistente che redige comunicazioni per un'agenzia investigativa. "
+           "Scrivi nella lingua '%s', con tono %s, adatto al canale %s. "
+           "Restituisci SOLO il corpo del messaggio, senza preamboli n\u00e9 note." % (lang, tone, channel))
+    if improve and (current or "").strip():
+        prompt = "Migliora, correggi e rendi pi\u00f9 efficace questo messaggio mantenendone il senso:\n\n" + current
+    else:
+        prompt = "Scrivi un messaggio per: " + (intent or "(nessun dettaglio)")
+        if subject:
+            prompt += "\nOggetto/contesto: " + subject
+    try:
+        resp = _gateway(prompt, system=sys, task_type="chat", session_id="comm-compose")
+        text = (_resp_text(resp) or "").strip()
+    except Exception as e:
+        return {"error": str(e)[:160]}
+    return {"text": text}

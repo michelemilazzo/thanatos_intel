@@ -541,6 +541,17 @@ function thanatos_set_monitor_operators(frm) {
     });
     grid.update_docfield_property('operator', 'options', opts.join('\n'));
     grid.refresh();
+    if (!grid.custom_buttons || !grid.custom_buttons[__('Auto-compila')]) {
+        grid.add_custom_button(__('Auto-compila'), () => {
+            const have = new Set((frm.doc.monitor_recipients || []).map(r => r.recipient_type));
+            let n = 0;
+            ['Investigatore assegnato', 'Cliente'].forEach(t => {
+                if (!have.has(t)) { frm.add_child('monitor_recipients', { recipient_type: t }); n++; }
+            });
+            frm.refresh_field('monitor_recipients');
+            frappe.show_alert({ message: n ? __('{0} destinatari aggiunti', [n]) : __('Gi\u00e0 completo'), indicator: 'green' });
+        });
+    }
 }
 
 frappe.ui.form.on('Case Assignment', {
