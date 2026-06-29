@@ -273,6 +273,65 @@ CATALOGO = [
 
 
 @frappe.whitelist()
+def risolvi_piva(name):
+    """Nome/ragione sociale → P.IVA (company IT-search → IT-start)."""
+    code, b = _get("company", "/IT-search", {"companyName": name})
+    if code != 200 or not (b.get("data")):
+        return {"name": name, "piva": None, "error": (b or {}).get("message") or f"HTTP {code}"}
+    rid = b["data"][0].get("id")
+    code2, b2 = _get("company", f"/IT-start/{rid}")
+    rec = ((b2.get("data") or [{}])[0] if isinstance(b2.get("data"), list) else b2.get("data")) or {}
+    return {"name": name, "piva": rec.get("vatCode") or rec.get("taxCode"),
+            "denominazione": rec.get("companyName")}
+
+
+@frappe.whitelist()
+def risolvi_pive_caso(case):
+    """Per ogni società del caso senza P.IVA, la risolve da openapi e la scrive
+    su Investigation Entity.primary_identifier. Accende i bottoni Visura/Soci/UBO."""
+    c = frappe.get_doc("Investigation Case", case)
+    done, skip = [], 0
+    for ce in (c.get("case_entities") or []):
+        et = frappe.db.get_value("Investigation Entity", ce.entity,
+                                 ["name", "full_name", "entity_type", "primary_identifier"], as_dict=True)
+        if not et or et.entity_type != "Company":
+            continue
+        if len("".join(ch for ch in (et.primary_identifier or "") if ch.isdigit())) == 11:
+            skip += 1
+            continue
+        r = risolvi_piva(et.full_name or ce.entity)
+        if r.get("piva"):
+            frappe.db.set_value("Investigation Entity", et.name, "primary_identifier", r["piva"])
+            done.append({"nome": et.full_name, "piva": r["piva"]})
+    frappe.db.commit()
+    return {"risolte": done, "gia_presenti": skip, "tot": len(done)}
+
+
+@frappe.whitelist()
+def screening_free(query, investigation_case=None):
+    """Screening sanzioni/PEP GRATUITO via OpenSanctions (cache locale 285k:
+    aggrega OFAC/UN/EU/Interpol). Alternativa free a risk WW-kyc-*."""
+    try:
+        from thanatos_intel.osint import free_sources
+        res = free_sources.screen_sanctions(query) or {}
+    except Exception as e:
+        return {"query": query, "error": str(e)[:160]}
+    matches = res.get("matches") or res.get("results") or []
+    n = res.get("total") if res.get("total") is not None else len(matches)
+    hits = []
+    for m in (matches if isinstance(matches, list) else [])[:15]:
+        hits.append({"nome": m.get("name") or m.get("caption") or m.get("full_name"),
+                     "tipo": m.get("schema") or m.get("type"), "score": m.get("score")})
+    lines = [f"Screening sanzioni/PEP (OpenSanctions, free) — «{query}»", f"Match: {n}"]
+    lines += [f"• {h['nome']} ({h.get('tipo')})" for h in hits]
+    out = {"query": query, "match": n, "hits": hits, "fonte": "OpenSanctions (free)",
+           "offline": res.get("offline"), "stub": res.get("stub")}
+    out["evidence"] = _evidence(investigation_case, f"Screening free — {query}", lines,
+                                source="OpenSanctions")
+    return out
+
+
+@frappe.whitelist()
 def case_entities(case):
     """Entità del caso con identificativi normalizzati, per i bottoni per-entità."""
     import re

@@ -757,14 +757,18 @@ window.ThanatosVerifiche = {
 					+ (isCo ? `<span class="vf-id">${e.piva ? 'P.IVA ' + esc(e.piva) : '⚠ P.IVA mancante'}</span>` : (e.cf ? `<span class="vf-id">${esc(e.cf)}</span>` : '')) + '</div>'
 					+ '<div class="vf-acts">';
 				if (isCo) {
-					h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 KYC', 'kyc', e);
+					if (!e.piva) h += this.btn('🔗 Trova P.IVA', 'piva', e);
+					h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 Sanzioni/PEP', 'free', e);
 				} else {
-					h += this.btn('🛂 KYC', 'kyc', e) + this.btn('⚖ Negatività', 'neg', e) + this.btn('🏦 Patrimoniale', 'patr', e);
+					h += this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('⚖ Negatività', 'neg', e) + this.btn('🏦 Patrimoniale', 'patr', e);
 				}
 				h += '</div></div>';
 			});
 		}
-		h += '<div class="vf-foot"><button class="btn btn-xs btn-default vf-cat">🧰 Catalogo strumenti</button>'
+		const missing = ents.filter(e => e.type === 'Company' && !e.piva).length;
+		h += '<div class="vf-foot">'
+			+ (missing ? '<button class="btn btn-xs btn-primary vf-resolve">🔗 Risolvi ' + missing + ' P.IVA mancanti</button>' : '')
+			+ '<button class="btn btn-xs btn-default vf-cat">🧰 Catalogo strumenti (free/paid)</button>'
 			+ '<button class="btn btn-xs btn-default vf-free">🔎 Ricerca libera</button></div>';
 		h += '<div class="vf-out" style="display:none"></div></div>';
 		$w.html(h);
@@ -772,6 +776,14 @@ window.ThanatosVerifiche = {
 		$w.find('.vf-btn').on('click', function () { self.run(frm, $w, $(this).data('act'), $(this).data('idx'), ents); });
 		$w.find('.vf-cat').on('click', () => self.catalog($w));
 		$w.find('.vf-free').on('click', () => self.freeForm(frm, $w));
+		$w.find('.vf-resolve').on('click', () => {
+			const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Risoluzione P.IVA mancanti (openapi)…</div>');
+			frappe.call({ method: self.OC + 'risolvi_pive_caso', args: { case: frm.doc.name }, freeze: true, freeze_message: 'Risoluzione P.IVA…', callback: r => {
+				const m = r.message || {};
+				$o.html('<div class="vf-res">✓ ' + (m.tot || 0) + ' P.IVA risolte e salvate' + ((m.tot || 0) ? ': ' + (m.risolte || []).map(x => frappe.utils.escape_html(x.nome) + ' → ' + x.piva).join('; ') : '.') + '<br>Ricarico…</div>');
+				setTimeout(() => frm.reload_doc(), 1200);
+			} });
+		});
 	},
 	btn(label, act, e) {
 		return `<button class="btn btn-xs btn-default vf-btn" data-act="${act}" data-idx="${e.idx}">${label}</button>`;
@@ -796,12 +808,21 @@ window.ThanatosVerifiche = {
 				const ubo = (m.ubo || []).map(u => esc(u.nome) + ' [' + (u.cf || '') + ']').join('; ') || '—';
 				return '<b>Soci:</b> ' + soci + '<br><b>UBO:</b> ' + ubo;
 			})));
-		} else if (act === 'kyc') {
-			frappe.call(Object.assign({ method: this.OC + 'screening_kyc', args: Object.assign({ query: e.full_name, mode: 'pep' }, args) }, cb(m => {
+		} else if (act === 'free') {
+			frappe.call(Object.assign({ method: this.OC + 'screening_free', args: Object.assign({ query: e.full_name }, args) }, cb(m => {
 				if (m.error) return '⚠ ' + esc(m.error);
 				const hl = (m.hits || []).map(x => esc(x.nome)).join(', ') || 'nessun match';
-				return '<b>Screening PEP «' + esc(e.full_name) + '»:</b> ' + (m.match || 0) + ' match — ' + hl;
+				return '<b>Sanzioni/PEP «' + esc(e.full_name) + '»</b> <span class="vf-free-tag">free · OpenSanctions</span><br>' + (m.match || 0) + ' match — ' + hl;
 			})));
+		} else if (act === 'piva') {
+			frappe.call({ method: this.OC + 'risolvi_piva', args: { name: e.full_name }, freeze: true, freeze_message: 'Risoluzione P.IVA…', callback: r => {
+				const m = r.message || {};
+				if (!m.piva) return done('⚠ P.IVA non trovata per «' + esc(e.full_name) + '».');
+				frappe.call({ method: 'frappe.client.set_value', args: { doctype: 'Investigation Entity', name: e.entity, fieldname: 'primary_identifier', value: m.piva }, callback: () => {
+					done('✓ P.IVA <b>' + esc(m.piva) + '</b> (' + esc(m.denominazione || '') + ') salvata. Ricarico…');
+					setTimeout(() => frm.reload_doc(), 900);
+				} });
+			} });
 		} else if (act === 'neg') {
 			const idv = e.cf || e.piva;
 			if (!idv) return done('⚠ Manca CF/P.IVA.');
@@ -824,13 +845,23 @@ window.ThanatosVerifiche = {
 		}
 	},
 	catalog($w) {
-		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">…</div>');
+		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Carico catalogo…</div>');
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
-		frappe.call(this.OC + 'strumenti').then(r => {
-			const s = r.message || {};
-			let h = '<div class="vf-res"><div class="vf-mut">' + (s.totale_servizi || 0) + ' servizi · ' + esc(s.ambiente) + ' · ' + (s.connesso ? 'connesso' : 'non connesso') + '</div>';
-			(s.famiglie || []).forEach(f => { h += '<div style="margin:6px 0"><b>' + esc(f.famiglia) + '</b> <span class="vf-mut">(' + esc(f.pattern) + ', ' + esc(f.fascia) + ')</span><br><span class="vf-mut">' + esc((f.strumenti || []).join(' · ')) + '</span></div>'; });
-			$o.html(h + '</div>');
+		frappe.call('thanatos_intel.osint.tool_catalog.catalogo_completo').then(r => {
+			const c = r.message || {}; const st = c.stats || {};
+			let h = '<div class="vf-res"><div class="vf-mut" style="margin-bottom:8px">'
+				+ (st.capacita || 0) + ' capacità · ' + (st.fonti_totali || 0) + ' fonti (<b style="color:#1a8a2e">' + (st.fonti_gratuite || 0) + ' gratuite</b>) · '
+				+ (st.famiglie_openapi || 0) + ' famiglie openapi · ' + (st.capacita_con_free || 0) + ' capacità con opzione free</div>';
+			h += '<table class="vf-cat-tbl"><thead><tr><th>Capacità</th><th>🟢 Gratis</th><th>🔴 A pagamento</th></tr></thead><tbody>';
+			(c.capacita || []).forEach(x => {
+				const free = (x.free || []).length ? (x.free || []).map(esc).join(', ') : '<span class="vf-mut">—</span>';
+				const paid = (x.paid || []).length ? (x.paid || []).map(esc).join(', ') : '<span class="vf-mut">—</span>';
+				const cons = x.consiglio === 'free' ? '<span class="vf-free-tag">usa free</span>' : (x.consiglio === 'paid' ? '<span class="vf-paid-tag">paid</span>' : '<span class="vf-mix-tag">misto</span>');
+				h += '<tr><td><b>' + esc(x.capacita) + '</b> ' + cons + '<br><span class="vf-mut">' + esc(x.nota || '') + '</span></td>'
+					+ '<td class="' + ((x.free || []).length ? 'vf-ok' : '') + '">' + free + '</td><td>' + paid + '</td></tr>';
+			});
+			h += '</tbody></table></div>';
+			$o.html(h);
 		});
 	},
 	freeForm(frm, $w) {
@@ -867,6 +898,13 @@ window.ThanatosVerifiche = {
 		.vf-foot{margin-top:12px;display:flex;gap:8px}
 		.vf-out{margin-top:12px}
 		.vf-res{background:var(--bg-color);border:1px solid #C8A96E;border-radius:8px;padding:12px;font-size:13px;color:var(--text-color);line-height:1.6}
+		.vf-free-tag{font-size:10px;color:#1a8a2e;border:1px solid #29CD42;border-radius:8px;padding:1px 6px;margin-left:4px}
+		.vf-paid-tag{font-size:10px;color:#a33;border:1px solid #e0879a;border-radius:8px;padding:1px 6px;margin-left:4px}
+		.vf-mix-tag{font-size:10px;color:#9a7d2e;border:1px solid #ECAD4B;border-radius:8px;padding:1px 6px;margin-left:4px}
+		.vf-cat-tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+		.vf-cat-tbl th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border-color);color:var(--text-muted);font-weight:500}
+		.vf-cat-tbl td{padding:7px 8px;border-bottom:1px solid var(--border-color);vertical-align:top}
+		.vf-cat-tbl td.vf-ok{color:#1a8a2e}
 		`;
 		$('<style id="vf-css">').text(css).appendTo(document.head);
 	}
