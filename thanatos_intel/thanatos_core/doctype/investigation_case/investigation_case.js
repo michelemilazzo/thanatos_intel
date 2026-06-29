@@ -959,7 +959,13 @@ window.ThanatosVerifiche = {
 					else if (T.indexOf('urlscan') === 0) frappe.call({ method: CY + 'urlscan', args: Object.assign({ target: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>urlscan ' + esc(m.target) + '</b><br>' + (m.scansioni || 0) + ' scansioni<br>' + (m.ultime || []).map(u => esc(u.url) + ' → ' + esc(u.ip || '-') + ' (' + esc(u.paese || '-') + ')').join('<br>')) });
 				}
 			});
-			d.fields_dict.tool.df.onchange = () => { d.fields_dict.value.set_data(MAP[d.get_value('tool')] || []); };
+			const applySugg = () => {
+				const f = d.fields_dict.value;
+				f.set_data(MAP[d.get_value('tool')] || []);
+				if (f.awesomplete) { f.awesomplete.minChars = 0; }
+			};
+			d.fields_dict.tool.df.onchange = applySugg;
+			setTimeout(() => { const f = d.fields_dict.value; if (f && f.$input) f.$input.on('focus', () => { if (f.awesomplete) f.awesomplete.evaluate(); }); }, 300);
 			d.show();
 		});
 	},
