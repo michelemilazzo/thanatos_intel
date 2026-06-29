@@ -35,7 +35,11 @@ _FAIL = {"failed", "error", "rejected", "ko"}
 
 
 def _token():
-    return frappe.conf.get("registro_imprese_token") or frappe.conf.get("openapi_token")
+    # PROD usa registro_imprese_token_prod (token Produzione openapi); SANDBOX il token di test.
+    if frappe.conf.get("openapi_sandbox"):
+        return frappe.conf.get("registro_imprese_token") or frappe.conf.get("openapi_token")
+    return (frappe.conf.get("registro_imprese_token_prod")
+            or frappe.conf.get("registro_imprese_token") or frappe.conf.get("openapi_token"))
 
 
 def _base(service):
