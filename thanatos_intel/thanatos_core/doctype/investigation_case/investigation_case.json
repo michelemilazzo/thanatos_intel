@@ -94,6 +94,13 @@
    "description": "Chi emette la fattura per questo caso (vuoto = default piattaforma)"
   },
   {
+   "fieldname": "service_price_overrides",
+   "fieldtype": "Long Text",
+   "label": "Override prezzi servizi (JSON)",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
    "fieldname": "assigned_investigator",
    "fieldtype": "Link",
    "label": "Assigned Investigator",

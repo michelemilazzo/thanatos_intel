@@ -159,3 +159,98 @@ def catalogo_completo():
                   "openapi_connesso": connesso,
                   "capacita_con_free": len([c for c in CAPACITA if c["free"]])},
     }
+
+# ── Listino operativo (X free / Y paid) + pertinenza al caso + override Z ──
+_CAP_PREZZO_Y = {
+    "Sanzioni / PEP / liste / adverse media": 6.0,
+    "Anagrafica azienda (bilanci, struttura)": 7.5,
+    "Soci e quote / Titolari effettivi (UBO) IT": 4.5,
+    "Nome \u2192 P.IVA (risoluzione)": 1.5,
+    "Negativit\u00e0 / protesti / pregiudizievoli": 6.0,
+    "Patrimoniale persona / beni": 9.0,
+    "Catasto / immobili / ipoteche": 5.0,
+    "Veicoli per targa": 3.0,
+    "Indirizzi / geocoding": 1.0,
+    "Telefono (validit\u00e0, operatore, paese)": 1.8,
+    "Email (validit\u00e0, footprint)": 1.8,
+    "IBAN (validit\u00e0, banca, titolare)": 2.4,
+    "IP / URL / dominio / cyber": 3.0,
+    "Wallet crypto / tracing": 4.0,
+    "Contenzioso / giudiziario": 2.0,
+    "Archivio web / storico siti": 1.0,
+    "Username / social / breach password": 2.0,
+    "Navi / aerei (trasporti)": 3.0,
+}
+
+_CASETYPE_CAT = {
+    "Fraud": {"Crypto", "Antifrode", "Compliance", "Cyber", "Aziende", "Rischio"},
+    "Cyber": {"Cyber", "Crypto", "Contatti", "Social", "Media"},
+    "Asset Recovery": {"Crypto", "Patrimonio", "Rischio", "Aziende", "Antifrode"},
+    "Due Diligence": {"Aziende", "Compliance", "Rischio", "Patrimonio"},
+    "Corporate": {"Aziende", "Compliance", "Rischio"},
+    "Family": {"Contatti", "Patrimonio", "Social", "Rischio"},
+}
+_ENTITY_CAT = {"Wallet": "Crypto", "Company": "Aziende", "Person": "Rischio",
+               "Email": "Contatti", "Domain": "Cyber", "IP": "Cyber", "Phone": "Contatti"}
+
+
+def _relevant_caps(case):
+    if not case:
+        return set()
+    ct = frappe.db.get_value("Investigation Case", case, "case_type")
+    rel = set(_CASETYPE_CAT.get(ct, set()))
+    try:
+        ents = frappe.db.sql("""select ie.entity_type from `tabCase Entity` ce
+            join `tabInvestigation Entity` ie on ie.name = ce.entity where ce.parent = %s""",
+            (case,), as_dict=True)
+        for e in ents:
+            if e.entity_type in _ENTITY_CAT:
+                rel.add(_ENTITY_CAT[e.entity_type])
+    except Exception:
+        pass
+    return rel
+
+
+@frappe.whitelist()
+def catalogo_due(case=None):
+    """Listino a due voci: X (dati gratuiti, valore aggiunto) e Y (a pagamento),
+    con pertinenza al caso e prezzo Z personalizzato (override per caso)."""
+    overrides = {}
+    if case:
+        raw = frappe.db.get_value("Investigation Case", case, "service_price_overrides")
+        overrides = frappe.parse_json(raw) if raw else {}
+    rel = _relevant_caps(case)
+    free_list, paid_list = [], []
+    for c in CAPACITA:
+        name = c["capacita"]
+        slug = frappe.scrub(name)
+        y = _CAP_PREZZO_Y.get(name, 5.0)
+        is_free = c.get("consiglio") in ("free", "misto")
+        prezzo_def = round(y * 0.5, 2) if is_free else round(y, 2)
+        ovr = overrides.get(slug)
+        item = {"id": slug, "capacita": name, "categoria": c.get("categoria"),
+                "tipo": "free" if is_free else "paid",
+                "prezzo_default": prezzo_def,
+                "prezzo": ovr if ovr is not None else prezzo_def,
+                "override": ovr is not None,
+                "relevant": c.get("categoria") in rel,
+                "sorgenti": ", ".join((c.get("free") or []) + (c.get("paid") or []))}
+        (free_list if is_free else paid_list).append(item)
+    return {"free": free_list, "paid": paid_list,
+            "stats": {"free": len(free_list), "paid": len(paid_list),
+                      "pertinenti": len([1 for x in free_list + paid_list if x["relevant"]])}}
+
+
+@frappe.whitelist()
+def set_service_price(case, service_id, prezzo=None):
+    """Override prezzo Z per (caso, servizio). Vuoto = ripristina listino base."""
+    if not case or not frappe.has_permission("Investigation Case", "write", doc=case):
+        frappe.throw("Permessi insufficienti.")
+    raw = frappe.db.get_value("Investigation Case", case, "service_price_overrides")
+    data = frappe.parse_json(raw) if raw else {}
+    if prezzo in (None, "", "null"):
+        data.pop(service_id, None)
+    else:
+        data[service_id] = round(float(prezzo), 2)
+    frappe.db.set_value("Investigation Case", case, "service_price_overrides", frappe.as_json(data))
+    return {"ok": True, "service_id": service_id, "prezzo": data.get(service_id)}

@@ -800,7 +800,7 @@ window.ThanatosVerifiche = {
 		$w.html(h);
 		const self = this;
 		$w.find('.vf-btn').on('click', function () { self.run(frm, $w, $(this).data('act'), $(this).data('idx'), ents); });
-		$w.find('.vf-cat').on('click', () => self.catalog($w));
+		$w.find('.vf-cat').on('click', () => self.catalog($w, frm));
 		$w.find('.vf-free').on('click', () => self.freeForm(frm, $w));
 		$w.find('.vf-prev').on('click', () => self.preventivo(frm, $w));
 		$w.find('.vf-resolve').on('click', () => {
@@ -885,26 +885,34 @@ window.ThanatosVerifiche = {
 			}, 'Patrimoniale persona', 'Esegui');
 		}
 	},
-	catalog($w) {
-		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Carico catalogo…</div>');
+	catalog($w, frm) {
+		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Carico listino…</div>');
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
-		frappe.call('thanatos_intel.osint.tool_catalog.catalogo_completo').then(r => {
-			const c = r.message || {}; const st = c.stats || {}; const mb = c.modello || {};
-			let h = '<div class="vf-res"><div class="vf-mut" style="margin-bottom:6px">'
-				+ (st.capacita || 0) + ' capacità · ' + (st.fonti_totali || 0) + ' fonti (<b style="color:#1a8a2e">' + (st.fonti_gratuite || 0) + ' gratuite</b>) · '
-				+ (st.famiglie_openapi || 0) + ' famiglie openapi</div>';
-			if (mb.principio) h += '<div class="vf-bill">💶 ' + esc(mb.catena) + '<br><b>' + esc(mb.principio) + '</b></div>';
-			h += '<table class="vf-cat-tbl"><thead><tr><th>Capacità</th><th>🟢 Gratis dà</th><th>🔴 Paid aggiunge</th><th>⚠ Manca nel free</th></tr></thead><tbody>';
-			(c.capacita || []).forEach(x => {
-				const cons = x.consiglio === 'free' ? '<span class="vf-free-tag">usa free</span>' : (x.consiglio === 'paid' ? '<span class="vf-paid-tag">paid</span>' : '<span class="vf-mix-tag">misto</span>');
-				const fhas = (x.free || []).length;
-				h += '<tr><td><b>' + esc(x.capacita) + '</b> ' + cons + '<br><span class="vf-mut">' + esc(((x.free || []).concat(x.paid || [])).join(' · ')) + '</span></td>'
-					+ '<td class="' + (fhas ? 'vf-ok' : '') + '">' + esc(x.free_dati || '—') + '</td>'
-					+ '<td>' + esc(x.paid_dati || '—') + '</td>'
-					+ '<td class="vf-gap">' + esc(x.gap || '—') + '</td></tr>';
-			});
-			h += '</tbody></table></div>';
+		const caseName = (frm && frm.doc) ? frm.doc.name : null;
+		frappe.call('thanatos_intel.osint.tool_catalog.catalogo_due', { case: caseName }).then(r => {
+			const c = r.message || {}; const st = c.stats || {};
+			const row = it => '<div class="vf-cr" data-txt="' + esc((it.capacita + ' ' + it.categoria).toLowerCase()) + '" '
+				+ 'style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-bottom:1px solid #eee;' + (it.relevant ? 'background:#fff8e6' : '') + '">'
+				+ '<div style="flex:1;font-size:12.5px">' + (it.relevant ? '⭐ ' : '') + '<b>' + esc(it.capacita) + '</b> <span class="vf-mut">· ' + esc(it.categoria) + '</span>'
+				+ '<br><span class="vf-mut" style="font-size:11px">' + esc(it.sorgenti) + '</span></div>'
+				+ '<div style="white-space:nowrap">€ <input class="vf-z" data-id="' + it.id + '" type="number" step="0.01" min="0" value="' + it.prezzo + '" style="width:74px;padding:3px 5px;border:1px solid #ddd;border-radius:5px">'
+				+ (it.override ? ' <span title="prezzo personalizzato (Z)" style="color:#b8860b;font-weight:700">Z</span>' : '') + '</div>'
+				+ '<button class="btn btn-xs btn-default vf-addc" data-id="' + it.id + '" data-l="' + esc(it.capacita) + '">➕</button></div>';
+			const sect = (title, items, badge) => items.length ? ('<div style="margin-top:8px"><div style="font-weight:700;font-size:12px;margin-bottom:2px">' + badge + ' ' + title + '</div>'
+				+ items.sort((a, b) => (b.relevant ? 1 : 0) - (a.relevant ? 1 : 0)).map(row).join('') + '</div>') : '';
+			let h = '<div class="vf-res">'
+				+ '<input class="vf-cq" placeholder="🔎 cerca capacità…" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:6px">'
+				+ '<div class="vf-mut" style="margin-bottom:4px;font-size:11px">⭐ pertinente al caso (' + (st.pertinenti || 0) + ') · prezzo editabile = personalizzato per questo caso (Z) · ➕ usalo nel preventivo</div>'
+				+ sect('A pagamento (Listino Y)', c.paid || [], '🔵')
+				+ sect('Gratuiti — valore aggiunto (Listino X)', c.free || [], '🟢')
+				+ '</div>';
 			$o.html(h);
+			$o.find('.vf-cq').on('input', function () { const q = this.value.toLowerCase(); $o.find('.vf-cr').each(function () { $(this).toggle(!q || (String($(this).attr('data-txt')) || '').indexOf(q) >= 0); }); });
+			$o.find('.vf-z').on('change', function () {
+				frappe.call('thanatos_intel.osint.tool_catalog.set_service_price', { case: caseName, service_id: $(this).data('id'), prezzo: this.value })
+					.then(() => frappe.show_alert({ message: 'Prezzo aggiornato', indicator: 'green' }));
+			});
+			$o.find('.vf-addc').on('click', function () { frappe.show_alert({ message: '«' + $(this).data('l') + '» — includilo da “Preventivo & pagamento cliente”', indicator: 'blue' }); });
 		});
 	},
 	freeForm(frm, $w) {
