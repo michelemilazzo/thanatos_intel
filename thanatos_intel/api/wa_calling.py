@@ -190,7 +190,9 @@ def register_recording():
         content = audio.stream.read()
         fname = f"wa-call-{call_id[:18]}.ogg"
         # 1. audio su StorageBox (box autoritativo, non riempie il disco del bench)
-        box_dir = frappe.conf.get("call_recordings_box", "/mnt/thanatos-box/call-recordings")
+        box_dir = os.path.join(
+            frappe.conf.get("call_recordings_box", "/mnt/thanatos-box/call-recordings"),
+            doc.get("linked_case") or "_non-assegnate")
         file_url = f"/private/files/{fname}"
         try:
             os.makedirs(box_dir, exist_ok=True)
@@ -224,3 +226,44 @@ def register_recording():
                        queue="long", timeout=900, call_log_name=doc.name)
     frappe.db.commit()
     return {"ok": True, "call_log": doc.name}
+
+
+def reorganize_call_files(call_log):
+    """Sposta registrazione audio + trascrizione .md nella cartella del caso
+    collegato (o _non-assegnate) sul box, aggiornando i symlink. Idempotente."""
+    import os
+    import shutil
+    cl = frappe.get_doc("Call Log", call_log)
+    sub = cl.get("linked_case") or "_non-assegnate"
+    url = (cl.get("audio_file") or "").strip()
+    if url:
+        fname = url.split("/")[-1]
+        link = frappe.get_site_path("private", "files", fname)
+        rec_base = frappe.conf.get("call_recordings_box", "/mnt/thanatos-box/call-recordings")
+        dest_dir = os.path.join(rec_base, sub)
+        dest = os.path.join(dest_dir, fname)
+        cur = os.path.realpath(link) if os.path.islink(link) else (link if os.path.exists(link) else None)
+        if cur and os.path.exists(cur) and os.path.abspath(cur) != os.path.abspath(dest):
+            try:
+                os.makedirs(dest_dir, exist_ok=True)
+                if not os.path.exists(dest):
+                    shutil.move(cur, dest)
+                if os.path.islink(link) or os.path.exists(link):
+                    os.remove(link)
+                os.symlink(dest, link)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "reorganize call rec")
+    try:
+        from thanatos_intel.ingest.transcription import _archive_transcript_md
+        _archive_transcript_md(call_log)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "reorganize call md")
+
+
+def call_log_files_on_update(doc, method=None):
+    """Quando il caso collegato cambia, riorganizza i file della chiamata per caso."""
+    try:
+        if doc.has_value_changed("linked_case") and doc.get("audio_file"):
+            reorganize_call_files(doc.name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "call_log on_update reorg")
