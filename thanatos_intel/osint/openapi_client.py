@@ -350,7 +350,7 @@ def case_entities(case):
         if m:
             cf = m.group(1)
         out.append({"idx": i, "entity": ce.entity, "full_name": et.full_name or ce.entity,
-                    "type": et.entity_type, "piva": piva, "cf": cf})
+                    "type": et.entity_type, "piva": piva, "cf": cf, "ident": ident})
     return {"entities": out}
 
 

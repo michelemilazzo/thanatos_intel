@@ -757,7 +757,7 @@ window.ThanatosVerifiche = {
 					+ (isCo ? `<span class="vf-id">${e.piva ? 'P.IVA ' + esc(e.piva) : '⚠ P.IVA mancante'}</span>` : (e.cf ? `<span class="vf-id">${esc(e.cf)}</span>` : '')) + '</div>'
 					+ '<div class="vf-acts">';
 				if (isCo) {
-					if (!e.piva) h += this.btn('🔗 Trova P.IVA', 'piva', e);
+					if (!e.piva) h += this.btn('🔗 Trova P.IVA', 'piva', e) + this.btn('🌍 Estero', 'estero', e);
 					h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 Sanzioni/PEP', 'free', e);
 				} else {
 					h += this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('⚖ Negatività', 'neg', e) + this.btn('🏦 Patrimoniale', 'patr', e);
@@ -814,6 +814,20 @@ window.ThanatosVerifiche = {
 				const hl = (m.hits || []).map(x => esc(x.nome)).join(', ') || 'nessun match';
 				return '<b>Sanzioni/PEP «' + esc(e.full_name) + '»</b> <span class="vf-free-tag">free · OpenSanctions</span><br>' + (m.match || 0) + ' match — ' + hl;
 			})));
+		} else if (act === 'estero') {
+			const isUK = /\bUK\b|\bGB\b/i.test(e.ident || '');
+			if (isUK) {
+				frappe.call(Object.assign({ method: 'thanatos_intel.osint.companies_house.kyb_lookup', args: { entity_name: e.entity } }, cb(m => {
+					return '<b>🇬🇧 Companies House «' + esc(e.full_name) + '»</b> (' + esc(m.number || '') + ')<br>Stato: ' + esc(m.status || '-') + ' · ' + (m.officers || 0) + ' officer · ' + (m.psc || 0) + ' PSC (UBO) · ' + (m.linked_companies || 0) + ' società collegate';
+				}))).fail(() => done('⚠ Companies House: chiave mancante. Registrati gratis su developer.company-information.service.gov.uk e inserisci companies_house_api_key.'));
+			} else {
+				frappe.call(Object.assign({ method: 'thanatos_intel.osint.opencorporates.lookup', args: Object.assign({ name: e.full_name }, args) }, cb(m => {
+					if (m.stub) return '⚠ ' + esc(m.message);
+					if (m.error) return '⚠ ' + esc(m.error);
+					const hl = (m.risultati || []).map(x => esc(x.nome) + ' (' + esc(x.giurisdizione) + ' ' + esc(x.numero) + ') — ' + esc(x.stato || '-')).join('<br>') || 'nessun match';
+					return '<b>🌍 OpenCorporates «' + esc(e.full_name) + '»</b>' + (m.jurisdiction ? ' [' + esc(m.jurisdiction) + ']' : '') + '<br>' + (m.match || 0) + ' match<br>' + hl;
+				})));
+			}
 		} else if (act === 'piva') {
 			frappe.call({ method: this.OC + 'risolvi_piva', args: { name: e.full_name }, freeze: true, freeze_message: 'Risoluzione P.IVA…', callback: r => {
 				const m = r.message || {};
