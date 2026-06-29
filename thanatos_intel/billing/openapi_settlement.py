@@ -37,9 +37,8 @@ def mmos_connect_link():
 
 
 def _mmos_share(cost, total):
-    pct = flt(frappe.conf.get("mmos_markup_pct") or 0)
-    markup = max(0.0, flt(total) - flt(cost))
-    return round(flt(cost) + markup * pct / 100.0, 2)
+    # MMOS vende all'ingrosso a costo openapi × 3 (prezzo fisso per tutti i rivenditori).
+    return round(flt(cost) * flt(frappe.conf.get("openapi_mmos_markup") or 3.0), 2)
 
 
 @frappe.whitelist()
