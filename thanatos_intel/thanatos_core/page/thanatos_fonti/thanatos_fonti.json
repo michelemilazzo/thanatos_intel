@@ -1,0 +1,18 @@
+{
+ "content": null,
+ "creation": "2026-06-29 00:00:00",
+ "doctype": "Page",
+ "icon": "list",
+ "idx": 0,
+ "modified": "2026-06-29 00:00:00",
+ "modified_by": "Administrator",
+ "module": "Thanatos Core",
+ "name": "thanatos-fonti",
+ "owner": "Administrator",
+ "page_name": "thanatos-fonti",
+ "roles": [{"role": "System Manager"}, {"role": "Investigation Manager"}, {"role": "Investigator"}],
+ "script": null,
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "🧰 Fonti & Chiavi OSINT"
+}
