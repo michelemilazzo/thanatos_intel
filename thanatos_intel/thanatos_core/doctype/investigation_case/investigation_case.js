@@ -916,29 +916,52 @@ window.ThanatosVerifiche = {
 		});
 	},
 	freeForm(frm, $w) {
-		frappe.prompt([
-			{ fieldtype: 'Select', fieldname: 'tool', label: 'Strumento', reqd: 1, options: ['Visura camerale (P.IVA)', 'Soci & UBO (P.IVA)', 'Screening KYC (nome)', 'Negatività (CF/P.IVA)', 'Verifica IBAN', 'Veicolo (targa)', 'VirusTotal (IP/dominio/URL)', 'AbuseIPDB (IP)', 'Shodan (IP)', 'IPinfo (IP)', 'urlscan (dominio/URL)'].join('\n') },
-			{ fieldtype: 'Data', fieldname: 'value', label: 'Valore (P.IVA / nome / CF / IBAN / targa / IP / dominio / URL)', reqd: 1 }
-		], (v) => {
-			const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Interrogazione…</div>');
-			const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
-			const done = h => $o.html('<div class="vf-res">' + h + '</div>');
-			const a = { investigation_case: frm.doc.name };
-			const T = v.tool;
-			if (T.indexOf('Visura') === 0) frappe.call({ method: 'thanatos_intel.osint.registro_imprese.verifica_impresa', args: Object.assign({ piva: v.value }, a), callback: r => { const c = (r.message || {}).company || {}; done('<b>' + esc(c.denominazione || '-') + '</b> · ' + esc(c.stato || '-')); } });
-			else if (T.indexOf('Soci') === 0) frappe.call({ method: this.OC + 'soci_titolari', args: Object.assign({ piva: v.value }, a), callback: r => { const m = r.message || {}; done('Soci: ' + ((m.soci || []).map(s => esc(s.nome) + ' (' + s.quota + '%)').join('; ') || '—') + '<br>UBO: ' + ((m.ubo || []).map(u => esc(u.nome)).join('; ') || '—')); } });
-			else if (T.indexOf('Screening') === 0) frappe.call({ method: this.OC + 'screening_kyc', args: Object.assign({ query: v.value, mode: 'pep' }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : (m.match || 0) + ' match — ' + ((m.hits || []).map(x => esc(x.nome)).join(', ') || 'nessuno')); } });
-			else if (T.indexOf('Negatività') === 0) frappe.call({ method: this.OC + 'negativita', args: Object.assign({ cf_piva: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : esc(m.status) + ' — ' + esc(JSON.stringify(m.esito || ''))); } });
-			else if (T.indexOf('IBAN') >= 0) frappe.call({ method: this.OC + 'verifica_iban', args: Object.assign({ iban: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : 'Valido: ' + esc(m.valido) + ' · Banca: ' + esc(m.banca || '-')); } });
-			else if (T.indexOf('Veicolo') >= 0) frappe.call({ method: this.OC + 'veicolo', args: Object.assign({ targa: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : esc(JSON.stringify(m.dati || {}).slice(0, 300))); } });
-			const CY = 'thanatos_intel.osint.cyber_intel.';
-			const cyDone = (m, body) => done(m.stub ? '⚠ ' + esc(m.message) : (m.error ? '⚠ ' + esc(m.error) : body(m)));
-			if (T.indexOf('VirusTotal') === 0) frappe.call({ method: CY + 'virustotal', args: Object.assign({ target: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>VirusTotal ' + esc(m.target) + '</b><br>Malicious: ' + m.malicious + ' · Suspicious: ' + m.suspicious + ' · Reputation: ' + esc(m.reputation) + '<br>AS: ' + esc(m.as_owner || '-') + ' (' + esc(m.country || '-') + ')') });
-			else if (T.indexOf('AbuseIPDB') === 0) frappe.call({ method: CY + 'abuseipdb', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>AbuseIPDB ' + esc(m.ip) + '</b><br>Abuse score: ' + esc(m.abuse_score) + '% · ' + esc(m.segnalazioni) + ' segnalazioni<br>ISP: ' + esc(m.isp || '-') + ' (' + esc(m.paese || '-') + ')') });
-			else if (T.indexOf('Shodan') === 0) frappe.call({ method: CY + 'shodan_host', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>Shodan ' + esc(m.ip) + '</b><br>Org: ' + esc(m.org || '-') + '<br>Porte: ' + esc((m.porte || []).join(', ') || '-') + '<br>Vuln: ' + esc((m.vulns || []).join(', ') || 'nessuna')) });
-			else if (T.indexOf('IPinfo') === 0) frappe.call({ method: CY + 'ipinfo', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>IPinfo ' + esc(m.ip) + '</b><br>Org/ASN: ' + esc(m.org || '-') + '<br>' + esc(m.citta || '-') + ', ' + esc(m.paese || '-') + ' · ' + esc(m.hostname || '-')) });
-			else if (T.indexOf('urlscan') === 0) frappe.call({ method: CY + 'urlscan', args: Object.assign({ target: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>urlscan ' + esc(m.target) + '</b><br>' + (m.scansioni || 0) + ' scansioni<br>' + (m.ultime || []).map(u => esc(u.url) + ' → ' + esc(u.ip || '-') + ' (' + esc(u.paese || '-') + ')').join('<br>')) });
-		}, 'Ricerca libera', 'Esegui');
+		const self = this;
+		frappe.call(this.OC + 'case_entities', { case: frm.doc.name }).then(rr => {
+			const ents = (rr.message || {}).entities || [];
+			const uniq = arr => { const seen = new Set(); return arr.filter(x => x && x.value && !seen.has(x.value) && seen.add(x.value)); };
+			const piva = uniq(ents.filter(e => e.piva).map(e => ({ value: e.piva, label: e.piva + ' — ' + e.full_name })));
+			const cf = uniq(ents.filter(e => e.cf).map(e => ({ value: e.cf, label: e.cf + ' — ' + e.full_name })));
+			const nomi = uniq(ents.filter(e => ['Company', 'Person'].includes(e.type)).map(e => ({ value: e.full_name, label: e.full_name + ' (' + (e.type === 'Company' ? 'Società' : 'Persona') + ')' })));
+			const ip = uniq(ents.filter(e => e.type === 'IP').map(e => ({ value: e.ident, label: e.ident })));
+			const web = uniq(ents.filter(e => ['Domain', 'IP'].includes(e.type)).map(e => ({ value: e.ident, label: e.ident + ' (' + e.type + ')' })));
+			const MAP = {
+				'Visura camerale (P.IVA)': piva, 'Soci & UBO (P.IVA)': piva, 'Negatività (CF/P.IVA)': piva.concat(cf),
+				'Screening KYC (nome)': nomi, 'Verifica IBAN': [], 'Veicolo (targa)': [],
+				'VirusTotal (IP/dominio/URL)': web, 'AbuseIPDB (IP)': ip, 'Shodan (IP)': ip, 'IPinfo (IP)': ip, 'urlscan (dominio/URL)': web
+			};
+			const d = new frappe.ui.Dialog({
+				title: 'Ricerca libera',
+				fields: [
+					{ fieldtype: 'Select', fieldname: 'tool', label: 'Strumento', reqd: 1, options: Object.keys(MAP) },
+					{ fieldtype: 'Autocomplete', fieldname: 'value', label: 'Valore (scegli dai suggerimenti del caso o digita)', reqd: 1, options: [] }
+				],
+				primary_action_label: 'Esegui',
+				primary_action(v) {
+					d.hide();
+					const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Interrogazione…</div>');
+					const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+					const done = h => $o.html('<div class="vf-res">' + h + '</div>');
+					const a = { investigation_case: frm.doc.name };
+					const T = v.tool;
+					if (T.indexOf('Visura') === 0) frappe.call({ method: 'thanatos_intel.osint.registro_imprese.verifica_impresa', args: Object.assign({ piva: v.value }, a), callback: r => { const c = (r.message || {}).company || {}; done('<b>' + esc(c.denominazione || '-') + '</b> · ' + esc(c.stato || '-')); } });
+					else if (T.indexOf('Soci') === 0) frappe.call({ method: self.OC + 'soci_titolari', args: Object.assign({ piva: v.value }, a), callback: r => { const m = r.message || {}; done('Soci: ' + ((m.soci || []).map(s => esc(s.nome) + ' (' + s.quota + '%)').join('; ') || '—') + '<br>UBO: ' + ((m.ubo || []).map(u => esc(u.nome)).join('; ') || '—')); } });
+					else if (T.indexOf('Screening') === 0) frappe.call({ method: self.OC + 'screening_kyc', args: Object.assign({ query: v.value, mode: 'pep' }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : (m.match || 0) + ' match — ' + ((m.hits || []).map(x => esc(x.nome)).join(', ') || 'nessuno')); } });
+					else if (T.indexOf('Negatività') === 0) frappe.call({ method: self.OC + 'negativita', args: Object.assign({ cf_piva: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : esc(m.status) + ' — ' + esc(JSON.stringify(m.esito || ''))); } });
+					else if (T.indexOf('IBAN') >= 0) frappe.call({ method: self.OC + 'verifica_iban', args: Object.assign({ iban: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : 'Valido: ' + esc(m.valido) + ' · Banca: ' + esc(m.banca || '-')); } });
+					else if (T.indexOf('Veicolo') >= 0) frappe.call({ method: self.OC + 'veicolo', args: Object.assign({ targa: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : esc(JSON.stringify(m.dati || {}).slice(0, 300))); } });
+					const CY = 'thanatos_intel.osint.cyber_intel.';
+					const cyDone = (m, body) => done(m.stub ? '⚠ ' + esc(m.message) : (m.error ? '⚠ ' + esc(m.error) : body(m)));
+					if (T.indexOf('VirusTotal') === 0) frappe.call({ method: CY + 'virustotal', args: Object.assign({ target: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>VirusTotal ' + esc(m.target) + '</b><br>Malicious: ' + m.malicious + ' · Suspicious: ' + m.suspicious + ' · Reputation: ' + esc(m.reputation) + '<br>AS: ' + esc(m.as_owner || '-') + ' (' + esc(m.country || '-') + ')') });
+					else if (T.indexOf('AbuseIPDB') === 0) frappe.call({ method: CY + 'abuseipdb', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>AbuseIPDB ' + esc(m.ip) + '</b><br>Abuse score: ' + esc(m.abuse_score) + '% · ' + esc(m.segnalazioni) + ' segnalazioni<br>ISP: ' + esc(m.isp || '-') + ' (' + esc(m.paese || '-') + ')') });
+					else if (T.indexOf('Shodan') === 0) frappe.call({ method: CY + 'shodan_host', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>Shodan ' + esc(m.ip) + '</b><br>Org: ' + esc(m.org || '-') + '<br>Porte: ' + esc((m.porte || []).join(', ') || '-') + '<br>Vuln: ' + esc((m.vulns || []).join(', ') || 'nessuna')) });
+					else if (T.indexOf('IPinfo') === 0) frappe.call({ method: CY + 'ipinfo', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>IPinfo ' + esc(m.ip) + '</b><br>Org/ASN: ' + esc(m.org || '-') + '<br>' + esc(m.citta || '-') + ', ' + esc(m.paese || '-') + ' · ' + esc(m.hostname || '-')) });
+					else if (T.indexOf('urlscan') === 0) frappe.call({ method: CY + 'urlscan', args: Object.assign({ target: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>urlscan ' + esc(m.target) + '</b><br>' + (m.scansioni || 0) + ' scansioni<br>' + (m.ultime || []).map(u => esc(u.url) + ' → ' + esc(u.ip || '-') + ' (' + esc(u.paese || '-') + ')').join('<br>')) });
+				}
+			});
+			d.fields_dict.tool.df.onchange = () => { d.fields_dict.value.set_data(MAP[d.get_value('tool')] || []); };
+			d.show();
+		});
 	},
 	preventivo(frm, $w) {
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
