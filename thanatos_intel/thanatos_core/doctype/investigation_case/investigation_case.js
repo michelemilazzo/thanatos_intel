@@ -903,7 +903,7 @@ window.ThanatosVerifiche = {
 				+ '<select class="vf-rule-mode" style="padding:3px 5px;border:1px solid #ddd;border-radius:5px">' + opt('multiplier', '× Moltiplicatore') + opt('percent', '+ Percentuale %') + opt('fixed', '€ Prezzo fisso') + '</select>'
 				+ '<input class="vf-rule-val" type="number" step="0.01" value="' + (rule.value != null ? rule.value : 1) + '" style="width:80px;padding:3px 5px;border:1px solid #ddd;border-radius:5px">'
 				+ '<button class="btn btn-xs btn-primary vf-rule-apply">Applica a tutti</button>'
-				+ '<span class="vf-mut" style="font-size:11px">prezzi base su erp.onekeyco.com · modifica una cella per un prezzo su misura</span></div>'
+				+ '<span class="vf-mut" style="font-size:11px">modifica una cella per un prezzo su misura</span></div>'
 				+ '<input class="vf-cq" placeholder="🔎 cerca capacità…" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:6px;margin-bottom:6px">'
 				+ (c.voci || []).map(row).join('')
 				+ '</div>';
