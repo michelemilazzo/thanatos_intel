@@ -46,6 +46,22 @@ h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 
   </div>
   <a class="cta" href="/portal/segnala">Segnala e guadagna credito →</a>
   <a class="cta ghost" href="/portal/verifica-blacklist">Usa il credito (verifica blacklist)</a>
+  {% if client %}
+  <a class="cta" href="#" id="wallet-topup">Ricarica wallet (carta) &rarr;</a>
+  <script>
+  document.getElementById("wallet-topup").addEventListener("click", async function(e){
+    e.preventDefault();
+    var amt = prompt("Quanto vuoi ricaricare? Importo di credito netto in \u20ac.\nVerr\u00e0 aggiunta la commissione Stripe (3% + 0,40\u20ac).");
+    if(!amt) return;
+    try{
+      var r = await fetch("/api/method/thanatos_intel.integrations.stripe_bridge.topup_wallet",{
+        method:"POST", headers:{"Content-Type":"application/json","X-Frappe-CSRF-Token":frappe.csrf_token},
+        body: JSON.stringify({client:"{{ client }}", amount: amt})}).then(x=>x.json());
+      if(r.message && r.message.url){ window.location = r.message.url; } else { alert("Errore ricarica"); }
+    }catch(err){ alert("Errore: "+err); }
+  });
+  </script>
+  {% endif %}
   {% if client_moves %}
   <div class="led">
     {% for m in client_moves %}
