@@ -248,3 +248,48 @@ def case_ai_chat(case, message):
         return done("Comandi: dossier · proforma · formulario · fascicolo · doppia cessione · domande · "
                     "screening · riconciliazione fatture · verifica camerale <piva> · valuta assicurazione · "
                     "analisi completa · avanzamento.")
+
+
+_EV_TYPE = [
+    ("audio", "Audio"), ("image", "Photo"), ("video", "Video"),
+    ("pdf", "Document"), ("zip", "File"), ("text", "Document"),
+]
+
+
+@frappe.whitelist()
+def chat_upload(case, file_url, file_name, content_type=""):
+    """File caricato dalla chat del caso → reperto nel dossier (Investigation Evidence
+    con attached_file). Il file è già allegato al caso da upload_file."""
+    ct = (content_type or "").lower()
+    name_l = (file_name or "").lower()
+    etype = "Document"
+    for key, t in _EV_TYPE:
+        if key in ct or name_l.endswith("." + ("jpg" if key == "image" else key)):
+            etype = t
+            break
+    if name_l.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
+        etype = "Photo"
+    elif name_l.endswith((".mp3", ".wav", ".m4a", ".ogg", ".opus", ".aac")):
+        etype = "Audio"
+    elif name_l.endswith((".mp4", ".mov", ".avi", ".mkv")):
+        etype = "Video"
+    elif name_l.endswith((".zip", ".rar", ".7z")):
+        etype = "File"
+    ev = frappe.get_doc({
+        "doctype": "Investigation Evidence", "investigation_case": case,
+        "evidence_name": file_name[:140], "evidence_type": etype, "source": "Chat caso",
+        "attached_file": file_url, "acquisition_date": now_datetime(),
+        "custody_status": "Received", "notes": f"Caricato dalla chat del caso: {file_name}"})
+    ev.flags.ignore_mandatory = True
+    ev.insert(ignore_permissions=True)
+    try:
+        c = frappe.get_doc("Investigation Case", case)
+        c.append("case_activities", {"activity_date": now_datetime(), "activity_type": "Document",
+                 "description": f"📎 File nel dossier: {file_name} (reperto {ev.name}, tipo {etype})"[:500],
+                 "operator": frappe.session.user})
+        c.flags.ignore_mandatory = True
+        c.save(ignore_permissions=True)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "chat_upload activity")
+    frappe.db.commit()
+    return {"evidence": ev.name, "type": etype, "transcribing": False}

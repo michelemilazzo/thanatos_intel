@@ -1105,7 +1105,9 @@ frappe.ui.form.on('Investigation Case', {
             + '<div id="aic-msgs" style="height:240px;overflow-y:auto;padding:10px 12px;font-size:13px;background:#faf8f2"></div>'
             + '<div style="padding:6px 10px;border-top:1px solid #eee">'
             + '<div id="aic-chips" style="margin-bottom:6px"></div>'
-            + '<div style="display:flex;gap:6px"><input id="aic-in" class="form-control input-sm" placeholder="Chiedi o comanda… (es. valuta assicurazione, verifica camerale 03293360966)" style="flex:1">'
+            + '<div style="display:flex;gap:6px;align-items:center"><input id="aic-in" class="form-control input-sm" placeholder="Chiedi o comanda… (es. valuta assicurazione, verifica camerale 03293360966)" style="flex:1">'
+            + '<button id="aic-attach" class="btn btn-default btn-sm" title="Carica file nel dossier (audio, zip, foto, PDF…)">📎</button>'
+            + '<input id="aic-file" type="file" multiple style="display:none">'
             + '<button id="aic-send" class="btn btn-primary btn-sm">Invia</button></div></div></div>');
         const $msgs = $w.find('#aic-msgs');
         function add(who, text) {
@@ -1130,6 +1132,31 @@ frappe.ui.form.on('Investigation Case', {
         $w.find('#aic-chips button').on('click', function () { send($(this).text()); });
         $w.find('#aic-send').on('click', () => send($w.find('#aic-in').val().trim()));
         $w.find('#aic-in').on('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send($w.find('#aic-in').val().trim()); } });
+        // upload file → dossier (reperto sul caso)
+        $w.find('#aic-attach').on('click', () => $w.find('#aic-file').click());
+        $w.find('#aic-file').on('change', function () {
+            const files = Array.from(this.files || []); this.value = '';
+            files.forEach(file => {
+                add('me', '📎 ' + file.name);
+                const fd = new FormData();
+                fd.append('file', file); fd.append('is_private', 1);
+                fd.append('doctype', 'Investigation Case'); fd.append('docname', frm.doc.name);
+                add('ai', '⏳ carico…');
+                fetch('/api/method/upload_file', { method: 'POST', headers: { 'X-Frappe-CSRF-Token': frappe.csrf_token }, body: fd })
+                    .then(r => r.json()).then(j => {
+                        const fu = (j.message || {}).file_url;
+                        if (!fu) { $msgs.find('div:last').remove(); add('ai', '⚠ upload fallito'); return; }
+                        frappe.call({ method: 'thanatos_intel.ai.case_assistant.chat_upload',
+                            args: { case: frm.doc.name, file_url: fu, file_name: file.name, content_type: file.type || '' },
+                            callback(r2) {
+                                $msgs.find('div:last').remove();
+                                const m = r2.message || {};
+                                add('ai', '✅ «' + file.name + '» nel dossier come reperto' + (m.evidence ? ' ' + m.evidence : '') + (m.transcribing ? ' · trascrizione audio avviata' : ''));
+                                frm.reload_doc();
+                            } });
+                    }).catch(() => { $msgs.find('div:last').remove(); add('ai', '⚠ upload fallito'); });
+            });
+        });
         add('ai', 'Ciao. Sono l’assistente del caso: posso eseguire gli strumenti (dossier, proforma, doppia cessione, domande, screening, verifica camerale, valutazione assicurativa, analisi completa) o rispondere alle tue domande. Scrivi un comando o usa i tasti rapidi.');
     }
 });
