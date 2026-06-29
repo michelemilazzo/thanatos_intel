@@ -953,7 +953,7 @@ window.ThanatosVerifiche = {
 			const d = new frappe.ui.Dialog({
 				title: 'Preventivo cliente',
 				fields: [
-					{ fieldtype: 'HTML', fieldname: 'list', options: '<div style="max-height:240px;overflow:auto">' + rows + '</div>' + '<div style="font-size:11px;color:var(--text-muted);margin-top:6px">Prezzi IVA esclusa' + (lst.iva_note ? ' · ' + esc(lst.iva_note) : '') + '</div>' },
+					{ fieldtype: 'HTML', fieldname: 'list', options: '<div style="max-height:240px;overflow:auto">' + rows + '</div>' + '<div style="font-size:11px;color:var(--text-muted);margin-top:6px">Prezzi IVA esclusa · + IVA</div>' },
 					{ fieldtype: 'Select', fieldname: 'payer', label: 'Chi paga', options: 'Cliente\nInvestigatore\nA carico di Thanatos', default: 'Cliente' },
 					{ fieldtype: 'Select', fieldname: 'channels', label: 'Invia tramite', options: 'Email\nWhatsApp\nEmail + WhatsApp', default: 'Email' },
 					{ fieldtype: 'Data', fieldname: 'email', label: 'Email destinatario' },
@@ -975,6 +975,9 @@ window.ThanatosVerifiche = {
 						callback(r2) {
 							const m = r2.message || {};
 							let h = '<div style="margin-top:10px;border-top:1px solid var(--border-color);padding-top:10px">';
+							h += '<div style="font-weight:700;margin-bottom:4px">📄 Preventivo' + (m.payer ? ' — paga: ' + esc(m.payer) : '') + '</div>';
+							(m.righe || []).forEach(function (r) { h += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:1px 0"><span>' + esc(r.label) + (r.target ? ' — ' + esc(r.target) : '') + '</span><span>€ ' + (r.prezzo || 0).toFixed(2) + '</span></div>'; });
+							h += '<div style="border-top:1px solid #eee;margin:4px 0;padding-top:4px"></div>';
 							h += '<div>Imponibile: € ' + (m.imponibile != null ? m.imponibile : (m.totale_cliente || 0)).toFixed(2) + '</div>';
 							if (m.iva_rate) h += '<div>' + esc(m.iva_note || 'IVA') + ': € ' + (m.iva_importo || 0).toFixed(2) + '</div>';
 							else if (m.iva_note) h += '<div style="color:var(--text-muted)">' + esc(m.iva_note) + '</div>';
@@ -986,6 +989,7 @@ window.ThanatosVerifiche = {
 							['inviato_email','inviato_wa'].forEach(function(k){ var s2=m[k]; if(s2) h += '<div style="margin-top:4px;color:'+(s2.ok?'#1a8a2e':'#c0392b')+'">'+(k==='inviato_wa'?'WhatsApp':'Email')+': '+(s2.ok?'✓ inviato a '+esc(s2.to):'⚠ '+esc(s2.error))+'</div>'; });
 							h += '</div>';
 							d.fields_dict.out.$wrapper.html(h);
+							try { d.fields_dict.out.$wrapper[0].scrollIntoView({ block: 'nearest' }); } catch (e) {}
 							d.$wrapper.find('.vf-copy').on('click', function () { navigator.clipboard.writeText($(this).data('l')); frappe.show_alert({ message: 'Link copiato', indicator: 'green' }); });
 							frm.reload_doc();
 						}
