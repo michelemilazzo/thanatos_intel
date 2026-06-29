@@ -60,25 +60,43 @@ _EU_COUNTRIES = {
 }
 
 
+_EU_VAT_RATES = {
+    "Italy": 22, "Romania": 19, "Germany": 19, "France": 20, "Spain": 21, "Austria": 20,
+    "Belgium": 21, "Bulgaria": 20, "Croatia": 25, "Cyprus": 19, "Czech Republic": 21,
+    "Denmark": 25, "Estonia": 22, "Finland": 25.5, "Greece": 24, "Hungary": 27,
+    "Ireland": 23, "Latvia": 21, "Lithuania": 21, "Luxembourg": 17, "Malta": 18,
+    "Netherlands": 21, "Poland": 23, "Portugal": 23, "Slovakia": 23, "Slovenia": 22,
+    "Sweden": 25,
+}
+
+
 def _iva(case=None):
-    """Aliquota IVA applicabile (%) e nota di regime, in base a chi fattura e al cliente."""
+    """Aliquota IVA applicabile (%) e nota di regime: chi fattura (Billing Entity) + cliente.
+    Domestico = aliquota nazionale; UE B2B con P.IVA = inversione contabile; UE B2C = OSS
+    (aliquota destinazione); extra-UE = non imponibile."""
     be_name = frappe.db.get_value("Investigation Case", case, "billing_entity") if case else None
     if not be_name:
         from thanatos_intel.billing.billing_entity import get_default_billing_entity_name
         be_name = get_default_billing_entity_name()
     be_country = frappe.db.get_value("Billing Entity", be_name, "country") if be_name else None
-    if be_country not in ("Italy", "Italia", "IT"):
-        return 0.0, "IVA non applicabile (entit\u00e0 estera)"
     client = frappe.db.get_value("Investigation Case", case, "client") if case else None
     cc = frappe.db.get_value("Investigation Client", client, "country") if client else None
     vat = frappe.db.get_value("Investigation Client", client, "vat_number") if client else None
-    if not cc or cc in ("Italy", "Italia", "IT"):
-        return 22.0, "IVA 22%"
-    if cc in _EU_COUNTRIES and vat:
-        return 0.0, "Inversione contabile art.7-ter (UE B2B)"
-    if cc in _EU_COUNTRIES:
-        return 22.0, "IVA 22% (UE B2C)"
-    return 0.0, "Operazione non imponibile (extra-UE)"
+    if not cc:
+        cc = be_country  # cliente sconosciuto → assume operazione domestica
+    be_eu = be_country in _EU_VAT_RATES
+    cl_eu = cc in _EU_VAT_RATES
+    if not be_eu:
+        return 0.0, "IVA non applicabile (entit\u00e0 extra-UE)"
+    if not cl_eu:
+        return 0.0, "Operazione non imponibile (cliente extra-UE)"
+    if cc == be_country:
+        r = _EU_VAT_RATES.get(cc, 22)
+        return float(r), "IVA %g%%" % r
+    if vat:
+        return 0.0, "Inversione contabile art.196 (UE B2B)"
+    r = _EU_VAT_RATES.get(cc, 22)
+    return float(r), "IVA %g%% (OSS %s)" % (r, cc)
 
 
 @frappe.whitelist()
