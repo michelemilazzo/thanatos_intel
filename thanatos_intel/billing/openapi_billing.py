@@ -176,7 +176,8 @@ def genera_preventivo(case, items, payer="cliente", channels="email", email=None
     righe, tot_real, tot_cli = [], 0.0, 0.0
     for it in items:
         lbl, cost = _price(it.get("id"))
-        prezzo = round(cost * mk, 2)
+        p = it.get("prezzo")
+        prezzo = round(float(p), 2) if p not in (None, "", "null") else round(cost * mk, 2)
         tot_real += cost
         tot_cli += prezzo
         righe.append({"id": it.get("id"), "label": it.get("label") or lbl,

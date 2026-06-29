@@ -886,6 +886,7 @@ window.ThanatosVerifiche = {
 		}
 	},
 	catalog($w, frm) {
+		const self = this;
 		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Carico listino…</div>');
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
 		const caseName = (frm && frm.doc) ? frm.doc.name : null;
@@ -911,7 +912,7 @@ window.ThanatosVerifiche = {
 			$o.find('.vf-cq').on('input', function () { const q = this.value.toLowerCase(); $o.find('.vf-cr').each(function () { $(this).toggle(!q || (String($(this).attr('data-txt')) || '').indexOf(q) >= 0); }); });
 			$o.find('.vf-z').on('change', function () { frappe.call('thanatos_intel.osint.tool_catalog.set_service_price', { case: caseName, service_id: $(this).data('id'), prezzo: this.value }).then(() => frappe.show_alert({ message: 'Prezzo rivendita aggiornato', indicator: 'green' })); });
 			$o.find('.vf-rule-apply').on('click', function () { frappe.call('thanatos_intel.osint.tool_catalog.set_resale_rule', { case: caseName, mode: $o.find('.vf-rule-mode').val(), value: $o.find('.vf-rule-val').val() }).then(() => { frappe.show_alert({ message: 'Regola rivendita applicata', indicator: 'green' }); load(); }); });
-			$o.find('.vf-addc').on('click', function () { frappe.show_alert({ message: '«' + $(this).data('l') + '» — includilo da "Preventivo & pagamento cliente"', indicator: 'blue' }); });
+			$o.find('.vf-addc').on('click', function () { self.preventivo(frm, $w, $(this).data('id')); });
 		});
 		load();
 	},
@@ -969,16 +970,16 @@ window.ThanatosVerifiche = {
 			d.show();
 		});
 	},
-	preventivo(frm, $w) {
+	preventivo(frm, $w, preselect) {
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
-		frappe.call('thanatos_intel.billing.openapi_billing.listino', { case: frm.doc.name }).then(r => {
+		frappe.call('thanatos_intel.osint.tool_catalog.catalogo_due', { case: frm.doc.name }).then(r => {
 			const lst = r.message || {}; const voci = lst.voci || [];
 			const PAYMAP = { 'Cliente': 'cliente', 'Investigatore': 'investigatore', 'A carico di Thanatos': 'thanatos' };
 			const CHMAP = { 'Email': 'email', 'WhatsApp': 'whatsapp', 'Email + WhatsApp': 'both' };
 			const rows = voci.map(v => `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">
-				<input type="checkbox" class="vf-pv-it" data-id="${v.id}" data-label="${esc(v.label)}">
-				<span style="flex:1">${esc(v.label)}</span>
-				<span style="color:var(--text-muted)">€ ${v.prezzo.toFixed(2)}</span></label>`).join('');
+				<input type="checkbox" class="vf-pv-it" data-id="${v.id}" data-label="${esc(v.capacita)}" data-prezzo="${v.rivendita}">
+				<span style="flex:1">${v.relevant ? '⭐ ' : ''}${esc(v.capacita)} <span style="color:var(--text-muted)">· ${esc(v.categoria)}</span></span>
+				<span style="color:var(--text-muted)">€ ${(v.rivendita).toFixed(2)}</span></label>`).join('');
 			const d = new frappe.ui.Dialog({
 				title: 'Preventivo cliente',
 				fields: [
@@ -994,7 +995,7 @@ window.ThanatosVerifiche = {
 				primary_action(v) {
 					const items = [];
 					d.$wrapper.find('.vf-pv-it:checked').each(function () {
-						items.push({ id: $(this).data('id'), label: $(this).data('label') });
+						items.push({ id: $(this).data('id'), label: $(this).data('label'), prezzo: $(this).data('prezzo') });
 					});
 					if (!items.length) { frappe.show_alert({ message: 'Seleziona almeno una voce', indicator: 'orange' }); return; }
 					frappe.call({
@@ -1031,6 +1032,7 @@ window.ThanatosVerifiche = {
 				if (d.fields_dict.payer) d.fields_dict.payer.df.onchange = fill;
 				fill();
 			});
+			if (preselect) setTimeout(() => { d.$wrapper.find('.vf-pv-it[data-id="' + preselect + '"]').prop('checked', true); }, 250);
 			d.show();
 		});
 	},
