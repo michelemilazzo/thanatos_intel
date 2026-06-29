@@ -420,6 +420,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "🚨 Watchlist Entry",
+   "link_count": 0,
+   "link_to": "Watchlist Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Corporate & Financial",
    "link_count": 4,
    "link_type": "DocType",
@@ -466,6 +476,16 @@
    "label": "Debt Exposure",
    "link_count": 0,
    "link_to": "Debt Exposure",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "🕸️ Corporate Group (cluster)",
+   "link_count": 0,
+   "link_to": "Corporate Group",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -530,6 +550,16 @@
    "label": "Usage Event",
    "link_count": 0,
    "link_to": "Usage Event",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "🤖 AI Usage Log",
+   "link_count": 0,
+   "link_to": "AI Usage Log",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -867,6 +897,16 @@
    "label": "Case Type",
    "link_count": 0,
    "link_to": "Case Type",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "🧭 Service Blueprint",
+   "link_count": 0,
+   "link_to": "Service Blueprint",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
