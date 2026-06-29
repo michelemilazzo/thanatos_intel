@@ -52,15 +52,47 @@ def gen_mmos_link():
     return mmos_connect_link()
 
 
+_EU_COUNTRIES = {
+    "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus", "Czech Republic", "Denmark",
+    "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Ireland", "Italy",
+    "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland", "Portugal",
+    "Romania", "Slovakia", "Slovenia", "Spain", "Sweden",
+}
+
+
+def _iva(case=None):
+    """Aliquota IVA applicabile (%) e nota di regime, in base a chi fattura e al cliente."""
+    be_name = frappe.db.get_value("Investigation Case", case, "billing_entity") if case else None
+    if not be_name:
+        from thanatos_intel.billing.billing_entity import get_default_billing_entity_name
+        be_name = get_default_billing_entity_name()
+    be_country = frappe.db.get_value("Billing Entity", be_name, "country") if be_name else None
+    if be_country not in ("Italy", "Italia", "IT"):
+        return 0.0, "IVA non applicabile (entit\u00e0 estera)"
+    client = frappe.db.get_value("Investigation Case", case, "client") if case else None
+    cc = frappe.db.get_value("Investigation Client", client, "country") if client else None
+    vat = frappe.db.get_value("Investigation Client", client, "vat_number") if client else None
+    if not cc or cc in ("Italy", "Italia", "IT"):
+        return 22.0, "IVA 22%"
+    if cc in _EU_COUNTRIES and vat:
+        return 0.0, "Inversione contabile art.7-ter (UE B2B)"
+    if cc in _EU_COUNTRIES:
+        return 22.0, "IVA 22% (UE B2C)"
+    return 0.0, "Operazione non imponibile (extra-UE)"
+
+
 @frappe.whitelist()
-def listino(client=None):
-    """Listino completo: funzione, costo reale, prezzo cliente (col markup)."""
+def listino(client=None, case=None):
+    """Listino: prezzo cliente finale (markup gi\u00e0 incluso) + regime IVA."""
+    if case and not client:
+        client = frappe.db.get_value("Investigation Case", case, "client")
     mk = _markup(client)
     out = []
     for fid, (label, cost) in _PRICES.items():
         lbl, c = _price(fid)
         out.append({"id": fid, "label": lbl, "costo": c, "prezzo": round(c * mk, 2)})
-    return {"markup": mk, "voci": out}
+    iva_rate, iva_note = _iva(case)
+    return {"markup": mk, "voci": out, "iva_rate": iva_rate, "iva_note": iva_note}
 
 
 def _client_of(case):
@@ -84,13 +116,18 @@ def genera_preventivo(case, items, payer_email=None, invia=0):
         righe.append({"id": it.get("id"), "label": it.get("label") or lbl,
                       "target": it.get("target"), "costo": cost, "prezzo": prezzo})
     tot_cli = round(tot_cli, 2)
+    iva_rate, iva_note = _iva(case)
+    iva_importo = round(tot_cli * iva_rate / 100.0, 2)
+    totale = round(tot_cli + iva_importo, 2)
     out = {"case": case, "client": client, "markup": mk, "righe": righe,
-           "totale_reale": round(tot_real, 2), "totale_cliente": tot_cli, "valuta": "EUR"}
+           "totale_reale": round(tot_real, 2), "imponibile": tot_cli,
+           "iva_rate": iva_rate, "iva_note": iva_note, "iva_importo": iva_importo,
+           "totale_cliente": totale, "valuta": "EUR"}
 
     # link di pagamento Stripe (one-off)
     desc = f"Verifiche dati caso {case} — " + ", ".join(r["label"] for r in righe)[:200]
     try:
-        out["link"] = _stripe_link(client, payer_email, tot_cli, desc, case,
+        out["link"] = _stripe_link(client, payer_email, totale, desc, case,
                                    round(tot_real, 2))
     except Exception as e:
         out["link_error"] = str(e)[:200]
@@ -99,7 +136,7 @@ def genera_preventivo(case, items, payer_email=None, invia=0):
     try:
         c = frappe.get_doc("Investigation Case", case)
         c.append("case_activities", {"activity_date": now_datetime(), "activity_type": "Report",
-                 "description": (f"🧾 Preventivo verifiche: € {tot_cli:.2f} ({len(righe)} voci). "
+                 "description": (f"🧾 Preventivo verifiche: € {totale:.2f} (IVA incl.) ({len(righe)} voci). "
                                  + ("Link: " + out["link"] if out.get("link") else "Link non generato"))[:500],
                  "operator": frappe.session.user})
         c.flags.ignore_mandatory = True
@@ -148,7 +185,10 @@ def _invia_email(case, client, payer_email, prev):
                     + f" : € {r['prezzo']:.2f}</li>" for r in prev["righe"])
     msg = (f"<p>Gentile cliente,</p><p>per procedere con le verifiche richieste sul caso "
            f"<b>{frappe.utils.escape_html(case)}</b> trova qui il preventivo:</p><ul>{righe}</ul>"
-           f"<p><b>Totale: € {prev['totale_cliente']:.2f}</b></p>"
+           + (f"<p>Imponibile: \u20ac {prev.get('imponibile', prev['totale_cliente']):.2f}<br>"
+              f"{prev.get('iva_note','')}: \u20ac {prev.get('iva_importo',0):.2f}</p>" if prev.get('iva_rate') else
+              (f"<p style='font-size:12px;color:#888'>{prev.get('iva_note','')}</p>" if prev.get('iva_note') else ""))
+           + f"<p><b>Totale: \u20ac {prev['totale_cliente']:.2f}</b></p>"
            f"<p><a href='{prev['link']}' style='background:#C8A96E;color:#0D1B3E;padding:10px 18px;"
            f"border-radius:6px;text-decoration:none;font-weight:600'>Paga ora</a></p>"
            f"<p style='font-size:12px;color:#888'>Le verifiche partono a pagamento ricevuto.</p>")

@@ -923,16 +923,16 @@ window.ThanatosVerifiche = {
 	},
 	preventivo(frm, $w) {
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
-		frappe.call('thanatos_intel.billing.openapi_billing.listino').then(r => {
+		frappe.call('thanatos_intel.billing.openapi_billing.listino', { case: frm.doc.name }).then(r => {
 			const lst = r.message || {}; const voci = lst.voci || [];
 			const rows = voci.map(v => `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px">
 				<input type="checkbox" class="vf-pv-it" data-id="${v.id}" data-label="${esc(v.label)}">
 				<span style="flex:1">${esc(v.label)}</span>
 				<span style="color:var(--text-muted)">€ ${v.prezzo.toFixed(2)}</span></label>`).join('');
 			const d = new frappe.ui.Dialog({
-				title: 'Preventivo cliente (markup ×' + (lst.markup || 3) + ')',
+				title: 'Preventivo cliente',
 				fields: [
-					{ fieldtype: 'HTML', fieldname: 'list', options: '<div style="max-height:240px;overflow:auto">' + rows + '</div>' },
+					{ fieldtype: 'HTML', fieldname: 'list', options: '<div style="max-height:240px;overflow:auto">' + rows + '</div>' + '<div style="font-size:11px;color:var(--text-muted);margin-top:6px">Prezzi IVA esclusa' + (lst.iva_note ? ' · ' + esc(lst.iva_note) : '') + '</div>' },
 					{ fieldtype: 'Data', fieldname: 'payer_email', label: 'Email destinatario (vuoto = email cliente del caso)' },
 					{ fieldtype: 'Check', fieldname: 'invia', label: 'Invia subito il link via email', default: 1 },
 					{ fieldtype: 'HTML', fieldname: 'out' }
@@ -951,6 +951,9 @@ window.ThanatosVerifiche = {
 						callback(r2) {
 							const m = r2.message || {};
 							let h = '<div style="margin-top:10px;border-top:1px solid var(--border-color);padding-top:10px">';
+							h += '<div>Imponibile: € ' + (m.imponibile != null ? m.imponibile : (m.totale_cliente || 0)).toFixed(2) + '</div>';
+							if (m.iva_rate) h += '<div>' + esc(m.iva_note || 'IVA') + ': € ' + (m.iva_importo || 0).toFixed(2) + '</div>';
+							else if (m.iva_note) h += '<div style="color:var(--text-muted)">' + esc(m.iva_note) + '</div>';
 							h += '<b>Totale cliente: € ' + (m.totale_cliente || 0).toFixed(2) + '</b> (' + (m.righe || []).length + ' voci)';
 							if (m.link) h += '<div style="margin-top:8px"><a href="' + m.link + '" target="_blank" class="btn btn-xs btn-primary">Apri link pagamento</a> '
 								+ '<button class="btn btn-xs btn-default vf-copy" data-l="' + esc(m.link) + '">Copia link</button></div>';
