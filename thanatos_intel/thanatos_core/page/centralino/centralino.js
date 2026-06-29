@@ -203,13 +203,24 @@ class CentralinoPage {
                 ? `<audio controls preload="metadata" style="width:100%;margin:12px 0" src="${src}"></audio>
                    <div><a class="ctlno-call-link" href="${src}" download="${esc(name)}.ogg">⬇ Scarica registrazione</a></div>`
                 : '<div class="ctlno-call-meta">Nessuna registrazione audio.</div>';
-            const tr = d.transcript_text ? esc(d.transcript_text) : "(trascrizione non disponibile)";
+            let segs = [];
+            try { segs = JSON.parse(d.transcript_raw || "[]"); } catch (e) {}
+            let tr;
+            if (segs.length) {
+                tr = segs.map(sg => {
+                    const t = Math.floor((sg.start_ms || 0) / 1000);
+                    const ts = String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0");
+                    const spk = sg.speaker_label || sg.speaker || "?";
+                    return `<div class="ctlno-tr-seg"><b>${esc(spk)}</b> <span style="color:#888">[${ts}]</span> ${esc(sg.text || "")}</div>`;
+                }).join("");
+            } else { tr = d.transcript_text ? esc(d.transcript_text) : "(trascrizione non disponibile)"; }
+            const mdUrl = "/api/method/thanatos_intel.api.centralino.call_transcript_md?call_log=" + encodeURIComponent(name);
             const who = esc(d.caller_name || d.caller_number || "Sconosciuto");
             $("#ctlno-chat-area").html(`<div class="ctlno-call-detail">
                 <div class="ctlno-call-h">📞 ${who}<span>${esc(d.caller_number || "")}</span></div>
                 <div class="ctlno-call-meta">${esc(d.outcome || "")} · ${(d.duration_minutes || 0)}m ${(d.duration_seconds || 0)}s · ${d.called_at ? frappe.datetime.str_to_user(d.called_at) : ""}</div>
                 ${audio}
-                <div class="ctlno-call-tr-h">Trascrizione</div>
+                <div class="ctlno-call-tr-h">Trascrizione <a class="ctlno-call-link" href="${mdUrl}" style="font-size:11px;font-weight:400;margin-left:10px" download="${esc(name)}.md">📄 Esporta .md</a></div>
                 <div class="ctlno-call-tr">${tr}</div>
                 ${d.linked_case ? `<a class="ctlno-call-link" href="/app/investigation-case/${d.linked_case}" target="_blank">Apri caso ${esc(d.linked_case)}</a>` : ""}
             </div>`);

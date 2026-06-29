@@ -190,3 +190,36 @@ def stream_call_audio(call_log):
     return Response(content, mimetype="audio/ogg",
                     headers={"Content-Disposition": 'inline; filename="%s.ogg"' % call_log,
                              "Accept-Ranges": "bytes"})
+
+
+@frappe.whitelist()
+def call_transcript_md(call_log):
+    """Esporta la trascrizione della chiamata come file Markdown (.md)."""
+    import json
+    from werkzeug.wrappers import Response
+    cl = frappe.get_doc("Call Log", call_log)  # check permessi
+    try:
+        segs = json.loads(cl.transcript_raw or "[]")
+    except Exception:
+        segs = []
+    L = ["# Chiamata %s" % cl.name, ""]
+    L.append("- **Da:** %s (%s)" % (cl.caller_name or "", cl.caller_number or ""))
+    L.append("- **Data:** %s" % (cl.called_at or ""))
+    L.append("- **Durata:** %sm %ss" % (cl.duration_minutes or 0, cl.duration_seconds or 0))
+    L.append("- **Esito:** %s" % (cl.outcome or ""))
+    if cl.get("linked_case"):
+        L.append("- **Caso:** %s" % cl.linked_case)
+    L += ["", "## Trascrizione", ""]
+    if segs:
+        for s in segs:
+            t = int((s.get("start_ms") or 0) / 1000)
+            ts = "%02d:%02d" % (t // 60, t % 60)
+            spk = s.get("speaker_label") or s.get("speaker") or "?"
+            L.append("**%s** [%s] %s" % (spk, ts, s.get("text", "")))
+    elif (cl.transcript_text or "").strip():
+        L.append(cl.transcript_text)
+    else:
+        L.append("_(trascrizione non disponibile)_")
+    md = "\n".join(L)
+    return Response(md, mimetype="text/markdown",
+                    headers={"Content-Disposition": 'attachment; filename="%s.md"' % call_log})
