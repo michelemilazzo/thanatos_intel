@@ -18,6 +18,30 @@ def _box_ready():
     return os.path.isdir(parent) and os.access(parent, os.W_OK)
 
 
+def _file_case(file_url):
+    """Caso a cui appartiene un file (dal documento allegato), o '_generale'."""
+    row = frappe.db.get_value("File", {"file_url": file_url},
+                              ["attached_to_doctype", "attached_to_name"], as_dict=True)
+    if not row or not row.get("attached_to_doctype"):
+        return "_generale"
+    dt, dn = row.attached_to_doctype, row.attached_to_name
+    if dt == "Investigation Case":
+        return dn or "_generale"
+    if dt in ("Intel Lead", "Call Log"):
+        try:
+            return frappe.db.get_value(dt, dn, "linked_case") or "_generale"
+        except Exception:
+            return "_generale"
+    for fld in ("investigation_case", "case", "linked_case"):
+        try:
+            v = frappe.db.get_value(dt, dn, fld)
+            if v:
+                return v
+        except Exception:
+            pass
+    return "_generale"
+
+
 def tier_cold_files():
     if not _box_ready():
         frappe.logger().warning("file_tiering: box non disponibile, salto")
@@ -30,7 +54,6 @@ def tier_cold_files():
         base = frappe.get_site_path(*sub.split("/"))
         if not os.path.isdir(base):
             continue
-        box_base = os.path.join(BOX_ROOT, site, sub)
         for root, _dirs, files in os.walk(base):
             for fn in files:
                 fpath = os.path.join(root, fn)
@@ -44,7 +67,9 @@ def tier_cold_files():
                     if last_used > cutoff:
                         continue  # ancora "caldo"
                     rel = os.path.relpath(fpath, base)
-                    dest = os.path.join(box_base, rel)
+                    file_url = "/" + sub + "/" + rel.replace(os.sep, "/")
+                    case_sub = _file_case(file_url)
+                    dest = os.path.join(BOX_ROOT, site, case_sub, sub, rel)
                     os.makedirs(os.path.dirname(dest), exist_ok=True)
                     if os.path.exists(dest):
                         os.remove(fpath)
