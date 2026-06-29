@@ -277,3 +277,25 @@ def set_service_price(case, service_id, prezzo=None):
         data[service_id] = round(float(prezzo), 2)
     frappe.db.set_value("Investigation Case", case, "service_price_overrides", frappe.as_json(data))
     return {"ok": True, "service_id": service_id, "prezzo": data.get(service_id)}
+
+
+_TOOL_CAP = {
+    "negativita": "Negatività / protesti / pregiudizievoli",
+    "patrimoniale": "Patrimoniale persona / beni",
+    "soci": "Soci e quote / Titolari effettivi (UBO) IT",
+    "visura": "Anagrafica azienda (bilanci, struttura)",
+    "catasto": "Catasto / immobili / ipoteche",
+    "veicolo": "Veicoli per targa",
+}
+
+
+def tool_price(case, tool_key):
+    """Prezzo di rivendita cliente per uno strumento, dal listino del caso."""
+    name = _TOOL_CAP.get(tool_key)
+    if not name:
+        return 0.0
+    slug = frappe.scrub(name)
+    for v in catalogo_due(case).get("voci", []):
+        if v["id"] == slug:
+            return float(v["rivendita"])
+    return 0.0

@@ -636,6 +636,15 @@ def handle_event(event: dict) -> dict:
         if meta.get("kind") == "openapi_quote":
             from thanatos_intel.billing.openapi_settlement import settle
             return settle(obj)
+        if meta.get("kind") == "wallet_topup":
+            from thanatos_intel.billing.credits import grant_credit, _ledger_exists
+            cl = meta.get("thanatos_client")
+            net = float(meta.get("net") or 0)
+            sid = obj.get("id")
+            if cl and net and not _ledger_exists("Earned", sid):
+                grant_credit(cl, net, ref_dt="Stripe Checkout", ref_name=sid,
+                             notes="Ricarica wallet (Stripe, fee \u20ac %s)" % meta.get("fee"))
+            return {"ok": True, "wallet_topup": cl, "net": net}
         ue_name = meta.get("thanatos_usage_event")
         if ue_name and obj.get("mode") == "payment":
             return _fulfil_onetime(ue_name, obj)
@@ -833,3 +842,27 @@ def _handle_refund(charge_obj):
         f"Rimborso: {refund_amount:.2f} {currency} su charge {charge_id} / PI {pi}",
         "stripe.charge.refunded"
     )
+
+
+@frappe.whitelist()
+def topup_wallet(client, amount):
+    """Ricarica il wallet servizi del cliente via Stripe Checkout.
+    L'utente paga `amount` + fee Stripe (gross-up); il credito netto accreditato = `amount`."""
+    from thanatos_intel.billing.credits import gross_up, stripe_fee
+    net = float(amount or 0)
+    if net <= 0:
+        frappe.throw(_("Importo non valido."))
+    gross = gross_up(net)
+    fee = stripe_fee(net)
+    stripe = _get_stripe()
+    meta = {"kind": "wallet_topup", "thanatos_client": client, "net": str(net), "fee": str(fee)}
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{"price_data": {"currency": "eur",
+                                    "product_data": {"name": "Ricarica wallet servizi (credito \u20ac %.2f)" % net},
+                                    "unit_amount": int(round(gross * 100))}, "quantity": 1}],
+        success_url=_success_url(), cancel_url=_cancel_url(),
+        customer=get_or_create_stripe_customer(client),
+        payment_intent_data={"metadata": meta}, metadata=meta, locale="it",
+    )
+    return {"url": session.url, "net": net, "fee": fee, "gross": gross}

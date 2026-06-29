@@ -134,3 +134,38 @@ def on_party_payout_update(doc, method=None):
     if doc.status in PAID_STATUSES:
         record_payout(pt, party, doc.amount, "Party Payout", doc.name,
                       f"Pagamento {doc.name}")
+
+
+# ---------------- fee Stripe + guardia pre-pagamento ----------------
+STRIPE_FEE_PCT = 3.0
+STRIPE_FEE_FIXED = 0.40
+
+
+def gross_up(net):
+    """Lordo da addebitare perché il credito NETTO accreditato sia `net`."""
+    return round(flt(net) * (1 + STRIPE_FEE_PCT / 100.0) + STRIPE_FEE_FIXED, 2)
+
+
+def stripe_fee(net):
+    return round(gross_up(net) - flt(net), 2)
+
+
+def ensure_credit(client, amount, label="servizio"):
+    """Blocca (senza addebitare) se il credito disponibile non copre `amount`."""
+    amount = flt(amount)
+    if not client or amount <= 0:
+        return
+    avail = available_to_spend(client)
+    if avail < amount:
+        frappe.throw("Credito insufficiente per «%s»: servono \u20ac %.2f, disponibili \u20ac %.2f. "
+                     "Ricarica il wallet servizi." % (label, amount, avail))
+
+
+def charge(client, amount, label="servizio", ref_dt=None, ref_name=None):
+    """Addebita dopo l'esecuzione riuscita."""
+    amount = flt(amount)
+    if not client or amount <= 0:
+        return
+    if ref_name and _ledger_exists("Spent", ref_name):
+        return
+    spend_credit(client, amount, ref_dt=ref_dt, ref_name=ref_name, notes=label)
