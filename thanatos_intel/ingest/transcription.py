@@ -130,6 +130,7 @@ def _transcribe_whisper_local(doc):
     doc.db_set("transcript_text", full_text)
     doc.db_set("transcription_status", "Completato")
     frappe.db.commit()
+    _archive_transcript_md(doc.name)
 
     # identificazione automatica voci dal DB Voiceprint
     try:
@@ -253,6 +254,7 @@ def _store_assemblyai_result(doc, result: dict):
     doc.db_set("transcription_status", "Completato")
     doc.db_set("transcription_job_id", result.get("id", ""))
     frappe.db.commit()
+    _archive_transcript_md(doc.name)
 
     # Notifica operatore
     _notify_done(doc)
@@ -368,3 +370,59 @@ def render_transcript_html(segments: list, speaker_a: str = "Operatore", speaker
         '<div style="background:#0d1117;border-radius:8px;padding:12px;'
         'max-height:500px;overflow-y:auto">' + "".join(rows) + "</div>"
     )
+
+
+def _archive_transcript_md(call_log_name):
+    """Genera la trascrizione in Markdown, la salva nel BOX organizzata per caso
+    e la allega al caso (File nativo, accessibile dal desk)."""
+    import os
+    import json as _json
+    try:
+        cl = frappe.get_doc("Call Log", call_log_name)
+        try:
+            segs = _json.loads(cl.transcript_raw or "[]")
+        except Exception:
+            segs = []
+        if not segs and not (cl.transcript_text or "").strip():
+            return  # niente da trascrivere
+        L = ["# Chiamata %s" % cl.name, "",
+             "- **Da:** %s (%s)" % (cl.caller_name or "", cl.caller_number or ""),
+             "- **Data:** %s" % (cl.called_at or ""),
+             "- **Durata:** %sm %ss" % (cl.duration_minutes or 0, cl.duration_seconds or 0),
+             "- **Esito:** %s" % (cl.outcome or "")]
+        if cl.get("linked_case"):
+            L.append("- **Caso:** %s" % cl.linked_case)
+        L += ["", "## Trascrizione", ""]
+        if segs:
+            for sg in segs:
+                t = int((sg.get("start_ms") or 0) / 1000)
+                L.append("**%s** [%02d:%02d] %s" % (
+                    sg.get("speaker_label") or sg.get("speaker") or "?",
+                    t // 60, t % 60, sg.get("text", "")))
+        else:
+            L.append(cl.transcript_text or "")
+        md = "\n".join(L)
+        # 1) BOX organizzato per caso
+        base = frappe.conf.get("call_transcripts_box", "/mnt/thanatos-box/call-transcripts")
+        if os.path.isdir(os.path.dirname(base)):
+            sub = cl.get("linked_case") or "_non-assegnate"
+            folder = os.path.join(base, sub)
+            os.makedirs(folder, exist_ok=True)
+            with open(os.path.join(folder, "%s.md" % call_log_name), "w", encoding="utf-8") as f:
+                f.write(md)
+        else:
+            frappe.logger().warning("transcript md: box non disponibile")
+        # 2) allega al caso (o al Call Log) come File nativo
+        fname = "%s-trascrizione.md" % call_log_name
+        attach_dt = "Investigation Case" if cl.get("linked_case") else "Call Log"
+        attach_name = cl.get("linked_case") or cl.name
+        ex = frappe.db.get_value("File", {"attached_to_doctype": attach_dt,
+                                          "attached_to_name": attach_name, "file_name": fname})
+        if ex:
+            frappe.delete_doc("File", ex, ignore_permissions=True, force=True)
+        frappe.get_doc({"doctype": "File", "file_name": fname,
+                        "attached_to_doctype": attach_dt, "attached_to_name": attach_name,
+                        "is_private": 1, "content": md}).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "archive_transcript_md")

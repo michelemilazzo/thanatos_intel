@@ -12,6 +12,31 @@ import frappe
 from frappe.utils import now_datetime, flt
 
 
+@frappe.whitelist()
+def mmos_connect_link():
+    """Crea (una volta) il connected account Express di MMOS sulla piattaforma Stripe
+    di Thanatos, ne salva l'acct id in site_config e ritorna il link di onboarding."""
+    from frappe.installer import update_site_config
+    from thanatos_intel.integrations.stripe_bridge import _get_stripe
+    s = _get_stripe()
+    acct_id = frappe.conf.get("mmos_stripe_connect_account_id")
+    if not acct_id:
+        acct = s.Account.create(type="express", country="IT",
+                                business_type="company",
+                                business_profile={"name": "MMOS", "product_description": "Servizi dati e infrastruttura"},
+                                capabilities={"transfers": {"requested": True}},
+                                metadata={"thanatos_role": "mmos_platform_parent"})
+        acct_id = acct.id
+        update_site_config("mmos_stripe_connect_account_id", acct_id)
+        update_site_config("mmos_markup_pct", 0)  # MMOS = costo openapi; markup ×3 resta a Thanatos
+    base = frappe.utils.get_url()
+    link = s.AccountLink.create(account=acct_id,
+                                refresh_url=f"{base}/app/thanatos-fonti",
+                                return_url=f"{base}/app/thanatos-fonti",
+                                type="account_onboarding")
+    return {"account": acct_id, "url": link.url}
+
+
 def _mmos_share(cost, total):
     pct = flt(frappe.conf.get("mmos_markup_pct") or 0)
     markup = max(0.0, flt(total) - flt(cost))
