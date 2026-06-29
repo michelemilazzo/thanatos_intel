@@ -228,21 +228,39 @@ def case_ai_chat(case, message):
         res = send_case_report_wa(case, lead.name, lead.whatsapp_number, lead.source_identifier, include_pdf=1)
         return done(f"📲 Relazione inviata su WhatsApp: {res.get('messaggi')} messaggi + {res.get('documenti')} PDF.", "invia_wa")
 
+def _contextual_commands(case):
+    """Comandi suggeriti pertinenti al tipo di caso (allineati ai chip del cockpit)."""
+    ct = frappe.db.get_value("Investigation Case", case, "case_type")
+    common = ["avanzamento", "genera dossier", "proforma", "domande", "analisi completa"]
+    extra = {
+        "Fraud": ["screening", "doppia cessione"],
+        "Cyber": ["screening"],
+        "Asset Recovery": ["screening", "doppia cessione"],
+        "Due Diligence": ["verifica camerale <piva>", "valuta assicurazione", "doppia cessione"],
+        "Corporate": ["verifica camerale <piva>", "screening"],
+        "Family": ["screening"],
+    }
+    out = []
+    for c in common + extra.get(ct, ["screening", "verifica camerale <piva>"]):
+        if c not in out:
+            out.append(c)
+    return out
+
     # — fallback conversazionale col contesto del caso —
     try:
         from thanatos_intel.ai.doc_ingest import _gateway
         from thanatos_intel.ai.case_architect import _resp_text
         from thanatos_intel.ingest.operator_console import _case_brief
+        _cmds = _contextual_commands(case)
         sys = ("Sei l'assistente investigativo interno di Thanatos sul caso. Rispondi all'operatore "
                "(dagli del tu, conciso, concreto) usando il contesto. Se l'operatore vuole eseguire "
-               "un'azione, suggerisci il comando esatto (es. «genera dossier», «valuta assicurazione», "
-               "«verifica camerale <piva>», «analisi completa»).")
+               "un'azione, suggerisci SOLO comandi pertinenti a questo caso, scelti tra: "
+               + ", ".join("«%s»" % c for c in _cmds) + ".")
         brief = _case_brief(case)
         resp = _gateway(f"Contesto:\n{brief}\n\nOperatore: «{message}»\n\nRispondi.",
                         system=sys, task_type="chat", session_id=f"case-{case}")
         out = (_resp_text(resp) or "").strip()
-        return done(out or "Non ho capito; prova con un comando (dossier, proforma, doppia cessione, "
-                    "domande, screening, verifica camerale <piva>, valuta assicurazione, avanzamento).")
+        return done(out or ("Non ho capito; prova con un comando (" + ", ".join(_cmds) + ")."))
     except Exception:
         frappe.log_error(frappe.get_traceback(), "case_ai_chat")
         return done("Comandi: dossier · proforma · formulario · fascicolo · doppia cessione · domande · "

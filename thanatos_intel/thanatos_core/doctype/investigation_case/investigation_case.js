@@ -1126,7 +1126,7 @@ frappe.ui.form.on('Investigation Case', {
             + '<div id="aic-msgs" style="height:240px;overflow-y:auto;padding:10px 12px;font-size:13px;background:#faf8f2"></div>'
             + '<div style="padding:6px 10px;border-top:1px solid #eee">'
             + '<div id="aic-chips" style="margin-bottom:6px"></div>'
-            + '<div style="display:flex;gap:6px;align-items:center"><input id="aic-in" class="form-control input-sm" placeholder="Chiedi o comanda… (es. valuta assicurazione, verifica camerale 03293360966)" style="flex:1">'
+            + '<div style="display:flex;gap:6px;align-items:center"><input id="aic-in" class="form-control input-sm" placeholder="' + ('Chiedi o comanda… (' + thanatos_case_example(frm.doc.case_type) + ')') + '" style="flex:1">'
             + '<button id="aic-attach" class="btn btn-default btn-sm" title="Carica file nel dossier (audio, zip, foto, PDF…)">📎</button>'
             + '<input id="aic-file" type="file" multiple style="display:none">'
             + '<button id="aic-send" class="btn btn-primary btn-sm">Invia</button></div></div></div>');
@@ -1178,7 +1178,7 @@ frappe.ui.form.on('Investigation Case', {
                     }).catch(() => { $msgs.find('div:last').remove(); add('ai', '⚠ upload fallito'); });
             });
         });
-        add('ai', 'Ciao. Sono l’assistente del caso: posso eseguire gli strumenti (dossier, proforma, doppia cessione, domande, screening, verifica camerale, valutazione assicurativa, analisi completa) o rispondere alle tue domande. Scrivi un comando o usa i tasti rapidi.');
+        add('ai', 'Ciao, sono l’assistente di questo caso' + (frm.doc.case_type ? ' (' + frm.doc.case_type + ')' : '') + '. Qui i comandi utili: ' + chips.join(', ') + '. Scrivi un comando, fai una domanda o usa i tasti rapidi.');
     }
 });
 
@@ -1210,6 +1210,17 @@ frappe.ui.form.on('Investigation Case', {
 
 
 // ── Chip rapidi contestuali al tipo di caso ──
+function thanatos_case_example(case_type) {
+    const ex = {
+        'Fraud': 'es. screening, analisi completa',
+        'Cyber': 'es. screening, genera dossier',
+        'Asset Recovery': 'es. screening, doppia cessione',
+        'Due Diligence': 'es. verifica camerale 03293360966, valuta assicurazione',
+        'Corporate': 'es. verifica camerale 03293360966, screening',
+        'Family': 'es. screening, domande',
+    };
+    return ex[case_type] || 'es. screening, genera dossier';
+}
 function thanatos_case_chips(case_type) {
     const common = ['avanzamento', 'genera dossier', 'proforma', 'domande', 'analisi completa'];
     const extra = {
