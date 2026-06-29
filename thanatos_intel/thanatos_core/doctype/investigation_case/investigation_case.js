@@ -1105,7 +1105,7 @@ frappe.ui.form.on('Investigation Case', {
         if (frm.is_new() || !frm.fields_dict.ai_chat_panel) return;
         const $w = frm.fields_dict.ai_chat_panel.$wrapper;
         if ($w.data('built')) return; $w.data('built', true);
-        const chips = ['avanzamento', 'valuta assicurazione', 'genera dossier', 'proforma', 'doppia cessione', 'domande', 'analisi completa'];
+        const chips = thanatos_case_chips(frm.doc.case_type);
         $w.html(
             '<div style="border:1px solid #e0d7c0;border-radius:10px;background:#fff;overflow:hidden">'
             + '<div style="background:#0D1B3E;color:#C8A96E;font-weight:700;padding:8px 12px">🤖 Assistente AI del caso</div>'
@@ -1191,5 +1191,68 @@ frappe.ui.form.on('Investigation Case', {
                 callback(r) { const m = r.message || {}; if (m.gruppo) { frappe.show_alert({ message: __('Cluster {0}: {1} membri, {2} collegamenti', [m.gruppo, m.membri, m.links]), indicator: 'green' }, 8);
                     frappe.set_route('Form', 'Corporate Group', m.gruppo); } } });
         }, __('Intelligence'));
+    }
+});
+
+
+// ── Chip rapidi contestuali al tipo di caso ──
+function thanatos_case_chips(case_type) {
+    const common = ['avanzamento', 'genera dossier', 'proforma', 'domande', 'analisi completa'];
+    const extra = {
+        'Fraud': ['screening', 'doppia cessione'],
+        'Cyber': ['screening'],
+        'Asset Recovery': ['screening', 'doppia cessione'],
+        'Due Diligence': ['verifica camerale', 'valuta assicurazione', 'doppia cessione'],
+        'Corporate': ['verifica camerale', 'screening'],
+        'Family': ['screening'],
+    };
+    const ex = extra[case_type] || ['screening', 'verifica camerale'];
+    return [...new Set(common.concat(ex))];
+}
+
+// ── Timeline compatta: ultime N attività + "Mostra tutte" + ricerca ──
+function thanatos_compact_timeline(frm) {
+    const wrap = frm.timeline && frm.timeline.wrapper;
+    if (!wrap || !wrap.length) return;
+    const all = wrap.find('.timeline-item').filter(function () {
+        return $(this).find('textarea, .comment-input-wrapper, .comment-input-container').length === 0;
+    });
+    const LIMIT = 8;
+    if (all.length <= LIMIT + 3) return;          // poche attività: nessun taglio
+    let state = wrap.data('thn-tl') || { expanded: false };
+    if (!wrap.find('.thn-tl-tools').length) {
+        const tools = $('<div class="thn-tl-tools" style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">'
+            + '<input class="form-control input-sm thn-tl-search" placeholder="🔎 cerca nelle attività…" style="max-width:260px">'
+            + '<button class="btn btn-xs btn-default thn-tl-toggle"></button>'
+            + '<span class="text-muted thn-tl-count" style="font-size:11px"></span></div>');
+        all.first().before(tools);
+    }
+    function apply() {
+        const q = (wrap.find('.thn-tl-search').val() || '').toLowerCase().trim();
+        let shown = 0;
+        all.each(function (i) {
+            const $i = $(this);
+            const matchQ = !q || $i.text().toLowerCase().indexOf(q) >= 0;
+            const vis = q ? matchQ : (state.expanded || i < LIMIT);
+            $i.toggle(vis); if (vis) shown++;
+        });
+        const $t = wrap.find('.thn-tl-toggle');
+        if (q) { $t.hide(); wrap.find('.thn-tl-count').text(shown + ' risultati'); }
+        else {
+            $t.show().text(state.expanded ? __('Mostra meno') : (__('Mostra tutte') + ' (' + all.length + ')'));
+            wrap.find('.thn-tl-count').text(state.expanded ? '' : ('ultime ' + Math.min(LIMIT, all.length) + ' di ' + all.length));
+        }
+    }
+    wrap.find('.thn-tl-toggle').off('click').on('click', () => { state.expanded = !state.expanded; wrap.data('thn-tl', state); apply(); });
+    wrap.find('.thn-tl-search').off('input').on('input', apply);
+    wrap.data('thn-tl', state);
+    apply();
+}
+
+frappe.ui.form.on('Investigation Case', {
+    refresh(frm) {
+        if (frm.is_new()) return;
+        setTimeout(() => thanatos_compact_timeline(frm), 1500);
+        setTimeout(() => thanatos_compact_timeline(frm), 3500);
     }
 });
