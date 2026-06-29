@@ -91,6 +91,18 @@ def settle(session):
         finally:
             frappe.set_user(prev)
 
+    # 2b) registra il consumo openapi → AI Usage Log → ciclo mensile MMOS→Thanatos su erp.onekeyco.com
+    try:
+        from frappe.utils import today
+        frappe.get_doc({"doctype": "AI Usage Log", "client": client, "model": "openapi:verifiche",
+                        "usage_date": today(), "reference": case, "currency": "EUR",
+                        "real_cost": cost,        # costo openapi (MMOS→Thanatos, base)
+                        "client_cost": total}     # prezzo cliente = costo ×3 (Thanatos→cliente)
+                       ).insert(ignore_permissions=True, ignore_mandatory=True)
+        res["usage_logged"] = True
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "openapi usage log")
+
     # 3) log caso
     try:
         if case:
