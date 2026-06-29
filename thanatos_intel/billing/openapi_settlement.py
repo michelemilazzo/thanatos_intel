@@ -22,9 +22,8 @@ def mmos_connect_link():
     acct_id = frappe.conf.get("mmos_stripe_connect_account_id")
     if not acct_id:
         acct = s.Account.create(type="express", country="IT",
-                                business_type="company",
-                                business_profile={"name": "MMOS", "product_description": "Servizi dati e infrastruttura"},
                                 capabilities={"transfers": {"requested": True}},
+                                business_profile={"product_description": "Servizi dati e infrastruttura MMOS"},
                                 metadata={"thanatos_role": "mmos_platform_parent"})
         acct_id = acct.id
         update_site_config("mmos_stripe_connect_account_id", acct_id)

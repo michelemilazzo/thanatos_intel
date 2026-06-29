@@ -47,6 +47,12 @@ def _markup(client=None):
 
 
 @frappe.whitelist()
+def gen_mmos_link():
+    from thanatos_intel.billing.openapi_settlement import mmos_connect_link
+    return mmos_connect_link()
+
+
+@frappe.whitelist()
 def listino(client=None):
     """Listino completo: funzione, costo reale, prezzo cliente (col markup)."""
     mk = _markup(client)

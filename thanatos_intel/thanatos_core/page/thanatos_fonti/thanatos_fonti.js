@@ -2,10 +2,32 @@ frappe.pages['thanatos-fonti'].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({ parent: wrapper, title: '🧰 Fonti & Chiavi OSINT', single_column: true });
 	const $body = $(wrapper).find('.layout-main-section');
 	injectCss();
-	$body.html('<div id="tf-keys"></div><div id="tf-cat" style="margin-top:24px"></div>');
+	$body.html('<div id="tf-connect"></div><div id="tf-keys"></div><div id="tf-cat" style="margin-top:24px"></div>');
 	page.set_primary_action('↻ Aggiorna', () => { loadKeys(); loadCatalog(); });
+	loadConnect();
 	loadKeys();
 	loadCatalog();
+
+	function loadConnect() {
+		const $c = $body.find('#tf-connect');
+		let h = '<div class="tf-h">💸 Stripe Connect — pagamento MMOS</div>'
+			+ '<div class="tf-card" style="max-width:680px">'
+			+ '<div class="tf-mut" style="margin-bottom:8px">Modello: Thanatos incassa ed emette ricevuta; MMOS riceve subito (Connect Transfer) il costo openapi. Markup cliente ×3.</div>'
+			+ '<div class="tf-row"><button class="btn btn-sm btn-primary" id="tf-mmos-onb">Genera link onboarding MMOS</button>'
+			+ '<span id="tf-mmos-out" class="tf-mut" style="margin-left:10px"></span></div></div>';
+		$c.html(h);
+		$c.find('#tf-mmos-onb').on('click', function () {
+			const $o = $c.find('#tf-mmos-out').text('Creo account + link…');
+			frappe.call({ method: 'thanatos_intel.billing.openapi_settlement.mmos_connect_link', freeze: true, freeze_message: 'Stripe Connect…',
+				callback(r) {
+					const m = r.message || {};
+					if (m.url) $o.html('Account <b>' + frappe.utils.escape_html(m.account) + '</b> — <a href="' + m.url + '" target="_blank" rel="noopener">apri onboarding ↗</a>');
+					else $o.text('Errore: ' + JSON.stringify(m));
+				},
+				error() { $o.text('Errore Stripe Connect (vedi Error Log).'); }
+			});
+		});
+	}
 
 	function esc(s) { return frappe.utils.escape_html(s == null ? '' : String(s)); }
 
