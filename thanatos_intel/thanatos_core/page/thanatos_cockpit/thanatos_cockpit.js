@@ -39,6 +39,7 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 			['＋', 'Nuovo caso', () => frappe.new_doc('Investigation Case')],
 			['📨', 'Lead / WhatsApp', () => go('List', 'Intel Lead')],
 			['🔎', 'OSINT', () => frappe.new_doc('OSINT Job')],
+			['🧰', 'Fonti & Chiavi', () => go('thanatos-fonti')],
 			['📅', 'Agenda', () => go('List', 'Investigation Appointment')],
 			['🗂️', 'Rubrica', () => go('thanatos-rubrica')],
 			['📁', 'Drive', () => window.open('/drive', '_blank')],
@@ -148,10 +149,10 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 					<span class="tc-mut">${c.synced ? c.synced + ' mail' : ''}${c.last_sync ? ' · ' + esc(c.last_sync) : ''}</span>
 					${c.error ? `<span style="font-size:10px;color:#d05a5a;overflow:hidden;text-overflow:ellipsis;max-width:180px;white-space:nowrap" title="${esc(c.error)}">${esc(c.error.slice(0,60))}</span>` : ''}</div>`;
 			});
-			h += '<div class="tc-row" onclick="window.open('/portal/email-connectors','_blank')" style="justify-content:center;color:var(--text-muted);font-size:12px">+ Gestisci connettori →</div>';
+			h += '<div class="tc-row" onclick="window.open(\'/portal/email-connectors\',\'_blank\')" style="justify-content:center;color:var(--text-muted);font-size:12px">+ Gestisci connettori →</div>';
 			h += '</div>';
 		} else {
-			h += '<div class="tc-section-t">📡 Email Esterni</div><div class="tc-card"><div class="tc-empty" style="cursor:pointer" onclick="window.open('/portal/email-connectors','_blank')">Nessun account email esterno collegato — clicca per aggiungere Gmail o Outlook.</div></div>';
+			h += '<div class="tc-section-t">📡 Email Esterni</div><div class="tc-card"><div class="tc-empty" style="cursor:pointer" onclick="window.open(\'/portal/email-connectors\',\'_blank\')">Nessun account email esterno collegato — clicca per aggiungere Gmail o Outlook.</div></div>';
 		}
 
 		h += '</div>'; // cols
