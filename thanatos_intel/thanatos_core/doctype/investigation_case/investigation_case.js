@@ -882,8 +882,8 @@ window.ThanatosVerifiche = {
 	},
 	freeForm(frm, $w) {
 		frappe.prompt([
-			{ fieldtype: 'Select', fieldname: 'tool', label: 'Strumento', reqd: 1, options: ['Visura camerale (P.IVA)', 'Soci & UBO (P.IVA)', 'Screening KYC (nome)', 'Negatività (CF/P.IVA)', 'Verifica IBAN', 'Veicolo (targa)'].join('\n') },
-			{ fieldtype: 'Data', fieldname: 'value', label: 'Valore (P.IVA / nome / CF / IBAN / targa)', reqd: 1 }
+			{ fieldtype: 'Select', fieldname: 'tool', label: 'Strumento', reqd: 1, options: ['Visura camerale (P.IVA)', 'Soci & UBO (P.IVA)', 'Screening KYC (nome)', 'Negatività (CF/P.IVA)', 'Verifica IBAN', 'Veicolo (targa)', 'VirusTotal (IP/dominio/URL)', 'AbuseIPDB (IP)', 'Shodan (IP)', 'IPinfo (IP)', 'urlscan (dominio/URL)'].join('\n') },
+			{ fieldtype: 'Data', fieldname: 'value', label: 'Valore (P.IVA / nome / CF / IBAN / targa / IP / dominio / URL)', reqd: 1 }
 		], (v) => {
 			const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Interrogazione…</div>');
 			const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
@@ -896,6 +896,13 @@ window.ThanatosVerifiche = {
 			else if (T.indexOf('Negatività') === 0) frappe.call({ method: this.OC + 'negativita', args: Object.assign({ cf_piva: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : esc(m.status) + ' — ' + esc(JSON.stringify(m.esito || ''))); } });
 			else if (T.indexOf('IBAN') >= 0) frappe.call({ method: this.OC + 'verifica_iban', args: Object.assign({ iban: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : 'Valido: ' + esc(m.valido) + ' · Banca: ' + esc(m.banca || '-')); } });
 			else if (T.indexOf('Veicolo') >= 0) frappe.call({ method: this.OC + 'veicolo', args: Object.assign({ targa: v.value }, a), callback: r => { const m = r.message || {}; done(m.error ? '⚠ ' + esc(m.error) : esc(JSON.stringify(m.dati || {}).slice(0, 300))); } });
+			const CY = 'thanatos_intel.osint.cyber_intel.';
+			const cyDone = (m, body) => done(m.stub ? '⚠ ' + esc(m.message) : (m.error ? '⚠ ' + esc(m.error) : body(m)));
+			if (T.indexOf('VirusTotal') === 0) frappe.call({ method: CY + 'virustotal', args: Object.assign({ target: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>VirusTotal ' + esc(m.target) + '</b><br>Malicious: ' + m.malicious + ' · Suspicious: ' + m.suspicious + ' · Reputation: ' + esc(m.reputation) + '<br>AS: ' + esc(m.as_owner || '-') + ' (' + esc(m.country || '-') + ')') });
+			else if (T.indexOf('AbuseIPDB') === 0) frappe.call({ method: CY + 'abuseipdb', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>AbuseIPDB ' + esc(m.ip) + '</b><br>Abuse score: ' + esc(m.abuse_score) + '% · ' + esc(m.segnalazioni) + ' segnalazioni<br>ISP: ' + esc(m.isp || '-') + ' (' + esc(m.paese || '-') + ')') });
+			else if (T.indexOf('Shodan') === 0) frappe.call({ method: CY + 'shodan_host', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>Shodan ' + esc(m.ip) + '</b><br>Org: ' + esc(m.org || '-') + '<br>Porte: ' + esc((m.porte || []).join(', ') || '-') + '<br>Vuln: ' + esc((m.vulns || []).join(', ') || 'nessuna')) });
+			else if (T.indexOf('IPinfo') === 0) frappe.call({ method: CY + 'ipinfo', args: Object.assign({ ip: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>IPinfo ' + esc(m.ip) + '</b><br>Org/ASN: ' + esc(m.org || '-') + '<br>' + esc(m.citta || '-') + ', ' + esc(m.paese || '-') + ' · ' + esc(m.hostname || '-')) });
+			else if (T.indexOf('urlscan') === 0) frappe.call({ method: CY + 'urlscan', args: Object.assign({ target: v.value }, a), callback: r => cyDone(r.message || {}, m => '<b>urlscan ' + esc(m.target) + '</b><br>' + (m.scansioni || 0) + ' scansioni<br>' + (m.ultime || []).map(u => esc(u.url) + ' → ' + esc(u.ip || '-') + ' (' + esc(u.paese || '-') + ')').join('<br>')) });
 		}, 'Ricerca libera', 'Esegui');
 	},
 	injectCss() {
