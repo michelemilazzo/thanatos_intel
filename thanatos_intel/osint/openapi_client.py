@@ -171,8 +171,8 @@ def screening_kyc(query, mode="pep", investigation_case=None, birth_date=None, e
 
 # ── NEGATIVITÀ persona/impresa (protesti, pregiudizievoli) — async ──────────
 @frappe.whitelist()
-def negativita(cf_piva, investigation_case=None):
-    data, err = _async("risk", "/IT-negativita", {"cf_piva": cf_piva}, "/IT-richiesta")
+def negativita(cf_piva, investigation_case=None, max_wait=25):
+    data, err = _async("risk", "/IT-negativita", {"cf_piva": cf_piva}, "/IT-richiesta", max_wait=int(max_wait))
     if err:
         return {"error": err, "cf_piva": cf_piva}
     out = {"cf_piva": cf_piva, "status": data.get("status") or data.get("state"),
@@ -185,9 +185,9 @@ def negativita(cf_piva, investigation_case=None):
 
 # ── PATRIMONIALE persona (beni intestati) — async ───────────────────────────
 @frappe.whitelist()
-def patrimoniale(name, surname, tax_code, investigation_case=None):
+def patrimoniale(name, surname, tax_code, investigation_case=None, max_wait=25):
     data, err = _async("risk", "/IT-patrimoniale-persona",
-                       {"name": name, "surname": surname, "taxCode": tax_code}, "/IT-richiesta")
+                       {"name": name, "surname": surname, "taxCode": tax_code}, "/IT-richiesta", max_wait=int(max_wait))
     if err:
         return {"error": err, "tax_code": tax_code}
     out = {"tax_code": tax_code, "soggetto": f"{name} {surname}",
@@ -367,3 +367,24 @@ def strumenti():
         "famiglie": CATALOGO,
         "totale_servizi": len(_HOSTS),
     }
+
+
+@frappe.whitelist()
+def enqueue_lookup(kind, value=None, investigation_case=None, name=None, surname=None, tax_code=None):
+    """Esegue in background i servizi openapi lenti (async); il risultato (evidence)
+    finisce sul caso. Evita timeout/503 nella richiesta web."""
+    frappe.enqueue("thanatos_intel.osint.openapi_client._run_lookup_bg", queue="long", timeout=240,
+                   kind=kind, value=value, investigation_case=investigation_case,
+                   name=name, surname=surname, tax_code=tax_code)
+    return {"queued": True}
+
+
+def _run_lookup_bg(kind, value=None, investigation_case=None, name=None, surname=None, tax_code=None):
+    try:
+        if kind == "negativita":
+            negativita(value, investigation_case, max_wait=90)
+        elif kind == "patrimoniale":
+            patrimoniale(name, surname, tax_code, investigation_case, max_wait=90)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "openapi enqueue_lookup")

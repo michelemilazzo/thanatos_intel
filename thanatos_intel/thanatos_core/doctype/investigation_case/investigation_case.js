@@ -876,10 +876,8 @@ window.ThanatosVerifiche = {
 		} else if (act === 'neg') {
 			const idv = e.cf || e.piva;
 			if (!idv) return done('⚠ Manca CF/P.IVA.');
-			frappe.call(Object.assign({ method: this.OC + 'negativita', args: Object.assign({ cf_piva: idv }, args) }, cb(m => {
-				if (m.error) return '⚠ ' + esc(m.error);
-				return '<b>Negatività ' + esc(idv) + ':</b> ' + esc(m.status) + ' — ' + esc(JSON.stringify(m.esito || ''));
-			})));
+			frappe.call({ method: this.OC + 'enqueue_lookup', args: { kind: 'negativita', value: idv, investigation_case: frm.doc.name } });
+			done('⏳ <b>Negatività ' + esc(idv) + '</b> inviata a openapi (servizio asincrono).<br>Il risultato comparirà nelle <b>Evidenze</b> del caso tra ~1 minuto.');
 		} else if (act === 'patr') {
 			const parts = (e.full_name || '').trim().split(/\s+/);
 			frappe.prompt([
@@ -887,10 +885,8 @@ window.ThanatosVerifiche = {
 				{ fieldtype: 'Data', fieldname: 'surname', label: 'Cognome', default: parts.slice(1).join(' '), reqd: 1 },
 				{ fieldtype: 'Data', fieldname: 'cf', label: 'Codice Fiscale', default: e.cf || '', reqd: 1 }
 			], (v) => {
-				frappe.call(Object.assign({ method: this.OC + 'patrimoniale', args: Object.assign({ name: v.name, surname: v.surname, tax_code: v.cf }, args) }, cb(m => {
-					if (m.error) return '⚠ ' + esc(m.error);
-					return '<b>Patrimoniale ' + esc(v.name + ' ' + v.surname) + ':</b> ' + esc(m.status);
-				})));
+				frappe.call({ method: this.OC + 'enqueue_lookup', args: { kind: 'patrimoniale', name: v.name, surname: v.surname, tax_code: v.cf, investigation_case: frm.doc.name } });
+				done('⏳ <b>Patrimoniale ' + esc(v.name + ' ' + v.surname) + '</b> inviata a openapi (servizio asincrono).<br>Il risultato comparirà nelle <b>Evidenze</b> del caso tra ~1 minuto.');
 			}, 'Patrimoniale persona', 'Esegui');
 		} else if (act === 'vt') {
 			frappe.call(Object.assign({ method: 'thanatos_intel.osint.cyber_intel.virustotal', args: Object.assign({ target: e.ident }, args) }, cb(m => m.stub ? ('⚠ ' + esc(m.message)) : (m.error ? ('⚠ ' + esc(m.error)) : ('<b>VirusTotal ' + esc(m.target) + '</b><br>Malicious: ' + m.malicious + ' · Suspicious: ' + m.suspicious + ' · Reputation: ' + esc(m.reputation) + '<br>AS: ' + esc(m.as_owner || '-') + ' (' + esc(m.country || '-') + ')')))));
