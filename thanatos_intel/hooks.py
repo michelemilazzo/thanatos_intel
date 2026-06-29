@@ -210,7 +210,7 @@ scheduler_events={
           'thanatos_intel.notifications.client_alerts.daily_operator_digest',
           'thanatos_intel.notifications.onboarding_completion.daily_completion_reminder',
           'thanatos_intel.gsc.fetch_rankings'],
- 'daily_long':[],
+ 'daily_long':['thanatos_intel.maintenance.file_tiering.tier_cold_files'],
  'weekly':['thanatos_intel.thanatos_core.compliance_ops.policy_review_check'],
  'weekly_long':[],
  'monthly':['thanatos_intel.billing.cost_invoicing.scheduled_monthly_cost_invoicing',
