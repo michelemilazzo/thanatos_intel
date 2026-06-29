@@ -116,8 +116,11 @@ def _step_done(step):
     return step.status in ("Done", "Skipped")
 
 
+@frappe.whitelist()
 def start(case_name):
     case = frappe.get_doc("Investigation Case", case_name)
+    if not case.has_permission("write"):
+        frappe.throw(frappe._("Permessi insufficienti per avviare la pratica."), frappe.PermissionError)
     setup_from_blueprint(case)
     case.workflow_active = 1
     case.current_step_seq = 0
