@@ -133,7 +133,7 @@ def shodan_host(ip, investigation_case=None):
 @frappe.whitelist()
 def ipinfo(ip, investigation_case=None):
     """Geolocalizzazione e ASN/owner di un IP (IPinfo)."""
-    k = _key("ipinfo")
+    k = frappe.conf.get("ipinfo_token")  # la pagina chiavi salva su ipinfo_token
     if not k:
         return _stub("ipinfo")
     import requests
