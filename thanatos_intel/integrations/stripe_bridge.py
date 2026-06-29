@@ -645,6 +645,16 @@ def handle_event(event: dict) -> dict:
                 grant_credit(cl, net, ref_dt="Stripe Checkout", ref_name=sid,
                              notes="Ricarica wallet (Stripe, fee \u20ac %s)" % meta.get("fee"))
             return {"ok": True, "wallet_topup": cl, "net": net}
+        if meta.get("kind") == "mmos_topup":
+            from thanatos_intel.billing.mmos_wallet import mmos_grant
+            from thanatos_intel.billing.credits import _ledger_exists
+            tnt = meta.get("mmos_tenant") or "Thanatos"
+            net = float(meta.get("net") or 0)
+            sid = obj.get("id")
+            if net and not _ledger_exists("Earned", sid):
+                mmos_grant(tnt, net, ref_dt="Stripe Checkout", ref_name=sid,
+                           notes="Ricarica wallet MMOS (Stripe, fee \u20ac %s)" % meta.get("fee"))
+            return {"ok": True, "mmos_topup": tnt, "net": net}
         ue_name = meta.get("thanatos_usage_event")
         if ue_name and obj.get("mode") == "payment":
             return _fulfil_onetime(ue_name, obj)

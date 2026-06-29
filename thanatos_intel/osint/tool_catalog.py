@@ -299,3 +299,15 @@ def tool_price(case, tool_key):
         if v["id"] == slug:
             return float(v["rivendita"])
     return 0.0
+
+
+def tool_base_price(case, tool_key):
+    """Prezzo base/ingrosso (MMOS) per uno strumento, dal listino del caso."""
+    name = _TOOL_CAP.get(tool_key)
+    if not name:
+        return 0.0
+    slug = frappe.scrub(name)
+    for v in catalogo_due(case).get("voci", []):
+        if v["id"] == slug:
+            return float(v["base"])
+    return 0.0

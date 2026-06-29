@@ -377,9 +377,11 @@ def enqueue_lookup(kind, value=None, investigation_case=None, name=None, surname
     if investigation_case:
         client = frappe.db.get_value("Investigation Case", investigation_case, "client")
         if client:
-            from thanatos_intel.osint.tool_catalog import tool_price
+            from thanatos_intel.osint.tool_catalog import tool_price, tool_base_price
             from thanatos_intel.billing.credits import ensure_credit
+            from thanatos_intel.billing.mmos_wallet import mmos_ensure
             ensure_credit(client, tool_price(investigation_case, kind), kind)
+            mmos_ensure(tool_base_price(investigation_case, kind), label=kind)
     frappe.enqueue("thanatos_intel.osint.openapi_client._run_lookup_bg", queue="long", timeout=240,
                    kind=kind, value=value, investigation_case=investigation_case,
                    name=name, surname=surname, tax_code=tax_code)
