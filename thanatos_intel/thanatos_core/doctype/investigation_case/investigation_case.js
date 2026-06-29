@@ -848,17 +848,19 @@ window.ThanatosVerifiche = {
 		const $o = $w.find('.vf-out').show().html('<div class="vf-mut">Carico catalogo…</div>');
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
 		frappe.call('thanatos_intel.osint.tool_catalog.catalogo_completo').then(r => {
-			const c = r.message || {}; const st = c.stats || {};
-			let h = '<div class="vf-res"><div class="vf-mut" style="margin-bottom:8px">'
+			const c = r.message || {}; const st = c.stats || {}; const mb = c.modello || {};
+			let h = '<div class="vf-res"><div class="vf-mut" style="margin-bottom:6px">'
 				+ (st.capacita || 0) + ' capacità · ' + (st.fonti_totali || 0) + ' fonti (<b style="color:#1a8a2e">' + (st.fonti_gratuite || 0) + ' gratuite</b>) · '
-				+ (st.famiglie_openapi || 0) + ' famiglie openapi · ' + (st.capacita_con_free || 0) + ' capacità con opzione free</div>';
-			h += '<table class="vf-cat-tbl"><thead><tr><th>Capacità</th><th>🟢 Gratis</th><th>🔴 A pagamento</th></tr></thead><tbody>';
+				+ (st.famiglie_openapi || 0) + ' famiglie openapi</div>';
+			if (mb.principio) h += '<div class="vf-bill">💶 ' + esc(mb.catena) + '<br><b>' + esc(mb.principio) + '</b></div>';
+			h += '<table class="vf-cat-tbl"><thead><tr><th>Capacità</th><th>🟢 Gratis dà</th><th>🔴 Paid aggiunge</th><th>⚠ Manca nel free</th></tr></thead><tbody>';
 			(c.capacita || []).forEach(x => {
-				const free = (x.free || []).length ? (x.free || []).map(esc).join(', ') : '<span class="vf-mut">—</span>';
-				const paid = (x.paid || []).length ? (x.paid || []).map(esc).join(', ') : '<span class="vf-mut">—</span>';
 				const cons = x.consiglio === 'free' ? '<span class="vf-free-tag">usa free</span>' : (x.consiglio === 'paid' ? '<span class="vf-paid-tag">paid</span>' : '<span class="vf-mix-tag">misto</span>');
-				h += '<tr><td><b>' + esc(x.capacita) + '</b> ' + cons + '<br><span class="vf-mut">' + esc(x.nota || '') + '</span></td>'
-					+ '<td class="' + ((x.free || []).length ? 'vf-ok' : '') + '">' + free + '</td><td>' + paid + '</td></tr>';
+				const fhas = (x.free || []).length;
+				h += '<tr><td><b>' + esc(x.capacita) + '</b> ' + cons + '<br><span class="vf-mut">' + esc(((x.free || []).concat(x.paid || [])).join(' · ')) + '</span></td>'
+					+ '<td class="' + (fhas ? 'vf-ok' : '') + '">' + esc(x.free_dati || '—') + '</td>'
+					+ '<td>' + esc(x.paid_dati || '—') + '</td>'
+					+ '<td class="vf-gap">' + esc(x.gap || '—') + '</td></tr>';
 			});
 			h += '</tbody></table></div>';
 			$o.html(h);
@@ -905,6 +907,8 @@ window.ThanatosVerifiche = {
 		.vf-cat-tbl th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border-color);color:var(--text-muted);font-weight:500}
 		.vf-cat-tbl td{padding:7px 8px;border-bottom:1px solid var(--border-color);vertical-align:top}
 		.vf-cat-tbl td.vf-ok{color:#1a8a2e}
+		.vf-cat-tbl td.vf-gap{color:#a33}
+		.vf-bill{background:var(--bg-color);border:1px solid #ECAD4B;border-radius:8px;padding:8px 10px;margin:6px 0 10px;font-size:12px;color:var(--text-color);line-height:1.5}
 		`;
 		$('<style id="vf-css">').text(css).appendTo(document.head);
 	}
