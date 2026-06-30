@@ -1,0 +1,21 @@
+{
+ "doctype": "DocType",
+ "name": "Soggetto",
+ "module": "Thanatos Core",
+ "autoname": "format:SOG-{#####}",
+ "title_field": "full_name",
+ "track_changes": 1,
+ "fields": [
+  {"fieldname": "full_name", "fieldtype": "Data", "label": "Nome completo", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "codice_fiscale", "fieldtype": "Data", "label": "Codice Fiscale", "unique": 1, "in_list_view": 1, "in_standard_filter": 1, "description": "Chiave anti-duplicato primaria."},
+  {"fieldname": "cb1", "fieldtype": "Column Break"},
+  {"fieldname": "email", "fieldtype": "Data", "options": "Email", "label": "Email", "in_list_view": 1},
+  {"fieldname": "telefono", "fieldtype": "Data", "options": "Phone", "label": "Telefono", "in_list_view": 1},
+  {"fieldname": "sb_ruoli", "fieldtype": "Section Break", "label": "Ruoli"},
+  {"fieldname": "ruoli", "fieldtype": "Small Text", "label": "Ruoli (rilevati dai record collegati)", "read_only": 1}
+ ],
+ "permissions": [
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+  {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
+ ]
+}

@@ -9,10 +9,13 @@
   {"fieldname": "kind", "fieldtype": "Select", "label": "Movimento", "options": "Earned\nSpent\nCommission\nPayout\nAdjustment", "reqd": 1, "in_list_view": 1, "in_standard_filter": 1},
   {"fieldname": "amount", "fieldtype": "Currency", "label": "Importo (€)", "reqd": 1, "in_list_view": 1, "description": "Sempre positivo; il tipo determina il segno"},
   {"fieldname": "cb_1", "fieldtype": "Column Break"},
-  {"fieldname": "balance_after", "fieldtype": "Currency", "label": "Saldo dopo (clienti)", "read_only": 1, "in_list_view": 1},
+  {"fieldname": "balance_after", "fieldtype": "Currency", "label": "Saldo dopo", "read_only": 1, "in_list_view": 1},
   {"fieldname": "reference_doctype", "fieldtype": "Data", "label": "Rif. doctype"},
   {"fieldname": "reference_name", "fieldtype": "Data", "label": "Rif. nome"},
-  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Note"}
+  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Note"},
+  {"fieldname": "sec_audit", "fieldtype": "Section Break", "label": "Audit chain", "collapsible": 1},
+  {"fieldname": "prev_hash", "fieldtype": "Data", "label": "Prev entry hash", "read_only": 1, "length": 64, "description": "SHA256 della entry precedente per (party_type, party); vuoto = prima entry"},
+  {"fieldname": "entry_hash", "fieldtype": "Data", "label": "Entry hash", "read_only": 1, "length": 64, "description": "SHA256(prev_hash + payload). Tamper-evident."}
  ],
  "permissions": [
   {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},

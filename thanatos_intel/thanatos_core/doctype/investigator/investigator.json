@@ -12,6 +12,14 @@
    "label": "Investigator"
   },
   {
+   "fieldname": "soggetto",
+   "fieldtype": "Link",
+   "options": "Soggetto",
+   "label": "Soggetto (persona)",
+   "in_standard_filter": 1,
+   "description": "Anagrafica unica della persona: stesso Soggetto per tutti i suoi ruoli."
+  },
+  {
    "fieldname": "full_name",
    "fieldtype": "Data",
    "label": "Full Name",
