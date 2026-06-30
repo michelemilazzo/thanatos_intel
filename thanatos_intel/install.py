@@ -46,6 +46,10 @@ def after_migrate():
         from thanatos_intel.patches.soggetto_links import apply as _sl; _sl()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "soggetto_links")
+    try:
+        from thanatos_intel.patches.file_client_visibility import apply as _fcv; _fcv()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "file_client_visibility")
 
 
 def _ensure_client_address_fields():

@@ -70,3 +70,68 @@ def deliver_case_file(case, file_url, file_name=None, doc_kind="Altro", self_mod
                 out["email"] = {"ok": False, "error": "email cliente non valida"}
     frappe.db.commit()
     return out
+
+
+@frappe.whitelist()
+def case_documents(case):
+    """Elenco dei documenti (File) allegati al caso con la loro visibilita' cliente
+    e se sono gia' pubblicati nel portale del cliente."""
+    if not case or not frappe.db.exists("Investigation Case", case):
+        return {"documents": [], "has_client": False}
+    has_client = bool(frappe.db.get_value("Investigation Case", case, "client"))
+    files = frappe.get_all("File",
+        filters={"attached_to_doctype": "Investigation Case", "attached_to_name": case},
+        fields=["name", "file_name", "file_url", "is_private",
+                "visibilita_cliente", "vault_published"],
+        order_by="creation desc")
+    docs = []
+    for f in files:
+        docs.append({
+            "name": f.name,
+            "file_name": f.file_name or f.file_url,
+            "file_url": f.file_url,
+            "visibilita": f.visibilita_cliente or "Solo interno",
+            "published": bool(f.vault_published),
+        })
+    return {"documents": docs, "has_client": has_client}
+
+
+@frappe.whitelist()
+def set_document_visibility(file, visibilita):
+    """Imposta la visibilita' cliente di un singolo File (Solo interno / Condiviso col cliente)."""
+    if visibilita not in ("Solo interno", "Condiviso col cliente"):
+        frappe.throw("Visibilita' non valida")
+    frappe.db.set_value("File", file, "visibilita_cliente", visibilita, update_modified=False)
+    frappe.db.commit()
+    return {"ok": True}
+
+
+@frappe.whitelist()
+def publish_shared_documents(case, share_all=0):
+    """Pubblica nel portale del cliente i documenti del caso marcati 'Condiviso col cliente'
+    (o tutti, se share_all=1). I 'Solo interno' restano riservati allo staff."""
+    share_all = int(share_all or 0)
+    if not frappe.db.get_value("Investigation Case", case, "client"):
+        return {"ok": False, "error": "Il caso non ha un cliente collegato: impossibile pubblicare."}
+    files = frappe.get_all("File",
+        filters={"attached_to_doctype": "Investigation Case", "attached_to_name": case},
+        fields=["name", "file_name", "file_url", "visibilita_cliente", "vault_published"])
+    published, skipped = 0, 0
+    for f in files:
+        share = share_all or (f.visibilita_cliente == "Condiviso col cliente")
+        if not share:
+            skipped += 1
+            continue
+        if share_all and f.visibilita_cliente != "Condiviso col cliente":
+            frappe.db.set_value("File", f.name, "visibilita_cliente", "Condiviso col cliente", update_modified=False)
+        if f.vault_published:
+            continue
+        try:
+            deliver_case_file(case, f.file_url, file_name=f.file_name,
+                              doc_kind="Altro", self_mode=1, notify_email=0)
+            frappe.db.set_value("File", f.name, "vault_published", 1, update_modified=False)
+            published += 1
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "publish_shared_documents")
+    frappe.db.commit()
+    return {"ok": True, "published": published, "internal_kept": skipped}

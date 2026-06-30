@@ -112,6 +112,77 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('File'));
 
+            frm.add_custom_button(__('Documenti cliente'), () => {
+                frappe.call({
+                    method: 'thanatos_intel.reporting.case_file_delivery.case_documents',
+                    args: { case: frm.doc.name },
+                    freeze: true, freeze_message: __('Carico i documenti…'),
+                    callback(r) {
+                        const m = r.message || {};
+                        const docs = m.documents || [];
+                        if (!docs.length) { frappe.msgprint(__('Nessun documento allegato al caso.')); return; }
+                        const rows = docs.map((d) => {
+                            const sel = `<select class="form-control input-sm tnt-vis" data-file="${d.name}" style="width:auto;display:inline-block">
+                                <option value="Solo interno"${d.visibilita === 'Solo interno' ? ' selected' : ''}>🔒 Solo interno</option>
+                                <option value="Condiviso col cliente"${d.visibilita === 'Condiviso col cliente' ? ' selected' : ''}>👤 Condiviso col cliente</option>
+                              </select>`;
+                            const pub = d.published ? `<span style="color:#2ea043">✔ pubblicato</span>` : '';
+                            return `<tr><td style="padding:4px 8px;border-top:1px solid #eee">${frappe.utils.escape_html(d.file_name)}</td>
+                                <td style="padding:4px 8px;border-top:1px solid #eee">${sel}</td>
+                                <td style="padding:4px 8px;border-top:1px solid #eee">${pub}</td></tr>`;
+                        }).join('');
+                        const warn = m.has_client ? '' : `<div style="color:#c0392b;margin-top:10px">⚠ Il caso non ha un cliente collegato: i documenti non possono essere pubblicati nel portale.</div>`;
+                        const html = `<table style="width:100%;font-size:13px"><thead><tr>
+                            <th style="text-align:left;padding:4px 8px">Documento</th>
+                            <th style="text-align:left;padding:4px 8px">Visibilità</th>
+                            <th style="text-align:left;padding:4px 8px">Stato</th></tr></thead>
+                            <tbody>${rows}</tbody></table>${warn}`;
+                        const dlg = new frappe.ui.Dialog({
+                            title: __('Documenti del caso — cosa vede il cliente'),
+                            size: 'large',
+                            primary_action_label: __('Pubblica i condivisi al cliente'),
+                            primary_action() {
+                                frappe.call({
+                                    method: 'thanatos_intel.reporting.case_file_delivery.publish_shared_documents',
+                                    args: { case: frm.doc.name },
+                                    freeze: true, freeze_message: __('Pubblico nel portale cliente…'),
+                                    callback(r2) {
+                                        const x = r2.message || {};
+                                        if (x.error) { frappe.msgprint(x.error); return; }
+                                        frappe.show_alert({ message: __('{0} pubblicati al cliente, {1} tenuti interni', [x.published, x.internal_kept]), indicator: 'green' }, 8);
+                                        dlg.hide();
+                                    }
+                                });
+                            },
+                            secondary_action_label: __('Condividi tutto'),
+                            secondary_action() {
+                                frappe.confirm(__('Condividere TUTTI i documenti col cliente?'), () => {
+                                    frappe.call({
+                                        method: 'thanatos_intel.reporting.case_file_delivery.publish_shared_documents',
+                                        args: { case: frm.doc.name, share_all: 1 },
+                                        freeze: true, freeze_message: __('Pubblico tutto…'),
+                                        callback(r2) {
+                                            const x = r2.message || {};
+                                            if (x.error) { frappe.msgprint(x.error); return; }
+                                            frappe.show_alert({ message: __('{0} documenti pubblicati al cliente', [x.published]), indicator: 'green' }, 8);
+                                            dlg.hide();
+                                        }
+                                    });
+                                });
+                            }
+                        });
+                        dlg.$body.html(html);
+                        dlg.$body.find('.tnt-vis').on('change', function () {
+                            frappe.call({
+                                method: 'thanatos_intel.reporting.case_file_delivery.set_document_visibility',
+                                args: { file: $(this).data('file'), visibilita: $(this).val() }
+                            });
+                        });
+                        dlg.show();
+                    }
+                });
+            }, __('File'));
+
             frm.add_custom_button(__('Genera Fascicolo'), () => {
                 frappe.call({
                     method: 'thanatos_intel.reporting.fascicolo.genera_fascicolo',
