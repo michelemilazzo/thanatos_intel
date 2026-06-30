@@ -28,12 +28,12 @@ def after_migrate():
     _ensure_client_address_fields()
     try:
         from thanatos_intel.patches.appointment_outcome import apply as _ao; _ao()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ensure_appointment_outcome")
     try:
         from thanatos_intel.patches.crypto_recovery_scam_blacklist import apply as _crs; _crs()
     except Exception:
         pass
-    except Exception:
-        frappe.log_error(frappe.get_traceback(), "ensure_appointment_outcome")
     try:
         from thanatos_intel.patches.contact_fields import apply as _cf; _cf()
     except Exception:
