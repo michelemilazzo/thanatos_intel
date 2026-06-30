@@ -20,6 +20,19 @@ PRICING = {
 }
 
 
+# Tariffa FLAT di rivendita per i modelli che a noi costano 0 (free: llama/gemini/
+# opencode/codex/ollama/deepseek): EUR per 1.000.000 token (input, output). Indipendente
+# dal nostro costo. Override via site_config ai_flat_resale = [in, out].
+FREE_FLAT = (0.5, 1.5)
+
+
+def _flat_resale():
+	v = frappe.conf.get("ai_flat_resale")
+	if v and len(v) == 2:
+		return float(v[0]), float(v[1])
+	return FREE_FLAT
+
+
 def _rate(model):
 	cfg = frappe.conf.get("ai_pricing") or {}
 	m = (model or "").lower()
@@ -50,7 +63,9 @@ def record_usage(client, model, tokens_in=0, tokens_out=0, provider=None, refere
 	"""Registra un consumo AI contato. client=Investigation Client."""
 	from frappe.utils import nowdate
 	rc = real_cost(model, tokens_in, tokens_out)
-	cc = round(rc * _markup(client), 6)
+	fin, fout = _flat_resale()
+	flat = round((float(tokens_in or 0) * fin + float(tokens_out or 0) * fout) / 1_000_000.0, 6)
+	cc = round(max(rc * _markup(client), flat), 6)
 	prov = provider or _guess_provider(model)
 	doc = frappe.get_doc({
 		"doctype": "AI Usage Log", "client": client, "provider": prov, "model": model,
