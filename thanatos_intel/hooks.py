@@ -103,7 +103,6 @@ fixtures=[
 
 doc_events={
  'Call Log':{'on_update':'thanatos_intel.api.wa_calling.call_log_files_on_update'},
- 'Investigation Case':{'on_update':'thanatos_intel.thanatos_core.doctype.investigator.investigator.on_case_update'},
  'Credit Ledger': {
    'after_insert': 'thanatos_intel.referral.on_credit_spent',
  },
@@ -117,7 +116,14 @@ doc_events={
    'after_insert': 'thanatos_intel.integrations.helpdesk_bridge.on_ticket_created',
  },
  'Customer': {
-   'validate': 'thanatos_intel.billing.case_billing.warn_duplicate_customer',
+   'validate': ['thanatos_intel.billing.case_billing.warn_duplicate_customer',
+                'thanatos_intel.thanatos_core.party.autolink'],
+ },
+ 'Employee': {
+   'validate': 'thanatos_intel.thanatos_core.party.autolink',
+ },
+ 'Intelligence Contact': {
+   'validate': 'thanatos_intel.thanatos_core.party.autolink',
  },
  'Investigation Client': {
    'on_update': 'thanatos_intel.billing.case_billing.on_client_update',
@@ -147,7 +153,8 @@ doc_events={
                     'thanatos_intel.billing.case_billing.on_case_created',
                     'thanatos_intel.integrations.client_comms.auto_thankyou',
                     'thanatos_intel.workflow.lifecycle.on_case_after_insert'],
-   'on_update': 'thanatos_intel.integrations.client_comms.on_case_status_changed',
+   'on_update': ['thanatos_intel.integrations.client_comms.on_case_status_changed',
+                 'thanatos_intel.thanatos_core.doctype.investigator.investigator.on_case_update'],
    'validate': 'thanatos_intel.connect_onboarding.sync_assignment_connect_accounts',
  },
  'Agency Mandate': {

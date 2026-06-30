@@ -10,6 +10,8 @@ class Investigator(Document):
 	def validate(self):
 		if self.codename:
 			self.codename = self.codename.strip()
+		from thanatos_intel.thanatos_core import party
+		party.autolink(self)
 		self._sync_user()
 		self._sync_employee()
 		self._sync_territory()
