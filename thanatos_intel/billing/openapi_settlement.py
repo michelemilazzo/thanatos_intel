@@ -54,25 +54,12 @@ def settle(session):
     total = flt(meta.get("openapi_total") or (flt(session.get("amount_total")) / 100.0))
     res = {"case": case, "total": total, "cost": cost}
 
-    # 1) pagamento immediato a MMOS (Stripe Connect Transfer) — guardato
-    mmos_amt = _mmos_share(cost, total)
-    res["mmos_amount"] = mmos_amt
-    acct = frappe.conf.get("mmos_stripe_connect_account_id")
-    if acct and mmos_amt > 0:
-        try:
-            from thanatos_intel.integrations.stripe_bridge import _get_stripe
-            stripe = _get_stripe()
-            tr = stripe.Transfer.create(
-                amount=int(round(mmos_amt * 100)), currency="eur", destination=acct,
-                transfer_group=case or session.get("id"),
-                source_transaction=session.get("payment_intent") or None,
-                metadata={"thanatos_case": case or "", "kind": "openapi_mmos_settlement"})
-            res["mmos_transfer"] = tr.id
-        except Exception as e:
-            res["mmos_transfer_error"] = str(e)[:200]
-            frappe.log_error(frappe.get_traceback(), "openapi settle transfer")
-    else:
-        res["mmos_payout"] = "pending_no_account" if not acct else "skip_zero"
+    # 1) MMOS è già pagato dalla CASCATA WALLET (billing.mmos_wallet.mmos_charge →
+    #    cloud.onekeyco.com) al momento del consumo openapi. NIENTE Stripe Connect
+    #    Transfer qui: sarebbe un DOPPIO addebito a MMOS. Stripe Connect non serve
+    #    in questo modello (MMOS regolato via wallet/credito, non bonifico).
+    res["mmos_amount"] = _mmos_share(cost, total)
+    res["mmos_payout"] = "via_wallet_cascade"
 
     # 2) ricevuta Thanatos al cliente (ARES Sales Invoice) — elevata a Administrator
     if client and total > 0:
