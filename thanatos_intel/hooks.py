@@ -202,6 +202,7 @@ scheduler_events={
            'thanatos_intel.notifications.appointment_reminders.send_appointment_reminders',
            'thanatos_intel.site_i18n.warm_cache'],
  'daily':['thanatos_intel.news.ingestion.daily_case_digest',
+          'thanatos_intel.thanatos_core.doctype.investigator.investigator.check_license_expiry',
           'thanatos_intel.thanatos_ddd.opensanctions_sync.daily_refresh',
           'thanatos_intel.integrations.blacklist_ingest.daily_sanctions_sync',
           'thanatos_intel.workflow.vault.expire_vault_items',

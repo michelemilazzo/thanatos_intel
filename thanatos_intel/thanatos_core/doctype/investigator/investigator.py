@@ -110,3 +110,33 @@ def external_name(investigator):
 		return ""
 	code = frappe.db.get_value("Investigator", investigator, "codename")
 	return code or "Investigatore Thanatos"
+
+
+def check_license_expiry():
+    """Giornaliero: avvisa i manager quando l'atestat/licenza di un investigatore
+    scade entro 30 giorni (Legea 329/2003)."""
+    from frappe.utils import nowdate, add_days, date_diff, getdate
+    soon = add_days(nowdate(), 30)
+    rows = frappe.get_all("Investigator",
+        filters={"license_expiry": ["between", [nowdate(), soon]]},
+        fields=["name", "codename", "license_expiry"])
+    if not rows:
+        return
+    managers = frappe.get_all("Has Role",
+        filters={"role": ["in", ["Investigation Manager", "System Manager"]]},
+        pluck="parent")
+    managers = [m for m in set(managers) if m not in ("Guest", "Administrator")] or ["Administrator"]
+    for r in rows:
+        days = date_diff(getdate(r.license_expiry), getdate(nowdate()))
+        title = "Licenza investigatore in scadenza"
+        msg = "%s (%s): licenza/atestat scade il %s (tra %d giorni)." % (
+            r.name, r.codename or "", r.license_expiry, days)
+        for u in managers:
+            try:
+                frappe.get_doc({"doctype": "Notification Log", "subject": title,
+                    "email_content": msg, "for_user": u, "type": "Alert",
+                    "document_type": "Investigator", "document_name": r.name,
+                    "from_user": "Administrator"}).insert(ignore_permissions=True)
+            except Exception:
+                pass
+    frappe.db.commit()
