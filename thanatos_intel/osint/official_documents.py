@@ -49,11 +49,13 @@ def _url(service, path):
 
 
 @frappe.whitelist()
-def richiedi_documento(case, tipo, cf_piva):
+def richiedi_documento(case, tipo, cf_piva, self_mode=None):
     """Avvia la richiesta del documento ufficiale e la elabora in background."""
     if tipo not in TIPI:
         return {"error": f"tipo non valido: {tipo}", "tipi": list(TIPI)}
     digits = "".join(c for c in (cf_piva or "") if c.isdigit())
+    if self_mode is None:
+        self_mode = _is_self_purchase(case)
     service, path = TIPI[tipo]
     import requests
     r = requests.post(_url(service, path), headers=_hdr(),
@@ -66,12 +68,13 @@ def richiedi_documento(case, tipo, cf_piva):
         return {"error": "nessun id richiesta", "raw": str(data)[:200]}
     frappe.enqueue("thanatos_intel.osint.official_documents._scarica_bg",
                    queue="long", timeout=600, case=case, service=service,
-                   path=path, req_id=req_id, tipo=tipo, cf_piva=digits)
+                   path=path, req_id=req_id, tipo=tipo, cf_piva=digits,
+                   self_mode=int(self_mode or 0))
     return {"ok": True, "id": req_id, "tipo": tipo,
             "message": "Richiesta avviata; il documento arriverà nei reperti del caso tra qualche minuto."}
 
 
-def _scarica_bg(case, service, path, req_id, tipo, cf_piva, max_wait=480):
+def _scarica_bg(case, service, path, req_id, tipo, cf_piva, self_mode=0, max_wait=480):
     """Poll finché evasa, scarica gli allegati (ZIP base64), salva i PDF come reperti."""
     import requests
     deadline = time.time() + max_wait
@@ -106,11 +109,11 @@ def _scarica_bg(case, service, path, req_id, tipo, cf_piva, max_wait=480):
     except Exception:
         pdfs.append((f"{tipo}_{cf_piva}.pdf", raw))  # non-zip: PDF diretto
     for nm, content in pdfs:
-        _salva_reperto(case, tipo, cf_piva, nm, content)
+        _salva_reperto(case, tipo, cf_piva, nm, content, self_mode)
     frappe.db.commit()
 
 
-def _salva_reperto(case, tipo, cf_piva, filename, content):
+def _salva_reperto(case, tipo, cf_piva, filename, content, self_mode=0):
     """Crea Investigation Evidence con il PDF allegato sul caso."""
     label = f"{TIPI.get(tipo, (None, tipo))[1]} — {cf_piva}"
     ev = frappe.get_doc({
@@ -131,6 +134,12 @@ def _salva_reperto(case, tipo, cf_piva, filename, content):
         ev.db_set("attached_file", f.file_url)
     except Exception:
         pass
+    # consegna file originale: cartella Drive del caso + (self mode) portale cliente + email
+    try:
+        from thanatos_intel.reporting.case_file_delivery import deliver_case_file
+        deliver_case_file(case, f.file_url, file_name=fname, doc_kind="Altro", self_mode=self_mode)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "official_documents deliver")
 
 
 def _log(case, tipo, cf_piva, msg):
