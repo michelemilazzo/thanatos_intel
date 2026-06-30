@@ -12,6 +12,7 @@ class Investigator(Document):
 			self.codename = self.codename.strip()
 		self._sync_user()
 		self._sync_employee()
+		self._sync_territory()
 		self._refresh_active_cases()
 
 	def _sync_user(self):
@@ -32,10 +33,11 @@ class Investigator(Document):
 		emp = self.erp_employee_id
 		if not emp and self.platform_user:
 			emp = frappe.db.get_value("Employee", {"user_id": self.platform_user}, "name")
-			if emp:
-				self.erp_employee_id = emp
+		if not emp:
+			emp = self._maybe_create_employee()
 		if not emp:
 			return
+		self.erp_employee_id = emp
 		ed = frappe.db.get_value("Employee", emp, ["employee_name", "cell_number"], as_dict=True)
 		if not ed:
 			return
@@ -61,6 +63,54 @@ class Investigator(Document):
 			self.active_cases_count = int(rows[0][0]) if rows and rows[0][0] else 0
 		except Exception:
 			pass
+
+	def _maybe_create_employee(self):
+		"""Crea automaticamente l'Employee ERPNext (HR) se manca. Best-effort: se i
+		dati obbligatori non bastano, salta senza rompere il salvataggio."""
+		if not self.platform_user:
+			return None
+		dob = None
+		if self.soggetto:
+			dob = frappe.db.get_value("Soggetto", self.soggetto, "data_nascita")
+		if not dob:
+			return None  # DOB obbligatorio in ERPNext: senza, non creiamo (no invenzioni)
+		company = frappe.db.get_value("Company", {}, "name", order_by="creation asc")
+		if not company:
+			return None
+		gender = (frappe.db.get_value("Gender", {"name": ["in", ["Prefer not to say", "Other"]]}, "name")
+		          or frappe.db.get_value("Gender", {}, "name"))
+		fn = (self.full_name or self.platform_user or "").strip()
+		try:
+			e = frappe.get_doc({
+				"doctype": "Employee",
+				"first_name": fn.split(" ")[0] or fn,
+				"last_name": " ".join(fn.split(" ")[1:]),
+				"employee_name": fn,
+				"company": company,
+				"gender": gender,
+				"date_of_birth": dob,
+				"date_of_joining": frappe.utils.today(),
+				"status": "Active",
+				"user_id": self.platform_user,
+				"cell_number": self.phone,
+			})
+			e.flags.ignore_permissions = True
+			e.insert(ignore_permissions=True)
+			frappe.db.commit()
+			return e.name
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), "auto-create Employee")
+			return None
+
+	def _sync_territory(self):
+		"""Auto-compila il Territory dall'indirizzo predefinito del Soggetto."""
+		if (self.territory or "").strip() or not self.soggetto:
+			return
+		addr = frappe.db.get_value("Soggetto Indirizzo",
+			{"parent": self.soggetto, "is_default": 1},
+			["provincia", "citta", "nazione"], as_dict=True)
+		if addr:
+			self.territory = (addr.provincia or addr.citta or addr.nazione or "").strip()
 
 
 @frappe.whitelist()
