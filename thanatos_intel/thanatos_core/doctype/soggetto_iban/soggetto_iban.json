@@ -1,0 +1,12 @@
+{
+ "doctype": "DocType", "name": "Soggetto IBAN", "module": "Thanatos Core",
+ "istable": 1, "editable_grid": 1,
+ "fields": [
+  {"fieldname": "etichetta", "fieldtype": "Data", "label": "Etichetta", "in_list_view": 1, "columns": 2},
+  {"fieldname": "iban", "fieldtype": "Data", "label": "IBAN", "reqd": 1, "in_list_view": 1, "columns": 3},
+  {"fieldname": "intestatario", "fieldtype": "Data", "label": "Intestatario", "in_list_view": 1, "columns": 2},
+  {"fieldname": "banca", "fieldtype": "Data", "label": "Banca"},
+  {"fieldname": "bic_swift", "fieldtype": "Data", "label": "BIC/SWIFT"},
+  {"fieldname": "is_default", "fieldtype": "Check", "label": "Predefinito", "default": "0", "in_list_view": 1, "columns": 1}
+ ]
+}

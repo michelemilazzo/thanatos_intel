@@ -1,0 +1,13 @@
+{
+ "doctype": "DocType", "name": "Soggetto Indirizzo", "module": "Thanatos Core",
+ "istable": 1, "editable_grid": 1,
+ "fields": [
+  {"fieldname": "tipo", "fieldtype": "Select", "label": "Tipo", "options": "Residenza\nDomicilio\nSede legale\nFatturazione\nSpedizione\nAltro", "default": "Residenza", "in_list_view": 1, "reqd": 1, "columns": 2},
+  {"fieldname": "via", "fieldtype": "Data", "label": "Via e civico", "in_list_view": 1, "columns": 3},
+  {"fieldname": "cap", "fieldtype": "Data", "label": "CAP", "columns": 1},
+  {"fieldname": "citta", "fieldtype": "Data", "label": "Città", "in_list_view": 1, "columns": 2},
+  {"fieldname": "provincia", "fieldtype": "Data", "label": "Prov.", "columns": 1},
+  {"fieldname": "nazione", "fieldtype": "Data", "label": "Nazione", "default": "Italia"},
+  {"fieldname": "is_default", "fieldtype": "Check", "label": "Predefinito", "default": "0", "in_list_view": 1, "columns": 1}
+ ]
+}

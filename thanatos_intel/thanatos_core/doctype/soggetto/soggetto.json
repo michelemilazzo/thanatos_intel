@@ -6,16 +6,94 @@
  "title_field": "full_name",
  "track_changes": 1,
  "fields": [
-  {"fieldname": "full_name", "fieldtype": "Data", "label": "Nome completo", "reqd": 1, "in_list_view": 1},
-  {"fieldname": "codice_fiscale", "fieldtype": "Data", "label": "Codice Fiscale", "unique": 1, "in_list_view": 1, "in_standard_filter": 1, "description": "Chiave anti-duplicato primaria."},
-  {"fieldname": "cb1", "fieldtype": "Column Break"},
-  {"fieldname": "email", "fieldtype": "Data", "options": "Email", "label": "Email", "in_list_view": 1},
-  {"fieldname": "telefono", "fieldtype": "Data", "options": "Phone", "label": "Telefono", "in_list_view": 1},
-  {"fieldname": "sb_ruoli", "fieldtype": "Section Break", "label": "Ruoli"},
-  {"fieldname": "ruoli", "fieldtype": "Small Text", "label": "Ruoli (rilevati dai record collegati)", "read_only": 1}
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Nome completo",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "codice_fiscale",
+   "fieldtype": "Data",
+   "label": "Codice Fiscale",
+   "unique": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Chiave anti-duplicato primaria."
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "options": "Email",
+   "label": "Email",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "telefono",
+   "fieldtype": "Data",
+   "options": "Phone",
+   "label": "Telefono",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sb_ruoli",
+   "fieldtype": "Section Break",
+   "label": "Ruoli"
+  },
+  {
+   "fieldname": "ruoli",
+   "fieldtype": "Small Text",
+   "label": "Ruoli (rilevati dai record collegati)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_nascita",
+   "fieldtype": "Date",
+   "label": "Data di nascita"
+  },
+  {
+   "fieldname": "sb_indirizzi",
+   "fieldtype": "Section Break",
+   "label": "Indirizzi"
+  },
+  {
+   "fieldname": "indirizzi",
+   "fieldtype": "Table",
+   "options": "Soggetto Indirizzo",
+   "label": "Indirizzi (multipli; uno predefinito)",
+   "description": "Aggiungi piu' indirizzi. Il primo inserito diventa predefinito; spunta 'Predefinito' per cambiarlo. Per usi specifici scegli il tipo (Fatturazione, Spedizione...)."
+  },
+  {
+   "fieldname": "sb_ibans",
+   "fieldtype": "Section Break",
+   "label": "Conti / IBAN"
+  },
+  {
+   "fieldname": "ibans",
+   "fieldtype": "Table",
+   "options": "Soggetto IBAN",
+   "label": "IBAN (multipli; uno predefinito)",
+   "description": "Aggiungi piu' IBAN. Il primo inserito diventa predefinito."
+  }
  ],
  "permissions": [
-  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
-  {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  }
  ]
 }
