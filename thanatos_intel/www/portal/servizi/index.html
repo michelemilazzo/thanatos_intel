@@ -1,0 +1,62 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<div style="max-width:860px;margin:0 auto;padding:24px 16px">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+    <h1 style="margin:0">Acquista documenti</h1>
+    <a href="/portal" style="font-size:13px">← Portale</a>
+  </div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:12px 0">
+    <div style="background:#f3f6ff;border:1px solid #dfe7ff;border-radius:8px;padding:8px 14px">
+      Credito disponibile: <b id="wallet">{{ "%.2f"|format(wallet) }}€</b>
+      <a href="/portal/wallet" style="margin-left:8px;font-size:13px">Ricarica →</a>
+    </div>
+    <a href="/portal/legale" style="font-size:13px">Documenti legali</a>
+    <a href="/portal/vault" style="font-size:13px">Il mio archivio →</a>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:8px">
+    {% for s in services %}
+    <div style="border:1px solid #eee;border-radius:10px;padding:14px;background:#fff">
+      <div style="font-weight:600;font-size:14px">{{ s.label }}{% if s.gated %} <span title="richiede dichiarazione" style="color:#b8860b">⚖</span>{% endif %}</div>
+      <div style="color:#1a8a2e;font-weight:700;margin:6px 0">€ {{ "%.2f"|format(s.prezzo) }}</div>
+      <input class="ss-target" data-key="{{ s.key }}" data-label="{{ s.label }}" data-gated="{{ 1 if s.gated else 0 }}"
+             placeholder="P.IVA / Codice Fiscale" style="width:100%;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;margin-bottom:6px">
+      <button class="ss-buy btn btn-primary btn-sm" style="width:100%">Acquista</button>
+      <div class="ss-msg" style="font-size:12px;margin-top:6px"></div>
+    </div>
+    {% endfor %}
+  </div>
+  <p style="font-size:12px;color:#888;margin-top:16px">Le visure camerali sono dati pubblici del Registro Imprese. ⚖ = il servizio su soggetti terzi richiede una dichiarazione di base giuridica.</p>
+</div>
+
+<script>
+async function ssCall(args){
+  const r = await fetch('/api/method/thanatos_intel.osint.self_service.buy_document',{
+    method:'POST', headers:{'Content-Type':'application/json','X-Frappe-CSRF-Token':frappe.csrf_token},
+    body: JSON.stringify(args)});
+  const d = await r.json();
+  if(!r.ok){ throw new Error((d._server_messages ? JSON.parse(d._server_messages).map(m=>JSON.parse(m).message).join(' ') : d.message) || 'Errore'); }
+  return d.message;
+}
+document.querySelectorAll('.ss-buy').forEach(btn=>{
+  btn.addEventListener('click', async function(){
+    const card = btn.closest('div'); const inp = card.querySelector('.ss-target'); const msg = card.querySelector('.ss-msg');
+    const key = inp.dataset.key, label = inp.dataset.label, target = inp.value.trim();
+    if(!target){ msg.style.color='#c0392b'; msg.textContent='Inserisci P.IVA/CF'; return; }
+    btn.disabled=true; msg.style.color='#555'; msg.textContent='Elaborazione…';
+    try{
+      let res = await ssCall({service:key, target:target});
+      if(res && res.needs_declaration){
+        const ok = confirm('Servizio su soggetto terzo. Dichiari di avere una base giuridica legittima (interesse legittimo / tutela di un diritto / obbligo di legge) e accetti la relativa dichiarazione?');
+        if(!ok){ msg.textContent='Annullato.'; btn.disabled=false; return; }
+        const fin = prompt('Finalità (breve):','') || '';
+        res = await ssCall({service:key, target:target, accept_declaration:1, finalita:fin});
+      }
+      msg.style.color='#1a8a2e';
+      msg.innerHTML = (res && res.error) ? ('⚠ '+res.error) : '✓ Richiesta avviata. Arriverà nel tuo <a href="/portal/vault">archivio</a> e via email tra qualche minuto.';
+    }catch(e){ msg.style.color='#c0392b'; msg.textContent='⚠ '+e.message; }
+    btn.disabled=false;
+  });
+});
+</script>
+{% endblock %}
