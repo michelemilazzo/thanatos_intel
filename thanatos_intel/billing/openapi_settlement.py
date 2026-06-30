@@ -95,7 +95,7 @@ def settle(session):
             c = frappe.get_doc("Investigation Case", case)
             c.append("case_activities", {"activity_date": now_datetime(), "activity_type": "Report",
                      "description": (f"💳 Pagamento € {total:.2f} ricevuto. Ricevuta Thanatos: "
-                                     f"{res.get('invoice', '—')}. MMOS € {mmos_amt:.2f}: "
+                                     f"{res.get('invoice', '—')}. MMOS € {res['mmos_amount']:.2f}: "
                                      f"{res.get('mmos_transfer') or res.get('mmos_payout') or res.get('mmos_transfer_error')}")[:500],
                      "operator": "Administrator"})
             c.flags.ignore_mandatory = True
@@ -103,4 +103,23 @@ def settle(session):
             frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "openapi settle log")
+
+    # 4) SELF-MODE: il cliente ha pagato → consegna i documenti ufficiali del caso
+    #    (PDF) nel suo portale (/portal/vault) + email.
+    try:
+        if case and client:
+            from thanatos_intel.reporting.case_file_delivery import deliver_case_file
+            evs = frappe.get_all("Investigation Evidence",
+                filters={"investigation_case": case, "source": "openapi documento ufficiale"},
+                fields=["attached_file", "evidence_name"])
+            n = 0
+            for e in evs:
+                if e.attached_file:
+                    deliver_case_file(case, e.attached_file,
+                                      file_name=(e.evidence_name or "Documento")[:140],
+                                      self_mode=1)
+                    n += 1
+            res["delivered"] = n
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "openapi settle delivery")
     return res

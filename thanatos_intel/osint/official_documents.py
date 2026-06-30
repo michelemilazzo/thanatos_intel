@@ -48,6 +48,20 @@ def _url(service, path):
     return f"https://{_HOSTS[service]}/{path}"
 
 
+def _is_self_purchase(case):
+    """Self mode = la richiesta arriva dal cliente stesso (utente portale) oppure
+    il cliente ha gia pagato verifiche per questo caso (acquisto self-serve)."""
+    cl = frappe.db.get_value("Investigation Case", case, "client")
+    if not cl:
+        return 0
+    pu = frappe.db.get_value("Investigation Client", cl, "platform_user")
+    if pu and pu == frappe.session.user:
+        return 1
+    if frappe.db.exists("AI Usage Log", {"reference": case, "model": "openapi:verifiche"}):
+        return 1
+    return 0
+
+
 @frappe.whitelist()
 def richiedi_documento(case, tipo, cf_piva, self_mode=None):
     """Avvia la richiesta del documento ufficiale e la elabora in background."""
