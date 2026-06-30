@@ -395,6 +395,17 @@ def _run_lookup_bg(kind, value=None, investigation_case=None, name=None, surname
             res = negativita(value, investigation_case, max_wait=90)
         elif kind == "patrimoniale":
             res = patrimoniale(name, surname, tax_code, investigation_case, max_wait=90)
+        elif kind == "soci":
+            # value = P.IVA azienda target
+            res = soci_titolari(value, investigation_case)
+        elif kind == "veicolo":
+            # value = targa
+            res = veicolo(value, investigation_case)
+        elif kind == "iban":
+            # value = IBAN
+            res = verifica_iban(value, investigation_case)
+        # TODO: kind in ("visura","catasto") non hanno ancora wrapper diretti;
+        # aggiungere funzioni dedicate prima di abilitare il dispatch.
         # addebito al cliente solo se eseguito senza errore
         if res is not None and not res.get("error") and investigation_case:
             client = frappe.db.get_value("Investigation Case", investigation_case, "client")

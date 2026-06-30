@@ -1,6 +1,6 @@
 import frappe
 from thanatos_intel.thanatos_billing.doctype.collaborator_category.collaborator_category import featured_categories
-from thanatos_intel.thanatos_billing.doctype.commission_rule.commission_rule import resolve_commission
+from thanatos_intel.thanatos_billing.doctype.commission_rule.commission_rule import resolve_commission, commission_for_label
 
 
 def get_context(context):
@@ -26,12 +26,13 @@ def get_context(context):
 		clients = frappe.get_all("Investigation Client", filters={"referral_code": code},
 			fields=["client_name", "subscription_plan", "subscription_status", "total_spent", "acquired_at"],
 			order_by="acquired_at desc")
+		partner_label = (aff and aff.get("collaborator_category")) or "partner"
 		for c in clients:
 			spent = float(c.total_spent or 0)
 			attributed += spent
-			rule = resolve_commission(plan=c.subscription_plan) if c.subscription_plan else None
+			rule = resolve_commission(plan=c.subscription_plan, partner_level=partner_label) if c.subscription_plan else None
 			if rule and spent:
-				est += spent * (float(rule.commission_rate or 0) / 100)
+				est += commission_for_label(rule, spent, partner_label)
 	context.my_clients = clients
 	context.my_clients_count = len(clients)
 	context.attributed_total = round(attributed, 2)
