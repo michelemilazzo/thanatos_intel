@@ -47,6 +47,86 @@ _REPROCESS_RE = re.compile(
 _QUESTIONS_RE = re.compile(
     r"(domand.{0,14}(document|allegat|reperti|cas)|fai.{0,8}le domand|"
     r"poni.{0,14}domand|investigatore digitale|domande investigative)", re.I)
+_PROFORMA_RE = re.compile(
+    r"\b(proforma|pro\s*forma|preventivo|quotazione)\b", re.I)
+_PAYMENT_RE = re.compile(
+    r"\b(link\s*(di\s*)?pagamento|pagamento|paga(re)?|incassa|"
+    r"checkout|stripe\s*link)\b", re.I)
+_DELIVER_RE = re.compile(
+    r"(manda.{0,12}(al\s*)?cliente|invia.{0,12}(al\s*)?cliente|"
+    r"consegna.{0,12}(al\s*)?cliente|spedisci.{0,12}cliente|"
+    r"trasmett.{0,12}cliente|recapita.{0,12}cliente)", re.I)
+_STATUS_RE = re.compile(
+    r"\b(stato|status|sintesi|riassumi|riassunto|brief|situazione)\b", re.I)
+_DOCS_RE = re.compile(
+    r"^\s*(documenti|elenco\s+document|lista\s+document|files?|allegati)\s*$",
+    re.I)
+_CLOSE_RE = re.compile(
+    r"^\s*(chiudi(\s+il)?\s+cas[oi]|archivia(\s+il)?\s+cas[oi]|chiudi\s+pratica)\b",
+    re.I)
+_ASSIGN_RE = re.compile(
+    r"\bassegna(re)?\s+(a|al|alla)\s+([\w\.\-]+(\s+(?!CASE-)[\w\.\-]+)*)\b", re.I)
+
+
+# ─── Ruoli operatore ─────────────────────────────────────────────────────────
+
+# Ruolo derivato dai role del platform_user collegato all'Investigator:
+#  - super_admin  → System Manager (modifiche tecniche, comandi distruttivi)
+#  - admin        → Investigation Manager (gestione casi, assegnazioni, chiusure)
+#  - investigator → Investigator (operativo: aperture, OCR, proforma, pagamenti)
+_ROLE_RANK = {"super_admin": 3, "admin": 2, "investigator": 1, "guest": 0}
+
+
+def _operator_role(operator):
+    """Ritorna il ruolo dell'operatore: super_admin | admin | investigator | guest."""
+    if not operator:
+        return "guest"
+    user = _operator_user(operator)
+    roles = set(frappe.get_roles(user) or [])
+    if "System Manager" in roles:
+        return "super_admin"
+    if "Investigation Manager" in roles:
+        return "admin"
+    if "Investigator" in roles:
+        return "investigator"
+    return "guest"
+
+
+def _can(operator, min_role):
+    return _ROLE_RANK.get(_operator_role(operator), 0) >= _ROLE_RANK.get(min_role, 99)
+
+
+# ─── Comunicazione col cliente del caso ──────────────────────────────────────
+
+def _client_lead_phone(case):
+    """Ritorna (wa_phone_thanatos, client_wa_number, client_lead_name) per il caso.
+    Cerca il Intel Lead promosso col caso; se manca, ritorna (None, None, None)."""
+    lead = frappe.db.get_value("Intel Lead", {"linked_case": case},
+                               ["name", "source_identifier", "whatsapp_number"],
+                               as_dict=True, order_by="creation desc")
+    if not lead:
+        return None, None, None
+    return lead.whatsapp_number, lead.source_identifier, lead.name
+
+
+def _send_to_client(case, body):
+    """Invia un messaggio testuale al cliente del caso (via WhatsApp).
+    Ritorna True se riuscito, False se non c'è canale WA col cliente."""
+    wa_phone, client_num, client_lead = _client_lead_phone(case)
+    if not (wa_phone and client_num and client_lead):
+        return False
+    from thanatos_intel.ingest.wa_bot import _wa_doc, send_text
+    wd = _wa_doc(wa_phone)
+    if not wd:
+        return False
+    return send_text(wd, client_num, body, client_lead)
+
+
+def _send_doc_to_client(case, content, filename, caption):
+    wa_phone, client_num, client_lead = _client_lead_phone(case)
+    if not (wa_phone and client_num and client_lead):
+        return False
+    return send_document_wa(wa_phone, client_num, content, filename, caption, client_lead)
 
 
 def handle_operator_message(lead_name, wa_phone, sender, text, operator):
@@ -90,13 +170,108 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
                "\U0001F575️ Da investigatore digitale: preparo le domande per ogni "
                "documento, gliele mando tra poco.")
         return
-    if _HELP_RE.search(t):
+    if _PROFORMA_RE.search(t):
+        case = _resolve_case(lead_name, t)
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Non c'e' un caso collegato. Cita il caso (es. «proforma CASE-2026-0026») "
+                   "o apri prima la pratica.")
+            return
+        frappe.enqueue("thanatos_intel.ingest.operator_console.run_send_proforma",
+                       queue="long", timeout=600,
+                       case=case, lead_name=lead_name, wa_phone=wa_phone,
+                       sender=sender, operator=operator,
+                       hours_senior=_int_in(t, "senior", 40),
+                       hours_analyst=_int_in(t, "analyst", 30),
+                       sconto=_int_in(t, "sconto", 0),
+                       send_to_client=int(bool(_DELIVER_RE.search(t))))
         _reply(wa_phone, sender, lead_name,
-               "Sono il tuo assistente operativo. Puoi:\n"
-               "• farmi domande su casi, lead e documenti\n"
-               "• inviare i documenti e scrivere «*elabora gli allegati ed apri un "
-               "caso*» → apro la pratica con i reperti gia' analizzati (OCR + AI)\n"
-               "• chiedermi la sintesi di un caso (es. «riassumi CASE-2026-0026»)")
+               "\U0001F4C4 Genero la proforma per *" + case + "*"
+               + (" e la mando al cliente." if _DELIVER_RE.search(t)
+                  else " — te la inoltro a te per revisione."))
+        return
+    if _PAYMENT_RE.search(t):
+        case = _resolve_case(lead_name, t)
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Non c'e' un caso collegato. Cita il caso (es. «pagamento CASE-2026-0026»).")
+            return
+        frappe.enqueue("thanatos_intel.ingest.operator_console.run_send_payment_link",
+                       queue="short", timeout=180,
+                       case=case, lead_name=lead_name, wa_phone=wa_phone,
+                       sender=sender, operator=operator)
+        _reply(wa_phone, sender, lead_name,
+               "\U0001F4B3 Preparo il link di pagamento e lo mando al cliente del caso *"
+               + case + "*.")
+        return
+    if _DELIVER_RE.search(t):
+        case = _resolve_case(lead_name, t)
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Non c'e' un caso collegato. Cita il caso (es. «manda al cliente CASE-2026-0026»).")
+            return
+        frappe.enqueue("thanatos_intel.ingest.operator_console.run_deliver_to_client",
+                       queue="long", timeout=900,
+                       case=case, sender=sender, wa_phone=wa_phone, lead_name=lead_name,
+                       operator=operator)
+        _reply(wa_phone, sender, lead_name,
+               "\U0001F4E4 Consegno relazione e documenti chiave al cliente del caso *"
+               + case + "*. Ti confermo a fine invio.")
+        return
+    if _DOCS_RE.search(t):
+        case = _resolve_case(lead_name, t)
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Non c'e' un caso collegato a questa chat.")
+            return
+        _reply(wa_phone, sender, lead_name, _docs_list(case))
+        return
+    if _STATUS_RE.search(t):
+        case = _resolve_case(lead_name, t)
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Cita il caso (es. «stato CASE-2026-0026»).")
+            return
+        _reply(wa_phone, sender, lead_name, _case_brief(case))
+        return
+    if _CLOSE_RE.search(t):
+        if not _can(operator, "admin"):
+            _reply(wa_phone, sender, lead_name,
+                   "⛔ Non hai i permessi per chiudere casi. Serve ruolo admin.")
+            return
+        case = _resolve_case(lead_name, t)
+        if not case:
+            _reply(wa_phone, sender, lead_name, "Cita il caso da chiudere.")
+            return
+        frappe.db.set_value("Investigation Case", case, "status", "Closed")
+        frappe.db.commit()
+        _reply(wa_phone, sender, lead_name,
+               f"✅ Caso *{case}* chiuso.")
+        return
+    am = _ASSIGN_RE.search(t)
+    if am:
+        if not _can(operator, "admin"):
+            _reply(wa_phone, sender, lead_name,
+                   "⛔ Non hai i permessi per riassegnare. Serve ruolo admin.")
+            return
+        target = am.group(3)
+        case = _resolve_case(lead_name, t)
+        if not case:
+            _reply(wa_phone, sender, lead_name, "Cita il caso da riassegnare.")
+            return
+        inv = frappe.db.get_value("Investigator",
+                                  {"full_name": ["like", f"%{target}%"]}, "name")
+        if not inv:
+            _reply(wa_phone, sender, lead_name,
+                   f"Non trovo un investigatore «{target}».")
+            return
+        frappe.db.set_value("Investigation Case", case, "assigned_to", inv)
+        frappe.db.commit()
+        _reply(wa_phone, sender, lead_name,
+               f"✅ Caso *{case}* riassegnato a {inv}.")
+        return
+    if _HELP_RE.search(t):
+        _reply(wa_phone, sender, lead_name, _help_text(operator))
         return
     # messaggio operatore libero → assistente AI operativo (co-pilota), in background
     frappe.enqueue(
@@ -746,6 +921,204 @@ def _reprocess_evidence(ev):
     })
     frappe.db.commit()
     return True, (parsed.get("summary") or "")
+
+
+# ─── Helper testuali e listing ───────────────────────────────────────────────
+
+def _int_in(text, label, default):
+    m = re.search(r"\b" + label + r"\s*[:=]?\s*(\d{1,4})", text or "", re.I)
+    return int(m.group(1)) if m else default
+
+
+def _help_text(operator):
+    role = _operator_role(operator)
+    lines = [
+        f"Ciao — sei loggato come *{operator or '?'}* (ruolo: {role}).",
+        "Comandi che posso eseguire dalla chat:",
+        "",
+        "📂 *Pratica*",
+        "• «*apri un caso*» (con allegati) → apro pratica + analizzo i documenti",
+        "• «*rileggi i documenti*» → rifaccio OCR + estrazione",
+        "• «*fai le domande*» → domande investigative per ogni reperto",
+        "• «*stato CASE-…*» / «*riassumi CASE-…*» → sintesi della pratica",
+        "• «*documenti*» (in chat agganciata a un caso) → elenco reperti",
+        "",
+        "💶 *Cliente / fatturazione*",
+        "• «*proforma CASE-…*» → genero il preventivo, te lo mando per revisione",
+        "• «*proforma e manda al cliente CASE-…*» → genero e invio al cliente",
+        "• «*pagamento CASE-…*» → link Stripe al cliente per lo step pagabile corrente",
+        "• «*manda al cliente CASE-…*» → consegno relazione + documenti chiave al cliente",
+    ]
+    if _ROLE_RANK.get(role, 0) >= _ROLE_RANK["admin"]:
+        lines += [
+            "",
+            "🛡 *Amministrazione*",
+            "• «*chiudi il caso CASE-…*»",
+            "• «*assegna a <Nome Cognome> CASE-…*»",
+        ]
+    if role != "super_admin":
+        lines += [
+            "",
+            "Le modifiche tecniche (settings, doctype, integrazioni) sono riservate al super-admin.",
+        ]
+    lines += ["", "Qualsiasi altro messaggio: te lo gestisco col co-pilota AI."]
+    return "\n".join(lines)
+
+
+def _docs_list(case):
+    evs = frappe.get_all("Investigation Evidence",
+                         filters={"investigation_case": case},
+                         fields=["evidence_name", "attached_file", "notes"],
+                         order_by="creation asc", limit=0)
+    if not evs:
+        return f"📦 Caso *{case}*: nessun reperto caricato."
+    lines = [f"📦 Reperti caso *{case}* ({len(evs)}):"]
+    for i, e in enumerate(evs[:25], 1):
+        fname = (e.attached_file or "").split("/files/")[-1] or e.evidence_name
+        summ = ""
+        if e.notes and "Sintesi AI" in e.notes:
+            after = e.notes.split("Sintesi AI", 1)[-1].strip(" —\n")
+            summ = " — " + after.replace("\n", " ")[:90]
+        lines.append(f"{i:2d}. {fname}{summ}")
+    if len(evs) > 25:
+        lines.append(f"… e altri {len(evs) - 25} reperti")
+    lines.append("")
+    lines.append("🔗 " + get_url("/app/investigation-case/" + case))
+    return "\n".join(lines)
+
+
+# ─── Job: proforma → cliente o operatore ─────────────────────────────────────
+
+@frappe.whitelist()
+def run_send_proforma(case, lead_name, wa_phone, sender, operator,
+                      hours_senior=40, hours_analyst=30, sconto=0,
+                      send_to_client=0):
+    """Genera la proforma del caso e la manda al cliente del caso (se richiesto)
+    o all'operatore richiedente per revisione."""
+    try:
+        from thanatos_intel.billing.proforma_cliente import genera_proforma
+        r = genera_proforma(case, hours_senior=int(hours_senior),
+                            hours_analyst=int(hours_analyst), sconto=int(sconto)) or {}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "operator proforma generate")
+        _reply(wa_phone, sender, lead_name,
+               "⚠️ Non sono riuscito a generare la proforma — controlla il caso.")
+        return {"ok": False, "reason": "generate failed"}
+
+    file_url = r.get("file_url")
+    importo = r.get("imponibile") or 0
+    if not file_url:
+        _reply(wa_phone, sender, lead_name,
+               "⚠️ Proforma generata ma file non trovato.")
+        return {"ok": False, "reason": "no file"}
+
+    import os
+    local = frappe.get_site_path("private", "files",
+                                 file_url.split("/files/")[-1])
+    if not os.path.exists(local):
+        _reply(wa_phone, sender, lead_name,
+               f"⚠️ Proforma creata in DB ma file fisico mancante: {file_url}")
+        return {"ok": False, "reason": "file missing on disk"}
+    with open(local, "rb") as fh:
+        content = fh.read()
+    fname = f"Preventivo {case}.pdf"
+    caption = (f"Preventivo Thanatos Intel per la pratica {case}. "
+               f"Imponibile €{importo:,.0f} (IVA esclusa ove dovuta). "
+               "Validità 30 giorni.").replace(",", ".")
+
+    if int(send_to_client):
+        ok = _send_doc_to_client(case, content, fname, caption)
+        if ok:
+            _reply(wa_phone, sender, lead_name,
+                   f"✅ Proforma *{case}* inviata al cliente. Imponibile €{importo:,.0f}.\n"
+                   f"📄 {get_url(file_url)}")
+        else:
+            # fallback: mandala all'operatore
+            send_document_wa(wa_phone, sender, content, fname,
+                             caption + "\n\n⚠️ Non ho trovato un canale WA col cliente — "
+                             "te la mando a te.", lead_name)
+            _reply(wa_phone, sender, lead_name,
+                   "ℹ️ Cliente WA non trovato sul caso, ti ho mandato io la proforma.")
+        return {"ok": True, "sent_to": "client" if ok else "operator"}
+    # default: la riceve l'operatore
+    send_document_wa(wa_phone, sender, content, fname, caption, lead_name)
+    _reply(wa_phone, sender, lead_name,
+           f"📎 Proforma *{case}* pronta. Imponibile €{importo:,.0f}.\n"
+           "Rispondi «*proforma e manda al cliente " + case
+           + "*» per inviarla al cliente.")
+    return {"ok": True, "sent_to": "operator"}
+
+
+# ─── Job: link pagamento → cliente ───────────────────────────────────────────
+
+@frappe.whitelist()
+def run_send_payment_link(case, lead_name, wa_phone, sender, operator):
+    """Genera il link Stripe per lo step pagabile corrente del caso e lo manda al
+    cliente. Se non ci sono step «pay» pendenti, avvisa l'operatore."""
+    try:
+        from thanatos_intel.integrations.stripe_bridge import create_case_step_checkout
+        r = create_case_step_checkout(case) or {}
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "operator payment link")
+        _reply(wa_phone, sender, lead_name,
+               f"⚠️ Non sono riuscito a generare il link di pagamento: {str(e)[:200]}")
+        return {"ok": False, "reason": str(e)}
+
+    url = r.get("url") or r.get("checkout_url")
+    if not url:
+        # caso a credito → già attivato
+        if r.get("credit") or r.get("ok"):
+            _reply(wa_phone, sender, lead_name,
+                   f"✅ Step di *{case}* attivato a credito (cliente a bonifico). "
+                   "Nessun link da inviare.")
+            return {"ok": True, "credit": True}
+        _reply(wa_phone, sender, lead_name,
+               "⚠️ Nessuno step pagabile pendente in questo caso, "
+               "o link non generato. Controlla i case_steps.")
+        return {"ok": False, "reason": "no payable step"}
+
+    body = (f"Buongiorno, dal team Thanatos Intel.\n"
+            f"Per proseguire con la pratica può effettuare il pagamento al seguente "
+            f"link sicuro Stripe:\n\n{url}\n\n"
+            "Riceverà ricevuta e fattura via email. Grazie.")
+    sent = _send_to_client(case, body)
+    if sent:
+        _reply(wa_phone, sender, lead_name,
+               f"✅ Link di pagamento inviato al cliente del caso *{case}*.\n🔗 {url}")
+    else:
+        _reply(wa_phone, sender, lead_name,
+               "ℹ️ Cliente WA non trovato sul caso — link generato comunque:\n" + url)
+    return {"ok": True, "url": url}
+
+
+# ─── Job: consegna relazione + documenti chiave al cliente ───────────────────
+
+@frappe.whitelist()
+def run_deliver_to_client(case, sender, wa_phone, lead_name, operator):
+    """Recapita al cliente del caso la relazione completa + documenti chiave
+    (riusa send_case_report_wa, ma destinato al numero del cliente del caso, non
+    al numero dell'operatore mittente)."""
+    cwa, client_num, client_lead = _client_lead_phone(case)
+    if not (cwa and client_num and client_lead):
+        _reply(wa_phone, sender, lead_name,
+               "⚠️ Non ho un canale WhatsApp del cliente per questo caso. "
+               "Verifica il lead promosso.")
+        return {"ok": False, "reason": "no client wa"}
+    try:
+        r = send_case_report_wa(case=case, lead_name=client_lead,
+                                wa_phone=cwa, sender=client_num,
+                                include_pdf=1) or {}
+        n_msg = r.get("messaggi", 0)
+        n_doc = r.get("documenti", 0)
+        _reply(wa_phone, sender, lead_name,
+               f"✅ Consegna al cliente del caso *{case}* completata: "
+               f"{n_msg} messaggi, {n_doc} documenti.")
+        return r
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "operator deliver_to_client")
+        _reply(wa_phone, sender, lead_name,
+               f"⚠️ Consegna interrotta: {str(e)[:200]}")
+        return {"ok": False, "reason": str(e)}
 
 
 @frappe.whitelist()
