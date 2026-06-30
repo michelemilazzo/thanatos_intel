@@ -409,7 +409,7 @@ ${replyBox}`);
             callback: (r) => {
                 $("#ctlno-reply-input").prop("disabled", false);
                 $("#ctlno-send-btn").prop("disabled", false);
-                if (r.message?.status === "sent") {
+                if (r.message?.ok || r.message?.status === "sent") {
                     this._appendBubble({
                         direction: "Outbound",
                         content: text,
