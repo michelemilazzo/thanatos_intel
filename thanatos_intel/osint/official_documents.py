@@ -70,6 +70,14 @@ def richiedi_documento(case, tipo, cf_piva, self_mode=None):
     digits = "".join(c for c in (cf_piva or "") if c.isdigit())
     if self_mode is None:
         self_mode = _is_self_purchase(case)
+    # pre-pagamento: documenti ufficiali sono a pagamento → blocca se credito insufficiente
+    client = frappe.db.get_value("Investigation Case", case, "client")
+    if client:
+        from thanatos_intel.osint.tool_catalog import tool_price, tool_base_price
+        from thanatos_intel.billing.credits import ensure_credit
+        from thanatos_intel.billing.mmos_wallet import mmos_ensure
+        ensure_credit(client, tool_price(case, "visura"), "documento ufficiale")
+        mmos_ensure(tool_base_price(case, "visura"), label="documento ufficiale")
     service, path = TIPI[tipo]
     import requests
     r = requests.post(_url(service, path), headers=_hdr(),
@@ -124,6 +132,20 @@ def _scarica_bg(case, service, path, req_id, tipo, cf_piva, self_mode=0, max_wai
         pdfs.append((f"{tipo}_{cf_piva}.pdf", raw))  # non-zip: PDF diretto
     for nm, content in pdfs:
         _salva_reperto(case, tipo, cf_piva, nm, content, self_mode)
+    # addebito: documento ufficiale prodotto (cliente=rivendita, MMOS=ingrosso)
+    try:
+        client = frappe.db.get_value("Investigation Case", case, "client")
+        if client and pdfs:
+            from thanatos_intel.osint.tool_catalog import tool_price, tool_base_price
+            from thanatos_intel.billing.credits import charge
+            from thanatos_intel.billing.mmos_wallet import mmos_charge
+            _ref = "%s-doc-%s-%s" % (case, tipo, frappe.generate_hash(length=8))
+            charge(client, tool_price(case, "visura"), "documento ufficiale %s" % tipo,
+                   ref_dt="Investigation Case", ref_name=_ref)
+            mmos_charge(tool_base_price(case, "visura"), ref_name=_ref,
+                        notes="documento ufficiale %s (caso %s)" % (tipo, case))
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "official_documents charge")
     frappe.db.commit()
 
 
