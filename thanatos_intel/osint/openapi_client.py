@@ -398,12 +398,17 @@ def _run_lookup_bg(kind, value=None, investigation_case=None, name=None, surname
         # addebito al cliente solo se eseguito senza errore
         if res is not None and not res.get("error") and investigation_case:
             client = frappe.db.get_value("Investigation Case", investigation_case, "client")
+            _ref = "%s-%s-%s" % (investigation_case, kind, frappe.generate_hash(length=8))
+            from thanatos_intel.osint.tool_catalog import tool_price, tool_base_price
+            from thanatos_intel.billing.mmos_wallet import mmos_charge
+            # Thanatos paga MMOS il base/ingrosso (wallet su cloud.onekeyco.com)
+            mmos_charge(tool_base_price(investigation_case, kind), ref_name=_ref,
+                        notes="openapi %s (caso %s)" % (kind, investigation_case))
             if client:
-                from thanatos_intel.osint.tool_catalog import tool_price
                 from thanatos_intel.billing.credits import charge
                 charge(client, tool_price(investigation_case, kind),
                        "%s — %s" % (kind, value or tax_code or ""), ref_dt="Investigation Case",
-                       ref_name=investigation_case)
+                       ref_name=_ref)
         frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "openapi enqueue_lookup")
