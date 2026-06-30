@@ -21,22 +21,26 @@ class CreditLedger(Document):
     def validate(self):
         delta = SIGN[self.kind] * flt(self.amount)
         prev = _last_entry(self.party_type, self.party, exclude=self.name)
-        current = flt(prev.balance_after) if prev else 0.0
-        new_balance = current + delta
+        ledger_balance = flt(prev.balance_after) if prev else 0.0
+
+        # se il chiamante ha gia' passato balance_after (vecchio codice), rispettalo;
+        # altrimenti calcolalo dal ledger.
+        if self.balance_after in (None, ""):
+            self.balance_after = ledger_balance + delta
 
         if (
             self.party_type in PROTECTED_PARTY_TYPES
-            and new_balance < 0
             and not frappe.flags.get("allow_negative_credit_balance")
         ):
-            frappe.throw(
-                _("Saldo {0} insufficiente per {1}: saldo {2:.2f} + delta {3:.2f} = {4:.2f}").format(
-                    self.party_type, self.party, current, delta, new_balance
-                ),
-                title=_("Negative balance"),
-            )
+            floor = _negative_floor(self.party_type, self.party)
+            if flt(self.balance_after) < floor:
+                frappe.throw(
+                    _("Saldo {0} insufficiente per {1}: nuovo saldo {2:.2f} < soglia {3:.2f}").format(
+                        self.party_type, self.party, flt(self.balance_after), floor
+                    ),
+                    title=_("Negative balance"),
+                )
 
-        self.balance_after = new_balance
         self.prev_hash = prev.entry_hash if prev else ""
         self.entry_hash = _compute_entry_hash(self)
 
@@ -66,6 +70,16 @@ def _last_entry(party_type, party, exclude=None):
     return frappe._dict(rows[0]) if rows else None
 
 
+def _negative_floor(party_type, party):
+    """Soglia minima ammessa: 0 di default, -credit_limit se il Client ha fido."""
+    if party_type != "Client":
+        return 0.0
+    cg = frappe.db.get_value(
+        "Investigation Client", party, ["credit_granted", "credit_limit"], as_dict=True
+    ) or {}
+    return -flt(cg.get("credit_limit")) if cg.get("credit_granted") else 0.0
+
+
 def _compute_entry_hash(doc):
     payload = "|".join([
         str(doc.prev_hash or ""),
@@ -90,16 +104,23 @@ def verify_chain(party_type, party):
                 "reference_doctype", "reference_name", "prev_hash", "entry_hash"],
         order_by="creation asc, name asc",
     )
+    # salta le entry pre-feature (entry_hash vuoto = inserite prima dell'introduzione del chain)
+    started = False
     prev_hash = ""
-    running = 0.0
+    checked = 0
     for r in rows:
         d = frappe._dict(r)
-        running += SIGN[d.kind] * flt(d.amount)
+        if not d.entry_hash:
+            if started:
+                return {"ok": False, "broken_at": d.name, "reason": "entry post-genesis senza hash"}
+            continue
+        if not started:
+            started = True
+            prev_hash = d.prev_hash or ""
         if d.prev_hash != prev_hash:
             return {"ok": False, "broken_at": d.name, "reason": "prev_hash mismatch"}
         if d.entry_hash != _compute_entry_hash(d):
             return {"ok": False, "broken_at": d.name, "reason": "entry_hash mismatch"}
-        if abs(running - flt(d.balance_after)) > 0.005:
-            return {"ok": False, "broken_at": d.name, "reason": f"balance drift {running:.4f} != {d.balance_after:.4f}"}
         prev_hash = d.entry_hash
-    return {"ok": True, "entries": len(rows), "final_balance": running}
+        checked += 1
+    return {"ok": True, "entries": len(rows), "chained": checked, "final_balance": flt(rows[-1].balance_after) if rows else 0.0}

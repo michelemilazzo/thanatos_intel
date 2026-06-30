@@ -16,9 +16,11 @@
   {"fieldname": "partner_level", "fieldtype": "Data", "label": "Partner Level", "description": "Optional: limita la regola a un livello collaboratore (es. Bronze/Silver/Gold)"},
   {"fieldname": "sec_comm", "fieldtype": "Section Break", "label": "Commissione"},
   {"fieldname": "commission_type", "fieldtype": "Select", "label": "Commission Type", "options": "One-shot\nRecurring", "default": "One-shot", "reqd": 1},
-  {"fieldname": "commission_rate", "fieldtype": "Percent", "label": "Commission Rate (%)", "reqd": 1},
+  {"fieldname": "commission_rate", "fieldtype": "Percent", "label": "Commission Rate (%)", "description": "Usata se split_dsl e' vuoto. Ignorata altrimenti."},
   {"fieldname": "cb2", "fieldtype": "Column Break"},
-  {"fieldname": "max_recurring_months", "fieldtype": "Int", "label": "Max Recurring Months", "default": "0", "description": "0 = illimitato (solo per Recurring)", "depends_on": "eval:doc.commission_type=='Recurring'"}
+  {"fieldname": "max_recurring_months", "fieldtype": "Int", "label": "Max Recurring Months", "default": "0", "description": "0 = illimitato (solo per Recurring)", "depends_on": "eval:doc.commission_type=='Recurring'"},
+  {"fieldname": "sec_dsl", "fieldtype": "Section Break", "label": "Split DSL (opzionale)", "collapsible": 1, "description": "Override avanzato: stringa Numscript-style invece di una sola %"},
+  {"fieldname": "split_dsl", "fieldtype": "Small Text", "label": "Split DSL", "description": "Es: '70% to @partner, 30% to @platform' oppure '15% to @bronze, remaining to @house'. Se valorizzata sostituisce commission_rate."}
  ],
  "permissions": [
   {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},

@@ -1,37 +1,38 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
+
+from thanatos_intel.billing.split_dsl import parse_split
 
 
 class CommissionRule(Document):
-	def validate(self):
-		if self.applies_to == "Plan" and not self.subscription_plan:
-			frappe.throw("Subscription Plan richiesto quando Applies To = Plan")
-		if self.applies_to == "Service" and not self.service:
-			frappe.throw("Service richiesto quando Applies To = Service")
+    def validate(self):
+        if self.split_dsl:
+            # un dry-run del parser convalida la sintassi gia' al save
+            try:
+                parse_split(self.split_dsl, 100)
+            except Exception as e:
+                frappe.throw(_("Split DSL non valido: {0}").format(str(e)))
+        elif not self.commission_rate:
+            frappe.throw(_("Devi specificare commission_rate oppure split_dsl"))
 
 
-def resolve_commission(plan=None, service=None, partner_level=None):
-	"""Restituisce la Commission Rule attiva piu specifica per una vendita.
-	Specificita: match Plan/Service > Any; partner_level valorizzato > vuoto; poi priority."""
-	rules = frappe.get_all(
-		"Commission Rule",
-		filters={"active": 1},
-		fields=["name", "applies_to", "subscription_plan", "service",
-			"partner_level", "commission_type", "commission_rate",
-			"max_recurring_months", "priority"],
-	)
-	def ok(r):
-		if r.applies_to == "Plan" and r.subscription_plan != plan:
-			return False
-		if r.applies_to == "Service" and r.service != service:
-			return False
-		if r.partner_level and r.partner_level != partner_level:
-			return False
-		return True
-	cands = [r for r in rules if ok(r)]
-	if not cands:
-		return None
-	def score(r):
-		return (2 if r.applies_to in ("Plan", "Service") else 0,
-			1 if r.partner_level else 0, r.priority or 0)
-	return max(cands, key=score)
+def compute_commission(rule_name, gross_amount, default_partner_label=None):
+    """Applica una Commission Rule a un importo gross.
+
+    Ritorna sempre lista di dict {beneficiary, pct, amount}:
+    - Se la rule ha split_dsl => usa parse_split
+    - Altrimenti => unica riga {beneficiary=default_partner_label or rule.partner_level or 'partner',
+                                 pct=commission_rate, amount=gross*rate/100}
+    """
+    rule = frappe.get_doc("Commission Rule", rule_name)
+    if not rule.active:
+        frappe.throw(_("Commission Rule {0} non attiva").format(rule_name))
+
+    if rule.split_dsl:
+        return parse_split(rule.split_dsl, gross_amount)
+
+    rate = float(rule.commission_rate or 0)
+    benef = default_partner_label or rule.partner_level or "partner"
+    amount = round(float(gross_amount) * rate / 100.0, 2)
+    return [{"beneficiary": benef, "pct": rate, "amount": amount}]
