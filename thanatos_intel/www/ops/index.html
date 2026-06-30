@@ -1,0 +1,279 @@
+{% raw %}<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thanatos Switchboard</title>
+<link rel="manifest" href="/ops/manifest.json">
+<meta name="theme-color" content="#0D1B3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Switchboard">
+<link rel="apple-touch-icon" href="/ops/icon-192.png">
+<link rel="icon" href="/ops/icon-192.png">
+<style>
+  :root { --navy:#0D1B3E; --gold:#C8A65C; --grey:#6b6f7a; --bg:#0a1530; --panel:#10204a; --line:#1d2f5e; --text:#e9ecf3; --in:#1a2a55; --out:#5a4318; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overscroll-behavior:none; }
+  #app { display:flex; flex-direction:column; height:100dvh; }
+  header { display:flex; align-items:center; gap:12px; padding:14px 16px;
+    background:var(--navy); border-bottom:1px solid var(--line); }
+  header .logo { width:28px; height:28px; flex:0 0 28px; }
+  header h1 { font-size:16px; margin:0; font-weight:600; letter-spacing:.4px;
+    text-transform:uppercase; color:var(--gold); }
+  header .me { margin-left:auto; font-size:12px; color:var(--grey); }
+  header .me b { color:var(--text); }
+  main { display:flex; flex:1; min-height:0; }
+  #convs { width:35%; min-width:260px; max-width:380px; border-right:1px solid var(--line);
+    overflow-y:auto; background:var(--panel); }
+  #conv { flex:1; display:flex; flex-direction:column; min-width:0; }
+  #conv-empty { margin:auto; color:var(--grey); padding:32px; text-align:center; }
+  .conv-row { padding:12px 14px; border-bottom:1px solid var(--line); cursor:pointer; }
+  .conv-row:hover { background:#15265a; }
+  .conv-row.active { background:#1c3370; }
+  .conv-name { font-weight:600; font-size:14px; }
+  .conv-meta { font-size:11px; color:var(--grey); margin-top:3px; }
+  .conv-last { font-size:12px; margin-top:5px; color:#cbd1de;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .conv-row .badge { display:inline-block; background:var(--gold); color:var(--navy);
+    font-size:10px; padding:1px 6px; border-radius:8px; margin-left:6px; font-weight:700; }
+  #conv-head { padding:12px 16px; border-bottom:1px solid var(--line);
+    background:#0d1d44; display:flex; align-items:center; gap:12px; }
+  #conv-head .title { font-weight:600; }
+  #conv-head .sub { font-size:11px; color:var(--grey); }
+  #msgs { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:8px; }
+  .bubble { max-width:78%; padding:9px 13px; border-radius:14px; font-size:14px;
+    line-height:1.35; white-space:pre-wrap; word-wrap:break-word; }
+  .bubble .ts { display:block; font-size:10px; color:#a7accc; margin-top:5px; }
+  .in  { align-self:flex-start; background:var(--in); border-bottom-left-radius:4px; }
+  .out { align-self:flex-end;   background:var(--out); color:#fff8e7;
+         border-bottom-right-radius:4px; }
+  #compose { display:flex; gap:8px; padding:10px 12px;
+    border-top:1px solid var(--line); background:#0d1d44; }
+  #compose textarea { flex:1; min-height:42px; max-height:140px; resize:none;
+    padding:10px 12px; border-radius:18px; border:1px solid var(--line);
+    background:#0a1530; color:var(--text); font-size:14px;
+    font-family:inherit; }
+  #compose button { flex:0 0 auto; padding:0 16px; border-radius:18px; border:0;
+    background:var(--gold); color:var(--navy); font-weight:700; font-size:13px;
+    cursor:pointer; }
+  #compose button:disabled { opacity:.45; cursor:not-allowed; }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    background:#1a2a55; color:var(--text); padding:9px 16px; border-radius:18px;
+    font-size:13px; border:1px solid var(--line); z-index:9999;
+    transition:opacity .25s; }
+  .login-wrap { margin:auto; text-align:center; padding:32px; max-width:380px; }
+  .login-wrap h1 { color:var(--gold); margin:0 0 8px; font-size:24px;
+    text-transform:uppercase; letter-spacing:.6px; }
+  .login-wrap p { color:var(--grey); }
+  .login-wrap a { display:inline-block; margin-top:18px; padding:12px 24px;
+    background:var(--gold); color:var(--navy); border-radius:8px;
+    text-decoration:none; font-weight:700; }
+  @media (max-width: 700px) {
+    main { flex-direction:column; }
+    #convs { width:100%; max-width:none; min-width:0;
+      max-height:42vh; border-right:0; border-bottom:1px solid var(--line); }
+    #conv.has-active #convs { display:none; }
+    #conv.has-active #conv { display:flex; }
+  }
+</style>
+</head>
+<body>
+<div id="app">{% endraw %}
+{% if not logged_in %}
+  <div class="login-wrap">
+    <h1>Switchboard</h1>
+    <p>Accesso riservato agli operatori Thanatos. Effettua il login con le tue credenziali.</p>
+    <a href="/login?redirect-to=/ops/">Accedi</a>
+  </div>
+{% else %}
+{% raw %}
+  <header>
+    <svg class="logo" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="#C8A65C" stroke-width="1.6"/>
+      <path d="M5.5 13.5c1.5 1 4 2 6.5 2s5-1 6.5-2" stroke="#C8A65C" stroke-width="1.6" stroke-linecap="round"/>
+      <circle cx="9" cy="10" r="1" fill="#C8A65C"/>
+      <circle cx="15" cy="10" r="1" fill="#C8A65C"/>
+    </svg>
+    <h1>Thanatos · Switchboard</h1>
+    <div class="me">{% endraw %}{{ user_name }}{% raw %} · <b id="conn">…</b></div>
+  </header>
+  <main>
+    <aside id="convs"><div style="padding:14px;color:var(--grey);font-size:13px">Carico conversazioni…</div></aside>
+    <section id="conv">
+      <div id="conv-empty">Seleziona una conversazione</div>
+    </section>
+  </main>
+{% endraw %}
+{% endif %}
+{% raw %}
+</div>
+<script>
+const APP = {
+  user: {% endraw %}{{ (user_name or '')|tojson }}{% raw %},
+  isOperator: {% endraw %}{{ (is_operator or false)|tojson }}{% raw %},
+  active: null,
+  conversations: [],
+};
+
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(), 300); }, 2400);
+}
+async function call(method, args={}) {
+  const r = await fetch('/api/method/' + method, {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded',
+              'X-Frappe-CSRF-Token': (window.frappe?.csrf_token) || 'token'},
+    body: new URLSearchParams(args).toString(),
+    credentials: 'same-origin',
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  return j.message;
+}
+
+async function loadConversations() {
+  try {
+    APP.conversations = await call('thanatos_intel.api.centralino.get_conversations',
+                                    {filter_type:'all'}) || [];
+    renderConversations();
+    $('#conn').textContent = 'online';
+    $('#conn').style.color = '#9be9a8';
+  } catch (e) {
+    $('#conn').textContent = 'offline';
+    $('#conn').style.color = '#e08585';
+    toast('Errore caricamento conversazioni');
+  }
+}
+
+function renderConversations() {
+  const root = $('#convs');
+  if (!APP.conversations.length) {
+    root.innerHTML = '<div style="padding:18px;color:var(--grey);font-size:13px">Nessuna conversazione</div>';
+    return;
+  }
+  root.innerHTML = APP.conversations.map(c => {
+    const ts = c.last_message_at ? new Date(c.last_message_at).toLocaleString('it-IT', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'}) : '';
+    const unread = c.unread_count > 0 ? `<span class="badge">${c.unread_count}</span>` : '';
+    return `<div class="conv-row${APP.active===c.name?' active':''}" data-name="${esc(c.name)}">
+      <div class="conv-name">${esc(c.source_name || c.source_identifier || 'Sconosciuto')}${unread}</div>
+      <div class="conv-last">${esc((c.last_message||'').slice(0,80))}</div>
+      <div class="conv-meta">${esc(c.source_type||'')} · ${ts}</div>
+    </div>`;
+  }).join('');
+  root.querySelectorAll('.conv-row').forEach(el => {
+    el.addEventListener('click', () => openConversation(el.dataset.name));
+  });
+}
+
+async function openConversation(name) {
+  APP.active = name;
+  document.querySelectorAll('.conv-row').forEach(el =>
+    el.classList.toggle('active', el.dataset.name === name));
+  const root = $('#conv');
+  root.innerHTML = '<div id="conv-empty">Caricamento…</div>';
+  try {
+    const data = await call('thanatos_intel.api.centralino.get_thread',
+                            {lead_name:name});
+    renderConversation(data);
+  } catch (e) {
+    root.innerHTML = '<div id="conv-empty">Errore caricamento conversazione</div>';
+  }
+}
+
+function renderConversation(data) {
+  const root = $('#conv');
+  const msgs = (data.messages || []).map(renderBubble).join('');
+  root.innerHTML = `
+    <div id="conv-head">
+      <div>
+        <div class="title">${esc(data.source_name || data.source_identifier || '')}</div>
+        <div class="sub">${esc(data.source_type||'')} · ${esc(data.status||'')}${data.linked_case?' · '+esc(data.linked_case):''}</div>
+      </div>
+    </div>
+    <div id="msgs">${msgs}</div>
+    <div id="compose">
+      <textarea id="reply" placeholder="Scrivi una risposta…" rows="1"></textarea>
+      <button id="send">Invia</button>
+    </div>
+  `;
+  $('#msgs').scrollTop = $('#msgs').scrollHeight;
+  $('#send').addEventListener('click', sendReply);
+  $('#reply').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendReply(); }
+  });
+}
+
+function renderBubble(m) {
+  const cls = m.direction === 'Outbound' ? 'out' : 'in';
+  const ts = m.sent_at ? new Date(m.sent_at).toLocaleString('it-IT', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'}) : '';
+  return `<div class="bubble ${cls}">${esc(m.content||'')}<span class="ts">${ts}${m.status ? ' · '+esc(m.status) : ''}</span></div>`;
+}
+
+async function sendReply() {
+  const t = $('#reply').value.trim();
+  if (!t || !APP.active) return;
+  $('#reply').value = ''; $('#reply').disabled = true; $('#send').disabled = true;
+  try {
+    const r = await call('thanatos_intel.api.centralino.send_reply',
+                        {lead_name:APP.active, message_text:t});
+    if (r && (r.ok || r.status === 'sent')) {
+      $('#msgs').insertAdjacentHTML('beforeend', renderBubble({
+        direction:'Outbound', content:t, sent_at:new Date().toISOString(), status:'Inviato'
+      }));
+      $('#msgs').scrollTop = $('#msgs').scrollHeight;
+    } else {
+      toast('Errore invio: ' + (r?.error || 'sconosciuto'));
+    }
+  } catch (e) {
+    toast('Errore di rete');
+  } finally {
+    $('#reply').disabled = false; $('#send').disabled = false; $('#reply').focus();
+  }
+}
+
+function setupRealtime() {
+  if (typeof io === 'undefined') return;
+  const sio = io({ path: '/socket.io', transports:['websocket','polling'] });
+  sio.on('connect', () => { $('#conn').textContent='online'; $('#conn').style.color='#9be9a8'; });
+  sio.on('disconnect', () => { $('#conn').textContent='offline'; $('#conn').style.color='#e08585'; });
+  sio.on('centralino_update', (data) => {
+    loadConversations();
+    if (APP.active === data.lead) openConversation(APP.active);
+  });
+  sio.on('centralino_incoming_call', (data) => {
+    toast('📞 Chiamata in arrivo da ' + (data.from || '?'));
+  });
+}
+
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/ops/service-worker.js', {scope:'/ops/'});
+    // push subscription on first run (best-effort, requires VAPID key configured)
+    if ('PushManager' in window && Notification.permission === 'default') {
+      // chiediamo il permesso solo dopo che l'utente interagisce
+    }
+    return reg;
+  } catch (e) { console.warn('SW reg failed', e); }
+}
+
+if (APP.isOperator) {
+  loadConversations();
+  registerSW();
+  // socket.io client
+  const s = document.createElement('script');
+  s.src = '/assets/frappe/js/lib/socket.io.min.js';
+  s.onload = setupRealtime;
+  document.head.appendChild(s);
+}
+</script>
+{% endraw %}
+</body></html>
