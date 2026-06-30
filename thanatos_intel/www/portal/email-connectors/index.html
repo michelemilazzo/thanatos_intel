@@ -170,7 +170,7 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 
 <script>
 const api = (path, opts) =>
-  fetch('/api/method/thanatos_intel.api.mail_connectors.' + path, {
+  fetch('/api/method/mmos_brand.api.mail_connectors.' + path, {
     headers: {'X-Frappe-CSRF-Token': frappe.csrf_token, 'Content-Type': 'application/json'},
     ...opts
   }).then(r => r.json()).then(d => d.message !== undefined ? d.message : d);
