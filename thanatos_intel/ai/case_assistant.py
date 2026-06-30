@@ -228,24 +228,6 @@ def case_ai_chat(case, message):
         res = send_case_report_wa(case, lead.name, lead.whatsapp_number, lead.source_identifier, include_pdf=1)
         return done(f"📲 Relazione inviata su WhatsApp: {res.get('messaggi')} messaggi + {res.get('documenti')} PDF.", "invia_wa")
 
-def _contextual_commands(case):
-    """Comandi suggeriti pertinenti al tipo di caso (allineati ai chip del cockpit)."""
-    ct = frappe.db.get_value("Investigation Case", case, "case_type")
-    common = ["avanzamento", "genera dossier", "proforma", "domande", "analisi completa"]
-    extra = {
-        "Fraud": ["screening", "doppia cessione"],
-        "Cyber": ["screening"],
-        "Asset Recovery": ["screening", "doppia cessione"],
-        "Due Diligence": ["verifica camerale <piva>", "valuta assicurazione", "doppia cessione"],
-        "Corporate": ["verifica camerale <piva>", "screening"],
-        "Family": ["screening"],
-    }
-    out = []
-    for c in common + extra.get(ct, ["screening", "verifica camerale <piva>"]):
-        if c not in out:
-            out.append(c)
-    return out
-
     # — fallback conversazionale col contesto del caso —
     try:
         from thanatos_intel.ai.doc_ingest import _gateway
@@ -266,6 +248,25 @@ def _contextual_commands(case):
         return done("Comandi: dossier · proforma · formulario · fascicolo · doppia cessione · domande · "
                     "screening · riconciliazione fatture · verifica camerale <piva> · valuta assicurazione · "
                     "analisi completa · avanzamento.")
+
+
+def _contextual_commands(case):
+    """Comandi suggeriti pertinenti al tipo di caso (allineati ai chip del cockpit)."""
+    ct = frappe.db.get_value("Investigation Case", case, "case_type")
+    common = ["avanzamento", "genera dossier", "proforma", "domande", "analisi completa"]
+    extra = {
+        "Fraud": ["screening", "doppia cessione"],
+        "Cyber": ["screening"],
+        "Asset Recovery": ["screening", "doppia cessione"],
+        "Due Diligence": ["verifica camerale <piva>", "valuta assicurazione", "doppia cessione"],
+        "Corporate": ["verifica camerale <piva>", "screening"],
+        "Family": ["screening"],
+    }
+    out = []
+    for c in common + extra.get(ct, ["screening", "verifica camerale <piva>"]):
+        if c not in out:
+            out.append(c)
+    return out
 
 
 _EV_TYPE = [

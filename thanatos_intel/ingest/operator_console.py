@@ -162,10 +162,38 @@ def _operator_context(operator, lead_name, text):
     return "\n\n".join(parts)
 
 
+def _resolve_case(lead_name, text):
+    """Caso di riferimento per i comandi operativi: quello agganciato alla chat,
+    o un CASE-AAAA-N citato nel messaggio."""
+    lc = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+    if lc:
+        return lc
+    for tok in re.findall(r"CASE-\d{4}-\d+", text or "", re.I):
+        tok = tok.upper()
+        if frappe.db.exists("Investigation Case", tok):
+            return tok
+    return None
+
+
 @frappe.whitelist()
 def operator_assistant_reply(lead_name, wa_phone, sender, text, operator):
-    """Co-pilota AI per l'operatore: risponde su WhatsApp con supporto operativo
-    fondato sul contesto reale (casi, lead, reperti)."""
+    """Co-pilota AI operativo su WhatsApp. Se la chat è agganciata a un caso (o il
+    messaggio cita un CASE-…), il messaggio passa all'assistente del caso che ESEGUE
+    gli strumenti reali (visura camerale, soci/UBO, screening KYC/PEP/sanzioni,
+    negatività, patrimoniale, dossier, proforma, fascicolo, doppia cessione, domande,
+    cluster, analisi completa…) e risponde con l'esito — non è un semplice chatbot.
+    Senza caso, risponde col contesto (lead/casi recenti)."""
+    case = _resolve_case(lead_name, text)
+    if case:
+        try:
+            from thanatos_intel.ai.case_assistant import case_ai_chat
+            r = case_ai_chat(case, text) or {}
+            out = (r.get("reply") or "").strip()
+            if out:
+                _reply(wa_phone, sender, lead_name, out)
+                return {"ok": True, "case": case, "action": r.get("action")}
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "operator case_ai_chat")
     from thanatos_intel.ai.doc_ingest import _gateway
     from thanatos_intel.ai.case_architect import _resp_text
     ctx = _operator_context(operator, lead_name, text)

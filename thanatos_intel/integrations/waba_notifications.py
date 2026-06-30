@@ -75,11 +75,37 @@ def notify_mandate_ready(case_name: str):
         _send_whatsapp(phone, "thanatos_mandate_ready", [case_name])
 
 
-def notify_payment_request(case_name: str, amount: float, currency: str = "EUR"):
-    """Notifica il cliente del pagamento richiesto."""
+def _case_amount(case_name: str):
+    """Best-effort importo da richiedere: importo non saldato dell'ultima fattura del
+    cliente del caso (ARES Sales Invoice). None se non determinabile."""
+    try:
+        client = frappe.db.get_value("Investigation Case", case_name, "client")
+        customer = frappe.db.get_value("Investigation Client", client, "customer") if client else None
+        if not customer:
+            return None
+        inv = frappe.get_all("Sales Invoice",
+                             filters={"customer": customer, "docstatus": ["<", 2]},
+                             fields=["grand_total", "outstanding_amount"],
+                             order_by="creation desc", limit=1)
+        if inv:
+            return inv[0].outstanding_amount or inv[0].grand_total
+    except Exception:
+        pass
+    return None
+
+
+def notify_payment_request(case_name: str, amount: float = None, currency: str = "EUR"):
+    """Notifica il cliente del pagamento richiesto. Se `amount` non è passato (es. dal
+    motore workflow allo step «pay», che non conosce l'importo), lo deriva dall'ultima
+    fattura del cliente; se non c'è un importo certo non invia (no template fuorviante)."""
+    if amount is None:
+        amount = _case_amount(case_name)
+    if amount is None:
+        return False
     phone = _get_client_phone(case_name)
     if phone:
-        _send_whatsapp(phone, "thanatos_payment_request", [case_name, f"{amount:.2f}", currency])
+        _send_whatsapp(phone, "thanatos_payment_request", [case_name, f"{float(amount):.2f}", currency])
+    return True
 
 
 def notify_report_ready(case_name: str):
