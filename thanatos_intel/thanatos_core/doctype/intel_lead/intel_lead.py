@@ -41,7 +41,8 @@ class IntelLead(frappe.model.document.Document):
 
 def find_or_create_lead(source_identifier: str, source_name: str, content: str,
                         source_type: str = "WhatsApp", media_url: str = "",
-                        wa_number: dict | None = None, wa_message_id: str = "") -> str:
+                        wa_number: dict | None = None, wa_message_id: str = "",
+                        suppress_notify: bool = False) -> str:
     """
     Cerca un lead aperto dallo stesso mittente nelle ultime N ore.
     Se esiste, aggiunge il messaggio al thread; altrimenti crea un nuovo lead.
@@ -75,7 +76,7 @@ def find_or_create_lead(source_identifier: str, source_name: str, content: str,
         doc.save(ignore_permissions=True)
         frappe.db.commit()
         # Notifica real-time operatore assegnato
-        if doc.assigned_to:
+        if doc.assigned_to and not suppress_notify:
             try:
                 from thanatos_intel.ingest.intel_notifications import notify_new_message_in_thread
                 notify_new_message_in_thread(existing, doc.assigned_to,
@@ -112,7 +113,7 @@ def find_or_create_lead(source_identifier: str, source_name: str, content: str,
     frappe.db.commit()
     # Notifica operatore assegnato per nuovo lead
     assigned = (wa_number or {}).get("auto_assign_to") or ""
-    if assigned:
+    if assigned and not suppress_notify:
         try:
             from thanatos_intel.ingest.intel_notifications import notify_new_lead
             notify_new_lead(doc.name, assigned, source_name or "", source_identifier, content or "")

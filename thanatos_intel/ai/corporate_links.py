@@ -8,6 +8,7 @@ unica. È il controllo che smaschera i 'gruppi' dietro le frodi su cessione cred
 import json
 import re
 import frappe
+import math
 from frappe.utils import now_datetime
 
 from thanatos_intel.ai import doc_ingest as DI
@@ -153,3 +154,61 @@ def _arricchisci_ownership(doc, case_doc):
                                  "tipo": "titolare effettivo (UBO)", "evidenza": (u.get("cf") or "openapi")[:140]})
             added += 1
     return added
+
+
+@frappe.whitelist()
+def graph(group):
+    """Rende il cluster come grafo SVG (societa'=rettangoli, persone=cerchi, archi etichettati
+    col tipo di legame/quota) — vista 'stile Arkham' del Corporate Group."""
+    if not group or not frappe.db.exists("Corporate Group", group):
+        return ""
+    doc = frappe.get_doc("Corporate Group", group)
+    types = {}
+    for m in (doc.members or []):
+        nm = (m.entity_name or m.entity or "").strip()
+        if nm:
+            types[nm] = (m.entity_type or "").lower()
+    edges = []
+    for l in (doc.links or []):
+        a = (l.da or "").strip(); b = (l.a or "").strip()
+        if a and b:
+            edges.append((a, b, (l.tipo or "").strip()))
+            types.setdefault(a, ""); types.setdefault(b, "")
+    names = list(types.keys())
+    if not names:
+        return "<div style='color:#888'>Nessun membro/collegamento nel cluster.</div>"
+
+    W, Hh, cx, cy = 640, 460, 320, 220
+    R = 165 if len(names) > 1 else 0
+    pos = {}
+    for i, nm in enumerate(names):
+        ang = 2 * math.pi * i / max(len(names), 1) - math.pi / 2
+        pos[nm] = (cx + R * math.cos(ang), cy + R * math.sin(ang))
+
+    def is_company(t):
+        return "compan" in t or "societ" in t or "srl" in t or "spa" in t
+
+    out = ["<svg viewBox='0 0 %d %d' style='width:100%%;max-width:680px;border:1px solid #eee;border-radius:8px;background:#0d1117'>" % (W, Hh)]
+    # archi
+    for a, b, tipo in edges:
+        x1, y1 = pos[a]; x2, y2 = pos[b]
+        out.append("<line x1='%.0f' y1='%.0f' x2='%.0f' y2='%.0f' stroke='#3b4453' stroke-width='1.5'/>" % (x1, y1, x2, y2))
+        if tipo:
+            mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+            out.append("<text x='%.0f' y='%.0f' fill='#9aa4b2' font-size='10' text-anchor='middle'>%s</text>" % (mx, my, frappe.utils.escape_html(tipo)[:24]))
+    # nodi
+    for nm in names:
+        x, y = pos[nm]
+        comp = is_company(types.get(nm, ""))
+        label = frappe.utils.escape_html(nm)[:26]
+        if comp:
+            out.append("<rect x='%.0f' y='%.0f' width='124' height='34' rx='5' fill='#1f6feb' stroke='#388bfd'/>" % (x - 62, y - 17))
+            out.append("<text x='%.0f' y='%.0f' fill='#fff' font-size='11' font-weight='600' text-anchor='middle'>%s</text>" % (x, y + 4, label))
+        else:
+            out.append("<circle cx='%.0f' cy='%.0f' r='24' fill='#238636' stroke='#2ea043'/>" % (x, y))
+            out.append("<text x='%.0f' y='%.0f' fill='#fff' font-size='10' text-anchor='middle'>%s</text>" % (x, y + 40, label))
+    # legenda
+    out.append("<rect x='10' y='%d' width='13' height='13' rx='3' fill='#1f6feb'/><text x='28' y='%d' fill='#9aa4b2' font-size='11'>Societa'</text>" % (Hh - 24, Hh - 14))
+    out.append("<circle cx='100' cy='%d' r='7' fill='#238636'/><text x='112' y='%d' fill='#9aa4b2' font-size='11'>Persona</text>" % (Hh - 17, Hh - 14))
+    out.append("</svg>")
+    return "".join(out)

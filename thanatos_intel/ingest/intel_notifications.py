@@ -80,18 +80,32 @@ def _notify(user: str, title: str, message: str, lead_name: str, indicator: str 
     except Exception:
         pass
 
-    # Notification Log (campanella nel desk)
+    # Notification Log (campanella nel desk) con ACCORPAMENTO: se esiste gia' una
+    # notifica NON letta per lo stesso lead+utente negli ultimi 5 min, la aggiorna
+    # invece di crearne una nuova (evita il flood quando arriva una raffica di media).
     try:
-        frappe.get_doc({
-            "doctype": "Notification Log",
-            "subject": title,
-            "email_content": message,
-            "for_user": user,
-            "type": "Alert",
-            "document_type": "Intel Lead",
-            "document_name": lead_name,
-            "from_user": frappe.session.user or "Administrator",
-        }).insert(ignore_permissions=True)
+        from frappe.utils import add_to_date, now_datetime
+        cutoff = add_to_date(now_datetime(), minutes=-5)
+        existing = frappe.db.get_value("Notification Log", {
+            "for_user": user, "document_type": "Intel Lead",
+            "document_name": lead_name, "read": 0,
+            "creation": [">=", cutoff],
+        }, "name")
+        if existing:
+            frappe.db.set_value("Notification Log", existing,
+                                {"subject": title, "email_content": message,
+                                 "creation": now_datetime()}, update_modified=False)
+        else:
+            frappe.get_doc({
+                "doctype": "Notification Log",
+                "subject": title,
+                "email_content": message,
+                "for_user": user,
+                "type": "Alert",
+                "document_type": "Intel Lead",
+                "document_name": lead_name,
+                "from_user": frappe.session.user or "Administrator",
+            }).insert(ignore_permissions=True)
         frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "intel_notifications Notification Log")

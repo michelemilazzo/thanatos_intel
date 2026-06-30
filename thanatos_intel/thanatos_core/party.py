@@ -14,6 +14,8 @@ def get_or_create_soggetto(full_name=None, codice_fiscale=None, email=None, tele
         s = frappe.db.get_value("Soggetto", {"codice_fiscale": codice_fiscale})
     if not s and email:
         s = frappe.db.get_value("Soggetto", {"email": email})
+        if not s and frappe.db.exists("DocType", "Soggetto Email"):
+            s = frappe.db.get_value("Soggetto Email", {"email": email, "parenttype": "Soggetto"}, "parent")
     if not s and telefono:
         tail = _phone_tail(telefono)
         if tail:
@@ -100,3 +102,108 @@ def backfill_all():
         res[dt] = n
     frappe.db.commit()
     return res
+
+
+@frappe.whitelist()
+def person_card(soggetto):
+    """HTML 'scheda persona': ruoli, record collegati, email, fatture, casi — in un colpo solo."""
+    from frappe.utils import get_url_to_form, fmt_money
+    if not soggetto or not frappe.db.exists("Soggetto", soggetto):
+        return ""
+    sog = frappe.get_doc("Soggetto", soggetto)
+    H = []
+    H.append("<div style='font-size:13px'>")
+
+    # ruoli
+    if sog.ruoli:
+        H.append("<div style='margin-bottom:8px'><b>Ruoli:</b> %s</div>" % frappe.utils.escape_html(sog.ruoli))
+
+    # record-ruolo collegati
+    role_rows = []
+    for dt, label in [("Customer", "Cliente"), ("Employee", "Dipendente"),
+                      ("Investigator", "Investigatore"), ("Intelligence Contact", "Contatto Intel")]:
+        try:
+            if not frappe.db.has_column(dt, "soggetto"):
+                continue
+            for nm in frappe.get_all(dt, filters={"soggetto": soggetto}, pluck="name"):
+                role_rows.append((label, dt, nm))
+        except Exception:
+            pass
+    if role_rows:
+        H.append("<div style='margin-bottom:8px'><b>Record collegati</b><ul style='margin:4px 0 0 16px;padding:0'>")
+        for label, dt, nm in role_rows:
+            H.append("<li>%s: <a href='%s'>%s</a></li>" % (label, get_url_to_form(dt, nm), frappe.utils.escape_html(nm)))
+        H.append("</ul></div>")
+
+    # email (primaria + alias)
+    mails = []
+    if sog.email:
+        mails.append(sog.email + " (primaria)")
+    for r in (sog.get("emails") or []):
+        if r.email:
+            mails.append(r.email + ((" — " + r.etichetta) if r.etichetta else "") + (" ⭐" if r.is_default else ""))
+    if mails:
+        H.append("<div style='margin-bottom:8px'><b>Email:</b> %s</div>" % frappe.utils.escape_html(" · ".join(mails)))
+
+    # Customer collegati -> fatture
+    customers = [nm for (_l, dt, nm) in role_rows if dt == "Customer"]
+    if customers:
+        try:
+            invs = frappe.get_all("Sales Invoice", filters={"customer": ["in", customers]},
+                                  fields=["name", "status", "grand_total", "currency", "posting_date"],
+                                  order_by="posting_date desc", limit=8)
+            if invs:
+                H.append("<div style='margin-bottom:8px'><b>Fatture</b><ul style='margin:4px 0 0 16px;padding:0'>")
+                for iv in invs:
+                    H.append("<li><a href='%s'>%s</a> · %s %s · %s · %s</li>" % (
+                        get_url_to_form("Sales Invoice", iv.name), iv.name,
+                        iv.currency or "", iv.grand_total or 0, iv.status or "", iv.posting_date or ""))
+                H.append("</ul></div>")
+        except Exception:
+            pass
+
+    # Casi: Investigation Case con un Link verso Customer (rilevato dinamicamente) + per investigatore
+    cases = set()
+    try:
+        if frappe.db.exists("DocType", "Investigation Case") and customers:
+            meta = frappe.get_meta("Investigation Case")
+            for df in meta.get("fields", []):
+                if df.fieldtype == "Link" and df.options == "Customer":
+                    for nm in frappe.get_all("Investigation Case", filters={df.fieldname: ["in", customers]}, pluck="name"):
+                        cases.add(nm)
+    except Exception:
+        pass
+    try:
+        investigators = [nm for (_l, dt, nm) in role_rows if dt == "Investigator"]
+        if investigators and frappe.db.exists("DocType", "Case Assignment"):
+            for nm in frappe.get_all("Case Assignment",
+                                     filters={"assignee": ["in", investigators], "parenttype": "Investigation Case"},
+                                     fields=["parent"], pluck="parent"):
+                cases.add(nm)
+    except Exception:
+        pass
+    if cases:
+        H.append("<div style='margin-bottom:8px'><b>Casi</b><ul style='margin:4px 0 0 16px;padding:0'>")
+        for nm in list(cases)[:12]:
+            H.append("<li><a href='%s'>%s</a></li>" % (get_url_to_form("Investigation Case", nm), frappe.utils.escape_html(nm)))
+        H.append("</ul></div>")
+
+    # Gruppi/cluster societari in cui la persona compare (per link soggetto o per nome)
+    try:
+        groups = set()
+        if frappe.db.has_column("Corporate Group Member", "soggetto"):
+            groups.update(frappe.get_all("Corporate Group Member",
+                          filters={"soggetto": soggetto}, fields=["parent"], pluck="parent"))
+        if sog.full_name:
+            groups.update(frappe.get_all("Corporate Group Member",
+                          filters={"entity_name": sog.full_name}, fields=["parent"], pluck="parent"))
+        if groups:
+            H.append("<div style='margin-bottom:8px'><b>Gruppi societari</b><ul style='margin:4px 0 0 16px;padding:0'>")
+            for g in list(groups)[:10]:
+                H.append("<li><a href='%s'>%s</a></li>" % (get_url_to_form("Corporate Group", g), frappe.utils.escape_html(g)))
+            H.append("</ul></div>")
+    except Exception:
+        pass
+
+    H.append("</div>")
+    return "".join(H)

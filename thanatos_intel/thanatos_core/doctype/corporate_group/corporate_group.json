@@ -4,6 +4,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "graph_html",
+  "sb_graph",
   "group_name",
   "group_kind",
   "risk_level",
@@ -16,6 +18,16 @@
   "related_cases"
  ],
  "fields": [
+  {
+   "fieldname": "graph_html",
+   "fieldtype": "HTML",
+   "label": "Mappa cluster"
+  },
+  {
+   "fieldname": "sb_graph",
+   "fieldtype": "Section Break",
+   "label": ""
+  },
   {
    "fieldname": "group_name",
    "label": "Nome gruppo",

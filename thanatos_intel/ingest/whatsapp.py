@@ -46,7 +46,7 @@ def _check_token(token: str, wa_number: dict | None) -> bool:
 
 def _create_lead(source_id: str, source_name: str, content: str,
                  media_url: str = "", wa_number: dict | None = None,
-                 wa_message_id: str = "") -> str:
+                 wa_message_id: str = "", suppress_notify: bool = False) -> str:
     from thanatos_intel.thanatos_core.doctype.intel_lead.intel_lead import find_or_create_lead
     return find_or_create_lead(
         source_identifier=source_id,
@@ -56,6 +56,7 @@ def _create_lead(source_id: str, source_name: str, content: str,
         media_url=media_url,
         wa_number=wa_number,
         wa_message_id=wa_message_id,
+        suppress_notify=suppress_notify,
     )
 
 
@@ -189,9 +190,12 @@ def webhook():
         return {"ok": True, "type": "status_update"}
 
     created = []
+    from thanatos_intel.ingest.operator_console import find_operator, handle_operator_message
     for m in messages:
         if not m["content"] and not m["media_url"]:
             continue
+        # Mittente operatore? -> i suoi messaggi NON sono lead-cliente: niente notifica campanella
+        _operator = find_operator(m["source_id"])
         name = _create_lead(
             source_id=m["source_id"],
             source_name=m["source_name"],
@@ -199,6 +203,7 @@ def webhook():
             media_url=m["media_url"],
             wa_number=wa_number,
             wa_message_id=m.get("wa_message_id", ""),
+            suppress_notify=bool(_operator),
         )
         created.append(name)
 
@@ -206,8 +211,6 @@ def webhook():
 
         # Canale operatore: se il mittente è un investigatore noto, niente bot/auto-reply
         # cliente — i suoi messaggi sono comandi operativi (es. "apri un caso").
-        from thanatos_intel.ingest.operator_console import find_operator, handle_operator_message
-        _operator = find_operator(m["source_id"])
         if _operator:
             _dispatch_media(name, m, _wa_phone, notify_bot=False)
             try:

@@ -79,6 +79,22 @@
    "options": "Soggetto IBAN",
    "label": "IBAN (multipli; uno predefinito)",
    "description": "Aggiungi piu' IBAN. Il primo inserito diventa predefinito."
+  },
+  {
+   "fieldname": "scheda_html",
+   "fieldtype": "HTML",
+   "label": "Scheda persona"
+  },
+  {
+   "fieldname": "sb_emails",
+   "fieldtype": "Section Break",
+   "label": "Email (alias)"
+  },
+  {
+   "fieldname": "emails",
+   "fieldtype": "Table",
+   "label": "Email",
+   "options": "Soggetto Email"
   }
  ],
  "permissions": [
@@ -95,5 +111,22 @@
    "write": 1,
    "create": 1
   }
+ ],
+ "field_order": [
+  "full_name",
+  "codice_fiscale",
+  "cb1",
+  "email",
+  "telefono",
+  "sb_emails",
+  "emails",
+  "sb_ruoli",
+  "ruoli",
+  "scheda_html",
+  "data_nascita",
+  "sb_indirizzi",
+  "indirizzi",
+  "sb_ibans",
+  "ibans"
  ]
 }

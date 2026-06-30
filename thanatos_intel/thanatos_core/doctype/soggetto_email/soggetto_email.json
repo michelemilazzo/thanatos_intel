@@ -1,0 +1,44 @@
+{
+ "actions": [],
+ "creation": "2026-06-30 00:00:00",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "istable": 1,
+ "module": "Thanatos Core",
+ "name": "Soggetto Email",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "field_order": [
+  "email",
+  "etichetta",
+  "is_default"
+ ],
+ "fields": [
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "in_list_view": 1,
+   "reqd": 1,
+   "columns": 5
+  },
+  {
+   "fieldname": "etichetta",
+   "fieldtype": "Data",
+   "label": "Etichetta",
+   "in_list_view": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Predefinita",
+   "in_list_view": 1,
+   "columns": 2
+  }
+ ]
+}

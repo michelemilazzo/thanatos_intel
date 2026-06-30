@@ -6,6 +6,7 @@ TARGETS = {
     "Customer": {"insert_after": "tax_id"},
     "Employee": {"insert_after": "user_id"},
     "Reseller": {"insert_after": "reseller_name"},
+    "Corporate Group Member": {"insert_after": "entity_name"},
 }
 
 
