@@ -264,13 +264,16 @@
     <div class="mark">
       <svg class="t" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id="thg" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="agl" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#E0C58A"/>
             <stop offset="100%" stop-color="#8C6E3C"/>
           </linearGradient>
         </defs>
-        <path d="M0 0 L60 0 L60 8 L36 8 L36 60 L24 60 L24 8 L0 8 Z" fill="url(#thg)"/>
-        <circle cx="30" cy="34" r="3" fill="#0A0E1A"/>
+        <ellipse cx="30" cy="10" rx="6" ry="1.6" fill="none" stroke="url(#agl)" stroke-width=".9"/>
+        <path d="M30 26 C 20 22, 9 26, 3 42 C 14 34, 22 33, 30 33 Z" fill="url(#agl)"/>
+        <path d="M30 26 C 40 22, 51 26, 57 42 C 46 34, 38 33, 30 33 Z" fill="url(#agl)"/>
+        <ellipse cx="30" cy="18" rx="3.6" ry="4.2" fill="url(#agl)"/>
+        <path d="M25 24 Q 30 27, 35 24 L 37 52 L 23 52 Z" fill="url(#agl)"/>
       </svg>
       <div class="brand">
         <div class="n">THANATOS</div>
@@ -291,15 +294,23 @@
 {% raw %}
   <header>
     <div class="brand">
-      <svg viewBox="0 0 60 60" width="26" height="26" aria-hidden="true">
+      <svg viewBox="0 0 60 60" width="30" height="30" aria-hidden="true">
         <defs>
-          <linearGradient id="thgh" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="agh" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#E0C58A"/>
             <stop offset="100%" stop-color="#8C6E3C"/>
           </linearGradient>
         </defs>
-        <path d="M0 0 L60 0 L60 8 L36 8 L36 60 L24 60 L24 8 L0 8 Z" fill="url(#thgh)"/>
-        <circle cx="30" cy="34" r="3" fill="#0A0E1A"/>
+        <!-- halo -->
+        <ellipse cx="30" cy="10" rx="6" ry="1.6" fill="none" stroke="url(#agh)" stroke-width=".9"/>
+        <!-- ala sinistra -->
+        <path d="M30 26 C 20 22, 9 26, 3 42 C 14 34, 22 33, 30 33 Z" fill="url(#agh)"/>
+        <!-- ala destra -->
+        <path d="M30 26 C 40 22, 51 26, 57 42 C 46 34, 38 33, 30 33 Z" fill="url(#agh)"/>
+        <!-- testa -->
+        <ellipse cx="30" cy="18" rx="3.6" ry="4.2" fill="url(#agh)"/>
+        <!-- veste -->
+        <path d="M25 24 Q 30 27, 35 24 L 37 52 L 23 52 Z" fill="url(#agh)"/>
       </svg>
       <div>
         <div class="title">THANATOS</div>
