@@ -277,6 +277,65 @@ CATALOGO = [
 
 
 @frappe.whitelist()
+# ── VISURA CAMERALE ORDINARIA (async, PDF ufficiale) ─────────────────────────
+@frappe.whitelist()
+def visura(piva, tipo="ordinaria", investigation_case=None, max_wait=90):
+    """Visura camerale ufficiale (visurecamerali.openapi.it).
+    tipo ∈ ordinaria | storica | soci | bilancio. Ritorna PDF id + evidence."""
+    p = _digits(piva)
+    if len(p) != 11:
+        return {"error": "P.IVA non valida", "piva": piva}
+    paths = {
+        "ordinaria": "/IT-ordinaria",
+        "storica":   "/IT-storica",
+        "soci":      "/IT-soci",
+        "bilancio":  "/IT-bilancio-ottico",
+    }
+    post_path = paths.get(tipo, "/IT-ordinaria")
+    data, err = _async("visure", post_path, {"taxCode": p}, "/richiesta", max_wait=max_wait)
+    if err:
+        return {"error": err, "piva": p}
+    out = {"piva": p, "tipo": tipo, "id": (data or {}).get("id"), "status": (data or {}).get("status") or (data or {}).get("state"), "dati": data or {}}
+    lines = [f"Visura camerale {tipo} — P.IVA {p}",
+             f"ID richiesta: {out['id']}", f"Status: {out['status']}"]
+    out["evidence"] = _evidence(investigation_case, f"Visura {tipo} — {p}", lines,
+                                source="openapi visurecamerali")
+    return out
+
+
+# ── CATASTO / IPOTECHE (async) ───────────────────────────────────────────────
+@frappe.whitelist()
+def catasto(subject, tipo="visura_soggetto", investigation_case=None, max_wait=90):
+    """Catasto/ipoteche (catasto.openapi.it).
+    tipo ∈ visura_soggetto | ispezione_ipotecaria | estratto_mappa.
+    subject = CF/P.IVA per visura_soggetto/ipotecaria; per estratto_mappa e' un dict
+    con foglio/particella/comune (passalo come JSON string)."""
+    paths = {
+        "visura_soggetto":      "/IT-visura-catastale-soggetto",
+        "ispezione_ipotecaria": "/IT-ispezione-ipotecaria",
+        "estratto_mappa":       "/IT-estratto-mappa",
+    }
+    post_path = paths.get(tipo, "/IT-visura-catastale-soggetto")
+    if tipo == "estratto_mappa":
+        import json as _json
+        body = _json.loads(subject) if isinstance(subject, str) else (subject or {})
+    else:
+        s = _digits(subject)
+        if len(s) not in (11, 16):
+            return {"error": "CF/P.IVA non valido", "subject": subject}
+        body = {"taxCode": s}
+    data, err = _async("catasto", post_path, body, "/richiesta", max_wait=max_wait)
+    if err:
+        return {"error": err, "subject": subject}
+    out = {"subject": subject, "tipo": tipo, "id": (data or {}).get("id"),
+           "status": (data or {}).get("status") or (data or {}).get("state"), "dati": data or {}}
+    lines = [f"Catasto {tipo} — {subject}",
+             f"ID richiesta: {out['id']}", f"Status: {out['status']}"]
+    out["evidence"] = _evidence(investigation_case, f"Catasto {tipo} — {subject}", lines,
+                                source="openapi catasto")
+    return out
+
+
 def risolvi_piva(name):
     """Nome/ragione sociale → P.IVA (company IT-search → IT-start)."""
     code, b = _get("company", "/IT-search", {"companyName": name})
@@ -422,8 +481,12 @@ def _run_lookup_bg(kind, value=None, investigation_case=None, name=None, surname
         elif kind == "iban":
             # value = IBAN
             res = verifica_iban(value, investigation_case)
-        # TODO: kind in ("visura","catasto") non hanno ancora wrapper diretti;
-        # aggiungere funzioni dedicate prima di abilitare il dispatch.
+        elif kind == "visura":
+            # value = P.IVA (default: visura ordinaria)
+            res = visura(value, tipo="ordinaria", investigation_case=investigation_case, max_wait=90)
+        elif kind == "catasto":
+            # value = CF/P.IVA soggetto (default: visura catastale per soggetto)
+            res = catasto(value, tipo="visura_soggetto", investigation_case=investigation_case, max_wait=90)
         # addebito al cliente solo se eseguito senza errore
         if res is not None and not res.get("error") and investigation_case:
             client = frappe.db.get_value("Investigation Case", investigation_case, "client")
