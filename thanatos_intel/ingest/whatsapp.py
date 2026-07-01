@@ -220,6 +220,14 @@ def webhook():
                 frappe.log_error(frappe.get_traceback(), "operator console")
             continue
 
+        # Notifica push (PWA Switchboard) agli operatori: best-effort, non blocca
+        try:
+            from thanatos_intel.api.push import on_new_inbound_message
+            on_new_inbound_message(name, m.get("source_name") or m.get("source_id"),
+                                   (m.get("content") or "").strip())
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "push notify inbound")
+
         # Risposta automatica: bot AI se abilitato sul numero, altrimenti messaggio fisso
         try:
             from frappe.utils import add_to_date, now_datetime

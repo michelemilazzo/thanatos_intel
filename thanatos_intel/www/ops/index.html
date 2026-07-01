@@ -98,6 +98,10 @@
       <circle cx="15" cy="10" r="1" fill="#C8A65C"/>
     </svg>
     <h1>Thanatos · Switchboard</h1>
+    <button id="notif-btn" title="Attiva notifiche push"
+      style="margin-left:auto;background:transparent;border:1px solid var(--line);
+             color:var(--text);padding:5px 10px;border-radius:14px;font-size:12px;
+             cursor:pointer;display:none">🔔 Attiva notifiche</button>
     <div class="me">{% endraw %}{{ user_name }}{% raw %} · <b id="conn">…</b></div>
   </header>
   <main>
@@ -253,26 +257,105 @@ function setupRealtime() {
   });
 }
 
+function urlB64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; ++i) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+let SW_REG = null;
+
 async function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    const reg = await navigator.serviceWorker.register('/ops/service-worker.js', {scope:'/ops/'});
-    // push subscription on first run (best-effort, requires VAPID key configured)
-    if ('PushManager' in window && Notification.permission === 'default') {
-      // chiediamo il permesso solo dopo che l'utente interagisce
+    SW_REG = await navigator.serviceWorker.register('/ops/service-worker.js', {scope:'/ops/'});
+    if ('PushManager' in window) {
+      const sub = await SW_REG.pushManager.getSubscription();
+      updateNotifButton(sub);
     }
-    return reg;
+    return SW_REG;
   } catch (e) { console.warn('SW reg failed', e); }
+}
+
+function updateNotifButton(sub) {
+  const btn = $('#notif-btn');
+  if (!btn) return;
+  if (!('PushManager' in window) || !('Notification' in window)) {
+    btn.style.display = 'none'; return;
+  }
+  if (Notification.permission === 'denied') {
+    btn.style.display = 'inline-block';
+    btn.textContent = '🔕 Notifiche bloccate';
+    btn.disabled = true; btn.style.opacity = '.6';
+    return;
+  }
+  if (sub) {
+    btn.style.display = 'inline-block';
+    btn.textContent = '🔔 Notifiche attive';
+    btn.style.background = 'rgba(200,166,92,.15)';
+    btn.style.borderColor = 'var(--gold)';
+    return;
+  }
+  btn.style.display = 'inline-block';
+  btn.textContent = '🔔 Attiva notifiche';
+  btn.disabled = false;
+}
+
+async function toggleNotifications() {
+  if (!SW_REG || !('PushManager' in window)) return;
+  const existing = await SW_REG.pushManager.getSubscription();
+  if (existing) {
+    // già attive: mando un test push
+    try {
+      await call('thanatos_intel.api.push.send_test_push');
+      toast('Test push inviato (arriva tra un attimo)');
+    } catch (e) { toast('Errore invio test'); }
+    return;
+  }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { updateNotifButton(null); return; }
+  try {
+    const {public_key} = await call('thanatos_intel.api.push.get_public_key');
+    const sub = await SW_REG.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(public_key),
+    });
+    const j = sub.toJSON();
+    await call('thanatos_intel.api.push.subscribe', {
+      endpoint: j.endpoint,
+      p256dh: j.keys.p256dh,
+      auth: j.keys.auth,
+      user_agent: navigator.userAgent,
+    });
+    updateNotifButton(sub);
+    toast('Notifiche attivate');
+  } catch (e) {
+    console.error(e);
+    toast('Errore attivazione notifiche');
+  }
 }
 
 if (APP.isOperator) {
   loadConversations();
   registerSW();
+  document.addEventListener('click', e => {
+    if (e.target && e.target.id === 'notif-btn') toggleNotifications();
+  });
   // socket.io client
   const s = document.createElement('script');
   s.src = '/assets/frappe/js/lib/socket.io.min.js';
   s.onload = setupRealtime;
   document.head.appendChild(s);
+  // messaggi dal service worker (es. click su notifica)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', e => {
+      const d = e.data || {};
+      if (d.type === 'open-lead' && d.lead) openConversation(d.lead);
+    });
+  }
 }
 </script>
 {% endraw %}
