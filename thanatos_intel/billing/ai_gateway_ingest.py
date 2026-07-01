@@ -31,11 +31,24 @@ def _save_offsets(o):
 
 
 def _client_for_session(session_id):
-    site = (session_id or "").split(":")[0]
+    """AUTOMATICO: dall'utente nel session_id (<sito>:<utente>[:<chat>]) risolve
+    l'Investigation Client collegato (platform_user). Fallback: mappa per-sito o
+    house-client per l'uso interno/staff. None => non fatturiamo alla cieca."""
+    parts = (session_id or "").split(":")
+    site = parts[0] if parts else ""
+    user = parts[1] if len(parts) > 1 else ""
+    if user:
+        try:
+            from ..permissions import _client_records
+            cs = _client_records(user)
+            if cs:
+                return cs[0]
+        except Exception:
+            pass
     cmap = frappe.conf.get("ai_gateway_client_map") or {}
     if site in cmap:
         return cmap[site]
-    return frappe.conf.get("ai_gateway_default_client")
+    return frappe.conf.get("ai_gateway_house_client") or frappe.conf.get("ai_gateway_default_client")
 
 
 def ingest_gateway_usage():
