@@ -101,8 +101,17 @@
     background:var(--navy-2); }
 
   /* convs list */
-  .convs-head { padding:12px 14px 10px; border-bottom:1px solid var(--line);
+  .convs-head { padding:10px 12px; border-bottom:1px solid var(--line);
     background:var(--panel-2); }
+  .pillars { display:flex; gap:2px; margin-bottom:10px;
+    background:var(--navy-3); border:1px solid var(--line);
+    border-radius:8px; padding:3px; }
+  .pillar { flex:1; text-align:center; padding:6px; font-size:11.5px;
+    border-radius:6px; cursor:pointer; color:var(--text-dim);
+    font-weight:500; user-select:none; }
+  .pillar:hover { color:var(--text); }
+  .pillar.active { background:var(--panel); color:var(--gold);
+    box-shadow:0 1px 3px rgba(0,0,0,.3); }
   .search { display:flex; align-items:center; gap:8px; background:var(--navy-3);
     border:1px solid var(--line); border-radius:20px; padding:6px 12px; }
   .search input { flex:1; background:transparent; border:0; color:var(--text);
@@ -235,6 +244,45 @@
   .login-wrap a.cta:hover { background:var(--gold); color:var(--navy);
     letter-spacing:5px; }
 
+  /* case detail */
+  .case-body { flex:1; overflow-y:auto; padding:18px 22px;
+    background:radial-gradient(circle at 50% 0%, rgba(200,169,110,.03) 0%, transparent 60%),
+               var(--navy-2); }
+  .case-summary { padding:12px 14px; background:var(--panel);
+    border:1px solid var(--line); border-radius:8px;
+    font-size:13px; color:var(--tx-body); line-height:1.5;
+    margin-bottom:18px; }
+  .case-sect { margin-bottom:22px; }
+  .case-sect-h { font-family:var(--brand); color:var(--gold);
+    font-size:11px; letter-spacing:3px; text-transform:uppercase;
+    margin-bottom:10px; padding-bottom:6px;
+    border-bottom:1px solid var(--line); }
+  .ev-row, .act-row, .lead-row { display:flex; align-items:flex-start;
+    gap:10px; padding:9px 10px; border-radius:6px; margin-bottom:4px;
+    background:rgba(255,255,255,.02); }
+  .ev-row:hover, .act-row:hover, .lead-row:hover { background:rgba(200,169,110,.06); }
+  .ev-icon { flex:0 0 22px; opacity:.7; }
+  .ev-body { flex:1; min-width:0; }
+  .ev-name { font-size:13px; font-weight:500; }
+  .ev-notes { font-size:11.5px; color:var(--text-dim); margin-top:2px; }
+  .ev-open { color:var(--gold); font-size:11px; text-decoration:none;
+    padding:2px 8px; border:1px solid var(--gold-dim); border-radius:10px; }
+  .act-time { flex:0 0 60px; font-size:10px; color:var(--text-dim);
+    padding-top:2px; }
+  .act-type { font-size:12px; color:var(--gold); }
+  .act-desc { font-size:12.5px; color:var(--tx-body); margin-top:2px;
+    line-height:1.4; }
+  .lead-row { cursor:pointer; font-size:13px; }
+  .empty-inline { color:var(--text-dim); font-size:12px;
+    font-style:italic; padding:8px 4px; }
+
+  /* bubble action buttons (ingest) */
+  .bubble .attach { display:inline-block; margin-top:6px; padding:2px 8px;
+    background:transparent; border:1px solid var(--gold-dim);
+    color:var(--gold); border-radius:10px; font-size:10.5px;
+    cursor:pointer; }
+  .bubble .attach:hover { background:rgba(200,169,110,.12); }
+
   /* scrollbars */
   ::-webkit-scrollbar { width:8px; height:8px; }
   ::-webkit-scrollbar-track { background:transparent; }
@@ -330,20 +378,31 @@
   <main>
     <aside id="convs">
       <div class="convs-head">
+        <div class="pillars">
+          <div class="pillar active" data-section="chats">💬 Chat</div>
+          <div class="pillar" data-section="cases">📁 Casi</div>
+          <div class="pillar" data-section="ingest">📥 Ingest</div>
+        </div>
         <div class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5" stroke-linecap="round"/>
           </svg>
-          <input id="search" placeholder="Cerca conversazione…" autocomplete="off">
+          <input id="search" placeholder="Cerca…" autocomplete="off">
         </div>
-        <div class="tabs">
+        <div class="tabs" id="tabs-chats">
           <div class="tab active" data-filter="all">Tutte</div>
           <div class="tab" data-filter="mine">Mie</div>
           <div class="tab" data-filter="unassigned">Da assegnare</div>
         </div>
+        <div class="tabs" id="tabs-cases" style="display:none">
+          <div class="tab active" data-filter="mine">Miei</div>
+          <div class="tab" data-filter="open">Aperti</div>
+          <div class="tab" data-filter="all">Tutti</div>
+          <div class="tab" data-filter="closed">Chiusi</div>
+        </div>
       </div>
       <div class="convs-list" id="convs-list">
-        <div style="padding:18px;color:var(--text-dim);font-size:12.5px">Carico conversazioni…</div>
+        <div style="padding:18px;color:var(--text-dim);font-size:12.5px">Carico…</div>
       </div>
     </aside>
     <section id="conv">
@@ -377,8 +436,12 @@ const APP = {
   isSuperAdmin: {% endraw %}{{ (is_super_admin or false)|tojson }}{% raw %},
   investigator: {% endraw %}{{ (investigator_codename or investigator or '')|tojson }}{% raw %},
   active: null,
+  activeType: null,          // 'chat' | 'case' | 'ingest'
   conversations: [],
+  cases: [],
   filter: 'all',
+  caseFilter: 'mine',
+  section: 'chats',
   search: '',
   status: 'online',
 };
@@ -423,6 +486,12 @@ function initials(name) {
 
 /* ─── conversations ─── */
 
+async function loadCurrentSection() {
+  if (APP.section === 'chats') return loadConversations();
+  if (APP.section === 'cases') return loadCases();
+  if (APP.section === 'ingest') return loadIngest();
+}
+
 async function loadConversations() {
   try {
     APP.conversations = await call('thanatos_intel.api.centralino.get_conversations',
@@ -434,6 +503,183 @@ async function loadConversations() {
     if (e.message !== 'auth') toast('Errore caricamento conversazioni');
   }
 }
+
+async function loadCases() {
+  const root = $('#convs-list');
+  root.innerHTML = '<div style="padding:18px;color:var(--text-dim);font-size:12.5px">Carico casi…</div>';
+  try {
+    APP.cases = await call('thanatos_intel.api.centralino.get_cases',
+                           {filter_type: APP.caseFilter, search: APP.search}) || [];
+    renderCases();
+    setConn(true);
+  } catch (e) {
+    if (e.message !== 'auth') toast('Errore caricamento casi');
+  }
+}
+
+function renderCases() {
+  const root = $('#convs-list');
+  if (!APP.cases.length) {
+    root.innerHTML = '<div style="padding:22px;color:var(--text-dim);font-size:12.5px;text-align:center">Nessun caso' + (APP.search ? ' per «'+esc(APP.search)+'»' : '') + '.</div>';
+    return;
+  }
+  const stColor = { Open: 'var(--ok)', Closed: 'var(--text-dim)',
+                    'On Hold': '#e5b660', Archived: 'var(--text-dim)' };
+  root.innerHTML = APP.cases.map(c => {
+    const st = c.status || '-';
+    const color = stColor[st] || 'var(--gold)';
+    const client = c.client_name || c.client || '';
+    return `<div class="conv-row${APP.active===c.name?' active':''}" data-case="${esc(c.name)}">
+      <div class="av" style="background:linear-gradient(135deg,rgba(200,169,110,.2),rgba(140,110,60,.2));color:${color}">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 7h18v13H3z"/><path d="M8 7V4h8v3"/>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="top">
+          <span class="conv-name">${esc(c.name)} · ${esc(c.case_title || '')}</span>
+          <span class="conv-ts">${fmtTs(c.modified)}</span>
+        </div>
+        <div class="conv-last">${esc(client)}${c.case_type ? ' · '+esc(c.case_type) : ''}</div>
+        <div class="conv-tags">
+          <span class="conv-tag" style="color:${color};border-color:${color}">${esc(st)}</span>
+          ${c.priority ? '<span class="conv-tag">'+esc(c.priority)+'</span>' : ''}
+          <span class="conv-tag" style="opacity:.8">📎 ${c.n_evidence || 0}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  root.querySelectorAll('.conv-row').forEach(el => {
+    el.addEventListener('click', () => openCase(el.dataset.case));
+  });
+}
+
+async function loadIngest() {
+  const root = $('#convs-list');
+  root.innerHTML = '<div style="padding:18px;color:var(--text-dim);font-size:12.5px">Apro la cassetta ingest…</div>';
+  try {
+    const data = await call('thanatos_intel.api.centralino.get_ingest_thread');
+    if (data.empty) {
+      root.innerHTML = '<div style="padding:22px;color:var(--text-dim);font-size:12.5px;text-align:center;line-height:1.5">'+esc(data.hint)+'</div>';
+      $('#conv').innerHTML = `<div id="conv-empty">
+        <h3>CASSETTA INGEST</h3>
+        <p style="max-width:340px;margin:auto;font-size:12.5px">
+          Qui vedrai i tuoi documenti/note in coda, non ancora smistati.
+          Manda file al numero WhatsApp Thanatos dal tuo cellulare —
+          li trovi qui e li assegni al caso giusto (o crei un nuovo caso).
+        </p></div>`;
+      return;
+    }
+    // riuso openConversation per aprire il thread ingest come thread normale
+    APP.active = data.name;
+    APP.activeType = 'ingest';
+    renderConversation(data);
+    // marca il pannello sinistro con info sulla cassetta
+    root.innerHTML = `<div style="padding:14px;color:var(--text-dim);font-size:12.5px;line-height:1.6">
+      <b style="color:var(--gold)">Cassetta ingest personale</b><br>
+      Ogni messaggio ha un bottone <i>«→ Caso»</i> per smistare l'allegato o
+      la nota nel caso giusto. Nuovi arrivi qui in tempo reale.
+    </div>`;
+  } catch (e) {
+    if (e.message !== 'auth') toast('Errore caricamento ingest');
+  }
+}
+
+async function openCase(caseName) {
+  APP.active = caseName;
+  APP.activeType = 'case';
+  $('#app').classList.add('viewing');
+  document.querySelectorAll('.conv-row').forEach(el =>
+    el.classList.toggle('active', el.dataset.case === caseName));
+  const root = $('#conv');
+  root.innerHTML = '<div id="conv-empty">Caricamento caso…</div>';
+  try {
+    const d = await call('thanatos_intel.api.centralino.get_case_detail',
+                        {case_name: caseName});
+    renderCaseDetail(d);
+  } catch (e) {
+    root.innerHTML = '<div id="conv-empty">Errore caricamento caso</div>';
+  }
+}
+window.openCase = openCase;
+
+function renderCaseDetail(d) {
+  const root = $('#conv');
+  const client = d.client_name || d.client || '—';
+  const evs = (d.evidences || []).map(e => `
+    <div class="ev-row">
+      <div class="ev-icon">📎</div>
+      <div class="ev-body">
+        <div class="ev-name">${esc(e.evidence_name || e.attached_file?.split('/').pop() || 'reperto')}</div>
+        <div class="ev-notes">${esc((e.notes||'').split('\n')[0].slice(0,120))}</div>
+      </div>
+      ${e.attached_file ? `<a class="ev-open" href="${esc(e.attached_file)}" target="_blank" rel="noopener">apri</a>` : ''}
+    </div>`).join('') || '<div class="empty-inline">Nessun reperto caricato.</div>';
+  const acts = (d.activities || []).map(a => `
+    <div class="act-row">
+      <div class="act-time">${fmtTs(a.activity_date)}</div>
+      <div class="act-body">
+        <div class="act-type">${esc(a.activity_type || '')}</div>
+        <div class="act-desc">${esc((a.description||'').slice(0,220))}</div>
+      </div>
+    </div>`).join('') || '<div class="empty-inline">Nessuna attività registrata.</div>';
+  const leads = (d.linked_leads || []).map(l => `
+    <div class="lead-row" onclick="APP.section='chats'; refreshTabs(); openConversation('${esc(l.name)}')">
+      💬 ${esc(l.source_name || l.source_identifier || l.name)}
+      <span style="color:var(--text-dim);font-size:11px">${esc(l.source_type||'')}</span>
+    </div>`).join('');
+
+  root.innerHTML = `
+    <div id="conv-head">
+      <button class="back-btn" style="display:none;background:transparent;border:0;color:var(--text);font-size:20px;cursor:pointer" onclick="closeConversation()">‹</button>
+      <div class="av" style="background:linear-gradient(135deg,var(--gold),var(--gold-dim))">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0A0E1A" stroke-width="2">
+          <path d="M3 7h18v13H3z"/><path d="M8 7V4h8v3"/>
+        </svg>
+      </div>
+      <div class="info">
+        <div class="title">${esc(d.name)} · ${esc(d.case_title || '')}</div>
+        <div class="sub">
+          ${esc(d.status||'')}${d.case_type?' · '+esc(d.case_type):''}${d.priority?' · '+esc(d.priority):''}
+          · Cliente: ${esc(client)}
+        </div>
+      </div>
+      <div class="actions">
+        <button onclick="window.open('/app/investigation-case/${esc(d.name)}','_blank')">Apri in Desk</button>
+      </div>
+    </div>
+    <div class="case-body">
+      ${d.summary ? `<div class="case-summary">${esc(d.summary)}</div>` : ''}
+      <div class="case-sect">
+        <div class="case-sect-h">Reperti (${(d.evidences||[]).length})</div>
+        <div class="ev-list">${evs}</div>
+      </div>
+      <div class="case-sect">
+        <div class="case-sect-h">Attività recenti</div>
+        <div class="act-list">${acts}</div>
+      </div>
+      ${leads ? `<div class="case-sect">
+        <div class="case-sect-h">Lead / chat collegati</div>
+        <div class="lead-list">${leads}</div>
+      </div>` : ''}
+    </div>
+  `;
+  if (window.innerWidth <= 720) {
+    const bb = root.querySelector('.back-btn'); if (bb) bb.style.display = 'inline-block';
+  }
+}
+
+function refreshTabs() {
+  // aggiorna i sub-tab visibili in base a APP.section
+  document.querySelectorAll('.pillar').forEach(p =>
+    p.classList.toggle('active', p.dataset.section === APP.section));
+  $('#tabs-chats').style.display = APP.section === 'chats' ? 'flex' : 'none';
+  $('#tabs-cases').style.display = APP.section === 'cases' ? 'flex' : 'none';
+  $('#search').placeholder = APP.section === 'chats' ? 'Cerca conversazione…'
+                          : APP.section === 'cases' ? 'Cerca caso…'
+                          : 'Cerca in ingest…';
+}
+window.refreshTabs = refreshTabs;
 
 function setConn(ok) {
   const s = $('#status-dot'), l = $('#status-label');
@@ -546,8 +792,29 @@ window.closeConversation = closeConversation;
 
 function renderBubble(m) {
   const cls = m.direction === 'Outbound' ? 'out' : 'in';
-  return `<div class="bubble ${cls}">${esc(m.content||'')}<span class="ts">${fmtTs(m.sent_at)}${m.status ? ' · '+esc(m.status) : ''}</span></div>`;
+  // Nella cassetta ingest offri il bottone "→ Caso" per smistare
+  const attach = (APP.activeType === 'ingest' && m.name)
+    ? `<div><button class="attach" data-attach="${esc(m.name)}">→ Caso</button></div>`
+    : '';
+  const media = m.media_url
+    ? `<div style="font-size:11px;margin-top:4px"><a href="${esc(m.media_url)}" target="_blank" style="color:var(--gold);text-decoration:none">📎 apri allegato</a></div>`
+    : '';
+  return `<div class="bubble ${cls}">${esc(m.content||'')}${media}${attach}<span class="ts">${fmtTs(m.sent_at)}${m.status ? ' · '+esc(m.status) : ''}</span></div>`;
 }
+
+async function attachIngestToCase(messageName) {
+  const caseName = prompt('A quale caso vuoi smistare questo elemento?\n(es. CASE-2026-0026)');
+  if (!caseName) return;
+  try {
+    const r = await call('thanatos_intel.api.centralino.attach_lead_message_to_case',
+                        {message_name: messageName, case_name: caseName.trim()});
+    toast('Smistato a ' + caseName + (r.as === 'evidence' ? ' come reperto' : ' come nota'));
+    loadIngest();
+  } catch (e) {
+    toast('Errore smistamento: ' + (e.message || 'sconosciuto'));
+  }
+}
+window.attachIngestToCase = attachIngestToCase;
 
 async function promoteToCase() {
   if (!APP.active) return;
@@ -620,17 +887,41 @@ function initHeader() {
   const btnN = $('#btn-notif');
   btnN.addEventListener('click', toggleNotifications);
 
+  /* pillars (Chat / Casi / Ingest) */
+  $$('.pillar').forEach(p => p.addEventListener('click', () => {
+    APP.section = p.dataset.section;
+    APP.active = null; APP.activeType = null;
+    document.querySelectorAll('.conv-row').forEach(el => el.classList.remove('active'));
+    $('#conv').innerHTML = '<div id="conv-empty"><h3>' +
+      (APP.section === 'cases' ? 'SELEZIONA UN CASO'
+       : APP.section === 'ingest' ? 'CASSETTA INGEST'
+       : 'SELEZIONA UNA CONVERSAZIONE') + '</h3></div>';
+    refreshTabs();
+    loadCurrentSection();
+  }));
+
   /* search + tabs */
   let searchTimer;
   $('#search').addEventListener('input', e => {
     clearTimeout(searchTimer);
     APP.search = e.target.value.trim();
-    searchTimer = setTimeout(loadConversations, 250);
+    searchTimer = setTimeout(loadCurrentSection, 250);
   });
-  $$('.tab').forEach(t => t.addEventListener('click', () => {
-    $$('.tab').forEach(x => x.classList.toggle('active', x === t));
+  $$('#tabs-chats .tab').forEach(t => t.addEventListener('click', () => {
+    $$('#tabs-chats .tab').forEach(x => x.classList.toggle('active', x === t));
     APP.filter = t.dataset.filter; loadConversations();
   }));
+  $$('#tabs-cases .tab').forEach(t => t.addEventListener('click', () => {
+    $$('#tabs-cases .tab').forEach(x => x.classList.toggle('active', x === t));
+    APP.caseFilter = t.dataset.filter; loadCases();
+  }));
+
+  /* delegated: attach ingest to case */
+  document.addEventListener('click', e => {
+    if (e.target && e.target.dataset && e.target.dataset.attach) {
+      attachIngestToCase(e.target.dataset.attach);
+    }
+  });
 }
 
 function updateStatusMenu() {
@@ -751,7 +1042,8 @@ async function toggleNotifications() {
 
 if (APP.isOperator) {
   initHeader();
-  loadConversations();
+  refreshTabs();
+  loadCurrentSection();
   registerSW();
   setupRealtime();
   if ('serviceWorker' in navigator) {
@@ -760,7 +1052,7 @@ if (APP.isOperator) {
       if (d.type === 'open-lead' && d.lead) openConversation(d.lead);
     });
   }
-  setInterval(loadConversations, 45000);
+  setInterval(loadCurrentSection, 45000);
 }
 </script>
 {% endraw %}

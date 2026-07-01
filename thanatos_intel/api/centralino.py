@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.utils import now_datetime
 
 
 # ─── Conversations ────────────────────────────────────────────────────────────
@@ -245,3 +246,171 @@ def promote_to_case(lead_name):
         operator=inv,
     )
     return {"ok": True, "enqueued": True}
+
+
+@frappe.whitelist()
+def get_cases(filter_type="mine", search=""):
+    """Lista casi visibili all'operatore corrente. filter_type: mine|all|open|closed."""
+    user = frappe.session.user
+    conditions = []
+    values = {}
+    if filter_type == "mine":
+        # casi in cui l'utente è nel team (via Case Assignment: assignee_email
+        # o assignee=Investigator collegato al platform_user)
+        conditions.append(
+            "EXISTS (SELECT 1 FROM `tabCase Assignment` a "
+            "WHERE a.parent = c.name AND ("
+            "  a.assignee_email = %(user)s "
+            "  OR a.assignee IN (SELECT name FROM `tabInvestigator` "
+            "                    WHERE platform_user = %(user)s)))"
+        )
+        values["user"] = user
+    elif filter_type == "open":
+        conditions.append("c.status = 'Open'")
+    elif filter_type == "closed":
+        conditions.append("c.status IN ('Closed','Archived')")
+    if search:
+        conditions.append("(c.name LIKE %(s)s OR c.case_title LIKE %(s)s)")
+        values["s"] = f"%{search}%"
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    rows = frappe.db.sql(
+        f"""
+        SELECT c.name, c.case_title, c.case_type, c.status, c.priority,
+               c.client, c.modified, c.opening_date, c.risk_score_final,
+               (SELECT COUNT(*) FROM `tabInvestigation Evidence` e
+                WHERE e.investigation_case = c.name) as n_evidence,
+               (SELECT client_name FROM `tabInvestigation Client`
+                WHERE name = c.client) as client_name
+        FROM `tabInvestigation Case` c
+        {where}
+        ORDER BY c.modified DESC LIMIT 100
+        """,
+        values, as_dict=True,
+    )
+    return rows
+
+
+@frappe.whitelist()
+def get_case_detail(case_name):
+    """Dettaglio caso per la Switchboard: header + reperti + attività + team."""
+    c = frappe.get_doc("Investigation Case", case_name)
+    client_name = None
+    if c.client:
+        client_name = frappe.db.get_value("Investigation Client", c.client, "client_name")
+    evidences = frappe.get_all(
+        "Investigation Evidence",
+        filters={"investigation_case": case_name},
+        fields=["name", "evidence_name", "attached_file", "notes",
+                "authenticity", "creation"],
+        order_by="creation desc", limit=50,
+    )
+    activities = frappe.get_all(
+        "Case Activity",
+        filters={"parent": case_name},
+        fields=["activity_date", "activity_type", "description"],
+        order_by="activity_date desc", limit=30,
+    )
+    team = []
+    for a in (c.get("case_assignments") or []):
+        team.append({"user": a.assigned_to,
+                     "role": a.role_in_case if hasattr(a, "role_in_case") else None})
+    linked_leads = frappe.get_all(
+        "Intel Lead", filters={"linked_case": case_name},
+        fields=["name", "source_name", "source_identifier",
+                "source_type", "last_message_at"], limit=10,
+    )
+    return {
+        "name": c.name,
+        "case_title": c.case_title,
+        "case_type": c.case_type,
+        "status": c.status,
+        "priority": c.priority,
+        "client": c.client,
+        "client_name": client_name,
+        "summary": c.summary,
+        "opening_date": str(c.opening_date or ""),
+        "closing_date": str(c.closing_date or ""),
+        "risk_score_final": c.risk_score_final,
+        "final_verdict": c.final_verdict,
+        "team": team,
+        "evidences": evidences,
+        "activities": activities,
+        "linked_leads": linked_leads,
+    }
+
+
+def _operator_lead(user):
+    """Trova il Intel Lead con source_identifier = numero WhatsApp dell'operatore
+    (Investigator.phone). Se non esiste, ritorna None (non lo creiamo qui: viene
+    creato automaticamente dal webhook quando l'operatore scrive al numero
+    Thanatos)."""
+    import re
+    phone = frappe.db.get_value("Investigator", {"platform_user": user}, "phone")
+    if not phone:
+        return None
+    digits = re.sub(r"\D", "", phone)
+    if len(digits) < 8:
+        return None
+    tail = digits[-9:]
+    lead = frappe.db.sql(
+        """
+        SELECT name FROM `tabIntel Lead`
+        WHERE source_type = 'WhatsApp' AND source_identifier LIKE %s
+        ORDER BY last_message_at DESC LIMIT 1
+        """,
+        f"%{tail}",
+    )
+    return lead[0][0] if lead else None
+
+
+@frappe.whitelist()
+def get_ingest_thread():
+    """Ritorna il thread ingest dell'operatore corrente (i suoi messaggi WA con
+    documenti/note): fungerà da cassetta di smistamento nella PWA."""
+    user = frappe.session.user
+    lead_name = _operator_lead(user)
+    if not lead_name:
+        return {"empty": True,
+                "hint": "Non ho trovato la tua cassetta ingest. "
+                        "Manda un messaggio o un documento al numero WhatsApp "
+                        "Thanatos dal tuo cellulare per crearla."}
+    return get_thread(lead_name)
+
+
+@frappe.whitelist()
+def attach_lead_message_to_case(message_name, case_name):
+    """Sposta un allegato di un Intel Lead Message dentro un Investigation Case
+    (come Investigation Evidence). Se il messaggio non ha allegato ma solo testo,
+    salva il testo come Case Activity note."""
+    msg = frappe.get_doc("Intel Lead Message",
+                         {"name": message_name}) if not isinstance(
+        message_name, dict) else None
+    if not msg:
+        # child docs vengono cercati globalmente per name
+        parents = frappe.db.sql(
+            "SELECT parent FROM `tabIntel Lead Message` WHERE name=%s",
+            message_name, as_dict=True)
+        if not parents:
+            frappe.throw("Messaggio non trovato")
+        lead = frappe.get_doc("Intel Lead", parents[0].parent)
+        msg = next((m for m in lead.messages if m.name == message_name), None)
+        if not msg:
+            frappe.throw("Messaggio non trovato nel lead")
+    frappe.get_doc("Investigation Case", case_name)  # existence + perm
+    from thanatos_intel.ai.doc_ingest import ingest_document
+    # Se c'è un file allegato, ingest come evidence
+    if msg.media_url:
+        r = ingest_document(file_url=msg.media_url,
+                            investigation_case=case_name,
+                            document_type="generic") or {}
+        return {"ok": True, "as": "evidence", "result": r}
+    # Altrimenti, aggiungi come Case Activity
+    c = frappe.get_doc("Investigation Case", case_name)
+    c.append("case_activities", {
+        "activity_date": now_datetime(),
+        "activity_type": "Note",
+        "description": f"Da ingest ({msg.sent_at}):\n{msg.content or ''}",
+    })
+    c.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"ok": True, "as": "activity"}
