@@ -290,6 +290,11 @@
       </div>
     </div>
     <div class="spacer"></div>
+    <a class="btn" id="btn-new-case" href="/app/investigation-case/new"
+       target="_blank" rel="noopener" title="Apri un nuovo caso"
+       style="text-decoration:none;color:var(--gold);border-color:var(--gold-dim)">
+      + Nuovo caso
+    </a>
     <button class="btn" id="btn-status" title="Cambia stato operatore">
       <span class="status-dot" id="status-dot"></span>
       <span id="status-label">Online</span>
@@ -499,7 +504,9 @@ function renderConversation(data) {
         </div>
       </div>
       <div class="actions">
-        ${data.linked_case ? `<button data-open-case="${esc(data.linked_case)}">Apri caso</button>` : ''}
+        ${data.linked_case
+          ? `<button data-open-case="${esc(data.linked_case)}">Apri caso</button>`
+          : `<button data-promote="${esc(data.name)}" style="color:var(--gold);border-color:var(--gold-dim)">+ Promuovi a caso</button>`}
       </div>
     </div>
     <div id="msgs">${msgs || '<div class="system">Nessun messaggio ancora.</div>'}</div>
@@ -512,8 +519,10 @@ function renderConversation(data) {
   $('#send').addEventListener('click', sendReply);
   const openBtn = root.querySelector('[data-open-case]');
   if (openBtn) openBtn.addEventListener('click', () => {
-    location.href = '/app/investigation-case/' + openBtn.dataset.openCase;
+    window.open('/app/investigation-case/' + openBtn.dataset.openCase, '_blank');
   });
+  const promoteBtn = root.querySelector('[data-promote]');
+  if (promoteBtn) promoteBtn.addEventListener('click', promoteToCase);
   const ta = $('#reply');
   ta.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey && !e.altKey) { e.preventDefault(); sendReply(); }
@@ -539,6 +548,22 @@ function renderBubble(m) {
   const cls = m.direction === 'Outbound' ? 'out' : 'in';
   return `<div class="bubble ${cls}">${esc(m.content||'')}<span class="ts">${fmtTs(m.sent_at)}${m.status ? ' · '+esc(m.status) : ''}</span></div>`;
 }
+
+async function promoteToCase() {
+  if (!APP.active) return;
+  if (!confirm('Promuovi questa conversazione a caso investigativo?\n\nIl sistema analizzerà eventuali allegati e aprirà un Investigation Case collegato a questo lead.')) return;
+  toast('Sto aprendo la pratica…');
+  try {
+    const r = await call('thanatos_intel.api.centralino.promote_to_case',
+                         {lead_name: APP.active});
+    if (r?.already) { toast('Già collegato a ' + r.already); location.href = '/app/investigation-case/' + r.already; return; }
+    toast('Analisi in corso — riceverai un aggiornamento a fine job.');
+    setTimeout(() => openConversation(APP.active), 3000);
+  } catch (e) {
+    toast('Errore promozione a caso');
+  }
+}
+window.promoteToCase = promoteToCase;
 
 async function sendReply() {
   const t = $('#reply').value.trim();

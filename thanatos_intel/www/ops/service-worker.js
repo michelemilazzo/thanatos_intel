@@ -5,7 +5,7 @@
 //  - Asset statici (manifest, icone, socket.io, /assets/...) = CACHE-FIRST
 //  - API /api/*  = MAI cachate
 // Push handler + click-to-open invariati.
-const VERSION = 'sw-v8-2026-07-01';
+const VERSION = 'sw-v9-2026-07-01';
 const STATIC = ['/ops/manifest.json', '/ops/icon-192.png',
                 '/ops/icon-512.png', '/ops/socket.io.min.js'];
 

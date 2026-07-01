@@ -223,3 +223,25 @@ def call_transcript_md(call_log):
     md = "\n".join(L)
     return Response(md, mimetype="text/markdown",
                     headers={"Content-Disposition": 'attachment; filename="%s.md"' % call_log})
+
+
+
+@frappe.whitelist()
+def promote_to_case(lead_name):
+    """Promuovi un Intel Lead a Investigation Case usando il flusso operatore
+    (analizza allegati, crea case, collega). Enqueue: risponde subito, il job
+    parte in background e emette centralino_update quando finisce."""
+    user = frappe.session.user
+    inv = frappe.db.get_value("Investigator", {"platform_user": user}, "name")
+    lead = frappe.get_doc("Intel Lead", lead_name)
+    if lead.linked_case:
+        return {"ok": True, "already": lead.linked_case}
+    frappe.enqueue(
+        "thanatos_intel.ingest.operator_console.run_open_case",
+        queue="long", timeout=1200,
+        lead_name=lead_name,
+        wa_phone=lead.whatsapp_number,
+        sender=lead.source_identifier,
+        operator=inv,
+    )
+    return {"ok": True, "enqueued": True}
