@@ -16,6 +16,18 @@ class InvestigationCase(Document):
 			self.case_title = self.case_title.strip()
 		if not self.status:
 			self.status = "Draft"
+		self._sort_case_activities()
+
+	def _sort_case_activities(self):
+		"""Riordina le case_activities dal piu recente al piu vecchio (activity_date DESC).
+		L idx della child table controlla l ordine di visualizzazione nel form Desk."""
+		acts = list(self.get("case_activities") or [])
+		if not acts:
+			return
+		acts.sort(key=lambda a: (a.activity_date or a.creation or ""), reverse=True)
+		for i, a in enumerate(acts, start=1):
+			a.idx = i
+		self.set("case_activities", acts)
 
 	def after_insert(self):
 		# Log iniziale come Case Activity
