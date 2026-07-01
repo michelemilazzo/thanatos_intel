@@ -213,7 +213,7 @@
   .login-wrap .mark { display:inline-flex; align-items:center; gap:14px;
     margin-bottom:8px; }
   .login-wrap .mark .t {
-    width:56px; height:56px; }
+    width:88px; height:88px; display:block; }
   .login-wrap .mark .brand { text-align:left; }
   .login-wrap .mark .brand .n { font-family:var(--brand); font-weight:700;
     font-size:26px; color:var(--gold); letter-spacing:7px; line-height:1; }
@@ -262,19 +262,7 @@
 {% if not logged_in %}
   <div class="login-wrap">
     <div class="mark">
-      <svg class="t" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="agl" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#E0C58A"/>
-            <stop offset="100%" stop-color="#8C6E3C"/>
-          </linearGradient>
-        </defs>
-        <ellipse cx="30" cy="10" rx="6" ry="1.6" fill="none" stroke="url(#agl)" stroke-width=".9"/>
-        <path d="M30 26 C 20 22, 9 26, 3 42 C 14 34, 22 33, 30 33 Z" fill="url(#agl)"/>
-        <path d="M30 26 C 40 22, 51 26, 57 42 C 46 34, 38 33, 30 33 Z" fill="url(#agl)"/>
-        <ellipse cx="30" cy="18" rx="3.6" ry="4.2" fill="url(#agl)"/>
-        <path d="M25 24 Q 30 27, 35 24 L 37 52 L 23 52 Z" fill="url(#agl)"/>
-      </svg>
+      <img class="t" src="/assets/thanatos_intel/images/thanatos-icon-192.png" alt="Thanatos">
       <div class="brand">
         <div class="n">THANATOS</div>
         <div class="s">· INTEL ·</div>
@@ -294,24 +282,8 @@
 {% raw %}
   <header>
     <div class="brand">
-      <svg viewBox="0 0 60 60" width="30" height="30" aria-hidden="true">
-        <defs>
-          <linearGradient id="agh" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#E0C58A"/>
-            <stop offset="100%" stop-color="#8C6E3C"/>
-          </linearGradient>
-        </defs>
-        <!-- halo -->
-        <ellipse cx="30" cy="10" rx="6" ry="1.6" fill="none" stroke="url(#agh)" stroke-width=".9"/>
-        <!-- ala sinistra -->
-        <path d="M30 26 C 20 22, 9 26, 3 42 C 14 34, 22 33, 30 33 Z" fill="url(#agh)"/>
-        <!-- ala destra -->
-        <path d="M30 26 C 40 22, 51 26, 57 42 C 46 34, 38 33, 30 33 Z" fill="url(#agh)"/>
-        <!-- testa -->
-        <ellipse cx="30" cy="18" rx="3.6" ry="4.2" fill="url(#agh)"/>
-        <!-- veste -->
-        <path d="M25 24 Q 30 27, 35 24 L 37 52 L 23 52 Z" fill="url(#agh)"/>
-      </svg>
+      <img src="/assets/thanatos_intel/images/thanatos-icon-192.png"
+           alt="" width="32" height="32" aria-hidden="true">
       <div>
         <div class="title">THANATOS</div>
         <div class="sub">· SWITCHBOARD ·</div>
