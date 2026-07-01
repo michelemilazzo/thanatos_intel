@@ -10,9 +10,9 @@ def get_context(context):
     context.title = "Thanatos Switchboard"
     user = frappe.session.user
     if user == "Guest":
-        context.logged_in = False
-        context.next_url = "/ops/"
-        return context
+        # redirect diretto al login, no schermata di gate
+        frappe.local.flags.redirect_location = "/login?redirect-to=%2Fops%2F"
+        raise frappe.Redirect
     roles = set(frappe.get_roles(user) or [])
     context.logged_in = True
     context.user = user
