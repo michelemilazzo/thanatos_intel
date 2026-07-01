@@ -87,6 +87,22 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
 
   <div id="main-banner" class="banner"></div>
 
+  <div id="setup-card" class="card" style="display:none;border-color:var(--gold)">
+    <h2 style="color:var(--gold);margin-bottom:8px">Casella destinazione</h2>
+    <p style="color:var(--grey);font-size:13px;margin-bottom:14px">Seleziona la casella <b>@thanatos.agency</b> dove consegnare le mail importate dagli account esterni.</p>
+    <div class="form-row">
+      <label>Casella destinazione</label>
+      <select id="target-select"></select>
+    </div>
+    <button class="btn btn-gold" onclick="saveTarget()">Salva casella</button>
+    <div id="target-msg" class="msg"></div>
+  </div>
+
+  <div id="target-info" style="display:none;font-size:12px;margin-bottom:16px;padding:8px 12px;border-radius:6px;background:rgba(200,169,110,.07);border:1px solid rgba(200,169,110,.2);color:var(--gold)">
+    Consegna a: <b id="target-label"></b>
+    &nbsp;<a href="#" onclick="showSetup();return false" style="color:var(--gold);font-size:11px">cambia</a>
+  </div>
+
   <!-- Pulsante Microsoft OAuth -->
   <div class="card" style="margin-bottom:20px">
     <h2 style="margin-bottom:8px">Collega account Microsoft</h2>
@@ -192,8 +208,15 @@ function flash(id, text, type) {
   setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
+function showSetup() { document.getElementById('setup-card').style.display='block'; document.getElementById('target-info').style.display='none'; }async function saveTarget() {  const mb = document.getElementById('target-select').value; if (!mb) return;  const d = await api('set_target_mailbox', {method:'POST', body: JSON.stringify({mailbox: mb})});  if (d.ok) { const m=document.getElementById('target-msg'); m.className='msg ok'; m.textContent='Casella salvata.'; m.style.display='block'; setTimeout(()=>{ document.getElementById('setup-card').style.display='none'; document.getElementById('target-info').style.display='block'; document.getElementById('target-label').textContent=mb; loadConnectors(); },1000); }  else { const m=document.getElementById('target-msg'); m.className='msg err'; m.textContent=d.exception||'Errore'; m.style.display='block'; }}
 async function loadConnectors() {
   const d = await api('list_connectors');
+  if (d.available_mailboxes && d.available_mailboxes.length) {
+    const sel = document.getElementById('target-select');
+    if (!sel.options.length) d.available_mailboxes.forEach(m => { const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+    if (d.target_mailbox) { sel.value=d.target_mailbox; document.getElementById('setup-card').style.display='none'; document.getElementById('target-info').style.display='block'; document.getElementById('target-label').textContent=d.target_mailbox; }
+    else { document.getElementById('setup-card').style.display='block'; document.getElementById('target-info').style.display='none'; }
+  }
   const list = document.getElementById('conn-list');
   const none = document.getElementById('no-conn');
   if (!d.connectors || !d.connectors.length) {
