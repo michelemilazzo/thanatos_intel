@@ -527,7 +527,7 @@ function renderConversation(data) {
         </div>
       </div>
       <div class="actions">
-        ${data.linked_case ? '<button onclick="location.href=\\'/app/investigation-case/'+esc(data.linked_case)+'\\'">Apri caso</button>' : ''}
+        ${data.linked_case ? `<button data-open-case="${esc(data.linked_case)}">Apri caso</button>` : ''}
       </div>
     </div>
     <div id="msgs">${msgs || '<div class="system">Nessun messaggio ancora.</div>'}</div>
@@ -538,6 +538,10 @@ function renderConversation(data) {
   `;
   const m = $('#msgs'); if (m) m.scrollTop = m.scrollHeight;
   $('#send').addEventListener('click', sendReply);
+  const openBtn = root.querySelector('[data-open-case]');
+  if (openBtn) openBtn.addEventListener('click', () => {
+    location.href = '/app/investigation-case/' + openBtn.dataset.openCase;
+  });
   const ta = $('#reply');
   ta.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey && !e.altKey) { e.preventDefault(); sendReply(); }
