@@ -1,7 +1,7 @@
 // Thanatos Switchboard service worker
 // Shell cache + push notification handler. La PWA è network-first sui dati;
 // solo asset statici (shell, manifest, icone) sono cache-first.
-const VERSION = 'sw-v3-2026-07-01';
+const VERSION = 'sw-v4-2026-07-01';
 const SHELL = ['/ops/', '/ops/manifest.json', '/ops/icon-192.png', '/ops/icon-512.png'];
 
 self.addEventListener('install', e => {
