@@ -276,6 +276,25 @@
   .empty-inline { color:var(--text-dim); font-size:12px;
     font-style:italic; padding:8px 4px; }
 
+  /* WhatsApp embed dentro Case detail */
+  .wa-embed { background:var(--panel); border:1px solid var(--line);
+    border-radius:10px; padding:14px; }
+  .wa-thread { max-height:340px; overflow-y:auto; display:flex;
+    flex-direction:column; gap:6px; padding:8px 4px;
+    background:var(--navy-3); border-radius:6px; margin-bottom:10px; }
+  .wa-thread .bubble { max-width:80%; font-size:13px; padding:8px 12px; }
+  .wa-compose { display:flex; gap:8px; align-items:flex-end; }
+  .wa-compose textarea { flex:1; min-height:36px; max-height:120px;
+    resize:none; padding:9px 12px; border-radius:16px;
+    border:1px solid var(--line); background:var(--navy-3);
+    color:var(--text); font-size:13px; font-family:inherit; outline:0; }
+  .wa-compose textarea:focus { border-color:var(--gold-dim); }
+  .wa-compose .send-inline { flex:0 0 auto; padding:0 14px; height:36px;
+    border-radius:18px; border:0;
+    background:linear-gradient(180deg,var(--gold),var(--gold-dim));
+    color:var(--navy); font-weight:700; font-size:12px; cursor:pointer; }
+  .wa-compose .send-inline:disabled { opacity:.45; cursor:not-allowed; }
+
   /* bubble action buttons (ingest) */
   .bubble .attach { display:inline-block; margin-top:6px; padding:2px 8px;
     background:transparent; border:1px solid var(--gold-dim);
@@ -596,6 +615,14 @@ async function openCase(caseName) {
   try {
     const d = await call('thanatos_intel.api.centralino.get_case_detail',
                         {case_name: caseName});
+    // se c'è un lead WA collegato, carico anche il thread per l'embed chat
+    const waLead = (d.linked_leads || []).find(l => l.source_type === 'WhatsApp');
+    if (waLead) {
+      try {
+        d._thread = await call('thanatos_intel.api.centralino.get_thread',
+                              {lead_name: waLead.name});
+      } catch (_) { /* non blocca la vista case */ }
+    }
     renderCaseDetail(d);
   } catch (e) {
     root.innerHTML = '<div id="conv-empty">Errore caricamento caso</div>';
@@ -629,6 +656,26 @@ function renderCaseDetail(d) {
       <span style="color:var(--text-dim);font-size:11px">${esc(l.source_type||'')}</span>
     </div>`).join('');
 
+  // Chat WhatsApp embed (se c'è un lead WA collegato)
+  const th = d._thread;
+  const chatSect = th ? `
+      <div class="case-sect wa-embed">
+        <div class="case-sect-h" style="display:flex;justify-content:space-between;align-items:center">
+          <span>💬 WhatsApp — ${esc(th.source_name || th.source_identifier || '')}</span>
+          <a href="#" onclick="event.preventDefault();APP.section='chats';refreshTabs();openConversation('${esc(th.name)}')"
+             style="color:var(--gold);font-size:11px;text-decoration:none;font-family:var(--sans);letter-spacing:0;text-transform:none">
+             apri chat completa ›
+          </a>
+        </div>
+        <div class="wa-thread" id="wa-thread-${esc(th.name)}">
+          ${(th.messages || []).slice(-20).map(renderBubble).join('') || '<div class="empty-inline">Nessun messaggio ancora.</div>'}
+        </div>
+        <div class="wa-compose">
+          <textarea id="wa-reply-${esc(th.name)}" placeholder="Rispondi al cliente…" rows="1"></textarea>
+          <button class="send-inline" data-wa-lead="${esc(th.name)}">Invia ›</button>
+        </div>
+      </div>` : '';
+
   root.innerHTML = `
     <div id="conv-head">
       <button class="back-btn" style="display:none;background:transparent;border:0;color:var(--text);font-size:20px;cursor:pointer" onclick="closeConversation()">‹</button>
@@ -650,6 +697,7 @@ function renderCaseDetail(d) {
     </div>
     <div class="case-body">
       ${d.summary ? `<div class="case-summary">${esc(d.summary)}</div>` : ''}
+      ${chatSect}
       <div class="case-sect">
         <div class="case-sect-h">Reperti (${(d.evidences||[]).length})</div>
         <div class="ev-list">${evs}</div>
@@ -659,11 +707,46 @@ function renderCaseDetail(d) {
         <div class="act-list">${acts}</div>
       </div>
       ${leads ? `<div class="case-sect">
-        <div class="case-sect-h">Lead / chat collegati</div>
+        <div class="case-sect-h">Altri lead / chat collegati</div>
         <div class="lead-list">${leads}</div>
       </div>` : ''}
     </div>
   `;
+  // Wire compose per la chat embedded
+  const sendInlineBtn = root.querySelector('.send-inline');
+  if (sendInlineBtn) {
+    const leadName = sendInlineBtn.dataset.waLead;
+    const ta = root.querySelector('#wa-reply-' + CSS.escape(leadName));
+    const send = async () => {
+      const t = ta.value.trim(); if (!t) return;
+      ta.value = ''; ta.disabled = true; sendInlineBtn.disabled = true;
+      try {
+        const r = await call('thanatos_intel.api.centralino.send_reply',
+                            {lead_name: leadName, message_text: t});
+        if (r && (r.ok || r.status === 'sent')) {
+          const thread = root.querySelector('#wa-thread-' + CSS.escape(leadName));
+          if (thread) {
+            thread.insertAdjacentHTML('beforeend', renderBubble({
+              direction:'Outbound', content:t,
+              sent_at:new Date().toISOString(), status:'Inviato'
+            }));
+            thread.scrollTop = thread.scrollHeight;
+          }
+        } else toast('Errore invio: ' + (r?.error || 'sconosciuto'));
+      } catch (e) { toast('Errore di rete'); }
+      finally { ta.disabled = false; sendInlineBtn.disabled = false; ta.focus(); }
+    };
+    sendInlineBtn.addEventListener('click', send);
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.altKey) { e.preventDefault(); send(); }
+    });
+    ta.addEventListener('input', () => {
+      ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px';
+    });
+    // scroll ultimo msg
+    const thread = root.querySelector('#wa-thread-' + CSS.escape(leadName));
+    if (thread) thread.scrollTop = thread.scrollHeight;
+  }
   if (window.innerWidth <= 720) {
     const bb = root.querySelector('.back-btn'); if (bb) bb.style.display = 'inline-block';
   }

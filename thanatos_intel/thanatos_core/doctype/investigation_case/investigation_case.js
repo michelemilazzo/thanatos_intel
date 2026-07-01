@@ -12,6 +12,25 @@ frappe.ui.form.on('Investigation Case', {
         thanatos_set_monitor_operators(frm);
 
         if (!frm.is_new()) {
+            // Bottone WhatsApp Cliente: apre la chat WA del lead collegato nella PWA
+            frappe.call({
+                method: "frappe.client.get_list",
+                args: {
+                    doctype: "Intel Lead",
+                    filters: {linked_case: frm.doc.name, source_type: "WhatsApp"},
+                    fields: ["name", "source_name", "source_identifier"],
+                    limit_page_length: 1,
+                },
+                callback: r => {
+                    const lead = (r.message || [])[0];
+                    if (lead) {
+                        const label = "\u{1F4AC} WhatsApp " + (lead.source_name || lead.source_identifier || "cliente");
+                        frm.add_custom_button(__(label), () => {
+                            window.open("https://ops.thanatos.agency/ops/", "_blank");
+                        }, __("Comunicazioni"));
+                    }
+                },
+            });
             frm.add_custom_button(__("Registra Chiamata"), () => {
                 window.thanatos && window.thanatos.logCall({
                     linked_case: frm.doc.name,
