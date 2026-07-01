@@ -7,14 +7,19 @@ import frappe
 from frappe.utils import now_datetime
 
 # Servizi vendibili self-serve. gated=True → richiede dichiarazione (servizi su terzi).
+# engine: "doc" (documento ufficiale PDF via official_documents) | "lookup" (servizio dato via openapi_client)
 SELF_SERVE = [
-    {"key": "ordinaria_capitale", "label": "Visura ordinaria — società di capitale", "doc": "ordinaria_capitale", "gated": False, "cap": "visura"},
-    {"key": "storica_capitale",   "label": "Visura storica — società di capitale",   "doc": "storica_capitale",   "gated": False, "cap": "visura"},
-    {"key": "ordinaria_persone",  "label": "Visura ordinaria — società di persone",  "doc": "ordinaria_persone",  "gated": False, "cap": "visura"},
-    {"key": "ordinaria_individuale", "label": "Visura ordinaria — impresa individuale", "doc": "ordinaria_individuale", "gated": False, "cap": "visura"},
-    {"key": "bilancio",           "label": "Bilancio ottico",                         "doc": "bilancio",           "gated": False, "cap": "visura"},
-    {"key": "certificato",        "label": "Certificato di iscrizione",               "doc": "certificato",        "gated": False, "cap": "visura"},
-    {"key": "certificato_vigenza", "label": "Certificato di vigenza",                 "doc": "certificato_vigenza", "gated": False, "cap": "visura"},
+    {"key": "ordinaria_capitale", "label": "Visura ordinaria — società di capitale", "doc": "ordinaria_capitale", "gated": False, "cap": "visura", "engine": "doc"},
+    {"key": "storica_capitale",   "label": "Visura storica — società di capitale",   "doc": "storica_capitale",   "gated": False, "cap": "visura", "engine": "doc"},
+    {"key": "ordinaria_persone",  "label": "Visura ordinaria — società di persone",  "doc": "ordinaria_persone",  "gated": False, "cap": "visura", "engine": "doc"},
+    {"key": "ordinaria_individuale", "label": "Visura ordinaria — impresa individuale", "doc": "ordinaria_individuale", "gated": False, "cap": "visura", "engine": "doc"},
+    {"key": "bilancio",           "label": "Bilancio ottico",                         "doc": "bilancio",           "gated": False, "cap": "visura", "engine": "doc"},
+    {"key": "certificato",        "label": "Certificato di iscrizione",               "doc": "certificato",        "gated": False, "cap": "visura", "engine": "doc"},
+    {"key": "certificato_vigenza", "label": "Certificato di vigenza",                 "doc": "certificato_vigenza", "gated": False, "cap": "visura", "engine": "doc"},
+    {"key": "soci",        "label": "Soci e titolari effettivi (UBO)",   "kind": "soci",        "gated": True, "cap": "soci",        "engine": "lookup", "target_label": "P.IVA azienda"},
+    {"key": "negativita",  "label": "Negatività / protesti / pregiudizievoli", "kind": "negativita", "gated": True, "cap": "negativita",  "engine": "lookup", "target_label": "P.IVA / Codice Fiscale"},
+    {"key": "patrimoniale", "label": "Patrimoniale persona (beni intestati)", "kind": "patrimoniale", "gated": True, "cap": "patrimoniale", "engine": "lookup", "target_label": "Codice Fiscale persona"},
+    {"key": "veicolo",     "label": "Veicolo per targa",                "kind": "veicolo",     "gated": True, "cap": "veicolo",     "engine": "lookup", "target_label": "Targa"},
 ]
 
 
@@ -25,6 +30,7 @@ def list_services():
     from thanatos_intel.billing.credits import available_to_spend
     cl = client_of_user()
     services = [{"key": s["key"], "label": s["label"], "gated": s["gated"],
+                 "target_label": s.get("target_label") or "P.IVA / Codice Fiscale",
                  "prezzo": tool_price(None, s["cap"])} for s in SELF_SERVE]
     return {"services": services,
             "wallet": (available_to_spend(cl.name) if cl else 0),
@@ -32,7 +38,7 @@ def list_services():
 
 
 @frappe.whitelist()
-def buy_document(service, target, finalita=None, accept_declaration=0):
+def buy_document(service, target, finalita=None, accept_declaration=0, name=None, surname=None):
     from thanatos_intel.workflow.vault import client_of_user
     cl = client_of_user()
     if not cl:
@@ -42,7 +48,7 @@ def buy_document(service, target, finalita=None, accept_declaration=0):
         frappe.throw("Servizio non valido.")
     target = "".join(ch for ch in (target or "") if ch.isalnum())
     if not target:
-        frappe.throw("Inserisci il target (P.IVA / Codice Fiscale).")
+        frappe.throw("Inserisci il target (%s)." % (s.get("target_label") or "P.IVA / Codice Fiscale"))
 
     # gate legale per servizi su terzi
     if s["gated"]:
@@ -56,8 +62,15 @@ def buy_document(service, target, finalita=None, accept_declaration=0):
                         "channel": "portale self-serve"}).insert(ignore_permissions=True)
 
     case = _personal_case(cl.name)
-    from thanatos_intel.osint.official_documents import richiedi_documento
-    res = richiedi_documento(case, s["doc"], target, self_mode=1)
+
+    if s["engine"] == "lookup":
+        from thanatos_intel.osint.openapi_client import enqueue_lookup
+        res = enqueue_lookup(s["kind"], value=target, investigation_case=case,
+                             name=name, surname=surname, tax_code=target, self_mode=1)
+    else:
+        from thanatos_intel.osint.official_documents import richiedi_documento
+        res = richiedi_documento(case, s["doc"], target, self_mode=1)
+
     res["servizio"] = s["label"]
     res["case"] = case
     return res

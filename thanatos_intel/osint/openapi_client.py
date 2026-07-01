@@ -370,10 +370,11 @@ def strumenti():
 
 
 @frappe.whitelist()
-def enqueue_lookup(kind, value=None, investigation_case=None, name=None, surname=None, tax_code=None):
+def enqueue_lookup(kind, value=None, investigation_case=None, name=None, surname=None, tax_code=None, self_mode=0):
     """Esegue in background i servizi openapi lenti (async); il risultato (evidence)
     finisce sul caso. Evita timeout/503 nella richiesta web.
-    Pre-pagamento: blocca se il wallet del cliente non copre il prezzo."""
+    Pre-pagamento: blocca se il wallet del cliente non copre il prezzo.
+    self_mode=1 → consegna anche il risultato (file) al portale/email del cliente."""
     if investigation_case:
         client = frappe.db.get_value("Investigation Case", investigation_case, "client")
         if client:
@@ -384,11 +385,28 @@ def enqueue_lookup(kind, value=None, investigation_case=None, name=None, surname
             mmos_ensure(tool_base_price(investigation_case, kind), label=kind)
     frappe.enqueue("thanatos_intel.osint.openapi_client._run_lookup_bg", queue="long", timeout=240,
                    kind=kind, value=value, investigation_case=investigation_case,
-                   name=name, surname=surname, tax_code=tax_code)
+                   name=name, surname=surname, tax_code=tax_code, self_mode=int(self_mode or 0))
     return {"queued": True}
 
 
-def _run_lookup_bg(kind, value=None, investigation_case=None, name=None, surname=None, tax_code=None):
+def _deliver_lookup_result(case, res):
+    """Copia il testo del referto (Evidence) in un file e lo consegna (portale+email)."""
+    ev_name = res.get("evidence") if res else None
+    if not ev_name or not case:
+        return
+    try:
+        ev = frappe.get_doc("Investigation Evidence", ev_name)
+        content = "%s\n\n%s" % (ev.evidence_name, ev.notes or "")
+        from frappe.utils.file_manager import save_file
+        f = save_file("%s.txt" % ev.evidence_name, content.encode("utf-8"),
+                      "Investigation Case", case, is_private=1)
+        from thanatos_intel.reporting.case_file_delivery import deliver_case_file
+        deliver_case_file(case, f.file_url, file_name=ev.evidence_name, doc_kind="Altro", self_mode=1)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "_deliver_lookup_result")
+
+
+def _run_lookup_bg(kind, value=None, investigation_case=None, name=None, surname=None, tax_code=None, self_mode=0):
     try:
         res = None
         if kind == "negativita":
@@ -420,6 +438,8 @@ def _run_lookup_bg(kind, value=None, investigation_case=None, name=None, surname
                 charge(client, tool_price(investigation_case, kind),
                        "%s — %s" % (kind, value or tax_code or ""), ref_dt="Investigation Case",
                        ref_name=_ref)
+            if int(self_mode or 0):
+                _deliver_lookup_result(investigation_case, res)
         frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "openapi enqueue_lookup")

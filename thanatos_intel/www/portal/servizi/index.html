@@ -20,7 +20,7 @@
       <div style="font-weight:600;font-size:14px">{{ s.label }}{% if s.gated %} <span title="richiede dichiarazione" style="color:#b8860b">⚖</span>{% endif %}</div>
       <div style="color:#1a8a2e;font-weight:700;margin:6px 0">€ {{ "%.2f"|format(s.prezzo) }}</div>
       <input class="ss-target" data-key="{{ s.key }}" data-label="{{ s.label }}" data-gated="{{ 1 if s.gated else 0 }}"
-             placeholder="P.IVA / Codice Fiscale" style="width:100%;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;margin-bottom:6px">
+             placeholder="{{ s.target_label }}" style="width:100%;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;margin-bottom:6px">
       <button class="ss-buy btn btn-primary btn-sm" style="width:100%">Acquista</button>
       <div class="ss-msg" style="font-size:12px;margin-top:6px"></div>
     </div>
@@ -42,15 +42,22 @@ document.querySelectorAll('.ss-buy').forEach(btn=>{
   btn.addEventListener('click', async function(){
     const card = btn.closest('div'); const inp = card.querySelector('.ss-target'); const msg = card.querySelector('.ss-msg');
     const key = inp.dataset.key, label = inp.dataset.label, target = inp.value.trim();
-    if(!target){ msg.style.color='#c0392b'; msg.textContent='Inserisci P.IVA/CF'; return; }
+    if(!target){ msg.style.color='#c0392b'; msg.textContent='Inserisci il dato richiesto'; return; }
+    let extra = {};
+    if(key === 'patrimoniale'){
+      const nm = prompt('Nome della persona:','') || '';
+      const sn = prompt('Cognome della persona:','') || '';
+      if(!nm || !sn){ msg.style.color='#c0392b'; msg.textContent='Nome e cognome obbligatori'; return; }
+      extra = {name:nm, surname:sn};
+    }
     btn.disabled=true; msg.style.color='#555'; msg.textContent='Elaborazione…';
     try{
-      let res = await ssCall({service:key, target:target});
+      let res = await ssCall(Object.assign({service:key, target:target}, extra));
       if(res && res.needs_declaration){
         const ok = confirm('Servizio su soggetto terzo. Dichiari di avere una base giuridica legittima (interesse legittimo / tutela di un diritto / obbligo di legge) e accetti la relativa dichiarazione?');
         if(!ok){ msg.textContent='Annullato.'; btn.disabled=false; return; }
         const fin = prompt('Finalità (breve):','') || '';
-        res = await ssCall({service:key, target:target, accept_declaration:1, finalita:fin});
+        res = await ssCall(Object.assign({service:key, target:target, accept_declaration:1, finalita:fin}, extra));
       }
       msg.style.color='#1a8a2e';
       msg.innerHTML = (res && res.error) ? ('⚠ '+res.error) : '✓ Richiesta avviata. Arriverà nel tuo <a href="/portal/vault">archivio</a> e via email tra qualche minuto.';
