@@ -286,3 +286,8 @@ jinja={
    'thanatos_intel.analytics.seo_keywords',
  ],
 }
+
+
+# Filtra dal Link header di preload gli asset non usati (elimina i warning
+# «preloaded using link preload but not used» in console)
+after_request = ["thanatos_intel.overrides.filter_stale_preloads"]
