@@ -66,6 +66,9 @@ _CLOSE_RE = re.compile(
     re.I)
 _ASSIGN_RE = re.compile(
     r"\bassegna(re)?\s+(a|al|alla)\s+([\w\.\-]+(\s+(?!CASE-)[\w\.\-]+)*)\b", re.I)
+_ADD_TO_CASE_RE = re.compile(
+    r"(aggiungi|attacca|allega|inserisci|metti|carica).{0,40}\b(al\s*)?(cas[oi]|pratica|"
+    r"CASE-\d{4}-\d+)", re.I)
 
 
 # ─── Ruoli operatore ─────────────────────────────────────────────────────────
@@ -144,6 +147,23 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
         _reply(wa_phone, sender, lead_name,
                "\U0001F6E0️ Ricevuto. Sto elaborando gli allegati e apro la "
                "pratica: le mando l'esito tra poco.")
+        return
+    # "aggiungi al caso CASE-XXX" — ingerisce gli allegati recenti come reperti del case
+    if _ADD_TO_CASE_RE.search(t):
+        case = _resolve_case(lead_name, t)
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Cita il caso (es. «aggiungi al caso CASE-2026-0026»).")
+            return
+        frappe.enqueue(
+            "thanatos_intel.ingest.operator_console.run_add_docs_to_case",
+            queue="long", timeout=1200,
+            lead_name=lead_name, case=case, wa_phone=wa_phone,
+            sender=sender, operator=operator,
+        )
+        _reply(wa_phone, sender, lead_name,
+               f"\U0001F4CE Aggiungo gli allegati recenti al caso *{case}*. "
+               "Ti confermo con l'esito.")
         return
     if _REPROCESS_RE.search(t):
         case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
@@ -938,6 +958,7 @@ def _help_text(operator):
         "",
         "📂 *Pratica*",
         "• «*apri un caso*» (con allegati) → apro pratica + analizzo i documenti",
+        "• «*aggiungi al caso CASE-…*» (con allegati) → li aggiungo come reperti",
         "• «*rileggi i documenti*» → rifaccio OCR + estrazione",
         "• «*fai le domande*» → domande investigative per ogni reperto",
         "• «*stato CASE-…*» / «*riassumi CASE-…*» → sintesi della pratica",
@@ -1148,3 +1169,64 @@ def reprocess_case_docs(case, lead_name=None, wa_phone=None, sender=None, only_f
             lines.append("\U0001F4C4 " + s)
         _reply(wa_phone, sender, lead_name, "\n".join(lines))
     return {"ok": True, "reprocessed": done, "still_failed": still}
+
+
+# ─── Job: aggiungi allegati recenti dell'operatore a un caso ─────────────────
+
+@frappe.whitelist()
+def run_add_docs_to_case(lead_name, case, wa_phone=None, sender=None,
+                          operator=None, minutes=15):
+    """Prende i documenti allegati al lead operatore negli ultimi N minuti e li
+    ingerisce come Investigation Evidence del caso indicato. Nessun re-download
+    da Meta: usa i File Frappe già scaricati da _dispatch_media."""
+    from frappe.utils import now_datetime, add_to_date
+    from thanatos_intel.ai.doc_ingest import ingest_document
+
+    if not frappe.db.exists("Investigation Case", case):
+        _reply(wa_phone, sender, lead_name, f"⚠️ Caso {case} non trovato.")
+        return {"ok": False, "reason": "case not found"}
+
+    since = add_to_date(now_datetime(), minutes=-int(minutes))
+    files = frappe.get_all(
+        "File",
+        filters={"attached_to_doctype": "Intel Lead",
+                 "attached_to_name": lead_name,
+                 "creation": [">", since]},
+        fields=["name", "file_name", "file_url"],
+        order_by="creation asc", limit=0,
+    )
+    docs = [f for f in files if (f.file_name or "").lower().endswith(_DOC_EXT)]
+    if not docs:
+        _reply(wa_phone, sender, lead_name,
+               f"Non trovo allegati recenti (ultimi {minutes} min) da aggiungere "
+               f"a *{case}*. Mandami prima i documenti e poi ripeti il comando.")
+        return {"ok": False, "reason": "no recent docs"}
+
+    ok_n, fail_n = 0, 0
+    lines = []
+    for d in docs:
+        try:
+            r = ingest_document(file_url=d.file_url, investigation_case=case,
+                                document_type="generic") or {}
+            ex = r.get("extracted") or {}
+            summ = (ex.get("summary") or "").replace("\n", " ")[:140]
+            auth = r.get("authenticity") or ""
+            icon = {"Autentico": "✅", "Dubbio": "❓", "Manomesso": "⚠️",
+                    "Contraffatto": "⛔"}.get(auth, "📎")
+            lines.append(f"{icon} {d.file_name}" + (f" — {summ}" if summ else ""))
+            ok_n += 1
+        except Exception:
+            frappe.log_error(frappe.get_traceback(),
+                             f"add_docs_to_case ingest {d.file_name}")
+            lines.append(f"⚠️ {d.file_name}: errore analisi")
+            fail_n += 1
+        frappe.db.commit()
+
+    head = (f"✅ Aggiunti {ok_n} documenti a *{case}* come reperti"
+            + (f" ({fail_n} falliti)" if fail_n else "") + ".")
+    body = "\n".join([head, ""] + lines[:12])
+    if len(lines) > 12:
+        body += f"\n… e altri {len(lines) - 12} documenti"
+    body += "\n\n🔗 " + frappe.utils.get_url("/app/investigation-case/" + case)
+    _reply(wa_phone, sender, lead_name, body)
+    return {"ok": True, "case": case, "added": ok_n, "failed": fail_n}
