@@ -671,6 +671,8 @@ function renderCaseDetail(d) {
           ${(th.messages || []).slice(-20).map(renderBubble).join('') || '<div class="empty-inline">Nessun messaggio ancora.</div>'}
         </div>
         <div class="wa-compose">
+          <input type="file" id="wa-attach-file-${esc(th.name)}" style="display:none" multiple>
+          <button class="attach-btn-inline" data-wa-attach="${esc(th.name)}" title="Allega file">📎</button>
           <textarea id="wa-reply-${esc(th.name)}" placeholder="Rispondi al cliente…" rows="1"></textarea>
           <button class="send-inline" data-wa-lead="${esc(th.name)}">Invia ›</button>
         </div>
@@ -714,6 +716,14 @@ function renderCaseDetail(d) {
   `;
   // Wire compose per la chat embedded
   const sendInlineBtn = root.querySelector('.send-inline');
+  const attachInlineBtn = root.querySelector('.attach-btn-inline');
+  if (attachInlineBtn) {
+    const leadName = attachInlineBtn.dataset.waAttach;
+    const fileInput = root.querySelector('#wa-attach-file-' + CSS.escape(leadName));
+    attachInlineBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => uploadAndSend(e.target.files, leadName,
+      root.querySelector('#wa-thread-' + CSS.escape(leadName))));
+  }
   if (sendInlineBtn) {
     const leadName = sendInlineBtn.dataset.waLead;
     const ta = root.querySelector('#wa-reply-' + CSS.escape(leadName));
@@ -840,12 +850,16 @@ function renderConversation(data) {
     </div>
     <div id="msgs">${msgs || '<div class="system">Nessun messaggio ancora.</div>'}</div>
     <div id="compose">
+      <input type="file" id="attach-file" style="display:none" multiple>
+      <button class="attach-btn" id="attach-btn" title="Allega file">📎</button>
       <textarea id="reply" placeholder="Scrivi una risposta…" rows="1"></textarea>
       <button class="send" id="send">Invia ›</button>
     </div>
   `;
   const m = $('#msgs'); if (m) m.scrollTop = m.scrollHeight;
   $('#send').addEventListener('click', sendReply);
+  $('#attach-btn').addEventListener('click', () => $('#attach-file').click());
+  $('#attach-file').addEventListener('change', e => uploadAndSend(e.target.files, APP.active));
   const openBtn = root.querySelector('[data-open-case]');
   if (openBtn) openBtn.addEventListener('click', () => {
     window.open('/app/investigation-case/' + openBtn.dataset.openCase, '_blank');
@@ -914,6 +928,53 @@ async function promoteToCase() {
   }
 }
 window.promoteToCase = promoteToCase;
+
+async function uploadAndSend(files, leadName, threadEl) {
+  if (!files || !files.length || !leadName) return;
+  threadEl = threadEl || $('#msgs');
+  for (const file of files) {
+    try {
+      toast('⬆️ Carico ' + file.name + '…');
+      // Upload al DocType File di Frappe (privato, non attaccato a nessun doc)
+      const fd = new FormData();
+      fd.append('file', file, file.name);
+      fd.append('is_private', '1');
+      fd.append('folder', 'Home');
+      const up = await fetch('/api/method/upload_file', {
+        method: 'POST',
+        headers: {'X-Frappe-CSRF-Token': window.csrf_token || 'token'},
+        body: fd,
+        credentials: 'same-origin',
+      });
+      if (!up.ok) throw new Error('upload ' + up.status);
+      const uj = await up.json();
+      const fileUrl = uj.message?.file_url;
+      if (!fileUrl) throw new Error('no file_url');
+      // Invia al cliente WA
+      const r = await call('thanatos_intel.api.centralino.send_media',
+                          {lead_name: leadName, file_url: fileUrl, caption: ''});
+      if (r?.ok) {
+        if (threadEl) {
+          threadEl.insertAdjacentHTML('beforeend', renderBubble({
+            direction:'Outbound',
+            content: '📎 ' + (r.filename || file.name),
+            media_url: r.file_url,
+            sent_at: new Date().toISOString(),
+            status: 'Inviato',
+          }));
+          threadEl.scrollTop = threadEl.scrollHeight;
+        }
+        toast('✓ ' + file.name + ' inviato');
+      } else {
+        toast('Errore invio ' + file.name + ': ' + (r?.error || 'sconosciuto'));
+      }
+    } catch (e) {
+      console.error(e);
+      toast('Errore su ' + file.name);
+    }
+  }
+}
+window.uploadAndSend = uploadAndSend;
 
 async function sendReply() {
   const t = $('#reply').value.trim();

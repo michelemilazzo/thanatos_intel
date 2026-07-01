@@ -414,3 +414,103 @@ def attach_lead_message_to_case(message_name, case_name):
     c.save(ignore_permissions=True)
     frappe.db.commit()
     return {"ok": True, "as": "activity"}
+
+
+@frappe.whitelist()
+def send_media(lead_name, file_url, caption=""):
+    """Invia un file al cliente WhatsApp via Meta Cloud API.
+    Determina automaticamente il tipo (image/audio/video/document) dal MIME."""
+    import os
+    import mimetypes
+    import requests
+    from frappe.utils.password import get_decrypted_password
+
+    lead = frappe.get_doc("Intel Lead", lead_name)
+    if lead.source_type != "WhatsApp":
+        frappe.throw(_("Il lead non è di tipo WhatsApp."))
+    wa_name = lead.whatsapp_number
+    if not wa_name:
+        frappe.throw(_("Numero WhatsApp non configurato per questo lead."))
+    wa = frappe.get_doc("WhatsApp Number", wa_name)
+    pnid = wa.meta_phone_number_id
+    token = get_decrypted_password("WhatsApp Number", wa.name, "meta_access_token")
+    if not (pnid and token):
+        frappe.throw(_("Meta phone_number_id o access_token mancanti."))
+    to_number = (lead.source_identifier or "").lstrip("+").replace(" ", "").replace("-", "")
+
+    rel = (file_url or "").split("/files/", 1)[-1]
+    fpath = frappe.get_site_path(
+        "private" if "/private/" in file_url else "public", "files", rel)
+    if not os.path.exists(fpath):
+        frappe.throw(_("File non trovato sul server: {0}").format(file_url))
+
+    filename = os.path.basename(fpath)
+    mime, _enc = mimetypes.guess_type(filename)
+    mime = mime or "application/octet-stream"
+    if mime.startswith("image/"):
+        wa_type = "image"
+    elif mime.startswith("audio/"):
+        wa_type = "audio"
+    elif mime.startswith("video/"):
+        wa_type = "video"
+    else:
+        wa_type = "document"
+
+    # upload media a Meta
+    with open(fpath, "rb") as fh:
+        up = requests.post(
+            f"https://graph.facebook.com/v21.0/{pnid}/media",
+            data={"messaging_product": "whatsapp"},
+            files={"file": (filename, fh, mime)},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=180,
+        )
+    up_json = up.json() if up.text else {}
+    mid = up_json.get("id")
+    if not mid:
+        return {"ok": False,
+                "error": up_json.get("error", {}).get("message") or up.text[:300]}
+
+    # invio messaggio
+    cap = (caption or "")[:900]
+    media_payload = {"id": mid}
+    if wa_type == "document":
+        media_payload["filename"] = filename
+    if cap and wa_type != "audio":
+        media_payload["caption"] = cap
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to_number,
+        "type": wa_type,
+        wa_type: media_payload,
+    }
+    r = requests.post(
+        f"https://graph.facebook.com/v21.0/{pnid}/messages",
+        json=payload,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=30,
+    )
+    resp = r.json() if r.text else {}
+    ok = r.status_code == 200 and bool(resp.get("messages"))
+    wa_mid = resp["messages"][0].get("id", "") if ok else ""
+
+    # log outbound
+    lead.append("messages", {
+        "direction": "Outbound",
+        "sent_at": now_datetime(),
+        "content": cap or f"📎 {filename}",
+        "media_url": file_url,
+        "status": "Inviato" if ok else "Fallito",
+        "sent_by": frappe.session.user,
+        "wa_message_id": wa_mid,
+    })
+    lead.db_set("last_message_at", now_datetime(), notify=False)
+    lead.save(ignore_permissions=True)
+    frappe.db.commit()
+
+    if not ok:
+        return {"ok": False,
+                "error": resp.get("error", {}).get("message") or str(resp)[:300]}
+    return {"ok": True, "message_id": wa_mid,
+            "file_url": file_url, "filename": filename, "wa_type": wa_type}
