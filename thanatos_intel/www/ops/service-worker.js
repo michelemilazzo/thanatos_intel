@@ -1,11 +1,18 @@
-// Thanatos Switchboard service worker
-// Shell cache + push notification handler. La PWA è network-first sui dati;
-// solo asset statici (shell, manifest, icone) sono cache-first.
-const VERSION = 'sw-v4-2026-07-01';
-const SHELL = ['/ops/', '/ops/manifest.json', '/ops/icon-192.png', '/ops/icon-512.png'];
+// Thanatos Switchboard service worker (v5)
+// STRATEGY:
+//  - HTML shell (/ops/, /ops/index.html) = NETWORK-FIRST (fallback cache)
+//    -> aggiornamenti si vedono subito, cache serve solo offline
+//  - Asset statici (manifest, icone, socket.io, /assets/...) = CACHE-FIRST
+//  - API /api/*  = MAI cachate
+// Push handler + click-to-open invariati.
+const VERSION = 'sw-v5-2026-07-01';
+const STATIC = ['/ops/manifest.json', '/ops/icon-192.png',
+                '/ops/icon-512.png', '/ops/socket.io.min.js'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(VERSION).then(c => c.addAll(STATIC)).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -17,17 +24,34 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // mai cachare API/socket/api di frappe
+  // MAI cachare API/socket/method
   if (url.pathname.startsWith('/api/') ||
       url.pathname.startsWith('/socket.io') ||
       url.pathname.startsWith('/method/')) return;
-  // cache-first per shell e asset statici
-  if (e.request.method === 'GET' && (SHELL.includes(url.pathname) ||
-       url.pathname.startsWith('/assets/'))) {
+
+  // HTML shell → network-first (aggiornamenti immediati)
+  const isShell = url.pathname === '/ops/' || url.pathname === '/ops/index.html';
+  if (isShell) {
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        if (resp && resp.ok) {
+          const clone = resp.clone();
+          caches.open(VERSION).then(c => c.put(e.request, clone));
+        }
+        return resp;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Assets statici → cache-first
+  if (STATIC.includes(url.pathname) || url.pathname.startsWith('/assets/') ||
+      url.pathname.startsWith('/ops/icon-')) {
     e.respondWith(
       caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
-        if (resp.ok) {
+        if (resp && resp.ok) {
           const clone = resp.clone();
           caches.open(VERSION).then(c => c.put(e.request, clone));
         }
@@ -66,4 +90,9 @@ self.addEventListener('notificationclick', e => {
       return self.clients.openWindow(url);
     })
   );
+});
+
+// Permetti alla pagina di forzare il ricaricamento del SW
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'skip-waiting') self.skipWaiting();
 });

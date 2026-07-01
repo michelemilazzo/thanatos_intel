@@ -14,16 +14,20 @@
 <link rel="icon" href="/ops/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cinzel+Decorative:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --navy:#0D1B3E; --navy-2:#0a1530; --navy-3:#08122a;
-    --panel:#101f47; --panel-2:#0d1c40; --line:#1c2c5a;
-    --gold:#C8A96E; --gold-dim:#8C6E3C;
-    --text:#e9ecf3; --text-dim:#9aa1b4; --grey:#6b6f7a;
-    --in:#1a2a55; --out:#5a4318; --danger:#e07777; --ok:#7dd8a1;
-    --sans:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    --serif:'Cinzel',Georgia,serif;
+    /* Palette esatta di thanatos.agency */
+    --navy:#0A0E1A; --navy-2:#0A0E1A; --navy-3:#060812;
+    --panel:#111729; --panel-2:#13192C; --line:#1F2742;
+    --gold:#C8A96E; --gold-2:#E0C58A; --gold-dim:#8C6E3C;
+    --tx-hi:#F2F3F7; --tx-body:#D8DBE6; --tx-mid:#A4A9BC; --tx-low:#8A909E;
+    --text:var(--tx-body); --text-dim:var(--tx-mid); --grey:var(--tx-low);
+    --in:#1a2141; --out:#4d3a17; --danger:#e07777; --ok:#7dd8a1;
+    --sans:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;
+    --serif:Georgia,'Times New Roman',serif;
+    --brand:'Cinzel Decorative','Cinzel',Georgia,serif;
+    --ls-brand:4px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin:0; padding:0; height:100%; background:var(--navy-2); color:var(--text);
@@ -37,11 +41,11 @@
     height:56px; flex:0 0 56px; background:var(--navy);
     border-bottom:1px solid var(--line); position:relative; z-index:20; }
   header .brand { display:flex; align-items:center; gap:10px; }
-  header .brand svg { width:26px; height:26px; }
-  header .brand .title { font-family:var(--serif); font-weight:700; font-size:15px;
-    color:var(--gold); letter-spacing:3px; }
+  header .brand svg { flex:0 0 26px; }
+  header .brand .title { font-family:var(--brand); font-weight:700; font-size:14px;
+    color:var(--gold); letter-spacing:5px; line-height:1; }
   header .brand .sub { font-family:var(--serif); font-size:9.5px;
-    color:var(--text-dim); letter-spacing:5px; margin-top:2px; }
+    color:var(--tx-low); letter-spacing:5px; margin-top:3px; }
   header .spacer { flex:1; }
   header .btn { background:transparent; border:1px solid var(--line); color:var(--text);
     height:34px; padding:0 12px; border-radius:17px; font-size:12.5px;
@@ -203,18 +207,33 @@
     z-index:9999; box-shadow:0 6px 18px rgba(0,0,0,.4);
     transition:opacity .25s; }
 
-  /* login page */
-  .login-wrap { margin:auto; text-align:center; padding:32px; max-width:400px; }
-  .login-wrap svg { width:80px; height:80px; margin-bottom:24px; }
-  .login-wrap h1 { color:var(--gold); font-family:var(--serif); margin:0 0 8px;
-    font-size:22px; letter-spacing:6px; font-weight:700; }
-  .login-wrap .sub { color:var(--text-dim); font-family:var(--serif);
-    font-size:11px; letter-spacing:8px; margin-bottom:20px; }
-  .login-wrap p { color:var(--text-dim); font-size:13px; line-height:1.5; }
-  .login-wrap a.cta { display:inline-block; margin-top:24px; padding:12px 28px;
-    background:linear-gradient(180deg,var(--gold),var(--gold-dim));
-    color:var(--navy); border-radius:8px; text-decoration:none;
-    font-weight:700; letter-spacing:.5px; font-family:var(--sans); }
+  /* login page — stile landing thanatos.agency */
+  .login-wrap { margin:auto; text-align:center; padding:48px 24px;
+    max-width:520px; }
+  .login-wrap .mark { display:inline-flex; align-items:center; gap:14px;
+    margin-bottom:8px; }
+  .login-wrap .mark .t {
+    width:56px; height:56px; }
+  .login-wrap .mark .brand { text-align:left; }
+  .login-wrap .mark .brand .n { font-family:var(--brand); font-weight:700;
+    font-size:26px; color:var(--gold); letter-spacing:7px; line-height:1; }
+  .login-wrap .mark .brand .s { font-family:var(--serif); font-size:11px;
+    color:var(--tx-low); letter-spacing:6px; margin-top:4px; }
+  .login-wrap hr { border:0; height:1px; width:80px; margin:26px auto 22px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+  .login-wrap h2 { font-family:var(--brand); color:var(--gold);
+    font-size:15px; letter-spacing:6px; font-weight:500; margin:0 0 14px; }
+  .login-wrap p { color:var(--tx-mid); font-size:13.5px; line-height:1.65;
+    max-width:400px; margin:8px auto; }
+  .login-wrap p.hint { color:var(--tx-low); font-size:12px; margin-top:16px;
+    font-style:italic; }
+  .login-wrap a.cta { display:inline-block; margin-top:26px; padding:13px 36px;
+    background:transparent; color:var(--gold); border:1px solid var(--gold);
+    border-radius:2px; text-decoration:none; font-family:var(--brand);
+    font-weight:500; letter-spacing:4px; font-size:12px;
+    text-transform:uppercase; transition:all .2s; }
+  .login-wrap a.cta:hover { background:var(--gold); color:var(--navy);
+    letter-spacing:5px; }
 
   /* scrollbars */
   ::-webkit-scrollbar { width:8px; height:8px; }
@@ -242,30 +261,49 @@
 <div id="app">{% endraw %}
 {% if not logged_in %}
   <div class="login-wrap">
-    <svg viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="10" stroke="#C8A96E" stroke-width="1.4"/>
-      <path d="M5.5 13.5c1.5 1 4 2 6.5 2s5-1 6.5-2" stroke="#C8A96E" stroke-width="1.4" stroke-linecap="round"/>
-      <circle cx="9" cy="10" r="1" fill="#C8A96E"/>
-      <circle cx="15" cy="10" r="1" fill="#C8A96E"/>
-    </svg>
-    <h1>SWITCHBOARD</h1>
-    <div class="sub">· THANATOS · INTEL ·</div>
-    <p>Accesso riservato agli operatori Thanatos.</p>
-    <a class="cta" href="/login?redirect-to=/ops/">ACCEDI</a>
+    <div class="mark">
+      <svg class="t" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="thg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#E0C58A"/>
+            <stop offset="100%" stop-color="#8C6E3C"/>
+          </linearGradient>
+        </defs>
+        <path d="M0 0 L60 0 L60 8 L36 8 L36 60 L24 60 L24 8 L0 8 Z" fill="url(#thg)"/>
+        <circle cx="30" cy="34" r="3" fill="#0A0E1A"/>
+      </svg>
+      <div class="brand">
+        <div class="n">THANATOS</div>
+        <div class="s">· INTEL ·</div>
+      </div>
+    </div>
+    <hr>
+    <h2>SWITCHBOARD</h2>
+    <p>Centralino operatori. Accesso riservato agli investigatori Thanatos.</p>
+    <a class="cta" href="/login?redirect-to=/ops/">Accedi</a>
+    <p class="hint">
+      Il login è per il dominio <b>ops.thanatos.agency</b>: se sei già loggato
+      su thanatos.agency o thanatos.onekeyco.com, devi rifare l'accesso qui la
+      prima volta. Il cookie di sessione dura ~15 giorni.
+    </p>
   </div>
 {% else %}
 {% raw %}
   <header>
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" stroke="#C8A96E" stroke-width="1.6"/>
-        <path d="M5.5 13.5c1.5 1 4 2 6.5 2s5-1 6.5-2" stroke="#C8A96E" stroke-width="1.6" stroke-linecap="round"/>
-        <circle cx="9" cy="10" r="1" fill="#C8A96E"/>
-        <circle cx="15" cy="10" r="1" fill="#C8A96E"/>
+      <svg viewBox="0 0 60 60" width="26" height="26" aria-hidden="true">
+        <defs>
+          <linearGradient id="thgh" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#E0C58A"/>
+            <stop offset="100%" stop-color="#8C6E3C"/>
+          </linearGradient>
+        </defs>
+        <path d="M0 0 L60 0 L60 8 L36 8 L36 60 L24 60 L24 8 L0 8 Z" fill="url(#thgh)"/>
+        <circle cx="30" cy="34" r="3" fill="#0A0E1A"/>
       </svg>
       <div>
-        <div class="title">SWITCHBOARD</div>
-        <div class="sub">· THANATOS · INTEL ·</div>
+        <div class="title">THANATOS</div>
+        <div class="sub">· SWITCHBOARD ·</div>
       </div>
     </div>
     <div class="spacer"></div>
@@ -634,6 +672,22 @@ async function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   try {
     SW_REG = await navigator.serviceWorker.register('/ops/service-worker.js', {scope:'/ops/'});
+    // controlla aggiornamenti immediatamente e chiedi al SW di attivarsi
+    try { SW_REG.update(); } catch(_) {}
+    if (SW_REG.waiting) SW_REG.waiting.postMessage({type:'skip-waiting'});
+    SW_REG.addEventListener('updatefound', () => {
+      const nw = SW_REG.installing;
+      if (nw) nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          nw.postMessage({type:'skip-waiting'});
+        }
+      });
+    });
+    // ricarica quando il SW nuovo prende controllo
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return; refreshing = true; location.reload();
+    });
     if ('PushManager' in window) {
       const sub = await SW_REG.pushManager.getSubscription();
       updateNotifButton(sub);
