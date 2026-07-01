@@ -1097,18 +1097,45 @@ window.addEventListener('beforeinstallprompt', e => {
 
 /* ─── realtime ─── */
 
+let SIO = null;
 function setupRealtime() {
   if (typeof io === 'undefined') return;
-  const sio = io({ path: '/socket.io', transports:['websocket','polling'] });
-  sio.on('connect', () => setConn(true));
-  sio.on('disconnect', () => setConn(false));
-  sio.on('centralino_update', (data) => {
-    loadConversations();
-    if (data && APP.active === data.lead) openConversation(APP.active);
+  SIO = io({ path: '/socket.io', transports:['websocket','polling'],
+             reconnection:true, reconnectionDelay:2000 });
+  SIO.on('connect', () => { setConn(true); console.log('socket connected', SIO.id); });
+  SIO.on('disconnect', reason => { setConn(false); console.warn('socket disconnected', reason); });
+  SIO.on('connect_error', e => console.error('socket connect_error', e.message));
+  SIO.on('centralino_update', (data) => {
+    // ricarica lista sezione corrente
+    if (APP.section === 'chats') loadConversations();
+    // se sto guardando quel lead/case, ricarica thread
+    if (APP.activeType === 'chat' && data && APP.active === data.lead) {
+      refreshActiveThread();
+    } else if (APP.activeType === 'ingest' && data) {
+      loadIngest();
+    }
   });
-  sio.on('centralino_incoming_call', (data) => {
+  SIO.on('centralino_incoming_call', (data) => {
     toast('📞 Chiamata in arrivo da ' + (data.from || '?'));
   });
+}
+
+// Refresh silenzioso del thread aperto senza chiudere/aprire (mantiene scroll+focus)
+async function refreshActiveThread() {
+  if (APP.activeType !== 'chat' || !APP.active) return;
+  try {
+    const data = await call('thanatos_intel.api.centralino.get_thread',
+                           {lead_name: APP.active});
+    const msgs = $('#msgs');
+    if (!msgs || !data.messages) return;
+    // conta i messaggi correnti nel DOM vs quelli nella risposta
+    const current = msgs.querySelectorAll('.bubble').length;
+    if (data.messages.length === current) return;   // nessun nuovo
+    // rebuild solo il body messaggi
+    const nearBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 80;
+    msgs.innerHTML = data.messages.map(renderBubble).join('');
+    if (nearBottom) msgs.scrollTop = msgs.scrollHeight;
+  } catch (e) { /* silent */ }
 }
 
 /* ─── push ─── */
@@ -1206,6 +1233,8 @@ if (APP.isOperator) {
     });
   }
   setInterval(loadCurrentSection, 45000);
+  // polling ravvicinato del thread aperto (rete di sicurezza se il socket cade)
+  setInterval(refreshActiveThread, 6000);
 }
 </script>
 {% endraw %}
