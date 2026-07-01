@@ -204,6 +204,55 @@ def case_ai_chat(case, message):
     if re.search(r"analisi completa|analizza tutto|esegui tutto|pipeline", t):
         _enq("thanatos_intel.ai.case_orchestrator.run_full_analysis", case=case)
         return done("▶ Pipeline completa avviata (esito + checklist nelle attività).", "full")
+    # — download documento ufficiale PDF (visura camerale, bilancio ottico, certificato) —
+    if re.search(r"scarica|documento ufficial|visura ufficial|visura in pdf|estratto camerale|bilancio ottico|\bcertificat", t):
+        mpv = re.search(r"\b(\d{11})\b", message or "")
+        if not mpv:
+            return done("Indicami la P.IVA (11 cifre) del documento ufficiale da scaricare, es. "
+                        "«scarica visura ufficiale 12485671007». Tipi: visura ordinaria/storica, "
+                        "società di persone, impresa individuale, bilancio, certificato, certificato vigenza.")
+        piva = mpv.group(1)
+        storica = "storic" in t
+        if "individual" in t or "ditta" in t:
+            tipo = "storica_individuale" if storica else "ordinaria_individuale"
+        elif "persone" in t:
+            tipo = "storica_persone" if storica else "ordinaria_persone"
+        elif "bilancio" in t:
+            tipo = "bilancio"
+        elif "certificat" in t:
+            tipo = "certificato_vigenza" if "vigenz" in t else "certificato"
+        else:
+            tipo = "storica_capitale" if storica else "ordinaria_capitale"
+        from thanatos_intel.osint.official_documents import richiedi_documento, TIPI
+        r = richiedi_documento(case, tipo, piva)
+        if r.get("error"):
+            return done(f"⚠️ Documento ufficiale: {r['error']}")
+        return done(f"📄 Richiesta avviata: {TIPI[tipo][1]} per P.IVA {piva}. "
+                    "Il PDF arriverà nei reperti del caso tra qualche minuto.", "documento_ufficiale")
+
+    # — verifica IBAN (validità, banca, titolare) —
+    if re.search(r"\biban\b", t):
+        mi = re.search(r"\b([A-Z]{2}\d{2}[A-Z0-9]{10,30})\b", (message or "").replace(" ", "").upper())
+        if mi:
+            from thanatos_intel.osint.openapi_client import verifica_iban
+            r = verifica_iban(mi.group(1), investigation_case=case)
+            if r.get("error"):
+                return done(f"⚠️ IBAN: {r['error']}")
+            return done(f"🏦 IBAN {mi.group(1)}: valido {r.get('valido')} · banca {r.get('banca') or '—'} · "
+                        f"titolare {r.get('titolare') or '—'}", "iban")
+        return done("Indicami l'IBAN da verificare, es. «verifica IBAN IT60X0542811101000000123456».")
+
+    # — veicolo per targa (proprietario/assicurazione) —
+    if re.search(r"\btarga\b|veicol|\bauto\b|automobil", t):
+        mt = re.search(r"\b([A-Z]{2}\d{3}[A-Z]{2})\b", (message or "").replace(" ", "").upper())
+        if mt:
+            from thanatos_intel.osint.openapi_client import veicolo
+            r = veicolo(mt.group(1), investigation_case=case)
+            if r.get("error"):
+                return done(f"⚠️ Veicolo: {r['error']}")
+            return done(f"🚗 Veicolo targa {mt.group(1)}: dati acquisiti e registrati nei reperti.", "veicolo")
+        return done("Indicami la targa (es. AB123CD), es. «veicolo targa AB123CD».")
+
     m = re.search(r"verifica\s+camerale.*?(\d{11})|p\.?\s*iva\s*(\d{11})|camerale.*?(\d{11})", t)
     if m or re.search(r"verifica camerale|visura", t):
         piva = next((g for g in (m.groups() if m else []) if g), None)
@@ -255,12 +304,12 @@ def _contextual_commands(case):
     ct = frappe.db.get_value("Investigation Case", case, "case_type")
     common = ["avanzamento", "genera dossier", "proforma", "domande", "analisi completa"]
     extra = {
-        "Fraud": ["screening", "doppia cessione"],
+        "Fraud": ["screening", "doppia cessione", "scarica visura ufficiale <piva>", "verifica IBAN <iban>"],
         "Cyber": ["screening"],
-        "Asset Recovery": ["screening", "doppia cessione"],
-        "Due Diligence": ["verifica camerale <piva>", "valuta assicurazione", "doppia cessione"],
-        "Corporate": ["verifica camerale <piva>", "screening"],
-        "Family": ["screening"],
+        "Asset Recovery": ["screening", "doppia cessione", "verifica IBAN <iban>", "veicolo targa <targa>", "scarica visura ufficiale <piva>"],
+        "Due Diligence": ["verifica camerale <piva>", "scarica visura ufficiale <piva>", "soci e UBO <piva>", "valuta assicurazione", "doppia cessione"],
+        "Corporate": ["verifica camerale <piva>", "scarica visura ufficiale <piva>", "soci e UBO <piva>", "screening"],
+        "Family": ["screening", "veicolo targa <targa>"],
     }
     out = []
     for c in common + extra.get(ct, ["screening", "verifica camerale <piva>"]):
