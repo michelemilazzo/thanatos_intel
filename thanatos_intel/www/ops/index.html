@@ -822,6 +822,7 @@ function renderConversations() {
 
 async function openConversation(name) {
   APP.active = name;
+  APP.activeType = 'chat';
   $('#app').classList.add('viewing');
   document.querySelectorAll('.conv-row').forEach(el =>
     el.classList.toggle('active', el.dataset.name === name));
