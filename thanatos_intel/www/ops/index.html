@@ -1277,6 +1277,32 @@ window.addEventListener('beforeinstallprompt', e => {
 
 /* ─── realtime ─── */
 
+/* Ping sound in-app per messaggi nuovi (Web Audio, no asset esterni) */
+let AUDIO_CTX = null;
+let LAST_PING = 0;
+function pingSound() {
+  const now = Date.now();
+  if (now - LAST_PING < 1500) return;  // debounce
+  LAST_PING = now;
+  try {
+    AUDIO_CTX = AUDIO_CTX || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = AUDIO_CTX;
+    if (ctx.state === 'suspended') ctx.resume();
+    // due note discrete C6→E6 (breve, dorato)
+    const t0 = ctx.currentTime;
+    [[1046.5, 0], [1318.5, 0.09]].forEach(([freq, delay]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t0 + delay);
+      gain.gain.exponentialRampToValueAtTime(0.12, t0 + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + delay + 0.20);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(t0 + delay); osc.stop(t0 + delay + 0.22);
+    });
+  } catch (_) { /* silent */ }
+}
+
 let SIO = null;
 function setupRealtime() {
   if (typeof io === 'undefined') return;
@@ -1286,13 +1312,17 @@ function setupRealtime() {
   SIO.on('disconnect', reason => { setConn(false); console.warn('socket disconnected', reason); });
   SIO.on('connect_error', e => console.error('socket connect_error', e.message));
   SIO.on('centralino_update', (data) => {
-    // ricarica lista sezione corrente
     if (APP.section === 'chats') loadConversations();
-    // se sto guardando quel lead/case, ricarica thread
     if (APP.activeType === 'chat' && data && APP.active === data.lead) {
       refreshActiveThread();
     } else if (APP.activeType === 'ingest' && data) {
       loadIngest();
+    }
+    // Suono in-app: solo su nuovi messaggi, e solo se non sto già guardando quel thread
+    if (data?.type === 'new_message' && !document.hasFocus()) {
+      pingSound();
+    } else if (data?.type === 'new_message' && APP.active !== data.lead) {
+      pingSound();
     }
   });
   SIO.on('centralino_incoming_call', (data) => {

@@ -38,10 +38,20 @@
   #compose textarea { flex:1; min-height:40px; max-height:140px; resize:none;
     padding:10px 14px; border-radius:18px; border:1px solid var(--line);
     background:#0a1530; color:var(--tx-body); font-size:14px; font-family:inherit; outline:0; }
-  #compose button { padding:0 18px; height:40px; border-radius:20px; border:0;
+  #compose button#send { padding:0 18px; height:40px; border-radius:20px; border:0;
     background:linear-gradient(180deg,var(--gold),#8C6E3C); color:var(--navy);
     font-weight:700; font-size:13px; cursor:pointer; }
   #compose button:disabled { opacity:.5; cursor:not-allowed; }
+  #compose .icon-btn { flex:0 0 auto; width:38px; height:38px; border-radius:50%;
+    background:transparent; border:1px solid var(--line); color:var(--gold);
+    font-size:16px; cursor:pointer; display:inline-flex; align-items:center;
+    justify-content:center; padding:0; }
+  #compose .icon-btn:hover { background:rgba(200,169,110,.10); border-color:var(--gold); }
+  #compose .icon-btn.rec { background:#8a1e1e; border-color:#c22; color:#fff;
+    width:auto; padding:0 10px; animation:micpulse 1.2s ease-in-out infinite; }
+  #compose .icon-btn.rec #mic-timer { font-family:inherit; font-size:11px;
+    font-weight:600; margin-left:4px; }
+  @keyframes micpulse { 0%,100%{ box-shadow:0 0 0 0 rgba(194,34,34,.5); } 50%{ box-shadow:0 0 0 6px rgba(194,34,34,0); } }
   .case-picker { display:flex; gap:6px; padding:10px 14px; border-bottom:1px solid var(--line);
     background:#0d1d44; overflow-x:auto; }
   .case-chip { flex:0 0 auto; padding:6px 12px; font-size:12px;
@@ -83,6 +93,9 @@
     </div>
   </main>
   <div id="compose" style="display:none">
+    <input type="file" id="attach-file" style="display:none" multiple>
+    <button class="icon-btn" id="attach-btn" title="Allega file">📎</button>
+    <button class="icon-btn" id="mic-btn" title="Nota vocale">🎤</button>
     <textarea id="reply" placeholder="Scrivi al team Thanatos…" rows="1"></textarea>
     <button id="send">Invia ›</button>
   </div>
@@ -157,6 +170,68 @@ document.querySelectorAll('.case-chip').forEach(c =>
 $('#send').addEventListener('click', sendReply);
 $('#reply').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); }
+});
+$('#attach-btn').addEventListener('click', () => $('#attach-file').click());
+$('#attach-file').addEventListener('change', e => uploadFiles(e.target.files));
+async function uploadFiles(files) {
+  if (!files?.length || !APP.activeCase) return;
+  for (const f of files) {
+    try {
+      toast('⬆️ Carico ' + f.name);
+      const fd = new FormData();
+      fd.append('file', f, f.name); fd.append('is_private', '1'); fd.append('folder', 'Home');
+      const up = await fetch('/api/method/upload_file', {
+        method:'POST', headers:{'X-Frappe-CSRF-Token': window.csrf_token || ''},
+        body: fd, credentials:'same-origin',
+      });
+      const uj = await up.json();
+      const fu = uj.message?.file_url;
+      if (!fu) throw new Error('no file_url');
+      const r = await call('thanatos_intel.api.portal_chat.send_media',
+                          {case_name: APP.activeCase, file_url: fu, caption: ''});
+      if (r?.ok) {
+        $('#msgs').insertAdjacentHTML('beforeend', renderBubble({
+          direction:'Inbound', content:'📎 ' + (r.filename || f.name),
+          sent_at:new Date().toISOString(),
+        }));
+        $('#msgs').scrollTop = $('#msgs').scrollHeight;
+        toast('✓ inviato');
+      } else toast('Errore invio');
+    } catch (e) { console.error(e); toast('Errore su ' + f.name); }
+  }
+}
+/* Note vocali */
+let MIC = { rec:null, chunks:[], stream:null, tickId:null, startAt:0 };
+$('#mic-btn').addEventListener('click', async () => {
+  if (MIC.rec && MIC.rec.state === 'recording') { MIC.rec.stop(); return; }
+  if (!APP.activeCase) { toast('Seleziona un caso'); return; }
+  if (!navigator.mediaDevices?.getUserMedia) { toast('Mic non supportato'); return; }
+  try { MIC.stream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch (e) { toast('Permesso microfono negato'); return; }
+  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+    ? 'audio/webm;codecs=opus'
+    : (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : '');
+  MIC.rec = new MediaRecorder(MIC.stream, mime ? {mimeType:mime} : {});
+  MIC.chunks = []; MIC.startAt = Date.now();
+  MIC.rec.ondataavailable = e => { if (e.data.size) MIC.chunks.push(e.data); };
+  MIC.rec.onstop = async () => {
+    const btn = $('#mic-btn');
+    if (MIC.tickId) { clearInterval(MIC.tickId); MIC.tickId=null; }
+    btn.classList.remove('rec'); btn.innerHTML = '🎤';
+    MIC.stream.getTracks().forEach(t => t.stop());
+    const blob = new Blob(MIC.chunks, { type: mime || 'audio/ogg' });
+    const ext = blob.type.includes('ogg') ? 'ogg' : 'webm';
+    const name = 'nota-vocale-' + new Date().toISOString().replace(/[:.]/g,'-').slice(0,19) + '.' + ext;
+    await uploadFiles([new File([blob], name, {type: blob.type})]);
+  };
+  MIC.rec.start();
+  const btn = $('#mic-btn');
+  btn.classList.add('rec'); btn.innerHTML = '⏹ <span id="mic-timer">0:00</span>';
+  MIC.tickId = setInterval(() => {
+    const s = Math.floor((Date.now() - MIC.startAt) / 1000);
+    const el = document.getElementById('mic-timer');
+    if (el) el.textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  }, 500);
 });
 // auto-refresh silenzioso
 setInterval(async () => {

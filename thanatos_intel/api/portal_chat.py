@@ -103,3 +103,40 @@ def send_message(case_name, message_text):
     except Exception:
         pass
     return {"ok": True, "lead": lead}
+
+
+@frappe.whitelist()
+def send_media(case_name, file_url, caption=""):
+    """Cliente carica un file (allegato o nota vocale) via portale. Lo salva
+    come messaggio Inbound sul lead e notifica gli operatori."""
+    _guard(case_name)
+    import os
+    lead = _get_or_create_lead(case_name, frappe.session.user)
+    doc = frappe.get_doc("Intel Lead", lead)
+    rel = (file_url or "").split("/files/", 1)[-1]
+    fname = os.path.basename(rel) or "allegato"
+    doc.append("messages", {
+        "direction": "Inbound",
+        "sent_at": now_datetime(),
+        "content": (caption or "").strip() or f"📎 {fname}",
+        "media_url": file_url,
+        "status": "Ricevuto",
+        "sent_by": frappe.session.user,
+    })
+    doc.db_set("last_message_at", now_datetime(), notify=False)
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+    try:
+        frappe.publish_realtime(
+            "centralino_update",
+            {"lead": lead, "type": "new_message", "source": "portal", "has_media": True},
+            after_commit=True,
+        )
+    except Exception:
+        pass
+    try:
+        from thanatos_intel.api.push import on_new_inbound_message
+        on_new_inbound_message(lead, doc.source_name, f"📎 {fname}")
+    except Exception:
+        pass
+    return {"ok": True, "lead": lead, "filename": fname}
