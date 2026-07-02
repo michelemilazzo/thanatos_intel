@@ -11,6 +11,7 @@ Due pattern:
 `strumenti()` ritorna il CATALOGO completo (per UI/console: cosa è disponibile,
 sync/async, fascia di costo). Le funzioni investigative scrivono un reperto sul caso.
 """
+import re
 import time
 import frappe
 from frappe.utils import now_datetime
@@ -348,16 +349,39 @@ def catasto(subject, tipo="visura_soggetto", investigation_case=None, max_wait=9
     return out
 
 
+def _norm_ragsoc(s):
+    """Normalizza una ragione sociale per il confronto: minuscole, via punteggiatura,
+    forme societarie e 'in liquidazione'. Evita match errati tipo BOMAX↔TURBOMAX."""
+    s = (s or "").lower()
+    s = re.sub(r"[^\w\s]", " ", s)
+    s = re.sub(r"\b(s\s*r\s*l\s*s|s\s*r\s*l|srl|srls|s\s*p\s*a|spa|s\s*n\s*c|snc|s\s*a\s*s|sas|"
+               r"in\s+liquidazione|societa|societ[aà])\b", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
 def risolvi_piva(name):
-    """Nome/ragione sociale → P.IVA (company IT-search → IT-start)."""
+    """Nome/ragione sociale → P.IVA (company IT-search → IT-start).
+    IT-search torna solo gli id: per disambiguare legge IT-start dei candidati e
+    sceglie il MATCH ESATTO sulla denominazione (fallback al primo). Max 4 candidati."""
     code, b = _get("company", "/IT-search", {"companyName": name})
-    if code != 200 or not (b.get("data")):
+    cands = b.get("data") or []
+    if code != 200 or not cands:
         return {"name": name, "piva": None, "error": (b or {}).get("message") or f"HTTP {code}"}
-    rid = b["data"][0].get("id")
-    code2, b2 = _get("company", f"/IT-start/{rid}")
-    rec = ((b2.get("data") or [{}])[0] if isinstance(b2.get("data"), list) else b2.get("data")) or {}
-    return {"name": name, "piva": rec.get("vatCode") or rec.get("taxCode"),
-            "denominazione": rec.get("companyName")}
+    target = _norm_ragsoc(name)
+    first = None
+    for c in cands[:4]:
+        rid = c.get("id")
+        if not rid:
+            continue
+        _, b2 = _get("company", f"/IT-start/{rid}")
+        rec = ((b2.get("data") or [{}])[0] if isinstance(b2.get("data"), list) else b2.get("data")) or {}
+        denom = rec.get("companyName") or ""
+        cand = {"name": name, "piva": rec.get("vatCode") or rec.get("taxCode"), "denominazione": denom}
+        if _norm_ragsoc(denom) == target and cand["piva"]:
+            return cand
+        if first is None:
+            first = cand
+    return first or {"name": name, "piva": None, "error": "nessun match"}
 
 
 @frappe.whitelist()
