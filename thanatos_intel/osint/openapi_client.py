@@ -239,13 +239,17 @@ def verifica_iban(iban, investigation_case=None):
     d, err = _trust_async("iban-start", iban_c)
     if err:
         return {"error": err, "iban": iban_c}
-    out = {"iban": iban_c, "stato": d.get("state"),
-           "valido": d.get("valid", d.get("isValid")),
-           "banca": d.get("bank") or d.get("bankName") or (d.get("branch") or {}).get("bank"),
-           "bic": d.get("bic") or (d.get("branch") or {}).get("bic"),
-           "paese": d.get("country"), "sepa": d.get("sepa"), "dati": d}
-    lines = [f"Verifica IBAN {iban_c}", f"Stato: {out['stato']} · Valido: {out['valido']}",
-             f"Banca: {out['banca'] or '—'} · BIC: {out['bic'] or '—'} · SEPA: {out['sepa']}",
+    bank = d.get("bankData") or {}
+    sepa = d.get("sepaData") or {}
+    vals = d.get("validations") or {}
+    out = {"iban": iban_c, "stato": d.get("state"), "esito": d.get("status"),
+           "valido": (vals.get("iban") or {}).get("valid"),
+           "banca": bank.get("bank"), "filiale": bank.get("branch"),
+           "bic": bank.get("bic"), "citta": bank.get("city"), "paese": bank.get("country"),
+           "sepa": sepa.get("creditTransfer"), "dati": d}
+    lines = [f"Verifica IBAN {iban_c}", f"Esito: {out['esito']} · Check digit valido: {out['valido']}",
+             f"Banca: {out['banca'] or '—'} ({out['filiale'] or '—'}, {out['citta'] or '—'})",
+             f"BIC: {out['bic'] or '—'} · SEPA credit transfer: {out['sepa']}",
              str(d)[:400]]
     out["evidence"] = _evidence(investigation_case, f"Verifica IBAN — {iban_c}", lines,
                                 source="openapi trust")
