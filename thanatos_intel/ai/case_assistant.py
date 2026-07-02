@@ -232,14 +232,14 @@ def case_ai_chat(case, message):
 
     # — verifica IBAN (validità, banca, titolare) —
     if re.search(r"\biban\b", t):
-        mi = re.search(r"\b([A-Z]{2}\d{2}[A-Z0-9]{10,30})\b", (message or "").replace(" ", "").upper())
+        mi = re.search(r"\b([A-Z]{2}\d{2}(?:\s?[A-Z0-9]){10,30})\b", (message or "").upper())
         if mi:
             from thanatos_intel.osint.openapi_client import verifica_iban
-            r = verifica_iban(mi.group(1), investigation_case=case)
+            r = verifica_iban(mi.group(1).replace(" ", ""), investigation_case=case)
             if r.get("error"):
                 return done(f"⚠️ IBAN: {r['error']}")
-            return done(f"🏦 IBAN {mi.group(1)}: valido {r.get('valido')} · banca {r.get('banca') or '—'} · "
-                        f"BIC {r.get('bic') or '—'} · SEPA {r.get('sepa')}", "iban")
+            return done(f"🏦 IBAN {r.get('iban')}: {r.get('esito')} · banca {r.get('banca') or '—'} "
+                        f"({r.get('citta') or '—'}) · BIC {r.get('bic') or '—'} · SEPA {r.get('sepa')}", "iban")
         return done("Indicami l'IBAN da verificare, es. «verifica IBAN IT60X0542811101000000123456».")
 
     # — verifica telefono (fraud score, operatore) —
