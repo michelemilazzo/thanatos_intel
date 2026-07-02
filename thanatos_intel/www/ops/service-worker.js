@@ -6,7 +6,7 @@
 // Push handler + click-to-open invariati.
 // Fix v14: tutte le respondWith ora ritornano una Response valida in ogni ramo,
 // evitando "Failed to convert value to 'Response'" quando la rete cade.
-const VERSION = 'sw-v14-2026-07-01';
+const VERSION = 'sw-v15-2026-07-01';
 const STATIC = ['/ops/manifest.json', '/ops/icon-192.png',
                 '/ops/icon-512.png', '/ops/socket.io.min.js'];
 

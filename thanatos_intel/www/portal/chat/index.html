@@ -1,0 +1,177 @@
+{% raw %}<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat con Thanatos</title>
+<meta name="theme-color" content="#0D1B3E">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --navy:#0A0E1A; --panel:#111729; --line:#1F2742;
+          --gold:#C8A96E; --tx-hi:#F2F3F7; --tx-body:#D8DBE6; --tx-mid:#A4A9BC;
+          --in:#1a2141; --out:#4d3a17; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; height:100%; background:var(--navy);
+    color:var(--tx-body); font-family:'Inter',-apple-system,sans-serif; }
+  #app { display:flex; flex-direction:column; height:100dvh; }
+  header { display:flex; align-items:center; gap:12px; padding:14px 16px;
+    background:#08122a; border-bottom:1px solid var(--line); }
+  header .logo { width:34px; height:34px; border-radius:50%; }
+  header .title { font-family:'Cinzel',serif; color:var(--gold);
+    letter-spacing:3px; font-weight:600; font-size:14px; }
+  header .sub { font-size:11px; color:var(--tx-mid); }
+  header .close { margin-left:auto; font-size:12px; color:var(--tx-mid);
+    text-decoration:none; border:1px solid var(--line); padding:6px 12px;
+    border-radius:16px; }
+  main { flex:1; overflow-y:auto; padding:18px; display:flex;
+    flex-direction:column; gap:8px; background:radial-gradient(circle at 50% 0%, rgba(200,169,110,.03), transparent 60%); }
+  .bubble { max-width:75%; padding:10px 14px; border-radius:14px;
+    font-size:14px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; }
+  .bubble .ts { display:block; font-size:10px; color:rgba(255,255,255,.55); margin-top:4px; }
+  .in { align-self:flex-start; background:var(--in); border-bottom-left-radius:4px; }
+  .out { align-self:flex-end; background:var(--out); color:#fff8e7; border-bottom-right-radius:4px; }
+  .day-sep { align-self:center; font-size:10px; color:var(--tx-mid);
+    background:var(--panel); padding:3px 10px; border-radius:10px; margin:8px 0;
+    text-transform:uppercase; letter-spacing:1px; }
+  #compose { display:flex; gap:10px; padding:12px; border-top:1px solid var(--line);
+    background:#0d1d44; align-items:flex-end; }
+  #compose textarea { flex:1; min-height:40px; max-height:140px; resize:none;
+    padding:10px 14px; border-radius:18px; border:1px solid var(--line);
+    background:#0a1530; color:var(--tx-body); font-size:14px; font-family:inherit; outline:0; }
+  #compose button { padding:0 18px; height:40px; border-radius:20px; border:0;
+    background:linear-gradient(180deg,var(--gold),#8C6E3C); color:var(--navy);
+    font-weight:700; font-size:13px; cursor:pointer; }
+  #compose button:disabled { opacity:.5; cursor:not-allowed; }
+  .case-picker { display:flex; gap:6px; padding:10px 14px; border-bottom:1px solid var(--line);
+    background:#0d1d44; overflow-x:auto; }
+  .case-chip { flex:0 0 auto; padding:6px 12px; font-size:12px;
+    border:1px solid var(--line); border-radius:14px; cursor:pointer;
+    color:var(--tx-mid); background:transparent; white-space:nowrap; }
+  .case-chip.active { color:var(--gold); border-color:var(--gold); background:rgba(200,169,110,.10); }
+  .empty { margin:auto; text-align:center; color:var(--tx-mid); padding:32px; }
+  .empty h3 { font-family:'Cinzel',serif; color:var(--gold); letter-spacing:3px; }
+  .toast { position:fixed; bottom:70px; left:50%; transform:translateX(-50%);
+    background:var(--panel); color:var(--tx-body); padding:9px 16px; border-radius:18px;
+    font-size:13px; border:1px solid var(--gold); z-index:9999; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <img class="logo" src="/assets/thanatos_intel/images/thanatos-icon-192.png" alt="Thanatos">
+    <div>
+      <div class="title">THANATOS</div>
+      <div class="sub">Chat con l'agenzia</div>
+    </div>
+    <a class="close" href="/portal">Torna al portale ›</a>
+  </header>
+  {% endraw %}
+  {% if case_names %}
+    <div class="case-picker" id="case-picker">
+      {% for cn in case_names %}
+        <div class="case-chip" data-case="{{ cn }}">{{ cn }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% raw %}
+  <main id="msgs">
+    <div class="empty">
+      <h3>SCEGLI IL CASO</h3>
+      <p style="max-width:340px;margin:8px auto">
+        Seleziona un caso dall'elenco in alto per aprire il thread con Thanatos.
+      </p>
+    </div>
+  </main>
+  <div id="compose" style="display:none">
+    <textarea id="reply" placeholder="Scrivi al team Thanatos…" rows="1"></textarea>
+    <button id="send">Invia ›</button>
+  </div>
+</div>
+<script>
+window.csrf_token = {% endraw %}{{ (csrf_token or '')|tojson }}{% raw %};
+const APP = { activeCase: null, activeLead: null };
+
+const $ = s => document.querySelector(s);
+const esc = s => (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(msg) {
+  const el = document.createElement('div'); el.className='toast'; el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),300); }, 2400);
+}
+async function call(method, args={}) {
+  const r = await fetch('/api/method/' + method, {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token': window.csrf_token || ''},
+    body:new URLSearchParams(args).toString(), credentials:'same-origin',
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return (await r.json()).message;
+}
+function fmtTs(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString('it-IT', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
+}
+function renderBubble(m) {
+  const cls = m.direction === 'Inbound' ? 'out' : 'in';   // client vede i propri msg come "out"
+  // spiegazione: Inbound=dal cliente (siamo noi qui) => allineato a destra
+  return `<div class="bubble ${cls}">${esc(m.content||'')}<span class="ts">${fmtTs(m.sent_at)}</span></div>`;
+}
+async function openCaseThread(caseName) {
+  APP.activeCase = caseName;
+  document.querySelectorAll('.case-chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.case === caseName));
+  const msgs = $('#msgs');
+  msgs.innerHTML = '<div class="empty">Carico…</div>';
+  try {
+    const d = await call('thanatos_intel.api.portal_chat.get_case_thread', {case_name: caseName});
+    APP.activeLead = d.lead;
+    if (!d.messages?.length) {
+      msgs.innerHTML = `<div class="empty"><h3>${esc(caseName)}</h3><p>Nessun messaggio ancora — scrivi qua sotto per aprire il canale.</p></div>`;
+    } else {
+      msgs.innerHTML = d.messages.map(renderBubble).join('');
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+    $('#compose').style.display = 'flex';
+    $('#reply').focus();
+  } catch (e) { msgs.innerHTML = '<div class="empty"><h3>Errore</h3></div>'; }
+}
+async function sendReply() {
+  const t = $('#reply').value.trim();
+  if (!t || !APP.activeCase) return;
+  $('#reply').value = ''; $('#reply').disabled = true; $('#send').disabled = true;
+  try {
+    const r = await call('thanatos_intel.api.portal_chat.send_message',
+                        {case_name: APP.activeCase, message_text: t});
+    if (r?.ok) {
+      $('#msgs').insertAdjacentHTML('beforeend', renderBubble({
+        direction:'Inbound', content:t, sent_at:new Date().toISOString(),
+      }));
+      $('#msgs').scrollTop = $('#msgs').scrollHeight;
+    } else toast('Errore invio');
+  } catch (e) { toast('Errore rete'); }
+  finally { $('#reply').disabled=false; $('#send').disabled=false; $('#reply').focus(); }
+}
+document.querySelectorAll('.case-chip').forEach(c =>
+  c.addEventListener('click', () => openCaseThread(c.dataset.case)));
+$('#send').addEventListener('click', sendReply);
+$('#reply').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); }
+});
+// auto-refresh silenzioso
+setInterval(async () => {
+  if (!APP.activeCase) return;
+  try {
+    const d = await call('thanatos_intel.api.portal_chat.get_case_thread', {case_name: APP.activeCase});
+    const msgs = $('#msgs');
+    const cur = msgs.querySelectorAll('.bubble').length;
+    if (d.messages?.length !== cur) {
+      const nearBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 100;
+      msgs.innerHTML = d.messages.map(renderBubble).join('');
+      if (nearBottom) msgs.scrollTop = msgs.scrollHeight;
+    }
+  } catch (_) {}
+}, 5000);
+</script>
+{% endraw %}
+</body></html>

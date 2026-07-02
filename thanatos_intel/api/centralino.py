@@ -514,3 +514,71 @@ def send_media(lead_name, file_url, caption=""):
                 "error": resp.get("error", {}).get("message") or str(resp)[:300]}
     return {"ok": True, "message_id": wa_mid,
             "file_url": file_url, "filename": filename, "wa_type": wa_type}
+
+
+@frappe.whitelist()
+def global_search(q, limit=20):
+    """Ricerca globale cross-doctype per la Switchboard: chat, casi, reperti,
+    clienti. Ritorna un dict per tipo, ognuno con lista di risultati."""
+    q = (q or "").strip()
+    if len(q) < 2:
+        return {"chats": [], "cases": [], "evidences": [], "clients": []}
+    like = f"%{q}%"
+    limit = min(int(limit), 50)
+    out = {}
+    out["chats"] = frappe.db.sql(
+        """
+        SELECT l.name, l.source_name, l.source_identifier, l.source_type,
+               l.status, l.linked_case
+        FROM `tabIntel Lead` l
+        WHERE l.source_name LIKE %s OR l.source_identifier LIKE %s
+           OR l.name LIKE %s
+        ORDER BY l.last_message_at DESC LIMIT %s
+        """,
+        (like, like, like, limit), as_dict=True,
+    )
+    out["cases"] = frappe.db.sql(
+        """
+        SELECT c.name, c.case_title, c.status, c.case_type,
+               (SELECT client_name FROM `tabInvestigation Client`
+                WHERE name = c.client) as client_name
+        FROM `tabInvestigation Case` c
+        WHERE c.name LIKE %s OR c.case_title LIKE %s OR c.summary LIKE %s
+        ORDER BY c.modified DESC LIMIT %s
+        """,
+        (like, like, like, limit), as_dict=True,
+    )
+    out["evidences"] = frappe.db.sql(
+        """
+        SELECT e.name, e.evidence_name, e.investigation_case, e.authenticity,
+               LEFT(e.notes, 140) as notes_preview
+        FROM `tabInvestigation Evidence` e
+        WHERE e.evidence_name LIKE %s OR e.notes LIKE %s
+        ORDER BY e.creation DESC LIMIT %s
+        """,
+        (like, like, limit), as_dict=True,
+    )
+    out["clients"] = frappe.db.sql(
+        """
+        SELECT name, client_name, client_type, phone, email
+        FROM `tabInvestigation Client`
+        WHERE client_name LIKE %s OR name LIKE %s OR phone LIKE %s
+           OR email LIKE %s
+        ORDER BY modified DESC LIMIT %s
+        """,
+        (like, like, like, like, limit), as_dict=True,
+    )
+    # ricerca anche nei messaggi (contenuti, ultimi N giorni)
+    out["messages"] = frappe.db.sql(
+        """
+        SELECT m.parent as lead, m.direction, m.sent_at,
+               LEFT(m.content, 160) as preview,
+               l.source_name, l.source_identifier
+        FROM `tabIntel Lead Message` m
+        JOIN `tabIntel Lead` l ON l.name = m.parent
+        WHERE m.content LIKE %s AND m.creation > NOW() - INTERVAL 60 DAY
+        ORDER BY m.sent_at DESC LIMIT %s
+        """,
+        (like, limit), as_dict=True,
+    )
+    return out
