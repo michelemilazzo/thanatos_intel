@@ -244,11 +244,15 @@ def _score_delta(connector: str, res: dict):
         if res.get("found"):
             m = res.get("matches") or []
             topics = {t for h in m for t in (h.get("topics") or [])}
+            # Un riscontro in liste sanzioni/crimine e' il segnale pubblico piu' grave:
+            # da solo deve portare la banda a Critical (>=75 = rosso), non a Medium.
             if "sanction" in topics or "crime" in topics:
-                return 40, f"{len(m)} match sanzioni/crimine"
+                return 80, f"{len(m)} match sanzioni/crimine"
+            # PEP/POI: profilo a rischio elevato -> High (>=50 = arancio) da solo.
             if "role.pep" in topics or "poi" in topics:
-                return 20, f"{len(m)} match PEP/POI"
-            return 15, f"{len(m)} match liste"
+                return 50, f"{len(m)} match PEP/POI"
+            # Altre liste (watchlist generiche/adverse): almeno Medium (>=25 = giallo).
+            return 30, f"{len(m)} match liste"
         return 0, ""
     if connector == "wallet":
         if res.get("error"):
