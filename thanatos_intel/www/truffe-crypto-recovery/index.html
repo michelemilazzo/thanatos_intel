@@ -1,0 +1,104 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
+
+{% block title %}Truffe di "crypto recovery" — Thanatos Intel{% endblock %}
+
+{% block head_include %}
+{{ seo_head(
+   title='Truffe di crypto recovery: private key finder, flash USDT, non-spendable — Thanatos Intel',
+   description='Chi ti promette di trovare la chiave privata dal tuo indirizzo, di rendere "spendibili" fondi non-spendable o di regalarti Flash USDT ti sta truffando. Ecco perché, come funziona lo schema, cosa fare.',
+   path='/truffe-crypto-recovery',
+   og_type='article') }}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0A0E1A;--navy2:#13192C;--panel:#111729;--gold:#C8A96E;--gold2:#E0C58A;
+  --muted:#7A8294;--text:#E6E8EE;--line:#1F2742;--danger:#E85B5B;}
+body.ppu-page,body.ppu-page .page_content,body.ppu-page .container,body.ppu-page .container-fluid,body.ppu-page main,body.ppu-page #page-content{
+  max-width:100%!important;width:100%!important;padding:0!important;margin:0!important;
+  background:var(--navy)!important;color:var(--text)!important;
+  font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif!important;}
+.hero{padding:96px 24px 48px;text-align:center;background:radial-gradient(ellipse at top,#2A0E0E 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
+.hero .eyebrow{font-size:11px;letter-spacing:6px;color:var(--danger);text-transform:uppercase;}
+.hero h1{font-family:'Cinzel Decorative',Georgia,serif;font-weight:700;font-size:38px;color:#fff;margin:14px 0 12px;}
+.hero h1 em{font-style:normal;color:var(--gold);}
+.hero p{color:#B8BCCC;max-width:720px;margin:0 auto;font-size:16px;line-height:1.6;}
+.wrap{max-width:860px;margin:56px auto;padding:0 24px 56px;}
+.wrap h2{font-family:'Cinzel',Georgia,serif;color:var(--gold);font-size:18px;letter-spacing:3px;text-transform:uppercase;margin:48px 0 18px;}
+.wrap p, .wrap li{color:#B8BCCC;line-height:1.7;font-size:16px;}
+.wrap p b, .wrap li b{color:#fff;}
+.card{background:var(--panel);border:1px solid var(--line);padding:20px 22px;margin:14px 0;}
+.card.red{border-left:3px solid var(--danger);}
+.card.gold{border-left:3px solid var(--gold);}
+.card h3{color:#fff;margin:0 0 8px;font-size:16px;letter-spacing:1px;text-transform:uppercase;}
+.claim{color:var(--danger);font-family:'Menlo',monospace;font-size:13px;background:rgba(232,91,91,.08);padding:6px 10px;display:inline-block;margin:6px 0;}
+.cta{margin:64px 0 0;text-align:center;padding:40px 24px;background:var(--navy2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+.cta h2{color:var(--gold);margin:0 0 8px;}
+.cta a.btn{display:inline-block;margin-top:16px;padding:14px 36px;background:var(--gold);color:var(--navy);text-decoration:none;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:13px;}
+</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header() }}
+<div class="hero">
+  <div class="eyebrow">Allarme truffa</div>
+  <h1>Nessuno può <em>&laquo;recuperare&raquo;</em> le tue crypto perse.</h1>
+  <p>Se qualcuno ti promette di ricavare la chiave privata dal tuo indirizzo pubblico, di rendere "spendibili" fondi congelati o di consegnarti "Flash USDT" gratuiti, ti sta truffando. Ecco perché, come riconoscere lo schema e cosa fare.</p>
+</div>
+
+<div class="wrap">
+
+<h2>Le tre bugie ricorrenti</h2>
+
+<div class="card red">
+<h3>1. &laquo;Trovo la tua chiave privata dall'indirizzo&raquo;</h3>
+<p>Un indirizzo Bitcoin/Ethereum è generato da una chiave privata usando funzioni matematiche <b>a senso unico</b> (curve ellittiche, SHA-256/Keccak). Ricavare la chiave dall'indirizzo richiederebbe più energia di quella prodotta dal Sole in tutta la sua vita. Chi lo promette (spesso con nomi tipo <span class="claim">private key finder</span>, <span class="claim">brute force wallet</span>, <span class="claim">recovery-phrase-finder</span>) sta mentendo.</p>
+</div>
+
+<div class="card red">
+<h3>2. &laquo;Rendo &quot;spendibili&raquo; i tuoi USDT non-spendable&raquo;</h3>
+<p>Quando Tether blacklista un wallet (per truffa, ordine giudiziario, sanzioni) il contratto USDT <b>rifiuta ogni trasferimento</b> da quell'indirizzo. Non c'è nessun "sblocco" possibile lato utente: solo Tether può togliere il blacklist e non lo fa mai su richiesta di terzi. Le pubblicità del tipo <span class="claim">make non-spendable spendable</span> sono l'esca di uno schema di anticipo (ti chiedono un "fee di sblocco" e spariscono).</p>
+</div>
+
+<div class="card red">
+<h3>3. &laquo;Ti regalo Flash USDT / Flash Bitcoin&raquo;</h3>
+<p>Il "Flash USDT" è <b>USDT falso</b>: un token con nome e simbolo identici a Tether, ma smart-contract diverso. Compare nel wallet, non si può scambiare né prelevare. Lo scam finale è: "ora paga la commissione per attivarli" — paghi in USDT veri, ricevi promesse di token che non esistono.</p>
+</div>
+
+<h2>I segnali per riconoscere lo scam</h2>
+<ul>
+<li>Ti scrivono <b>loro per primi</b> (Telegram, Instagram, commento sotto un post su portafogli hackerati).</li>
+<li>Il sito ha URL simili a servizi legittimi ma non risponde a WHOIS, ha meno di 6 mesi di dominio, o è ospitato su hosting bulletproof.</li>
+<li>Chiedono un <b>anticipo</b> ("gas fee", "smart-contract fee", "blockchain miner fee", "verification fee"). I recuperi legittimi non anticipano MAI.</li>
+<li>Nome del "servizio" con parole chiave forti: <b>recovery</b>, <b>refund</b>, <b>hunter</b>, <b>expert</b>, <b>vault12</b>, <b>ledgerlive-support</b>, <b>metamask-recovery</b>.</li>
+<li>Repository GitHub vuoti o pieni di frasi ripetute in inglese (SEO spam).</li>
+</ul>
+
+<h2>Cosa fare se ti sei accorto ORA di una truffa</h2>
+<div class="card gold">
+<ol>
+<li>Non pagare altro, non rispondere.</li>
+<li>Blocca il contatto e conserva ogni screenshot, wallet, transazione, contratto smart.</li>
+<li>Se hai perso somme rilevanti, fai denuncia formale (Polizia Postale in Italia).</li>
+<li>Segnala i wallet in blacklist internazionale (Chainabuse, OFAC, OpenSanctions).</li>
+<li>Contattaci per una <b>analisi forense on-chain</b> — non promettiamo recupero, promettiamo <b>tracciabilità</b>: dove sono finiti i fondi e chi c'è dietro. Utile in sede penale e per Tether per congelare quello che è ancora nel network.</li>
+</ol>
+</div>
+
+<h2>Cosa promettiamo (e cosa non promettiamo) noi</h2>
+<p>Thanatos Intel <b>non recupera</b> crypto già rubate. Chi te lo promette ti mente. Quello che facciamo è:</p>
+<ul>
+<li>Ricostruzione OSINT del flusso dei fondi (attribuzione wallet, mixer, exchange di uscita).</li>
+<li>Fascicolo forense utilizzabile in denuncia (già usato con Polizia Postale, procure, autorità estere).</li>
+<li>Segnalazione ai compliance officer degli exchange di destinazione (KYC exchange = punto di attrito reale).</li>
+<li>Consulenza su come <b>proteggere</b> quello che ti resta (self-custody, multisig, backup Shamir).</li>
+</ul>
+
+<div class="cta">
+  <h2>Hai subito una truffa crypto?</h2>
+  <p>Analisi preliminare gratuita entro 48h.</p>
+  <a class="btn" href="/portale">Apri un caso</a>
+</div>
+
+</div>
+{{ thanatos_footer() }}
+{% endblock %}
