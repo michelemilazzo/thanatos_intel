@@ -213,18 +213,77 @@ def patrimoniale(name, surname, tax_code, investigation_case=None, max_wait=25):
     return out
 
 
-# ── VERIFICA IBAN (titolare, banca, validità) — trust ───────────────────────
+# ── TRUST (IBAN/telefono/email): il valore va NEL PATH, flusso async ─────────
+def _trust_async(endpoint, value, max_wait=25):
+    """POST /{endpoint}/{value} → poll GET /{endpoint}/{id} finché state esce da
+    NEW/WAIT. Ritorna (data, err)."""
+    code, b = _post("trust", f"/{endpoint}/{value}", {})
+    if code not in (200, 201, 202):
+        return None, f"trust HTTP {code}: {(b or {}).get('message') or ''}"
+    d = (b or {}).get("data") or {}
+    if isinstance(d, list):
+        d = d[0] if d else {}
+    deadline = time.time() + max_wait
+    while (d.get("state") or "").upper() in ("NEW", "WAIT") and d.get("id") and time.time() < deadline:
+        time.sleep(3)
+        _, b2 = _get("trust", f"/{endpoint}/{d['id']}")
+        d2 = (b2 or {}).get("data") or {}
+        d = (d2[0] if d2 else d) if isinstance(d2, list) else (d2 or d)
+    return d, None
+
+
 @frappe.whitelist()
 def verifica_iban(iban, investigation_case=None):
-    code, b = _post("trust", "/iban-advanced", {"iban": iban})
-    if code not in (200, 201):
-        return {"error": f"trust HTTP {code}: {(b or {}).get('message') or ''}", "iban": iban}
-    d = (b or {}).get("data") or {}
-    out = {"iban": iban, "valido": d.get("valid"), "banca": d.get("bank") or d.get("bankName"),
-           "titolare": d.get("owner") or d.get("holder"), "paese": d.get("country")}
-    lines = [f"Verifica IBAN {iban}", f"Valido: {out['valido']} · Banca: {out['banca'] or '—'}",
-             f"Titolare: {out['titolare'] or '—'}"]
-    out["evidence"] = _evidence(investigation_case, f"Verifica IBAN — {iban}", lines,
+    """Validità IBAN + dati filiale bancaria + raggiungibilità SEPA (trust /iban-start)."""
+    iban_c = (iban or "").replace(" ", "").upper()
+    d, err = _trust_async("iban-start", iban_c)
+    if err:
+        return {"error": err, "iban": iban_c}
+    out = {"iban": iban_c, "stato": d.get("state"),
+           "valido": d.get("valid", d.get("isValid")),
+           "banca": d.get("bank") or d.get("bankName") or (d.get("branch") or {}).get("bank"),
+           "bic": d.get("bic") or (d.get("branch") or {}).get("bic"),
+           "paese": d.get("country"), "sepa": d.get("sepa"), "dati": d}
+    lines = [f"Verifica IBAN {iban_c}", f"Stato: {out['stato']} · Valido: {out['valido']}",
+             f"Banca: {out['banca'] or '—'} · BIC: {out['bic'] or '—'} · SEPA: {out['sepa']}",
+             str(d)[:400]]
+    out["evidence"] = _evidence(investigation_case, f"Verifica IBAN — {iban_c}", lines,
+                                source="openapi trust")
+    return out
+
+
+@frappe.whitelist()
+def verifica_telefono(numero, investigation_case=None):
+    """Verifica avanzata di un numero (fraud score, operatore, tipo linea) — trust
+    /phone-advanced."""
+    num = (numero or "").replace(" ", "")
+    d, err = _trust_async("phone-advanced", num)
+    if err:
+        return {"error": err, "numero": num}
+    out = {"numero": num, "stato": d.get("state"), "fraud_score": d.get("fraud_score") or d.get("fraudScore"),
+           "operatore": d.get("carrier") or d.get("operator"), "tipo": d.get("line_type") or d.get("lineType"),
+           "paese": d.get("country"), "dati": d}
+    lines = [f"Verifica telefono {num}", f"Fraud score: {out['fraud_score']} · Operatore: {out['operatore'] or '—'}"
+             f" · Linea: {out['tipo'] or '—'}", str(d)[:400]]
+    out["evidence"] = _evidence(investigation_case, f"Verifica telefono — {num}", lines,
+                                source="openapi trust")
+    return out
+
+
+@frappe.whitelist()
+def verifica_email(email, investigation_case=None):
+    """Verifica avanzata email (esistenza, fraud score, reputazione) — trust
+    /email-advanced."""
+    em = (email or "").strip().lower()
+    d, err = _trust_async("email-advanced", em)
+    if err:
+        return {"error": err, "email": em}
+    out = {"email": em, "stato": d.get("state"), "fraud_score": d.get("fraud_score") or d.get("fraudScore"),
+           "esiste": d.get("deliverable", d.get("exists")), "disposable": d.get("disposable"),
+           "dati": d}
+    lines = [f"Verifica email {em}", f"Fraud score: {out['fraud_score']} · Recapitabile: {out['esiste']}"
+             f" · Usa e getta: {out['disposable']}", str(d)[:400]]
+    out["evidence"] = _evidence(investigation_case, f"Verifica email — {em}", lines,
                                 source="openapi trust")
     return out
 

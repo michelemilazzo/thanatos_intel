@@ -239,8 +239,32 @@ def case_ai_chat(case, message):
             if r.get("error"):
                 return done(f"⚠️ IBAN: {r['error']}")
             return done(f"🏦 IBAN {mi.group(1)}: valido {r.get('valido')} · banca {r.get('banca') or '—'} · "
-                        f"titolare {r.get('titolare') or '—'}", "iban")
+                        f"BIC {r.get('bic') or '—'} · SEPA {r.get('sepa')}", "iban")
         return done("Indicami l'IBAN da verificare, es. «verifica IBAN IT60X0542811101000000123456».")
+
+    # — verifica telefono (fraud score, operatore) —
+    if re.search(r"verifica.*telefono|telefono.*verific|controlla.*numero|verifica.*numero|verifica.*cellular", t):
+        mt = re.search(r"(\+?\d[\d\s]{7,17}\d)", message or "")
+        if mt:
+            from thanatos_intel.osint.openapi_client import verifica_telefono
+            r = verifica_telefono(mt.group(1), investigation_case=case)
+            if r.get("error"):
+                return done(f"⚠️ Telefono: {r['error']}")
+            return done(f"📞 {r.get('numero')}: fraud score {r.get('fraud_score')} · "
+                        f"operatore {r.get('operatore') or '—'} · linea {r.get('tipo') or '—'}", "telefono")
+        return done("Indicami il numero, es. «verifica telefono +393501234567».")
+
+    # — verifica email (esistenza, fraud score) —
+    if re.search(r"verifica.*mail|mail.*verific|controlla.*mail", t):
+        me = re.search(r"([\w.+-]+@[\w-]+\.[\w.]+)", message or "")
+        if me:
+            from thanatos_intel.osint.openapi_client import verifica_email
+            r = verifica_email(me.group(1), investigation_case=case)
+            if r.get("error"):
+                return done(f"⚠️ Email: {r['error']}")
+            return done(f"✉️ {r.get('email')}: fraud score {r.get('fraud_score')} · "
+                        f"recapitabile {r.get('esiste')} · usa-e-getta {r.get('disposable')}", "email")
+        return done("Indicami l'email, es. «verifica email nome@dominio.com».")
 
     # — veicolo per targa (proprietario/assicurazione) —
     if re.search(r"\btarga\b|veicol|\bauto\b|automobil", t):
