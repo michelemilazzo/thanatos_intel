@@ -51,16 +51,28 @@ def _hdr():
     return {"Authorization": f"Bearer {_token()}", "Content-Type": "application/json"}
 
 
+def _json(r):
+    """Body come dict, senza mai crashare: risposte non-JSON (es. errore XML/HTML di
+    un CDN/gateway) diventano {'message': <testo>} così i chiamanti danno un errore
+    pulito invece di un traceback."""
+    if not r.text:
+        return {}
+    try:
+        return r.json()
+    except Exception:
+        return {"message": (r.text or "").strip()[:300]}
+
+
 def _get(service, path, params=None):
     import requests
     r = requests.get(f"{_base(service)}{path}", headers=_hdr(), params=params or {}, timeout=40)
-    return r.status_code, (r.json() if r.text else {})
+    return r.status_code, _json(r)
 
 
 def _post(service, path, body):
     import requests
     r = requests.post(f"{_base(service)}{path}", headers=_hdr(), json=body, timeout=60)
-    return r.status_code, (r.json() if r.text else {})
+    return r.status_code, _json(r)
 
 
 def _async(service, post_path, body, result_path, max_wait=25):
