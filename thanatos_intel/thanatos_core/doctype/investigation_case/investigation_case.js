@@ -12,6 +12,70 @@ frappe.ui.form.on('Investigation Case', {
         thanatos_set_monitor_operators(frm);
 
         if (!frm.is_new()) {
+            // Bottone Chiudi/Riapri caso
+            if (frm.doc.status !== "Closed") {
+                frm.add_custom_button(__("Chiudi caso"), () => {
+                    frappe.confirm("Chiudere questo caso?", () => {
+                        frappe.call({
+                            method: "frappe.client.set_value",
+                            args: {
+                                doctype: "Investigation Case",
+                                name: frm.doc.name,
+                                fieldname: { status: "Closed" }
+                            },
+                            callback: () => {
+                                frappe.show_alert({ message: __("Caso chiuso"), indicator: "green" });
+                                frm.reload_doc();
+                            }
+                        });
+                    });
+                }, __("Azioni"));
+            } else {
+                frm.add_custom_button(__("Riapri caso"), () => {
+                    frappe.confirm("Riaprire questo caso?", () => {
+                        frappe.call({
+                            method: "frappe.client.set_value",
+                            args: {
+                                doctype: "Investigation Case",
+                                name: frm.doc.name,
+                                fieldname: { status: "Open" }
+                            },
+                            callback: () => {
+                                frappe.show_alert({ message: __("Caso riaperto"), indicator: "green" });
+                                frm.reload_doc();
+                            }
+                        });
+                    });
+                }, __("Azioni"));
+            }
+
+            // Carica e renderizza la chat del lead collegato
+            setTimeout(() => {
+                frappe.call({
+                    method: "frappe.client.get_list",
+                    args: {
+                        doctype: "Intel Lead",
+                        filters: {linked_case: frm.doc.name},
+                        fields: ["name", "source_name", "source_identifier", "source_type"],
+                        limit_page_length: 1,
+                    },
+                    callback: r => {
+                        const lead = (r.message || [])[0];
+                        if (lead && frm.fields_dict.case_chat_panel) {
+                            frappe.call({
+                                method: "thanatos_intel.api.centralino.get_thread",
+                                args: { lead_name: lead.name },
+                                callback: r2 => {
+                                    if (r2.message) {
+                                        renderCaseChat(frm, r2.message);
+                                    }
+                                }
+                            });
+                        }
+                    }
+                });
+            }, 500);
+
             // Bottone WhatsApp Cliente: apre la chat WA del lead collegato nella PWA
             frappe.call({
                 method: "frappe.client.get_list",
@@ -615,6 +679,43 @@ frappe.ui.form.on('Investigation Case', {
         if (window.ThanatosCockpit) ThanatosCockpit.render(frm);
     }
 });
+
+
+function renderCaseChat(frm, thread) {
+    const $w = frm.fields_dict.case_chat_panel && frm.fields_dict.case_chat_panel.$wrapper;
+    if (!$w) return;
+
+    const srcName = frappe.utils.escape_html(thread.source_name || thread.source_identifier || thread.name);
+    let html = `
+<div style="font-size:13px;line-height:1.6;padding:12px">
+  <div style="color:#888;margin-bottom:12px;font-weight:600">💬 Chat cliente: ${srcName}</div>
+  <div style="max-height:400px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;padding:8px;background:#f9f9f9">`;
+
+    (thread.messages || []).forEach(m => {
+        const isOut = m.direction === "Outbound";
+        const align = isOut ? "flex-end" : "flex-start";
+        const bg = isOut ? "#e8e8ff" : "#fff";
+        const ts = m.sent_at ? frappe.datetime.str_to_user(m.sent_at) : "";
+        const media = m.media_url
+            ? `<div style="margin-top:4px;font-size:11px"><a href="${frappe.utils.escape_html(m.media_url)}" target="_blank" rel="noopener">📎 allegato</a></div>`
+            : "";
+
+        html += `
+<div style="display:flex;justify-content:${align};margin:6px 0">
+  <div style="max-width:75%;background:${bg};border-radius:8px;padding:8px 10px;font-size:12px">
+    <div style="color:#555;font-size:10px;margin-bottom:2px">${ts}</div>
+    <div style="word-wrap:break-word">${frappe.utils.escape_html(m.content || "")}${media}</div>
+  </div>
+</div>`;
+    });
+
+    html += `
+  </div>
+  <div style="color:#888;font-size:11px;margin-top:8px">Totale: ${(thread.messages || []).length} messaggi</div>
+</div>`;
+
+    $w.html(html);
+}
 
 
 function thanatos_set_monitor_operators(frm) {

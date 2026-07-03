@@ -18,6 +18,16 @@
    "label": ""
   },
   {
+   "fieldname": "tab_chat",
+   "fieldtype": "Tab Break",
+   "label": "Chat cliente"
+  },
+  {
+   "fieldname": "case_chat_panel",
+   "fieldtype": "HTML",
+   "label": ""
+  },
+  {
    "fieldname": "tab_dati",
    "fieldtype": "Tab Break",
    "label": "Dati caso"
