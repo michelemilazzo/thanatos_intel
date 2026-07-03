@@ -322,6 +322,35 @@
   ::-webkit-scrollbar-thumb:hover { background:rgba(200,169,110,.3); }
   .gs-item:hover { background:rgba(200,169,110,.10) !important; border-left-color:var(--gold) !important; }
 
+  /* typing indicator */
+  .typing-dots { display:inline-flex; gap:4px; align-items:center; height:16px; }
+  .typing-dots i { width:6px; height:6px; border-radius:50%; background:var(--tx-mid);
+    animation: typedot 1.2s infinite ease-in-out; }
+  .typing-dots i:nth-child(2){ animation-delay:.2s; }
+  .typing-dots i:nth-child(3){ animation-delay:.4s; }
+  @keyframes typedot { 0%,60%,100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:1; } }
+
+  /* onboarding */
+  #onboarding { position:fixed; inset:0; background:rgba(5,8,18,.92); z-index:400;
+    display:flex; align-items:center; justify-content:center; padding:24px; }
+  #onboarding .ob-card { background:var(--panel); border:1px solid var(--gold-dim);
+    border-radius:16px; max-width:520px; padding:32px; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  #onboarding img { width:72px; height:72px; margin-bottom:12px; }
+  #onboarding h2 { font-family:var(--brand); color:var(--gold); letter-spacing:5px;
+    font-size:20px; margin:0 0 6px; }
+  #onboarding .ob-sub { color:var(--tx-mid); font-size:12px; letter-spacing:3px;
+    font-family:var(--serif); margin-bottom:22px; }
+  #onboarding .ob-feat { display:flex; gap:14px; text-align:left; padding:10px 4px;
+    align-items:flex-start; }
+  #onboarding .ob-feat .ic { font-size:22px; flex:0 0 28px; }
+  #onboarding .ob-feat .t { font-size:14px; font-weight:600; }
+  #onboarding .ob-feat .d { font-size:12.5px; color:var(--tx-mid); margin-top:2px; line-height:1.4; }
+  #onboarding .ob-cta { margin-top:24px; padding:12px 32px; border:0;
+    background:linear-gradient(180deg,var(--gold),var(--gold-dim)); color:var(--navy);
+    border-radius:8px; font-family:var(--brand); font-weight:600; letter-spacing:3px;
+    font-size:12px; text-transform:uppercase; cursor:pointer; }
+
   /* Call banner + HUD */
   #call-banner { position:fixed; top:20px; right:20px; z-index:300; }
   #call-banner .call-inner { display:flex; align-items:center; gap:12px;
@@ -867,6 +896,10 @@ async function openConversation(name) {
   try {
     const data = await call('thanatos_intel.api.centralino.get_thread', {lead_name:name});
     renderConversation(data);
+    // segna letto + azzera badge localmente
+    call('thanatos_intel.api.centralino.mark_read', {lead_name: name}).catch(()=>{});
+    const row = document.querySelector(`.conv-row[data-name="${CSS.escape(name)}"] .unread`);
+    if (row) row.remove();
   } catch (e) {
     root.innerHTML = '<div id="conv-empty">Errore caricamento conversazione</div>';
   }
@@ -909,6 +942,14 @@ function renderConversation(data) {
   $('#attach-file').addEventListener('change', e => uploadAndSend(e.target.files, APP.active));
   const micBtn = $('#mic-btn');
   micBtn.addEventListener('click', () => toggleMicRec(micBtn, APP.active));
+  // typing broadcast operatore
+  let typingTimer;
+  $('#reply').addEventListener('input', () => {
+    call('thanatos_intel.api.centralino.set_typing', {lead_name: APP.active, is_typing: 1}).catch(()=>{});
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() =>
+      call('thanatos_intel.api.centralino.set_typing', {lead_name: APP.active, is_typing: 0}).catch(()=>{}), 3000);
+  });
   const openBtn = root.querySelector('[data-open-case]');
   if (openBtn) openBtn.addEventListener('click', () => {
     window.open('/app/investigation-case/' + openBtn.dataset.openCase, '_blank');
@@ -1328,6 +1369,35 @@ function setupRealtime() {
   SIO.on('centralino_incoming_call', (data) => {
     showIncomingCall(data);
   });
+  SIO.on('centralino_typing', (data) => {
+    // mostro "sta scrivendo" solo se sto guardando quel thread e chi scrive è il cliente
+    if (!data || data.who === 'operator') return;
+    if (APP.activeType === 'chat' && APP.active === data.lead) {
+      showTyping(!!data.typing);
+    }
+  });
+}
+
+let TYPING_HIDE = null;
+function showTyping(on) {
+  let el = document.getElementById('typing-ind');
+  const msgs = $('#msgs');
+  if (!msgs) return;
+  if (on) {
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'typing-ind';
+      el.className = 'bubble in';
+      el.style.opacity = '.7';
+      el.innerHTML = '<span class="typing-dots"><i></i><i></i><i></i></span>';
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+    clearTimeout(TYPING_HIDE);
+    TYPING_HIDE = setTimeout(() => showTyping(false), 4000);
+  } else if (el) {
+    el.remove();
+  }
 }
 
 /* ─── Chiamate audio WA (WebRTC → aiortc media server) ─── */
@@ -1542,12 +1612,35 @@ async function toggleNotifications() {
 
 /* ─── init ─── */
 
+function maybeShowOnboarding() {
+  if (localStorage.getItem('sb_onboarded') === '1') return;
+  const ob = document.createElement('div');
+  ob.id = 'onboarding';
+  ob.innerHTML = `
+    <div class="ob-card">
+      <img src="/assets/thanatos_intel/images/thanatos-icon-192.png" alt="">
+      <h2>SWITCHBOARD</h2>
+      <div class="ob-sub">· BENVENUTO ·</div>
+      <div class="ob-feat"><div class="ic">💬</div><div><div class="t">Chat / Casi / Ingest</div><div class="d">Le conversazioni WhatsApp, i casi investigativi e la tua cassetta documenti in un solo posto.</div></div></div>
+      <div class="ob-feat"><div class="ic">🔍</div><div><div class="t">Cerca ovunque — Ctrl K</div><div class="d">Trova casi, chat, reperti, clienti e messaggi in un attimo.</div></div></div>
+      <div class="ob-feat"><div class="ic">🔔</div><div><div class="t">Notifiche push</div><div class="d">Attivale dal menu per essere avvisato anche con l'app chiusa.</div></div></div>
+      <div class="ob-feat"><div class="ic">📱</div><div><div class="t">Installa come app</div><div class="d">Dal menu utente → «Installa come app» per averla sul telefono/desktop.</div></div></div>
+      <button class="ob-cta" id="ob-close">Inizia</button>
+    </div>`;
+  document.body.appendChild(ob);
+  $('#ob-close').addEventListener('click', () => {
+    localStorage.setItem('sb_onboarded', '1');
+    ob.remove();
+  });
+}
+
 if (APP.isOperator) {
   initHeader();
   refreshTabs();
   loadCurrentSection();
   registerSW();
   setupRealtime();
+  maybeShowOnboarding();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', e => {
       const d = e.data || {};

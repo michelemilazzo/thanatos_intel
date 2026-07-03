@@ -100,7 +100,7 @@
   {
    "fieldname": "priority",
    "fieldtype": "Select",
-   "label": "Priorità",
+   "label": "Priorit\u00e0",
    "options": "Bassa\nMedia\nAlta\nCritica",
    "default": "Media",
    "in_list_view": 1,
@@ -190,6 +190,13 @@
    "fieldname": "notes",
    "fieldtype": "Text Editor",
    "label": "Note"
+  },
+  {
+   "fieldname": "operator_last_read",
+   "fieldtype": "Datetime",
+   "label": "Operator Last Read",
+   "read_only": 1,
+   "hidden": 1
   }
  ],
  "permissions": [

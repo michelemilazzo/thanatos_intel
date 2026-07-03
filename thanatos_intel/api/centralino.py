@@ -32,7 +32,11 @@ def get_conversations(filter_type="all", search=""):
             l.status, l.priority, l.assigned_to, l.last_message_at, l.creation,
             l.linked_case, l.linked_contact, l.whatsapp_number,
             (SELECT COUNT(*) FROM `tabIntel Lead Message` m
-             WHERE m.parent = l.name AND m.direction = 'Inbound') AS msg_count
+             WHERE m.parent = l.name AND m.direction = 'Inbound') AS msg_count,
+            (SELECT COUNT(*) FROM `tabIntel Lead Message` m
+             WHERE m.parent = l.name AND m.direction = 'Inbound'
+               AND (l.operator_last_read IS NULL
+                    OR m.sent_at > l.operator_last_read)) AS unread_count
         FROM `tabIntel Lead` l
         WHERE {where}
         ORDER BY COALESCE(l.last_message_at, l.creation) DESC
@@ -42,6 +46,41 @@ def get_conversations(filter_type="all", search=""):
         as_dict=True,
     )
     return rows
+
+
+@frappe.whitelist()
+def mark_read(lead_name):
+    """Segna la conversazione come letta dall'operatore (aggiorna operator_last_read).
+    Emette centralino_update per aggiornare il badge negli altri client aperti."""
+    frappe.db.set_value("Intel Lead", lead_name, "operator_last_read",
+                        now_datetime(), update_modified=False)
+    frappe.db.commit()
+    try:
+        frappe.publish_realtime("centralino_update",
+                                {"lead": lead_name, "type": "read"}, after_commit=True)
+    except Exception:
+        pass
+    return {"ok": True}
+
+
+@frappe.whitelist()
+def set_typing(lead_name, is_typing=1):
+    """Broadcast 'sta scrivendo' per un thread. Usato sia dagli operatori (PWA)
+    sia dai clienti (portale). L'evento centralino_typing porta chi scrive."""
+    who = "operator"
+    if frappe.session.user != "Guest":
+        roles = set(frappe.get_roles(frappe.session.user) or [])
+        if not (roles & {"System Manager", "Investigation Manager", "Investigator"}):
+            who = "client"
+    try:
+        frappe.publish_realtime(
+            "centralino_typing",
+            {"lead": lead_name, "typing": int(is_typing), "who": who,
+             "name": frappe.db.get_value("User", frappe.session.user, "full_name") or ""},
+        )
+    except Exception:
+        pass
+    return {"ok": True}
 
 
 @frappe.whitelist()

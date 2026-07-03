@@ -171,6 +171,15 @@ $('#send').addEventListener('click', sendReply);
 $('#reply').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); }
 });
+// typing broadcast cliente
+let typingTimer;
+$('#reply').addEventListener('input', () => {
+  if (!APP.activeLead) return;
+  call('thanatos_intel.api.centralino.set_typing', {lead_name: APP.activeLead, is_typing: 1}).catch(()=>{});
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() =>
+    call('thanatos_intel.api.centralino.set_typing', {lead_name: APP.activeLead, is_typing: 0}).catch(()=>{}), 3000);
+});
 $('#attach-btn').addEventListener('click', () => $('#attach-file').click());
 $('#attach-file').addEventListener('change', e => uploadFiles(e.target.files));
 async function uploadFiles(files) {
