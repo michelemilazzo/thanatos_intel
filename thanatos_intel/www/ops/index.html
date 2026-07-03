@@ -808,7 +808,11 @@ function renderCaseDetail(d) {
       ${d.summary ? `<div class="case-summary">${esc(d.summary)}</div>` : ''}
       ${chatSect}
       <div class="case-sect">
-        <div class="case-sect-h">Reperti (${(d.evidences||[]).length})</div>
+        <div class="case-sect-h" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Reperti (${(d.evidences||[]).length})</span>
+          <button class="upload-evidence-btn" data-case="${esc(d.name)}" style="font-size:12px;padding:4px 10px;cursor:pointer">📁 Carica</button>
+        </div>
+        <input type="file" id="evidence-file-${esc(d.name)}" style="display:none" multiple>
         <div class="ev-list">${evs}</div>
       </div>
       <div class="case-sect">
@@ -863,6 +867,14 @@ function renderCaseDetail(d) {
     // scroll ultimo msg
     const thread = root.querySelector('#wa-thread-' + CSS.escape(leadName));
     if (thread) thread.scrollTop = thread.scrollHeight;
+  }
+  // Wire upload evidence button
+  const uploadEvidenceBtn = root.querySelector('.upload-evidence-btn');
+  if (uploadEvidenceBtn) {
+    const caseId = uploadEvidenceBtn.dataset.case;
+    const fileInput = root.querySelector('#evidence-file-' + CSS.escape(caseId));
+    uploadEvidenceBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => uploadEvidence(e.target.files, caseId, root));
   }
   if (window.innerWidth <= 720) {
     const bb = root.querySelector('.back-btn'); if (bb) bb.style.display = 'inline-block';
@@ -1149,6 +1161,59 @@ async function uploadAndSend(files, leadName, threadEl) {
   }
 }
 window.uploadAndSend = uploadAndSend;
+
+async function uploadEvidence(files, caseId, rootEl) {
+  if (!files || !files.length || !caseId) return;
+  for (const file of files) {
+    try {
+      toast('⬆️ Carico reperto: ' + file.name + '…');
+      // Upload al DocType File di Frappe
+      const fd = new FormData();
+      fd.append('file', file, file.name);
+      fd.append('is_private', '1');
+      fd.append('folder', 'Home');
+      const up = await fetch('/api/method/upload_file', {
+        method: 'POST',
+        headers: {'X-Frappe-CSRF-Token': window.csrf_token || 'token'},
+        body: fd,
+        credentials: 'same-origin',
+      });
+      if (!up.ok) throw new Error('upload ' + up.status);
+      const uj = await up.json();
+      const fileUrl = uj.message?.file_url;
+      if (!fileUrl) throw new Error('no file_url');
+      // Crea Investigation Evidence nel caso
+      const r = await call('frappe.client.insert', {
+        doc: {
+          doctype: 'Investigation Evidence',
+          investigation_case: caseId,
+          evidence_name: file.name,
+          attached_file: fileUrl,
+          notes: '',
+        }
+      });
+      if (r) {
+        toast('✓ ' + file.name + ' aggiunto ai reperti');
+      } else {
+        toast('Errore creazione reperto per ' + file.name);
+      }
+    } catch (e) {
+      console.error(e);
+      toast('Errore su ' + file.name);
+    }
+  }
+  // Ricarica il caso per mostrare i nuovi reperti
+  if (rootEl && rootEl.querySelector('#case-desc')) {
+    setTimeout(() => {
+      const caseDiv = rootEl.querySelector('[data-case]');
+      if (caseDiv && APP.cases) {
+        const caseData = APP.cases.find(c => c.name === caseId);
+        if (caseData) renderCaseDetail(caseData);
+      }
+    }, 500);
+  }
+}
+window.uploadEvidence = uploadEvidence;
 
 async function sendReply() {
   const t = $('#reply').value.trim();
