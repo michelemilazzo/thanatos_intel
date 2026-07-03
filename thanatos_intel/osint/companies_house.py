@@ -139,3 +139,41 @@ def kyb_lookup(entity_name: str) -> dict:
             "accounts_overdue": bool(acc.get("overdue")),
             "officers": len(officers), "psc": len(psc),
             "persons_created": len(created_persons), "linked_companies": len(linked_companies)}
+
+
+def search_by_name(query: str) -> dict:
+    """Ricerca aziende UK per nome libero — connettore free_auto per public_scan/free_sources.
+
+    Non richiede Investigation Entity: prende una stringa (nome/parole chiave) e ritorna
+    fino a 5 match con company_number, status, tipo, indirizzo, data. Nessuna scrittura
+    su DB. Ritorna {"found": bool, "total": int, "matches": [...]}.
+    """
+    if not query or len(query.strip()) < 3:
+        return {"found": False, "total": 0, "matches": [], "error": "query troppo corta"}
+    if not frappe.conf.get("companies_house_api_key"):
+        return {"found": False, "total": 0, "matches": [], "stub": True,
+                "error": "companies_house_api_key non configurata"}
+    try:
+        q = requests.utils.quote(query.strip())
+        res = _api(f"/search/companies?q={q}&items_per_page=5")
+    except Exception as e:
+        return {"found": False, "total": 0, "matches": [], "error": str(e)[:200]}
+
+    items = res.get("items", [])
+    matches = []
+    for it in items:
+        addr = it.get("address") or {}
+        addr_str = ", ".join(filter(None, [
+            addr.get("address_line_1"), addr.get("locality"),
+            addr.get("postal_code"), addr.get("country"),
+        ]))
+        matches.append({
+            "name": it.get("title") or it.get("company_name"),
+            "company_number": it.get("company_number"),
+            "status": it.get("company_status"),
+            "type": it.get("company_type"),
+            "created": it.get("date_of_creation"),
+            "address": addr_str,
+            "topics": ["registered_uk"] + (["dissolved"] if it.get("company_status") == "dissolved" else []),
+        })
+    return {"found": bool(matches), "total": res.get("total_results", len(matches)), "matches": matches}

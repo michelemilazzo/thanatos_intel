@@ -25,6 +25,11 @@ PRICING = {
 # dal nostro costo. Override via site_config ai_flat_resale = [in, out].
 FREE_FLAT = (0.5, 1.5)
 
+# Forfait per-CHIAMATA quando i token non sono disponibili (gateway senza usage,
+# chiamata legacy senza response.usage). EUR/chiamata. Override via
+# site_config ai_flat_per_call. Impostare a 0 per non fatturare le chiamate untracked.
+FLAT_PER_CALL_EUR = 0.02
+
 
 def _flat_resale():
 	v = frappe.conf.get("ai_flat_resale")
@@ -65,6 +70,11 @@ def record_usage(client, model, tokens_in=0, tokens_out=0, provider=None, refere
 	rc = real_cost(model, tokens_in, tokens_out)
 	fin, fout = _flat_resale()
 	flat = round((float(tokens_in or 0) * fin + float(tokens_out or 0) * fout) / 1_000_000.0, 6)
+	# Fallback per-chiamata se non abbiamo token (gateway senza usage): forfait fisso.
+	# Utile per assicurare che TUTTE le chiamate AI producano revenue.
+	if not (tokens_in or tokens_out):
+		flat_per_call = float(frappe.conf.get("ai_flat_per_call") or FLAT_PER_CALL_EUR)
+		flat = max(flat, round(flat_per_call, 6))
 	cc = round(max(rc * _markup(client), flat), 6)
 	prov = provider or _guess_provider(model)
 	doc = frappe.get_doc({

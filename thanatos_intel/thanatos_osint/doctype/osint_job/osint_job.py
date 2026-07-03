@@ -240,6 +240,16 @@ def _score_delta(connector: str, res: dict):
         if (res.get("total") or 0) == 0:
             return 8, "nessun match registro"
         return 0, ""
+    if connector == "companies_house":
+        if res.get("found"):
+            m = res.get("matches") or []
+            dissolved = sum(1 for h in m if "dissolved" in (h.get("topics") or []))
+            if dissolved:
+                return 30, f"{dissolved} societa dissolte in UK"
+            return 5, f"{len(m)} match registro UK"
+        if not res.get("stub") and (res.get("total") or 0) == 0:
+            return 5, "nessun match Companies House"
+        return 0, ""
     if connector == "opensanctions":
         if res.get("found"):
             m = res.get("matches") or []

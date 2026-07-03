@@ -244,6 +244,8 @@ website_route_rules=[
  {'from_route': '/solutions', 'to_route': 'soluzioni'},
  {'from_route': '/solutions/<slug>', 'to_route': 'soluzioni'},
  {'from_route': '/services', 'to_route': 'servizi'},
+ {'from_route': '/servizi/<slug>', 'to_route': 'pillar_route'},
+ {'from_route': '/en/services/<slug>', 'to_route': 'pillar_route'},
  {'from_route': '/collaborate', 'to_route': 'collabora'},
  {'from_route': '/cases', 'to_route': 'casi'},
  {'from_route': '/contact', 'to_route': 'contatti'},
