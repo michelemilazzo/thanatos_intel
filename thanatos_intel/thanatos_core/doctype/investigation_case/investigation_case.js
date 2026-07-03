@@ -15,20 +15,7 @@ frappe.ui.form.on('Investigation Case', {
             // Bottone Chiudi/Riapri caso
             if (frm.doc.status !== "Closed") {
                 frm.add_custom_button(__("Chiudi caso"), () => {
-                    frappe.confirm("Chiudere questo caso?", () => {
-                        frappe.call({
-                            method: "frappe.client.set_value",
-                            args: {
-                                doctype: "Investigation Case",
-                                name: frm.doc.name,
-                                fieldname: { status: "Closed" }
-                            },
-                            callback: () => {
-                                frappe.show_alert({ message: __("Caso chiuso"), indicator: "green" });
-                                frm.reload_doc();
-                            }
-                        });
-                    });
+                    thanatos_show_close_dialog(frm);
                 }, __("Azioni"));
             } else {
                 frm.add_custom_button(__("Riapri caso"), () => {
@@ -679,6 +666,85 @@ frappe.ui.form.on('Investigation Case', {
         if (window.ThanatosCockpit) ThanatosCockpit.render(frm);
     }
 });
+
+
+function thanatos_show_close_dialog(frm) {
+    const d = new frappe.ui.Dialog({
+        title: __("Chiudi caso"),
+        fields: [
+            {
+                fieldname: "close_reason",
+                fieldtype: "Select",
+                label: __("Motivo chiusura"),
+                reqd: 1,
+                options: "Completato\nAbbandonato\nNon pagato\nCancellato\nIrrisolvibile\nAltro"
+            },
+            {
+                fieldname: "notes",
+                fieldtype: "Small Text",
+                label: __("Note (opzionale)"),
+                depends_on: "close_reason"
+            }
+        ],
+        primary_action_label: __("Chiudi"),
+        primary_action(values) {
+            d.hide();
+            const reason = values.close_reason;
+            const notes = values.notes || "";
+
+            // Azioni in base al motivo
+            let actions = [];
+
+            if (reason === "Non pagato") {
+                // Aggiungere il cliente a blacklist
+                actions.push(() => {
+                    frappe.call({
+                        method: "thanatos_intel.fraud_engine.blacklist_sync.add_case_to_blacklist",
+                        args: { case_name: frm.doc.name, reason: "Non pagato", notes: notes },
+                        freeze: true,
+                        freeze_message: __("Aggiunta a blacklist…"),
+                        callback: (r) => {
+                            if (r.message?.ok) {
+                                frappe.show_alert({ message: __("Cliente aggiunto a blacklist"), indicator: "orange" });
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Chiudi il caso
+            actions.push(() => {
+                frappe.call({
+                    method: "frappe.client.set_value",
+                    args: {
+                        doctype: "Investigation Case",
+                        name: frm.doc.name,
+                        fieldname: {
+                            status: "Closed",
+                            close_reason: reason,
+                            close_notes: notes
+                        }
+                    },
+                    freeze: true,
+                    freeze_message: __("Chiusura in corso…"),
+                    callback: () => {
+                        frappe.show_alert({ message: __("Caso chiuso: {0}", [reason]), indicator: "green" });
+                        frm.reload_doc();
+                    }
+                });
+            });
+
+            // Esegui tutte le azioni in sequenza
+            if (actions.length > 0) {
+                actions[0]();
+                if (actions.length > 1) {
+                    setTimeout(() => actions[1](), 800);
+                }
+            }
+        }
+    });
+    d.show();
+}
 
 
 function renderCaseChat(frm, thread) {

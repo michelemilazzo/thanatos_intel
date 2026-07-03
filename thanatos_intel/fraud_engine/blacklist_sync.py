@@ -76,3 +76,73 @@ def sync_blacklist_from_case(case_name):
     frappe.db.commit()
     return {"created": created, "skipped": skipped,
             "total_blacklist": frappe.db.count("Blacklist Entry")}
+
+
+@frappe.whitelist()
+def add_case_to_blacklist(case_name, reason="Non pagato", notes=""):
+    """Aggiunge il cliente del caso a blacklist quando il caso è chiuso per motivo critico
+    (non pagato, ecc.). Crea una Blacklist Entry per il cliente."""
+    frappe.only_for(("System Manager", "Investigation Manager", "Investigator"))
+    case = frappe.get_doc("Investigation Case", case_name)
+    if not case.client:
+        return {"ok": False, "error": "Caso non ha un cliente collegato"}
+
+    client = frappe.get_doc("Investigation Client", case.client)
+
+    # Prepara le entry da aggiungere a blacklist
+    entries = []
+
+    # Aggiungi email cliente
+    if client.email and "@" in client.email:
+        entries.append({
+            "entry_type": "Email",
+            "entry_value": client.email.lower(),
+            "reason": f"{reason}: {client.client_name} (Case {case_name}). {notes}"[:480]
+        })
+
+    # Aggiungi telefono cliente
+    if client.phone:
+        entries.append({
+            "entry_type": "Phone",
+            "entry_value": client.phone,
+            "reason": f"{reason}: {client.client_name} (Case {case_name}). {notes}"[:480]
+        })
+
+    # Aggiungi società se Company
+    if client.client_type == "Company" and client.piva:
+        entries.append({
+            "entry_type": "Company",
+            "entry_value": client.piva,
+            "reason": f"{reason}: {client.client_name} (Case {case_name}). {notes}"[:480]
+        })
+
+    # Crea le Blacklist Entry
+    created = 0
+    for entry in entries:
+        if not entry["entry_value"]:
+            continue
+        if frappe.db.exists("Blacklist Entry", {
+            "entry_type": entry["entry_type"],
+            "entry_value": entry["entry_value"]
+        }):
+            continue
+        frappe.get_doc({
+            "doctype": "Blacklist Entry",
+            "entry_type": entry["entry_type"],
+            "entry_value": entry["entry_value"],
+            "risk_level": "High" if reason == "Non pagato" else "Medium",
+            "is_active": 1,
+            "verified": 1,
+            "source": "Internal",
+            "case_ref": case_name,
+            "reason": entry["reason"],
+            "last_seen": nowdate()
+        }).insert(ignore_permissions=True)
+        created += 1
+
+    frappe.db.commit()
+    return {
+        "ok": True,
+        "created": created,
+        "message": f"{created} entry/es aggiunta/e a blacklist"
+    }

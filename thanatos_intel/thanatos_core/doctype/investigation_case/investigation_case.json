@@ -85,6 +85,21 @@
    "in_standard_filter": 1
   },
   {
+   "fieldname": "close_reason",
+   "fieldtype": "Select",
+   "label": "Motivo chiusura",
+   "options": "Completato\nAbbandonato\nNon pagato\nCancellato\nIrrisolvibile\nAltro",
+   "depends_on": "eval: doc.status == 'Closed'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "close_notes",
+   "fieldtype": "Small Text",
+   "label": "Note chiusura",
+   "depends_on": "eval: doc.status == 'Closed'",
+   "read_only": 1
+  },
+  {
    "fieldname": "sb_parties",
    "fieldtype": "Section Break",
    "label": "Parties"
