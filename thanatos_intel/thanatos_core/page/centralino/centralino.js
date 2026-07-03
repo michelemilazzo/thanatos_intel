@@ -15,6 +15,7 @@ class CentralinoPage {
         this.search = "";
         this.operatorStatus = "online";
         this._searchTimer = null;
+        this.pendingAttachments = []; // Track file attachments being uploaded
 
         this._injectStyles();
         this._render();
@@ -298,8 +299,13 @@ class CentralinoPage {
 
         const replyBox = isClosed ? "" : `
 <div class="ctlno-reply-wrap">
-  <textarea class="ctlno-reply-input" id="ctlno-reply-input" placeholder="Scrivi risposta… (Invio=nuova riga, Ctrl+Invio=invia)" rows="2"></textarea>
-  <button class="ctlno-send-btn" id="ctlno-send-btn">▶</button>
+  <div class="ctlno-attachments-list" id="ctlno-attachments-list"></div>
+  <div class="ctlno-reply-row">
+    <textarea class="ctlno-reply-input" id="ctlno-reply-input" placeholder="Scrivi risposta… (Invio=nuova riga, Ctrl+Invio=invia)" rows="2"></textarea>
+    <button class="ctlno-attach-btn" id="ctlno-attach-btn" title="Allega file">📎</button>
+    <button class="ctlno-send-btn" id="ctlno-send-btn">▶</button>
+  </div>
+  <input type="file" id="ctlno-file-input" multiple style="display:none;">
 </div>`;
 
         const srcName = frappe.utils.escape_html(data.source_name || data.source_identifier || data.name);
@@ -366,6 +372,30 @@ ${replyBox}`);
             if (e.ctrlKey && e.key === "Enter") this._sendReply();
         });
 
+        // Allega file
+        $(root).on("click.chat", "#ctlno-attach-btn", () => $("#ctlno-file-input").click());
+        $(root).on("change.chat", "#ctlno-file-input", (e) => this._uploadFiles(e.target.files));
+
+        // Drag-drop file nel chat area
+        const chatEl = $("#ctlno-messages");
+        chatEl.on("dragover.chat", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            chatEl.css("background", "rgba(200, 169, 110, 0.05)");
+        });
+        chatEl.on("dragleave.chat", (e) => {
+            e.preventDefault();
+            chatEl.css("background", "");
+        });
+        chatEl.on("drop.chat", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            chatEl.css("background", "");
+            if (e.originalEvent.dataTransfer.files) {
+                this._uploadFiles(e.originalEvent.dataTransfer.files);
+            }
+        });
+
         // Chiudi / Riapri
         $(root).on("click.chat", "#ctlno-btn-close", () => {
             frappe.confirm("Chiudere questa conversazione?", () => {
@@ -395,6 +425,13 @@ ${replyBox}`);
 
         // Promuovi a caso
         $(root).on("click.chat", "#ctlno-btn-promote", () => this._openPromoteDialog(data));
+
+        // Rimuovi allegato dalla lista
+        $(root).on("click.chat", ".ctlno-rm-attach", (e) => {
+            const idx = $(e.currentTarget).data("idx");
+            this.pendingAttachments.splice(idx, 1);
+            this._renderAttachmentsList();
+        });
     }
 
     _sendReply() {
@@ -428,6 +465,51 @@ ${replyBox}`);
         const html = this._bubbleHtml(m);
         $("#ctlno-messages").append(html);
         this._scrollBottom();
+    }
+
+    _uploadFiles(fileList) {
+        if (!this.activeLead || fileList.length === 0) return;
+
+        for (const file of fileList) {
+            frappe.call({
+                method: "thanatos_intel.api.centralino.upload_attachment",
+                args: { lead_name: this.activeLead },
+                files: { file: file },
+                callback: (r) => {
+                    if (r.message?.ok) {
+                        this.pendingAttachments.push({
+                            file_name: r.message.file_name,
+                            file_url: r.message.file_url,
+                        });
+                        this._renderAttachmentsList();
+                        // Mostra allegato nel thread
+                        this._appendBubble({
+                            direction: "Outbound",
+                            content: `[Allegato: ${r.message.file_name}]`,
+                            media_url: r.message.file_url,
+                            sent_at: frappe.datetime.now_datetime(),
+                            sent_by: frappe.session.user,
+                            status: "Caricato",
+                        });
+                    } else {
+                        frappe.msgprint(__("Errore caricamento: ") + (r.message?.error || "sconosciuto"));
+                    }
+                },
+            });
+        }
+        // Reset file input
+        $("#ctlno-file-input").val("");
+    }
+
+    _renderAttachmentsList() {
+        const items = this.pendingAttachments
+            .map((att, idx) => `
+<div class="ctlno-attachment-item">
+  <span>📎 ${frappe.utils.escape_html(att.file_name)}</span>
+  <span class="ctlno-rm-attach" data-idx="${idx}" title="Rimuovi">✕</span>
+</div>`)
+            .join("");
+        $("#ctlno-attachments-list").html(items);
     }
 
     _openAssignDialog() {
@@ -859,11 +941,39 @@ ${replyBox}`);
 /* ─── Reply box ───────────────────────────────────────────────────── */
 .ctlno-reply-wrap {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   padding: 10px 14px;
   border-top: 1px solid #1F2742;
   background: #0d1020;
   flex-shrink: 0;
+}
+.ctlno-attachments-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 0;
+}
+.ctlno-attachment-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #1F2742;
+  border: 1px solid #2d3a52;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #E8E9F0;
+}
+.ctlno-attachment-item .ctlno-rm-attach {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity .15s;
+}
+.ctlno-attachment-item .ctlno-rm-attach:hover { opacity: 1; }
+.ctlno-reply-row {
+  display: flex;
+  gap: 8px;
   align-items: flex-end;
 }
 .ctlno-reply-input {
@@ -880,6 +990,22 @@ ${replyBox}`);
   line-height: 1.5;
 }
 .ctlno-reply-input:focus { border-color: #C8A96E; }
+.ctlno-attach-btn {
+  background: #1F2742;
+  color: #C8A96E;
+  border: 1px solid #2d3a52;
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background .15s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ctlno-attach-btn:hover { background: #2d3a52; }
 .ctlno-send-btn {
   background: #C8A96E;
   color: #0A0E1A;

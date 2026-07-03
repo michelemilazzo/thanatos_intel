@@ -120,6 +120,48 @@ def send_reply(lead_name, message_text):
 
 
 @frappe.whitelist()
+def upload_attachment(lead_name):
+    """Carica un file allegato al lead. Il file viene ricevuto come multipart/form-data.
+    Ritorna {ok, file_url} oppure {ok: False, error}."""
+    import os
+    from werkzeug.datastructures import FileStorage
+    from frappe.utils import get_random_filename, get_safe_filename
+
+    try:
+        # Recupera il file da request.files
+        if "file" not in frappe.request.files:
+            return {"ok": False, "error": "Nessun file caricato"}
+
+        file_obj = frappe.request.files["file"]
+        if not file_obj or not file_obj.filename:
+            return {"ok": False, "error": "File invalido"}
+
+        # Valida il lead esiste
+        if not frappe.db.exists("Intel Lead", lead_name):
+            return {"ok": False, "error": "Lead non trovato"}
+
+        # Salva il file nel Frappe File system
+        fname = get_safe_filename(file_obj.filename)
+        content = file_obj.read()
+
+        file_doc = frappe.get_doc({
+            "doctype": "File",
+            "file_name": fname,
+            "attached_to_doctype": "Intel Lead",
+            "attached_to_name": lead_name,
+            "content": content,
+            "is_private": 1,
+        })
+        file_doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+
+        return {"ok": True, "file_url": file_doc.file_url, "file_name": file_doc.file_name}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "upload_attachment")
+        return {"ok": False, "error": "Errore caricamento file"}
+
+
+@frappe.whitelist()
 def close_lead(lead_name):
     frappe.db.set_value("Intel Lead", lead_name, "status", "Chiuso")
     frappe.db.commit()
