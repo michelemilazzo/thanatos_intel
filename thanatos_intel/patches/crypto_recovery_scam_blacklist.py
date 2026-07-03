@@ -4,6 +4,11 @@ Origine: audit di top GitHub repos per "crypto recovery" (2026-06-30) - 70%
 risultati erano SEO/scam. Pattern: 'private key finder', 'non-spendable
 spendable', 'flash USDT', completare mnemonic da indirizzo. Documentato in
 crypto-self-custody/docs/SEGNALAZIONI.md.
+
+Aggiornamento 2026-07-03: aggiunto pattern crypto-clipper / address-replacement
+(malware che sostituisce l'indirizzo BTC in pagina, es. Tampermonkey userscript
+zile42O/g2a-drainer che dirotta il QR di pagamento su g2a.com/payment verso
+api.zile42o.dev).
 """
 import frappe
 
@@ -41,30 +46,58 @@ GITHUB_USERS = [
     ("booboomrtwix", "Repo 'Solana-FarmBot-2026': nome ingannevole, descrizione = recovery BIP-39, profilo SEO."),
 ]
 
+# --- Crypto clipper / address-replacement (audit 2026-07-03) ---
+# Malware che intercetta l'indirizzo crypto in pagina/clipboard e lo sostituisce
+# con quello dell'attaccante, dirottando il pagamento. Distinto dal recovery
+# scam: qui la vittima paga volontariamente ma verso l'indirizzo sbagliato.
+CLIPPER_RULE_NAME = "Crypto Clipper / Address Replacement"
+CLIPPER_DATASET_TAG = "MMOS Crypto Clipper audit 2026-07-03"
 
-def _upsert_rule():
+CLIPPER_SELECTOR = '''
+import re
+text = (doc.case_summary or "") + " " + (doc.case_description or "")
+patterns = [
+    r"clipper",
+    r"(replac|swap|chang)\\w*\\s+(the\\s+)?(btc|bitcoin|wallet|crypto)\\s+address",
+    r"address\\s+(was\\s+)?(replac|swap|chang)",
+    r"(paid|sent).*(wrong|different|other)\\s+address",
+    r"tampermonkey|userscript|greasemonkey",
+    r"g2a[- ]?drainer|cryptoqr|zile42o",
+    r"qr\\s+code.*(swap|replac|redirect|hijack)",
+]
+result = any(re.search(p, text, re.I) for p in patterns)
+'''.strip()
+
+CLIPPER_DOMAINS = [
+    ("zile42o.dev", "Infra dell'autore del clipper zile42O (g2a-drainer). Dominio di controllo del malware di sostituzione indirizzo BTC."),
+    ("api.zile42o.dev", "Endpoint C2/exfil del clipper g2a-drainer: serve il QR/indirizzo BTC dell'attaccante (/cryptoqr/api.php) sostituendolo in pagina su g2a.com/payment."),
+]
+
+CLIPPER_GITHUB_USERS = [
+    ("zile42O", "Autore del repo g2a-drainer: userscript Tampermonkey che trova l'indirizzo BTC via regex sulla pagina di pagamento G2A e lo sostituisce con il proprio, dirottando il QR verso api.zile42o.dev. Clipper/payment-hijack."),
+]
+
+
+def _upsert_rule(rule_name, selector, score_delta, severity, match_message, notes):
     if not frappe.db.exists("DocType", "Risk Rule"):
         return None
-    name = frappe.db.get_value("Risk Rule", {"rule_name": RULE_NAME}, "name")
+    name = frappe.db.get_value("Risk Rule", {"rule_name": rule_name}, "name")
     d = frappe.get_doc("Risk Rule", name) if name else frappe.new_doc("Risk Rule")
     if not name:
-        d.rule_name = RULE_NAME
+        d.rule_name = rule_name
     d.enabled = 1
     d.category = "Cyber"
     d.applies_to = "Case"
-    d.score_delta = 80
-    d.severity = "High"
-    d.selector_expression = SELECTOR
-    d.match_message = ("Il case contiene linguaggio tipico delle truffe di "
-                       "'crypto recovery'. NON ingaggiare il cliente come "
-                       "servizio; valutare denuncia.")
-    d.notes = ("Seed da thanatos_intel.install._seed_crypto_recovery_scam_blacklist "
-               "(2026-06-30). Pattern in crypto-self-custody/docs/SEGNALAZIONI.md.")
+    d.score_delta = score_delta
+    d.severity = severity
+    d.selector_expression = selector
+    d.match_message = match_message
+    d.notes = notes
     d.save(ignore_permissions=True)
     return d.name
 
 
-def _upsert_blacklist(entry_type, entry_value, reason, source_url=""):
+def _upsert_blacklist(entry_type, entry_value, reason, dataset, source_url=""):
     if not frappe.db.exists("DocType", "Blacklist Entry"):
         return None
     name = frappe.db.get_value(
@@ -81,7 +114,7 @@ def _upsert_blacklist(entry_type, entry_value, reason, source_url=""):
     d.is_active = 1
     d.verified = 1
     d.source = "Internal"
-    d.source_dataset = DATASET_TAG
+    d.source_dataset = dataset
     d.source_url = source_url
     d.reason = reason
     d.save(ignore_permissions=True)
@@ -89,10 +122,30 @@ def _upsert_blacklist(entry_type, entry_value, reason, source_url=""):
 
 
 def apply():
-    _upsert_rule()
+    _upsert_rule(
+        RULE_NAME, SELECTOR, 80, "High",
+        ("Il case contiene linguaggio tipico delle truffe di 'crypto recovery'. "
+         "NON ingaggiare il cliente come servizio; valutare denuncia."),
+        ("Seed da thanatos_intel.install._seed_crypto_recovery_scam_blacklist "
+         "(2026-06-30). Pattern in crypto-self-custody/docs/SEGNALAZIONI.md."),
+    )
+    _upsert_rule(
+        CLIPPER_RULE_NAME, CLIPPER_SELECTOR, 80, "High",
+        ("Il case descrive un crypto-clipper / sostituzione indirizzo (pagamento "
+         "dirottato). Trattare come vittima di malware; NON sviluppare strumenti "
+         "analoghi. Raccogliere IOC (dominio C2, indirizzo attaccante)."),
+        ("Seed 2026-07-03 da audit repo zile42O/g2a-drainer (clipper Tampermonkey "
+         "su g2a.com/payment, exfil api.zile42o.dev)."),
+    )
     for dom, reason in DOMAINS:
-        _upsert_blacklist("Domain", dom, reason, source_url=f"https://{dom}")
+        _upsert_blacklist("Domain", dom, reason, DATASET_TAG, source_url=f"https://{dom}")
     for user, reason in GITHUB_USERS:
-        _upsert_blacklist("Person", user, reason,
+        _upsert_blacklist("Person", user, reason, DATASET_TAG,
+                          source_url=f"https://github.com/{user}")
+    for dom, reason in CLIPPER_DOMAINS:
+        _upsert_blacklist("Domain", dom, reason, CLIPPER_DATASET_TAG,
+                          source_url=f"https://{dom}")
+    for user, reason in CLIPPER_GITHUB_USERS:
+        _upsert_blacklist("Person", user, reason, CLIPPER_DATASET_TAG,
                           source_url=f"https://github.com/{user}")
     frappe.db.commit()
