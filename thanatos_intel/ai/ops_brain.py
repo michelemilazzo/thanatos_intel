@@ -241,9 +241,24 @@ def _codex_answer(text, operator=None, ctx_case=None):
         return None
     prompt = text if not ctx_case else f"[Caso di contesto: {ctx_case}] {text}"
     full = (_CLI_SYS + "\n\nRichiesta operatore: " + prompt)
-    remote = "codex exec --skip-git-repo-check " + shlex.quote(full)
+    # workdir codex trusted + flag opzionale per abilitare i tool MCP headless
+    workdir = frappe.conf.get("ops_brain_codex_workdir") or "/root/thanatos-brain"
+    port = int(frappe.conf.get("ops_brain_mcp_port") or 18099)
+    flags = "--skip-git-repo-check"
+    if frappe.conf.get("ops_brain_codex_bypass"):
+        # necessario perché codex headless annulla le chiamate MCP senza questo
+        flags += " --dangerously-bypass-approvals-and-sandbox"
+    remote = (f"cd {shlex.quote(workdir)} && codex exec {flags} "
+              + shlex.quote(full))
+    # tunnel SSH inverso: l'MCP resta su 127.0.0.1 di dev, codex lo raggiunge
+    # su ai-core solo durante la chiamata (nessuna esposizione di rete).
     cmd = ["ssh", "-o", "ConnectTimeout=8", "-o", "BatchMode=yes",
-           *shlex.split(ssh_target), remote]
+           "-o", "StrictHostKeyChecking=accept-new",
+           "-R", f"{port}:127.0.0.1:{port}"]
+    key = frappe.conf.get("ops_brain_codex_key")
+    if key:
+        cmd += ["-i", key]
+    cmd += [ssh_target, remote]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=175)
         out = (r.stdout or "").strip()
