@@ -1,0 +1,159 @@
+{
+  "doctype": "DocType",
+  "name": "Wallet Recovery Job",
+  "module": "Thanatos Core",
+  "track_changes": 1,
+  "autoname": "naming_series:",
+  "naming_series": "WRJ-",
+  "custom": 1,
+  "fields": [
+    {
+      "fieldname": "sb_identity",
+      "fieldtype": "Section Break",
+      "label": "Job Identity"
+    },
+    {
+      "fieldname": "case_id",
+      "fieldtype": "Link",
+      "options": "Investigation Case",
+      "label": "Investigation Case",
+      "reqd": 1,
+      "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "cb_status",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nUploaded\nProcessing\nCompleted\nError\nExpired",
+      "default": "Draft",
+      "in_list_view": 1,
+      "in_standard_filter": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "wallet_type",
+      "fieldtype": "Select",
+      "label": "Wallet Type",
+      "options": "BIP39 Seed\nElectrum Seed\nBIP38 Encrypted\nLedger Passphrase",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "sb_parameters",
+      "fieldtype": "Section Break",
+      "label": "Recovery Parameters"
+    },
+    {
+      "fieldname": "missing_words_count",
+      "fieldtype": "Int",
+      "label": "Missing Words Count",
+      "default": 1,
+      "description": "Numero di parole mancanti/sbagliate nel seed"
+    },
+    {
+      "fieldname": "wordlist_type",
+      "fieldtype": "Select",
+      "label": "BIP39 Wordlist",
+      "options": "english\nitalian\nspanish\nfrench\ngerman",
+      "default": "english"
+    },
+    {
+      "fieldname": "password_hint",
+      "fieldtype": "Small Text",
+      "label": "Password/Passphrase Hint (optional)",
+      "description": "Indizio per il passphrase (non verrà salvato in plain)"
+    },
+    {
+      "fieldname": "sb_files",
+      "fieldtype": "Section Break",
+      "label": "Files & Vault"
+    },
+    {
+      "fieldname": "seed_input_file",
+      "fieldtype": "Attach",
+      "label": "Seed Input (encrypted)",
+      "description": "File .enc con il seed parziale (crittografato dal client)"
+    },
+    {
+      "fieldname": "processing_command",
+      "fieldtype": "Code",
+      "label": "Generated CLI Command",
+      "options": "bash",
+      "read_only": 1,
+      "description": "Comando da eseguire offline sulla recovery machine"
+    },
+    {
+      "fieldname": "seed_output_file",
+      "fieldtype": "Attach",
+      "label": "Seed Output (encrypted result)",
+      "description": "File .enc con il seed completo (caricato dalla recovery machine)"
+    },
+    {
+      "fieldname": "result_vault_url",
+      "fieldtype": "Text",
+      "label": "Vault Download Link",
+      "read_only": 1,
+      "description": "Link temporaneo per scaricare il seed dal vault"
+    },
+    {
+      "fieldname": "result_expires_at",
+      "fieldtype": "Datetime",
+      "label": "Result Expires At",
+      "read_only": 1
+    },
+    {
+      "fieldname": "sb_audit",
+      "fieldtype": "Section Break",
+      "label": "Audit & Metadata",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "operator",
+      "fieldtype": "Link",
+      "options": "User",
+      "label": "Created By",
+      "read_only": 1
+    },
+    {
+      "fieldname": "created_on",
+      "fieldtype": "Datetime",
+      "label": "Created",
+      "read_only": 1
+    },
+    {
+      "fieldname": "notes",
+      "fieldtype": "Text",
+      "label": "Internal Notes"
+    },
+    {
+      "fieldname": "audit_log",
+      "fieldtype": "Text Editor",
+      "label": "Audit Log",
+      "read_only": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "Investigation Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1
+    },
+    {
+      "role": "Investigator",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "report": 1
+    }
+  ]
+}
