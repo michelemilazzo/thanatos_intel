@@ -9,6 +9,7 @@ uno strumento (JSON), noi lo eseguiamo e gli ridiamo l'esito per la risposta
 finale. Usato sia da WhatsApp (operatore) sia dal pannello AI della Switchboard.
 """
 import json
+import os
 import re
 import frappe
 
@@ -183,10 +184,55 @@ def _extract_toolcall(text):
     return None
 
 
+# ─────────────────────── motore CLI (Claude Code / Codex) ────────────────────
+
+_MCP_TOOLS = [
+    "mcp__thanatos__stats", "mcp__thanatos__global_search",
+    "mcp__thanatos__list_cases", "mcp__thanatos__case_detail",
+    "mcp__thanatos__screening_kyc", "mcp__thanatos__soci_ubo",
+    "mcp__thanatos__negativita", "mcp__thanatos__visura",
+    "mcp__thanatos__case_tool", "mcp__thanatos__run_query",
+]
+
+_CLI_SYS = (
+    "Sei il cervello operativo di Thanatos Intel, agenzia investigativa (sede "
+    "Romania, GDPR/Legea 329-2003). Parli con un OPERATORE interno: dagli del tu, "
+    "tono diretto e concreto, niente disclaimer. Hai gli strumenti MCP thanatos "
+    "(stats, global_search, list_cases, case_detail, screening_kyc, soci_ubo, "
+    "negativita, visura, case_tool, run_query): USALI per rispondere con dati "
+    "reali invece di inventare. Risposte brevi e operative, in italiano. Quando "
+    "citi un caso usa il codice CASE-AAAA-N. Non chiedere conferme: agisci."
+)
+
+
+def _cli_answer(text, operator=None, ctx_case=None, session_id=None):
+    """Interroga il cervello via Claude Code CLI + MCP thanatos (tutti gli
+    strumenti). Ritorna il testo, o None se il CLI non è disponibile."""
+    import subprocess
+    claude = frappe.conf.get("ops_brain_claude_bin") or "/usr/local/bin/claude"
+    if not os.path.exists(claude):
+        return None
+    prompt = text if not ctx_case else f"[Caso di contesto: {ctx_case}] {text}"
+    cmd = [claude, "-p", prompt,
+           "--append-system-prompt", _CLI_SYS,
+           "--allowedTools", *_MCP_TOOLS,
+           "--output-format", "text"]
+    env = dict(os.environ)
+    env["HOME"] = frappe.conf.get("ops_brain_home") or "/home/frappe"
+    env["THANATOS_SITE"] = frappe.local.site or "thanatos.onekeyco.com"
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=170, env=env)
+        out = (r.stdout or "").strip()
+        return out or None
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ops_brain cli")
+        return None
+
+
 def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
-    """Ciclo agentico: chiede al modello, esegue eventuali tool, ritorna la
-    risposta finale in testo. `operator` per personalizzare, `lead_name` per
-    agganciare un eventuale caso di contesto."""
+    """Cervello operativo. Motore primario = Claude Code CLI + MCP thanatos
+    (tutti gli strumenti via CLI). Fallback = ciclo agentico su gateway MMOS AI.
+    `operator` per personalizzare, `lead_name` per il caso di contesto."""
     from thanatos_intel.ai.doc_ingest import _gateway
 
     # caso di contesto (se la chat è agganciata o citato nel testo)
@@ -197,6 +243,14 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
     if m and frappe.db.exists("Investigation Case", m.group(0).upper()):
         ctx_case = m.group(0).upper()
 
+    # 1) motore CLI (default) — a meno che disattivato in site_config
+    if frappe.conf.get("ops_brain_engine", "cli") != "gateway":
+        cli = _cli_answer(text, operator=operator, ctx_case=ctx_case,
+                          session_id=session_id)
+        if cli:
+            return cli
+
+    # 2) fallback: ciclo agentico su gateway
     sid = session_id or f"opsbrain-{operator or 'x'}"
     snapshot = _structure_snapshot()
     convo = (f"Contesto struttura (aggiornato):\n{snapshot}\n"
