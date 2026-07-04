@@ -229,10 +229,40 @@ def _cli_answer(text, operator=None, ctx_case=None, session_id=None):
         return None
 
 
+def _codex_answer(text, operator=None, ctx_case=None):
+    """Motore alternativo: Codex CLI su ai-core (via SSH) con MCP thanatos.
+    Attivo solo se site_config `ops_brain_codex_ssh` è valorizzato
+    (es. '-i /home/frappe/.ssh/ai_core root@10.10.0.4'). Codex usa l'MCP
+    thanatos raggiungibile dalla rete privata."""
+    import shlex
+    import subprocess
+    ssh_target = frappe.conf.get("ops_brain_codex_ssh")
+    if not ssh_target:
+        return None
+    prompt = text if not ctx_case else f"[Caso di contesto: {ctx_case}] {text}"
+    full = (_CLI_SYS + "\n\nRichiesta operatore: " + prompt)
+    remote = "codex exec --skip-git-repo-check " + shlex.quote(full)
+    cmd = ["ssh", "-o", "ConnectTimeout=8", "-o", "BatchMode=yes",
+           *shlex.split(ssh_target), remote]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=175)
+        out = (r.stdout or "").strip()
+        # codex exec stampa header + "codex\n<risposta>\ntokens used…" → estrai il corpo
+        if "codex\n" in out:
+            body = out.split("codex\n", 1)[1]
+            body = re.split(r"\ntokens used", body)[0].strip()
+            return body or None
+        return out or None
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ops_brain codex")
+        return None
+
+
 def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
-    """Cervello operativo. Motore primario = Claude Code CLI + MCP thanatos
-    (tutti gli strumenti via CLI). Fallback = ciclo agentico su gateway MMOS AI.
-    `operator` per personalizzare, `lead_name` per il caso di contesto."""
+    """Cervello operativo. Motore selezionabile via site_config `ops_brain_engine`:
+      cli (default) = Claude Code CLI + MCP; codex = Codex CLI su ai-core + MCP;
+      gateway = ciclo agentico su gateway MMOS AI. Ogni motore ha fallback al
+      successivo se non disponibile."""
     from thanatos_intel.ai.doc_ingest import _gateway
 
     # caso di contesto (se la chat è agganciata o citato nel testo)
@@ -243,14 +273,29 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
     if m and frappe.db.exists("Investigation Case", m.group(0).upper()):
         ctx_case = m.group(0).upper()
 
-    # 1) motore CLI (default) — a meno che disattivato in site_config
-    if frappe.conf.get("ops_brain_engine", "cli") != "gateway":
+    engine = frappe.conf.get("ops_brain_engine", "cli")
+
+    # 1) motore selezionato (con fallback in cascata)
+    if engine == "codex":
+        cx = _codex_answer(text, operator=operator, ctx_case=ctx_case)
+        if cx:
+            return cx
+        # fallback a claude cli
         cli = _cli_answer(text, operator=operator, ctx_case=ctx_case,
                           session_id=session_id)
         if cli:
             return cli
+    elif engine != "gateway":  # "cli" (default) o qualsiasi altro
+        cli = _cli_answer(text, operator=operator, ctx_case=ctx_case,
+                          session_id=session_id)
+        if cli:
+            return cli
+        # fallback a codex se configurato
+        cx = _codex_answer(text, operator=operator, ctx_case=ctx_case)
+        if cx:
+            return cx
 
-    # 2) fallback: ciclo agentico su gateway
+    # 2) fallback finale: ciclo agentico su gateway
     sid = session_id or f"opsbrain-{operator or 'x'}"
     snapshot = _structure_snapshot()
     convo = (f"Contesto struttura (aggiornato):\n{snapshot}\n"
