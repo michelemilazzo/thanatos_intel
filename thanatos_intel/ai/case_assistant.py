@@ -352,6 +352,9 @@ _EV_TYPE = [
 def chat_upload(case, file_url, file_name, content_type=""):
     """File caricato dalla chat del caso → reperto nel dossier (Investigation Evidence
     con attached_file). Il file è già allegato al caso da upload_file."""
+    # Guardia: caso nuovo non ancora salvato (name tipo new-investigation-case-…)
+    if not case or not frappe.db.exists("Investigation Case", case):
+        frappe.throw(frappe._("Salva prima il caso, poi potrai allegare i documenti."))
     ct = (content_type or "").lower()
     name_l = (file_name or "").lower()
     etype = "Document"
