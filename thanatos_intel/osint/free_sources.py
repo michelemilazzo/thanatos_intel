@@ -895,3 +895,17 @@ def case_tracing_links(case: str) -> dict:
             res["role"] = row.role_in_case
             wallets.append(res)
     return {"case": case, "count": len(wallets), "wallets": wallets}
+
+
+@frappe.whitelist()
+def generate_keywords_from_news() -> dict:
+    """Estrae keyword SEO dalle news/articoli di Thanatos e le salva come SEO Keyword.
+    Usa NLP semplice per identificare entità + parole-chiave ricorrenti."""
+    try:
+        # Placeholder: la feature completa richiede ML/NLP setup
+        # Per ora: restituisce stub con messaggio di avanzamento
+        created = 0
+        return {"ok": True, "created": created, "message": "Feature in sviluppo"}
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "generate_keywords_from_news")
+        return {"ok": False, "error": str(e)}

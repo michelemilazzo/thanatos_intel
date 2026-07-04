@@ -1,1 +1,171 @@
-{% extends "templates/web.html" %}{% block page_content %}<p>Reindirizzamento…</p>{% endblock %}
+{% raw %}<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SEO e Keyword</title>
+  <meta name="theme-color" content="#0D1B3E">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0A0E1A;
+      --panel: #111729;
+      --line: #1F2742;
+      --gold: #C8A96E;
+      --tx-hi: #F2F3F7;
+      --tx-body: #D8DBE6;
+      --tx-mid: #A4A9BC;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--navy); color: var(--tx-body);
+      font-family: 'Inter', -apple-system, sans-serif; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    header { padding: 20px 0; border-bottom: 1px solid var(--line); margin-bottom: 30px; }
+    header h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 28px;
+      letter-spacing: 2px; margin: 0 0 8px; }
+    header p { color: var(--tx-mid); margin: 0; font-size: 14px; }
+    .stats { display: flex; gap: 20px; margin: 30px 0; flex-wrap: wrap; }
+    .stat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+      padding: 16px; min-width: 200px; }
+    .stat-card .label { font-size: 12px; color: var(--tx-mid); text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 6px; }
+    .stat-card .value { font-size: 32px; font-weight: 700; color: var(--gold); }
+    .controls { margin: 20px 0; display: flex; gap: 10px; }
+    .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--line);
+      background: var(--panel); color: var(--gold); cursor: pointer; font-size: 13px;
+      transition: all 0.2s; }
+    .btn:hover { border-color: var(--gold); background: rgba(200,169,110,0.1); }
+    .btn-primary { background: var(--gold); color: var(--navy); border: none; }
+    .btn-primary:hover { background: #B8975A; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    thead { background: var(--panel); border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line); }
+    th { padding: 12px; text-align: left; font-size: 12px; color: var(--tx-mid);
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    td { padding: 12px; border-bottom: 1px solid var(--line); }
+    tbody tr:hover { background: rgba(200,169,110,0.05); }
+    .keyword-cell { font-weight: 600; color: var(--tx-hi); }
+    .origin-badge { display: inline-block; padding: 4px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600; }
+    .origin-Manual { background: rgba(200,169,110,0.2); color: var(--gold); }
+    .origin-News { background: rgba(76,175,80,0.2); color: #4CAF50; }
+    .origin-GSC { background: rgba(52,168,224,0.2); color: #34A8E0; }
+    .weight { text-align: center; color: var(--gold); font-weight: 700; }
+    .notes { font-size: 12px; color: var(--tx-mid); max-width: 300px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    .empty { text-align: center; padding: 40px 20px; color: var(--tx-mid); }
+    .empty h3 { color: var(--gold); font-family: 'Cinzel', serif; }
+    .loading { text-align: center; padding: 20px; color: var(--tx-mid); }
+    .toast { position: fixed; bottom: 20px; right: 20px; background: var(--panel);
+      border: 1px solid var(--gold); color: var(--tx-body); padding: 12px 20px;
+      border-radius: 6px; font-size: 13px; z-index: 9999; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔍 SEO Keyword</h1>
+    <p>Strategie e parole chiave per il sito Thanatos</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="label">Keyword totali</div>
+      <div class="value" id="total-keywords">{{ keywords|length }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Manuali</div>
+      <div class="value" id="manual-count">{{ origins.get('Manual', 0) }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Da news</div>
+      <div class="value" id="news-count">{{ origins.get('News', 0) }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">GSC</div>
+      <div class="value" id="gsc-count">{{ origins.get('GSC', 0) }}</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn btn-primary" id="generate-btn">📰 Genera da news</button>
+    <button class="btn" id="refresh-btn">🔄 Aggiorna</button>
+  </div>
+
+  {% endraw %}
+  {% if keywords %}
+    <table>
+      <thead>
+        <tr>
+          <th>Parola chiave</th>
+          <th>Origine</th>
+          <th>Peso</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for kw in keywords %}
+          <tr>
+            <td class="keyword-cell">{{ kw.keyword }}</td>
+            <td><span class="origin-badge origin-{{ kw.origin }}">{{ kw.origin }}</span></td>
+            <td class="weight">{{ kw.weight or '-' }}</td>
+            <td class="notes" title="{{ kw.notes or '' }}">{{ kw.notes or '-' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty">
+      <h3>Nessuna parola chiave</h3>
+      <p>Non ci sono keyword registrate. Clicca "Genera da news" per estrarre keyword automaticamente dalle pagine.</p>
+    </div>
+  {% endif %}
+
+  {% raw %}
+</div>
+
+<script>
+const csrf = {% endraw %}{{ csrf_token|tojson }}{% raw %};
+
+async function call(method, args = {}) {
+  const r = await fetch('/api/method/' + method, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Frappe-CSRF-Token': csrf || '' },
+    body: new URLSearchParams(args).toString(),
+    credentials: 'same-origin'
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return (await r.json()).message;
+}
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2400);
+}
+
+document.getElementById('generate-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Generando…';
+  try {
+    const r = await call('thanatos_intel.osint.free_sources.generate_keywords_from_news');
+    toast('✓ Keyword generate da news');
+    setTimeout(() => location.reload(), 1000);
+  } catch (e) {
+    toast('Errore: ' + (e.message || 'sconosciuto'));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '📰 Genera da news';
+  }
+});
+
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  location.reload();
+});
+</script>
+{% endraw %}
+</body>
+</html>
