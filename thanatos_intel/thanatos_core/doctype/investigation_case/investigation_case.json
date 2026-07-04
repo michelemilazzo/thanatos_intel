@@ -28,6 +28,16 @@
    "label": ""
   },
   {
+   "fieldname": "tab_email",
+   "fieldtype": "Tab Break",
+   "label": "Email"
+  },
+  {
+   "fieldname": "case_email_panel",
+   "fieldtype": "HTML",
+   "label": ""
+  },
+  {
    "fieldname": "tab_dati",
    "fieldtype": "Tab Break",
    "label": "Dati caso"

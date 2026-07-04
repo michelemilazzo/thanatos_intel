@@ -63,6 +63,31 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, 500);
 
+            // Carica e renderizza gli email del caso
+            setTimeout(() => {
+                if (frm.fields_dict.case_email_panel) {
+                    frappe.call({
+                        method: "frappe.client.get_list",
+                        args: {
+                            doctype: "Communication",
+                            filters: {
+                                reference_doctype: "Investigation Case",
+                                reference_name: frm.doc.name,
+                                communication_type: ["in", ["Email", "Incoming Email", "Outgoing Email"]]
+                            },
+                            fields: ["name", "sender", "recipients", "subject", "creation", "communication_date", "read"],
+                            order_by: "creation desc",
+                            limit_page_length: 50
+                        },
+                        callback: r => {
+                            if (r.message) {
+                                renderCaseEmail(frm, r.message);
+                            }
+                        }
+                    });
+                }
+            }, 800);
+
             // Bottone WhatsApp Cliente: apre la chat WA del lead collegato nella PWA
             frappe.call({
                 method: "frappe.client.get_list",
@@ -778,6 +803,47 @@ function renderCaseChat(frm, thread) {
     html += `
   </div>
   <div style="color:#888;font-size:11px;margin-top:8px">Totale: ${(thread.messages || []).length} messaggi</div>
+</div>`;
+
+    $w.html(html);
+}
+
+function renderCaseEmail(frm, emails) {
+    const $w = frm.fields_dict.case_email_panel && frm.fields_dict.case_email_panel.$wrapper;
+    if (!$w) return;
+
+    let html = `
+<div style="font-size:13px;line-height:1.6;padding:12px">
+  <div style="color:#888;margin-bottom:12px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
+    <span>📧 Email (${(emails || []).length})</span>
+    <button style="padding:4px 10px;font-size:11px;cursor:pointer;border:1px solid #ddd;border-radius:4px;background:#f9f9f9" onclick="frappe.new_doc('Communication',{reference_doctype:'Investigation Case',reference_name:'${frm.doc.name}'})">+ Nuovo email</button>
+  </div>
+  <div style="max-height:500px;overflow-y:auto">`;
+
+    if (!emails || !emails.length) {
+        html += `<div style="padding:20px;text-align:center;color:#888">Nessun email ancora</div>`;
+    } else {
+        emails.forEach(e => {
+            const sender = frappe.utils.escape_html(e.sender || "—");
+            const subject = frappe.utils.escape_html(e.subject || "(no subject)");
+            const ts = e.creation ? frappe.datetime.str_to_user(e.creation) : "";
+            const unread = e.read ? "" : " ⭕";
+
+            html += `
+<div style="padding:10px;border-bottom:1px solid #eee;cursor:pointer;background:${e.read ? "#fff" : "#f5f5f5"}" onclick="frappe.set_route('Form','Communication','${e.name}')">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+    <div style="flex:1">
+      <div style="font-weight:600;color:${e.read ? "#333" : "#000"}">${subject}${unread}</div>
+      <div style="font-size:11px;color:#666;margin-top:2px">Da: ${sender}</div>
+    </div>
+    <div style="font-size:11px;color:#888;white-space:nowrap">${ts}</div>
+  </div>
+</div>`;
+        });
+    }
+
+    html += `
+  </div>
 </div>`;
 
     $w.html(html);
