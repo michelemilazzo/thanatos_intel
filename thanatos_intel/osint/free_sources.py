@@ -901,11 +901,72 @@ def case_tracing_links(case: str) -> dict:
 def generate_keywords_from_news() -> dict:
     """Estrae keyword SEO dalle news/articoli di Thanatos e le salva come SEO Keyword.
     Usa NLP semplice per identificare entità + parole-chiave ricorrenti."""
+    import re
+    from collections import Counter
+
+    STOPWORDS = {
+        "della", "delle", "degli", "dello", "nella", "nelle", "negli", "sulla", "sulle",
+        "questo", "questa", "questi", "queste", "quello", "quella", "sono", "essere",
+        "hanno", "aveva", "stato", "stata", "stati", "state", "dopo", "prima", "anche",
+        "come", "dove", "quando", "perche", "perché", "mentre", "contro", "verso",
+        "tutti", "tutte", "tutto", "tutta", "altro", "altra", "altri", "altre",
+        "loro", "suoi", "nostro", "nostra", "viene", "vengono", "fatto",
+        "fare", "dice", "detto", "secondo", "ancora", "sempre", "molto", "alcuni",
+        "alcune", "presso", "tramite", "quindi", "inoltre", "infatti", "ossia",
+        "the", "and", "for", "with", "from", "that", "this", "have", "has", "was",
+        "were", "been", "will", "would", "could", "should", "about", "into", "over",
+        "anni", "anno", "euro",
+    }
+
     try:
-        # Placeholder: la feature completa richiede ML/NLP setup
-        # Per ora: restituisce stub con messaggio di avanzamento
+        articles = frappe.get_all(
+            "News Article",
+            filters={"published": 1},
+            fields=["name", "title", "tags", "excerpt"],
+            order_by="published_at desc",
+            limit_page_length=200,
+        )
+        if not articles:
+            return {"ok": True, "created": 0, "message": "Nessuna news pubblicata"}
+
+        counter = Counter()
+        for a in articles:
+            for tag in (a.tags or "").replace(";", ",").split(","):
+                tag = tag.strip().lower()
+                if len(tag) >= 4 and tag not in STOPWORDS:
+                    counter[tag] += 3
+
+            text = f"{a.title or ''} {a.excerpt or ''}".lower()
+            words = [w for w in re.findall(r"[a-zàèéìòù]{4,}", text) if w not in STOPWORDS]
+            counter.update(words)
+            for w1, w2 in zip(words, words[1:]):
+                counter[f"{w1} {w2}"] += 2
+
+        existing = {
+            (k or "").lower()
+            for k in frappe.get_all("SEO Keyword", pluck="keyword", limit_page_length=0)
+        }
+
         created = 0
-        return {"ok": True, "created": created, "message": "Feature in sviluppo"}
+        for kw, freq in counter.most_common(300):
+            if created >= 30:
+                break
+            if freq < 3 or kw in existing:
+                continue
+            frappe.get_doc({
+                "doctype": "SEO Keyword",
+                "keyword": kw,
+                "origin": "News",
+                "is_active": 1,
+                "weight": min(freq, 100),
+                "notes": f"Generata automaticamente dalle news (frequenza {freq})",
+            }).insert(ignore_permissions=True)
+            existing.add(kw)
+            created += 1
+
+        frappe.db.commit()
+        return {"ok": True, "created": created,
+                "message": f"{created} keyword create da {len(articles)} news"}
     except Exception as e:
         frappe.log_error(frappe.get_traceback(), "generate_keywords_from_news")
         return {"ok": False, "error": str(e)}
