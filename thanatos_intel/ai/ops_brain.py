@@ -273,13 +273,108 @@ def _codex_answer(text, operator=None, ctx_case=None):
         return None
 
 
-def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
-    """Cervello operativo. Motore selezionabile via site_config `ops_brain_engine`:
-      cli (default) = Claude Code CLI + MCP; codex = Codex CLI su ai-core + MCP;
-      gateway = ciclo agentico su gateway MMOS AI. Ogni motore ha fallback al
-      successivo se non disponibile."""
-    from thanatos_intel.ai.doc_ingest import _gateway
+# ─────────────── motori economici: Ollama (gratis) + OpenRouter ───────────────
 
+def _ollama_chat(convo, system):
+    """LLM callable su Ollama locale (ai-core, gratis). Ritorna (testo, usage)."""
+    import requests
+    url = (frappe.conf.get("ops_brain_ollama_url")
+           or "http://10.10.0.4:11434").rstrip("/")
+    model = frappe.conf.get("ops_brain_ollama_model") or "qwen2.5:7b"
+    try:
+        r = requests.post(f"{url}/api/chat", json={
+            "model": model, "stream": False,
+            "messages": [{"role": "system", "content": system},
+                         {"role": "user", "content": convo}],
+            "options": {"temperature": 0.2},
+        }, timeout=120)
+        r.raise_for_status()
+        d = r.json()
+        return (d.get("message", {}).get("content", "") or "").strip(), {}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ops_brain ollama")
+        return "", {}
+
+
+def _openrouter_chat(convo, system):
+    """LLM callable su OpenRouter (economico, tool-capable). Modello configurabile."""
+    import requests
+    key = frappe.conf.get("openrouter_api_key")
+    if not key:
+        return "", {}
+    model = frappe.conf.get("ops_brain_openrouter_model") or "google/gemini-2.0-flash-001"
+    try:
+        r = requests.post("https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {key}",
+                     "HTTP-Referer": "https://thanatos.agency",
+                     "X-Title": "Thanatos Ops Brain"},
+            json={"model": model,
+                  "messages": [{"role": "system", "content": system},
+                               {"role": "user", "content": convo}],
+                  "temperature": 0.2},
+            timeout=120)
+        r.raise_for_status()
+        d = r.json()
+        txt = (d.get("choices", [{}])[0].get("message", {}).get("content", "") or "").strip()
+        return txt, (d.get("usage") or {})
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ops_brain openrouter")
+        return "", {}
+
+
+def _agentic_loop(text, ctx_case, llm_fn, lead_name=None, max_steps=3):
+    """Ciclo agentico riusabile: il modello (llm_fn) riceve snapshot+catalogo,
+    emette {tool,args} JSON che eseguiamo, poi risponde. llm_fn(convo, system)
+    → (testo, usage). Ritorna la risposta finale o None se il modello non parla."""
+    snapshot = _structure_snapshot()
+    convo = (f"Contesto struttura (aggiornato):\n{snapshot}\n"
+             + (f"\nCaso di contesto attuale: {ctx_case}\n" if ctx_case else "")
+             + f"\nRichiesta operatore: «{text}»")
+    out = ""
+    for _step in range(max_steps):
+        out, usage = llm_fn(convo, _SYS)
+        out = (out or "").strip()
+        if usage:
+            _meter({"usage": usage, "model": "ext"}, lead_name)
+        if not out:
+            return None
+        call = _extract_toolcall(out)
+        if not call:
+            return out
+        tool = call["tool"]
+        args = call.get("args") or {}
+        if ctx_case and "case" not in args and tool in (
+                "case_detail", "case_tool", "screening_kyc", "soci_ubo",
+                "negativita", "visura"):
+            args.setdefault("case", ctx_case)
+        try:
+            result = TOOLS[tool](**args)
+        except Exception as e:
+            result = {"error": str(e)}
+        convo = (f"Ho eseguito lo strumento «{tool}» con args "
+                 f"{json.dumps(args, ensure_ascii=False)}.\nRisultato:\n"
+                 f"{json.dumps(result, ensure_ascii=False, default=str)[:3500]}\n\n"
+                 "Ora rispondi all'operatore in testo, breve e operativo. "
+                 "Se serve un altro strumento, richiamalo col JSON.")
+    return out if not _extract_toolcall(out) else None
+
+
+# domande "semplici" (saluti, generiche) che non richiedono i tool investigativi
+_SIMPLE_RE = re.compile(
+    r"^\s*(ciao|salve|buongiorno|buonasera|grazie|ok|come stai|"
+    r"chi sei|cosa sai fare|aiuto|help|test)\b", re.I)
+
+
+def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
+    """Cervello operativo. Motore via site_config `ops_brain_engine`:
+      auto    = router a costi scalati (ollama gratis per semplice/economico →
+                openrouter economico → claude per il complesso)
+      cli     = Claude Code CLI + MCP (default)
+      codex   = Codex CLI su ai-core + MCP
+      ollama  = ciclo agentico su Ollama locale (gratis)
+      openrouter = ciclo agentico su OpenRouter (economico)
+      gateway = ciclo agentico su gateway MMOS AI
+    Ogni motore cade sul successivo se non risponde."""
     # caso di contesto (se la chat è agganciata o citato nel testo)
     ctx_case = None
     if lead_name:
@@ -290,60 +385,50 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
 
     engine = frappe.conf.get("ops_brain_engine", "cli")
 
-    # 1) motore selezionato (con fallback in cascata)
+    # helper: catena di fallback finché uno risponde
+    def _chain(*fns):
+        for fn in fns:
+            r = fn()
+            if r:
+                return r
+        return None
+
+    E_claude = lambda: _cli_answer(text, operator=operator, ctx_case=ctx_case,
+                                   session_id=session_id)
+    E_codex = lambda: _codex_answer(text, operator=operator, ctx_case=ctx_case)
+    E_ollama = lambda: _agentic_loop(text, ctx_case, _ollama_chat, lead_name, max_steps)
+    E_openr = lambda: (_agentic_loop(text, ctx_case, _openrouter_chat, lead_name, max_steps)
+                       if frappe.conf.get("openrouter_api_key") else None)
+    E_gw = lambda: _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps)
+
+    if engine == "auto":
+        # Router a costi scalati. OpenRouter economico è il workhorse (veloce +
+        # tool-capable); Claude è l'escalation per il complesso; Codex/gateway
+        # alternative; Ollama (CPU, lento) solo ultimo fallback offline.
+        r = _chain(E_openr, E_claude, E_codex, E_gw, E_ollama)
+        return r or "Assistente AI momentaneamente non disponibile."
     if engine == "codex":
-        cx = _codex_answer(text, operator=operator, ctx_case=ctx_case)
-        if cx:
-            return cx
-        # fallback a claude cli
-        cli = _cli_answer(text, operator=operator, ctx_case=ctx_case,
-                          session_id=session_id)
-        if cli:
-            return cli
-    elif engine != "gateway":  # "cli" (default) o qualsiasi altro
-        cli = _cli_answer(text, operator=operator, ctx_case=ctx_case,
-                          session_id=session_id)
-        if cli:
-            return cli
-        # fallback a codex se configurato
-        cx = _codex_answer(text, operator=operator, ctx_case=ctx_case)
-        if cx:
-            return cx
+        return _chain(E_codex, E_claude, E_gw) or "Assistente AI non disponibile."
+    if engine == "ollama":
+        return _chain(E_ollama, E_claude, E_gw) or "Assistente AI non disponibile."
+    if engine == "openrouter":
+        return _chain(E_openr, E_ollama, E_claude, E_gw) or "Assistente AI non disponibile."
+    if engine == "gateway":
+        return _chain(E_gw, E_claude) or "Assistente AI non disponibile."
+    # cli (default)
+    return _chain(E_claude, E_codex, E_openr, E_ollama, E_gw) or "Assistente AI non disponibile."
 
-    # 2) fallback finale: ciclo agentico su gateway
+
+def _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps):
+    """Ciclo agentico sul gateway MMOS AI (fallback storico)."""
+    from thanatos_intel.ai.doc_ingest import _gateway
     sid = session_id or f"opsbrain-{operator or 'x'}"
-    snapshot = _structure_snapshot()
-    convo = (f"Contesto struttura (aggiornato):\n{snapshot}\n"
-             + (f"\nCaso di contesto attuale: {ctx_case}\n" if ctx_case else "")
-             + f"\nRichiesta operatore: «{text}»")
 
-    for step in range(max_steps):
-        resp = _gateway(convo, system=_SYS, task_type="chat", session_id=sid)
-        out = (_resp_text(resp) or "").strip()
-        _meter(resp, lead_name)
-        if not out:
-            return "Assistente AI momentaneamente non disponibile."
-        call = _extract_toolcall(out)
-        if not call:
-            return out  # risposta finale in testo
-        # esegui lo strumento
-        tool = call["tool"]
-        args = call.get("args") or {}
-        if ctx_case and "case" not in args and tool in ("case_detail", "case_tool",
-                                                          "screening_kyc", "soci_ubo",
-                                                          "negativita", "visura"):
-            args.setdefault("case", ctx_case)
-        try:
-            result = TOOLS[tool](**args)
-        except Exception as e:
-            result = {"error": str(e)}
-        # ridai l'esito al modello per la risposta finale
-        convo = (f"Ho eseguito lo strumento «{tool}» con args {json.dumps(args, ensure_ascii=False)}.\n"
-                 f"Risultato:\n{json.dumps(result, ensure_ascii=False, default=str)[:3500]}\n\n"
-                 "Ora rispondi all'operatore in testo, breve e operativo. "
-                 "Se serve un altro strumento, richiamalo col JSON.")
-    # esaurito il budget di step → ultima risposta testuale
-    return out if not _extract_toolcall(out) else "Ho raccolto i dati ma non sono riuscito a sintetizzarli — riprova più specifico."
+    def _gw_fn(convo, system):
+        resp = _gateway(convo, system=system, task_type="chat", session_id=sid)
+        return (_resp_text(resp) or ""), ((resp or {}).get("usage") or {})
+
+    return _agentic_loop(text, ctx_case, _gw_fn, lead_name, max_steps)
 
 
 def _meter(resp, ref):
@@ -358,33 +443,10 @@ def _meter(resp, ref):
         pass
 
 
-STAFF_ROLES = {"System Manager", "Investigation Manager", "Investigator",
-               "Thanatos Investigator", "Thanatos Supervisor",
-               "Thanatos Director", "Thanatos Analyst"}
-
-
 @frappe.whitelist()
 def ask(message, session_id=None):
-    """Endpoint per il pannello AI della Switchboard (web) e la pagina desk Cervello."""
+    """Endpoint per il pannello AI della Switchboard (web)."""
     if frappe.session.user == "Guest":
         frappe.throw("Login richiesto")
-    if not STAFF_ROLES & set(frappe.get_roles()):
-        frappe.throw("Riservato allo staff Thanatos", frappe.PermissionError)
     reply = answer(message, operator=frappe.session.user, session_id=session_id)
     return {"reply": reply}
-
-
-@frappe.whitelist()
-def chat_upload(file_url, file_name, content_type="", case=None, session_id=None):
-    """Allegato dalla chat Cervello (desk). Se è indicato un caso, il file diventa
-    reperto nel dossier (riusa case_assistant.chat_upload); altrimenti resta un
-    File libero e il cervello lo riceve come contesto."""
-    if frappe.session.user == "Guest":
-        frappe.throw("Login richiesto")
-    if not STAFF_ROLES & set(frappe.get_roles()):
-        frappe.throw("Riservato allo staff Thanatos", frappe.PermissionError)
-    result = {"ok": True, "evidence": None}
-    if case:
-        from thanatos_intel.ai.case_assistant import chat_upload as case_upload
-        result["evidence"] = case_upload(case, file_url, file_name, content_type).get("evidence")
-    return result
