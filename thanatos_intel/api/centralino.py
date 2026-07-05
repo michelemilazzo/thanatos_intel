@@ -213,18 +213,20 @@ def unshare_lead(lead_name, user_to_remove):
     return {"ok": True}
 
 
-def _notify_user(user, message, lead_name):
+def _notify_user(user, message, lead_name=None, case_name=None):
+    doctype = "Investigation Case" if case_name else "Intel Lead"
+    docname = case_name or lead_name
     try:
         frappe.get_doc({
             "doctype": "Notification Log", "for_user": user, "type": "Alert",
-            "document_type": "Intel Lead", "document_name": lead_name,
+            "document_type": doctype, "document_name": docname,
             "subject": message,
         }).insert(ignore_permissions=True)
         frappe.db.commit()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "centralino _notify_user")
     frappe.publish_realtime("centralino_personal", {"message": message,
-                            "lead": lead_name}, user=user)
+                            "lead": lead_name, "case": case_name}, user=user)
 
 
 @frappe.whitelist()

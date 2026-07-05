@@ -12,6 +12,7 @@ frappe.ui.form.on('Investigation Case', {
         thanatos_set_monitor_operators(frm);
 
         if (!frm.is_new()) {
+            thanatos_case_team_buttons(frm);
             // Bottone Chiudi/Riapri caso
             if (frm.doc.status !== "Closed") {
                 frm.add_custom_button(__("Chiudi caso"), () => {
@@ -693,6 +694,73 @@ frappe.ui.form.on('Investigation Case', {
     }
 });
 
+
+function thanatos_case_team_buttons(frm) {
+    frappe.call({
+        method: 'thanatos_intel.api.case_team.case_team',
+        args: { case: frm.doc.name },
+        callback: (r) => {
+            const t = r.message || {};
+            if (t.assigned_name) {
+                frm.dashboard.clear_headline();
+                frm.dashboard.set_headline(
+                    `👤 In carico a <b>${frappe.utils.escape_html(t.assigned_name)}</b>` +
+                    (t.team && t.team.length > 1 ? ` · team di ${t.team.length}` : ''));
+            }
+            if (!t.assigned_investigator && t.has_investigator) {
+                frm.add_custom_button(__('✋ Prendi in carico'), () => {
+                    frappe.call({
+                        method: 'thanatos_intel.api.case_team.claim_case',
+                        args: { case: frm.doc.name },
+                        callback: (rr) => {
+                            const m = rr.message || {};
+                            if (!m.ok) frappe.show_alert({ message: m.error, indicator: 'orange' });
+                            frm.reload_doc();
+                        },
+                    });
+                });
+            }
+            if (t.assigned_investigator && (t.is_mine || t.is_manager)) {
+                frm.add_custom_button(__('↪ Trasferisci'), () => {
+                    thanatos_case_operator_dialog(frm, __('Trasferisci pratica'), __('Trasferisci'), true,
+                        (op, note) => frappe.call({
+                            method: 'thanatos_intel.api.case_team.transfer_case',
+                            args: { case: frm.doc.name, to_user: op, note: note || '' },
+                            callback: () => frm.reload_doc(),
+                        }));
+                }, __('Team'));
+                frm.add_custom_button(__('➕ Condividi'), () => {
+                    thanatos_case_operator_dialog(frm, __('Aggiungi operatore al team'), __('Condividi'), false,
+                        (op) => frappe.call({
+                            method: 'thanatos_intel.api.case_team.share_case',
+                            args: { case: frm.doc.name, to_user: op },
+                            callback: () => frm.reload_doc(),
+                        }));
+                }, __('Team'));
+            }
+        },
+    });
+}
+
+function thanatos_case_operator_dialog(frm, title, actionLabel, withNote, onConfirm) {
+    frappe.call({
+        method: 'thanatos_intel.api.centralino.get_operators',
+        callback: (r) => {
+            const users = (r.message || []).filter(u => u.name !== frappe.session.user);
+            const fields = [{
+                label: __('Operatore'), fieldname: 'to_user', fieldtype: 'Select',
+                reqd: 1, options: users.map(u => u.name).join('\n'),
+            }];
+            if (withNote) fields.push({ label: __('Nota (opzionale)'), fieldname: 'note', fieldtype: 'Small Text' });
+            const d = new frappe.ui.Dialog({
+                title, fields,
+                primary_action_label: actionLabel,
+                primary_action: (vals) => { d.hide(); onConfirm(vals.to_user, vals.note); },
+            });
+            d.show();
+        },
+    });
+}
 
 function thanatos_show_close_dialog(frm) {
     const d = new frappe.ui.Dialog({
