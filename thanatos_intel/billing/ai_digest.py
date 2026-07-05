@@ -70,67 +70,83 @@ def _mark_billed(log_names, proforma=None):
         }, update_modified=False)
 
 
-def _html_table(by_client, date):
-    rows_html = ""
-    for client, d in sorted(by_client.items()):
-        label = client if client != "__none__" else "—"
-        rows_html += (
-            f"<tr><td>{label}</td>"
-            f"<td>{d['tokens_in']:,}</td><td>{d['tokens_out']:,}</td>"
-            f"<td>€{d['real_cost']:.4f}</td><td>€{d['client_cost']:.4f}</td></tr>"
-        )
-    return f"""<p>Riepilogo AI Usage — <strong>{date}</strong></p>
-<table border="1" cellpadding="4" style="border-collapse:collapse;font-size:13px">
-<tr style="background:#eee"><th>Client</th><th>Token IN</th><th>Token OUT</th>
-<th>Costo reale MMOS</th><th>Costo cliente</th></tr>
-{rows_html}
-</table>"""
+def _billing_email():
+    return (frappe.conf.get("ai_billing_email")
+            or frappe.conf.get("admin_email")
+            or "billing@thanatos.agency")
+
+
+def _invoice_html(date, tokens, total, charged, balance, recharge_url):
+    """Email MMOS→Thanatos: solo il totale del giorno da pagare. NESSUN costo
+    interno MMOS (come Thanatos rifattura ai suoi clienti sono affari suoi)."""
+    if charged:
+        pay = (f"<p style='color:#1a7f37'><strong>✓ Addebitato dal wallet "
+               f"prepagato:</strong> €{total:.2f}. Saldo residuo: "
+               f"<strong>€{balance:.2f}</strong>.</p>")
+    else:
+        pay = (f"<p style='color:#b35900'><strong>Da saldare: €{total:.2f}.</strong> "
+               f"Wallet prepagato insufficiente (saldo €{balance:.2f}). "
+               f"Ricarica con carta: <a href='{recharge_url}'>{recharge_url}</a></p>")
+    return f"""<div style="font-family:Arial,sans-serif;font-size:14px;color:#111">
+<p><strong>MMOS</strong> — riepilogo consumo AI della piattaforma Thanatos Intel.</p>
+<table cellpadding="6" style="border-collapse:collapse;font-size:14px">
+<tr><td style="color:#666">Giorno</td><td><strong>{date}</strong></td></tr>
+<tr><td style="color:#666">Token elaborati</td><td>{tokens:,}</td></tr>
+<tr><td style="color:#666">Importo dovuto a MMOS</td><td><strong>€{total:.2f}</strong></td></tr>
+</table>
+{pay}
+<p style="color:#888;font-size:12px">Fatturazione a consumo AI. Il dettaglio per
+singolo caso/cliente resta nella tua console; questo è il totale della piattaforma.</p>
+</div>"""
 
 
 def daily_ai_digest():
-    """scheduler_events.daily — F4: riepilogo giornaliero AI billing."""
+    """scheduler_events.daily — MMOS fattura a Thanatos il consumo AI del giorno:
+    addebita il wallet prepagato e invia la mail con il totale (carta se il
+    wallet non basta). NIENTE costo interno MMOS nella comunicazione."""
     date = _yesterday()
     by_client = _aggregate_yesterday(date)
     if not by_client:
         frappe.logger().info("[ai_digest] nessun log AI ieri (%s)", date)
         return
 
-    month_start = get_first_day(getdate(date))
-
     # Marca log come billed
     for client, d in by_client.items():
         _mark_billed(d["logs"])
-
     frappe.db.commit()
 
-    # Calcola overage per ogni client e logga
-    total_real = sum(d["real_cost"] for d in by_client.values())
-    total_client = sum(d["client_cost"] for d in by_client.values())
+    # Totale globale piattaforma = ciò che Thanatos deve a MMOS
+    total = round(sum(d["client_cost"] for d in by_client.values()), 2)
+    tokens = int(sum(d["tokens_in"] + d["tokens_out"] for d in by_client.values()))
+    if total <= 0:
+        frappe.logger().info("[ai_digest] %s: totale 0, nessuna fattura", date)
+        return
 
-    for client, d in by_client.items():
-        if client == "__none__":
-            continue
-        budget = _client_budget(client)
-        if budget > 0:
-            monthly_total = _monthly_total(client, month_start)
-            overage = max(0.0, monthly_total - budget)
-            if overage > 0:
-                frappe.logger().info(
-                    "[ai_digest] client=%s overage=€%.4f (mensile=€%.4f, included=€%.4f)",
-                    client, overage, monthly_total, budget,
-                )
+    # Addebita il wallet prepagato Thanatos (già predisposto)
+    charged = False
+    balance = 0.0
+    try:
+        from thanatos_intel.billing.mmos_wallet import mmos_balance, mmos_charge
+        if mmos_balance() >= total:
+            balance = mmos_charge(total, notes=f"Consumo AI {date} ({tokens:,} token)")
+            charged = True
+        else:
+            balance = mmos_balance()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ai_digest wallet charge")
+        try:
+            from thanatos_intel.billing.mmos_wallet import mmos_balance
+            balance = mmos_balance()
+        except Exception:
+            balance = 0.0
 
-    # Email riepilogo
-    admin = _admin_email()
-    html = _html_table(by_client, date)
-    html += (
-        f"<p><strong>Totale giornaliero:</strong> "
-        f"Costo MMOS €{total_real:.4f} | Costo clienti €{total_client:.4f}</p>"
-    )
+    recharge_url = (frappe.conf.get("ai_billing_recharge_url")
+                    or "https://thanatos.onekeyco.com/portal/wallet")
+    html = _invoice_html(date, tokens, total, charged, balance, recharge_url)
     try:
         frappe.sendmail(
-            recipients=[admin],
-            subject=f"[Thanatos] Riepilogo AI {date}",
+            recipients=[_billing_email()],
+            subject=f"[MMOS] Consumo AI {date} — €{total:.2f}",
             message=html,
             delayed=False,
         )
@@ -138,6 +154,6 @@ def daily_ai_digest():
         frappe.log_error(frappe.get_traceback(), "ai_digest email")
 
     frappe.logger().info(
-        "[ai_digest] %s: %d client, €%.4f MMOS, €%.4f clienti",
-        date, len(by_client), total_real, total_client,
+        "[ai_digest] %s: €%.2f (%d token) — wallet_charged=%s saldo=€%.2f",
+        date, total, tokens, charged, balance,
     )
