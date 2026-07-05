@@ -132,6 +132,73 @@ def _t_case_tool(case=None, instruction=None, **kw):
     return case_ai_chat(case, instruction)
 
 
+def _t_list_documents(case=None, lead=None, **kw):
+    """Elenca TUTTI i file allegati a un caso o lead (anche quelli non ancora
+    ingeriti come reperti), con stato. Serve al cervello per vedere i documenti
+    che l'operatore ha appena mandato, prima che siano processati."""
+    docs = []
+    if case:
+        for f in frappe.get_all("File",
+                filters={"attached_to_doctype": "Investigation Case",
+                         "attached_to_name": case},
+                fields=["file_name", "file_url"], limit=0):
+            docs.append({"file": f.file_name, "url": f.file_url, "stato": "allegato (non ingerito)"})
+        for e in frappe.get_all("Investigation Evidence",
+                filters={"investigation_case": case},
+                fields=["evidence_name", "attached_file", "notes"], limit=0):
+            docs.append({"file": e.evidence_name, "url": e.attached_file,
+                         "stato": "reperto ingerito" if (e.notes and "Sintesi" in (e.notes or "")) else "reperto (senza sintesi)"})
+    if lead:
+        for f in frappe.get_all("File",
+                filters={"attached_to_doctype": "Intel Lead",
+                         "attached_to_name": lead},
+                fields=["file_name", "file_url"], limit=0):
+            docs.append({"file": f.file_name, "url": f.file_url, "stato": "allegato chat"})
+    return {"count": len(docs), "documents": docs}
+
+
+def _t_read_document(file_url=None, **kw):
+    """Legge/OCR il contenuto testuale COMPLETO di un documento on-demand (PDF,
+    immagine, docx…). Usa questo per analizzare un allegato che non è ancora un
+    reperto sintetizzato."""
+    if not file_url:
+        return {"error": "manca file_url"}
+    from thanatos_intel.ai.doc_ingest import _read_text_fallback
+    text = ""
+    try:
+        from thanatos_intel.ai.ocr_service import ocr_file
+        r = ocr_file(file_url, "generic") or {}
+        text = (r.get("raw_text") or "").strip()
+    except Exception:
+        pass
+    if not text:
+        try:
+            text = (_read_text_fallback(file_url) or "").strip()
+        except Exception:
+            text = ""
+    return {"file_url": file_url,
+            "text": text[:8000] if text else "(documento vuoto o illeggibile)"}
+
+
+def _t_ingest_document(case=None, file_url=None, **kw):
+    """Ingerisce un documento allegato come REPERTO del caso (OCR + estrazione AI
+    + hash catena di custodia). Usa dopo che l'operatore ha mandato un file e
+    vuole che diventi parte del fascicolo."""
+    if not (case and file_url):
+        return {"error": "servono case e file_url"}
+    from thanatos_intel.ai.doc_ingest import ingest_document
+    try:
+        r = ingest_document(file_url=file_url, investigation_case=case,
+                            document_type="generic") or {}
+    except Exception as e:
+        return {"error": str(e)}
+    ex = r.get("extracted") or {}
+    return {"ok": True, "summary": ex.get("summary", ""),
+            "authenticity": r.get("authenticity"),
+            "evidence": r.get("evidence"),
+            "risk_flags": ex.get("risk_flags") or []}
+
+
 TOOLS = {
     "global_search": _t_global_search,   # {q}
     "list_cases": _t_list_cases,          # {status?}
@@ -142,6 +209,9 @@ TOOLS = {
     "negativita": _t_negativita,          # {id}
     "visura": _t_visura,                  # {piva}
     "case_tool": _t_case_tool,            # {case, instruction}  → cluster/dossier/proforma/…
+    "list_documents": _t_list_documents,  # {case?, lead?} → file allegati (anche non ingeriti)
+    "read_document": _t_read_document,    # {file_url} → testo OCR completo on-demand
+    "ingest_document": _t_ingest_document,  # {case, file_url} → reperto (OCR+AI+hash)
 }
 
 _TOOL_DOC = """STRUMENTI (rispondi con JSON {"tool":"nome","args":{...}} per usarne uno):
@@ -154,6 +224,9 @@ _TOOL_DOC = """STRUMENTI (rispondi con JSON {"tool":"nome","args":{...}} per usa
 - negativita {id}: protesti/pregiudizievoli (CF persona o P.IVA impresa)
 - visura {piva}: visura camerale impresa
 - case_tool {case, instruction}: esegue sul caso strumenti avanzati — cluster societario, dossier, proforma, avanzamento/checklist, collegamenti, valutazione assicurativa. Passa l'istruzione in linguaggio naturale.
+- list_documents {case?, lead?}: elenca TUTTI i file allegati a un caso o lead, anche quelli non ancora ingeriti come reperti (i documenti che l'operatore ha appena mandato)
+- read_document {file_url}: legge/OCR il testo completo di un documento on-demand (per analizzare un allegato non ancora sintetizzato)
+- ingest_document {case, file_url}: ingerisce un allegato come reperto del caso (OCR + estrazione AI + hash catena di custodia)
 """
 
 _SYS = (
@@ -208,6 +281,8 @@ _MCP_TOOLS = [
     "mcp__thanatos__screening_kyc", "mcp__thanatos__soci_ubo",
     "mcp__thanatos__negativita", "mcp__thanatos__visura",
     "mcp__thanatos__case_tool", "mcp__thanatos__run_query",
+    "mcp__thanatos__list_documents", "mcp__thanatos__read_document",
+    "mcp__thanatos__ingest_document",
 ]
 
 _CLI_SYS = (
@@ -267,7 +342,19 @@ _PROVIDER = {
 }
 
 
-def _cli_answer(text, operator=None, ctx_case=None, session_id=None):
+def _ctx_prefix(ctx_case=None, lead=None):
+    """Nota di contesto da anteporre al prompt: caso e/o lead con gli allegati."""
+    parts = []
+    if ctx_case:
+        parts.append(f"Caso di contesto: {ctx_case}")
+    if lead:
+        parts.append(f"Lead/chat corrente: {lead}. I documenti che l'operatore "
+                     f"ha appena allegato sono qui: usa list_documents(lead=\"{lead}\") "
+                     f"per vederli e read_document(file_url) per leggerli")
+    return f"[{'; '.join(parts)}] " if parts else ""
+
+
+def _cli_answer(text, operator=None, ctx_case=None, session_id=None, lead=None):
     """Interroga il cervello via Claude Code CLI + MCP thanatos (tutti gli
     strumenti). Ritorna il testo, o None se il CLI non è disponibile."""
     import json as _json
@@ -275,7 +362,7 @@ def _cli_answer(text, operator=None, ctx_case=None, session_id=None):
     claude = frappe.conf.get("ops_brain_claude_bin") or "/usr/local/bin/claude"
     if not os.path.exists(claude):
         return None
-    prompt = text if not ctx_case else f"[Caso di contesto: {ctx_case}] {text}"
+    prompt = _ctx_prefix(ctx_case, lead) + text
     cmd = [claude, "-p", prompt,
            "--append-system-prompt", _CLI_SYS,
            "--allowedTools", *_MCP_TOOLS,
@@ -307,7 +394,7 @@ def _cli_answer(text, operator=None, ctx_case=None, session_id=None):
         return None
 
 
-def _codex_answer(text, operator=None, ctx_case=None):
+def _codex_answer(text, operator=None, ctx_case=None, lead=None):
     """Motore alternativo: Codex CLI su ai-core (via SSH) con MCP thanatos.
     Attivo solo se site_config `ops_brain_codex_ssh` è valorizzato
     (es. '-i /home/frappe/.ssh/ai_core root@10.10.0.4'). Codex usa l'MCP
@@ -317,7 +404,7 @@ def _codex_answer(text, operator=None, ctx_case=None):
     ssh_target = frappe.conf.get("ops_brain_codex_ssh")
     if not ssh_target:
         return None
-    prompt = text if not ctx_case else f"[Caso di contesto: {ctx_case}] {text}"
+    prompt = _ctx_prefix(ctx_case, lead) + text
     full = (_CLI_SYS + "\n\nRichiesta operatore: " + prompt)
     # workdir codex trusted + flag opzionale per abilitare i tool MCP headless
     workdir = frappe.conf.get("ops_brain_codex_workdir") or "/root/thanatos-brain"
@@ -417,8 +504,14 @@ def _agentic_loop(text, ctx_case, llm_fn, lead_name=None, max_steps=3,
     → (testo, usage). Accumula i token di tutti gli step e traccia il motore per
     la fatturazione. Ritorna la risposta finale o None se il modello non parla."""
     snapshot = _structure_snapshot()
+    lead_note = ""
+    if lead_name:
+        lead_note = (f"\nLead/chat corrente: {lead_name}. I file appena allegati "
+                     f"dall'operatore sono qui: usa list_documents(lead=\"{lead_name}\") "
+                     f"per vederli e read_document(file_url) per leggerli.\n")
     convo = (f"Contesto struttura (aggiornato):\n{snapshot}\n"
              + (f"\nCaso di contesto attuale: {ctx_case}\n" if ctx_case else "")
+             + lead_note
              + f"\nRichiesta operatore: «{text}»")
     out = ""
     tot_in = tot_out = 0
@@ -440,7 +533,7 @@ def _agentic_loop(text, ctx_case, llm_fn, lead_name=None, max_steps=3,
         args = call.get("args") or {}
         if ctx_case and "case" not in args and tool in (
                 "case_detail", "case_tool", "screening_kyc", "soci_ubo",
-                "negativita", "visura"):
+                "negativita", "visura", "list_documents", "ingest_document"):
             args.setdefault("case", ctx_case)
         try:
             result = TOOLS[tool](**args)
@@ -494,8 +587,8 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
     cheap_model = frappe.conf.get("ops_brain_cheap_model") or "deepseek-v4-flash-free"
     ollama_model = frappe.conf.get("ops_brain_ollama_model") or "qwen2.5:7b"
     E_claude = lambda: _cli_answer(text, operator=operator, ctx_case=ctx_case,
-                                   session_id=session_id)
-    E_codex = lambda: _codex_answer(text, operator=operator, ctx_case=ctx_case)
+                                   session_id=session_id, lead=lead_name)
+    E_codex = lambda: _codex_answer(text, operator=operator, ctx_case=ctx_case, lead=lead_name)
     E_ollama = lambda: _agentic_loop(text, ctx_case, _ollama_chat, lead_name,
                                      max_steps, label="ollama", model=ollama_model)
     E_cheap = lambda: (_agentic_loop(text, ctx_case, _cheap_chat, lead_name,

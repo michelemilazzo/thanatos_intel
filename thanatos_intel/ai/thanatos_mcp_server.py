@@ -150,6 +150,34 @@ def run_query(sql: str) -> str:
         return f"Errore SQL: {e}"
 
 
+@mcp.tool()
+def list_documents(case: str = "", lead: str = "") -> str:
+    """Elenca TUTTI i file allegati a un caso o lead, ANCHE quelli non ancora
+    ingeriti come reperti (i documenti che l'operatore ha appena mandato in
+    chat). case: CASE-AAAA-N; lead: codice Intel Lead."""
+    _init()
+    from thanatos_intel.ai.ops_brain import _t_list_documents
+    return _j(_t_list_documents(case=case or None, lead=lead or None))
+
+
+@mcp.tool()
+def read_document(file_url: str) -> str:
+    """Legge/OCR il testo COMPLETO di un documento on-demand (PDF, immagine,
+    docx). Per analizzare un allegato non ancora sintetizzato come reperto."""
+    _init()
+    from thanatos_intel.ai.ops_brain import _t_read_document
+    return _j(_t_read_document(file_url=file_url))
+
+
+@mcp.tool()
+def ingest_document(case: str, file_url: str) -> str:
+    """Ingerisce un allegato come REPERTO del caso (OCR + estrazione AI + hash
+    catena di custodia). case: CASE-AAAA-N; file_url: url del file."""
+    _init()
+    from thanatos_intel.ai.ops_brain import _t_ingest_document
+    return _j(_t_ingest_document(case=case, file_url=file_url))
+
+
 if __name__ == "__main__":
     # THANATOS_MCP_TRANSPORT=http → servizio HTTP persistente (no spawn, no sandbox)
     # altrimenti stdio (default). init lazy in entrambi i casi.
