@@ -13,6 +13,22 @@ import os
 import re
 import frappe
 
+_VAULT = "/home/frappe/.secrets/integrations.json"
+
+
+def _vault(field, integration="ai_engines"):
+    """Legge un campo dal vault segreti admin (fonte unica di chiavi/password).
+    Struttura: {integration:{fields:{field:{value}}}}. Ritorna None se assente."""
+    try:
+        return (json.load(open(_VAULT))[integration]["fields"][field]["value"]) or None
+    except Exception:
+        return None
+
+
+def _secret(field, conf_key):
+    """Chiave con priorità: vault admin → site_config (retrocompat)."""
+    return _vault(field) or frappe.conf.get(conf_key)
+
 
 # ─────────────────────────── snapshot struttura ──────────────────────────────
 
@@ -367,13 +383,13 @@ def _cheap_chat(convo, system):
     Zen, modello free tool-capable). Configurabile: ops_brain_cheap_url/key/model.
     Fallback storico: openrouter_api_key."""
     import requests
-    url = (frappe.conf.get("ops_brain_cheap_url")
+    url = (_secret("cheap_url", "ops_brain_cheap_url")
            or "https://opencode.ai/zen/v1/chat/completions")
-    key = (frappe.conf.get("ops_brain_cheap_key")
-           or frappe.conf.get("openrouter_api_key"))
+    key = (_secret("cheap_key", "ops_brain_cheap_key")
+           or _secret("openrouter_api_key", "openrouter_api_key"))
     if not key:
         return "", {}
-    model = frappe.conf.get("ops_brain_cheap_model") or "deepseek-v4-flash-free"
+    model = _secret("cheap_model", "ops_brain_cheap_model") or "deepseek-v4-flash-free"
     try:
         r = requests.post(url,
             headers={"Authorization": f"Bearer {key}",
@@ -484,7 +500,8 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
                                      max_steps, label="ollama", model=ollama_model)
     E_cheap = lambda: (_agentic_loop(text, ctx_case, _cheap_chat, lead_name,
                                      max_steps, label="opencode-zen", model=cheap_model)
-                       if (frappe.conf.get("ops_brain_cheap_key") or frappe.conf.get("openrouter_api_key")) else None)
+                       if (_secret("cheap_key", "ops_brain_cheap_key")
+                           or _secret("openrouter_api_key", "openrouter_api_key")) else None)
     E_gw = lambda: _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps)
 
     # Router a costi scalati. cheap (OpenCode Zen free) è il workhorse; Claude è
@@ -533,33 +550,79 @@ def _meter(resp, ref):
         pass
 
 
-STAFF_ROLES = {"System Manager", "Investigation Manager", "Investigator",
-               "Thanatos Investigator", "Thanatos Supervisor",
-               "Thanatos Director", "Thanatos Analyst"}
-
-
 @frappe.whitelist()
 def ask(message, session_id=None):
-    """Endpoint per il pannello AI della Switchboard (web) e la pagina desk Cervello."""
+    """Endpoint per il pannello AI della Switchboard (web)."""
     if frappe.session.user == "Guest":
         frappe.throw("Login richiesto")
-    if not STAFF_ROLES & set(frappe.get_roles()):
-        frappe.throw("Riservato allo staff Thanatos", frappe.PermissionError)
     reply = answer(message, operator=frappe.session.user, session_id=session_id)
     return {"reply": reply}
 
 
+# ─────────────────────── report costi / fatturazione AI ──────────────────────
+
 @frappe.whitelist()
-def chat_upload(file_url, file_name, content_type="", case=None, session_id=None):
-    """Allegato dalla chat Cervello (desk). Se è indicato un caso, il file diventa
-    reperto nel dossier (riusa case_assistant.chat_upload); altrimenti resta un
-    File libero e il cervello lo riceve come contesto."""
-    if frappe.session.user == "Guest":
-        frappe.throw("Login richiesto")
-    if not STAFF_ROLES & set(frappe.get_roles()):
-        frappe.throw("Riservato allo staff Thanatos", frappe.PermissionError)
-    result = {"ok": True, "evidence": None}
-    if case:
-        from thanatos_intel.ai.case_assistant import chat_upload as case_upload
-        result["evidence"] = case_upload(case, file_url, file_name, content_type).get("evidence")
-    return result
+def cost_report(days=30):
+    """Report consumo AI dal AI Usage Log: totali, per motore/provider, per
+    giorno, per cliente. Per la console admin + generazione fattura."""
+    days = int(days)
+    per_provider = frappe.db.sql("""
+        SELECT provider, COUNT(*) chiamate,
+               SUM(tokens_in+tokens_out) token, SUM(client_cost) costo
+        FROM `tabAI Usage Log`
+        WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+        GROUP BY provider ORDER BY costo DESC
+    """, days, as_dict=True)
+    per_day = frappe.db.sql("""
+        SELECT usage_date, COUNT(*) chiamate,
+               SUM(tokens_in+tokens_out) token, SUM(client_cost) costo
+        FROM `tabAI Usage Log`
+        WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+        GROUP BY usage_date ORDER BY usage_date DESC
+    """, days, as_dict=True)
+    per_client = frappe.db.sql("""
+        SELECT COALESCE(client,'(interno/Thanatos)') cliente, COUNT(*) chiamate,
+               SUM(tokens_in+tokens_out) token, SUM(client_cost) costo
+        FROM `tabAI Usage Log`
+        WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+        GROUP BY client ORDER BY costo DESC
+    """, days, as_dict=True)
+    tot = frappe.db.sql("""
+        SELECT COUNT(*) chiamate, SUM(tokens_in+tokens_out) token,
+               SUM(client_cost) costo
+        FROM `tabAI Usage Log`
+        WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+    """, days, as_dict=True)
+    return {"giorni": days, "totale": tot[0] if tot else {},
+            "per_motore": per_provider, "per_giorno": per_day,
+            "per_cliente": per_client,
+            "tariffa_eur_1k": float(frappe.conf.get("ops_brain_bill_rate") or 0.03)}
+
+
+@frappe.whitelist()
+def generate_ai_invoice(client=None, days=30):
+    """Genera la fattura del consumo AI per un cliente (o Thanatos/interno) dal
+    AI Usage Log. Somma client_cost del periodo e crea un documento riepilogo.
+    Ritorna il totale e il dettaglio; l'inserimento su ERPNext Sales Invoice è
+    opzionale (richiede Company + Customer configurati)."""
+    days = int(days)
+    cond = "client = %(client)s" if client else "1=1"
+    rows = frappe.db.sql(f"""
+        SELECT provider, model, SUM(tokens_in+tokens_out) token,
+               SUM(client_cost) costo, COUNT(*) chiamate
+        FROM `tabAI Usage Log`
+        WHERE usage_date >= DATE_SUB(CURDATE(), INTERVAL %(d)s DAY) AND {cond}
+        GROUP BY provider, model ORDER BY costo DESC
+    """, {"d": days, "client": client}, as_dict=True)
+    totale = round(sum(float(r["costo"] or 0) for r in rows), 2)
+    token = int(sum(int(r["token"] or 0) for r in rows))
+    return {
+        "cliente": client or "Thanatos (interno)",
+        "periodo_giorni": days,
+        "token_totali": token,
+        "tariffa_eur_1k": float(frappe.conf.get("ops_brain_bill_rate") or 0.03),
+        "totale_eur": totale,
+        "righe": rows,
+        "nota": "Consumo AI fatturato da MMOS a €{:.3f}/1000 token.".format(
+            float(frappe.conf.get("ops_brain_bill_rate") or 0.03)),
+    }
