@@ -1,0 +1,9 @@
+{
+ "name": "thanatos-brain", "doctype": "Page", "module": "Thanatos Core",
+ "page_name": "thanatos-brain", "title": "Cervello Thanatos",
+ "standard": "Yes", "system_page": 0,
+ "roles": [
+  {"role": "System Manager"}, {"role": "Investigation Manager"}, {"role": "Investigator"},
+  {"role": "Thanatos Investigator"}, {"role": "Thanatos Supervisor"}, {"role": "Thanatos Director"}, {"role": "Thanatos Analyst"}
+ ]
+}

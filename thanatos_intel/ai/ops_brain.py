@@ -358,10 +358,17 @@ def _meter(resp, ref):
         pass
 
 
+STAFF_ROLES = {"System Manager", "Investigation Manager", "Investigator",
+               "Thanatos Investigator", "Thanatos Supervisor",
+               "Thanatos Director", "Thanatos Analyst"}
+
+
 @frappe.whitelist()
 def ask(message, session_id=None):
-    """Endpoint per il pannello AI della Switchboard (web)."""
+    """Endpoint per il pannello AI della Switchboard (web) e la pagina desk Cervello."""
     if frappe.session.user == "Guest":
         frappe.throw("Login richiesto")
+    if not STAFF_ROLES & set(frappe.get_roles()):
+        frappe.throw("Riservato allo staff Thanatos", frappe.PermissionError)
     reply = answer(message, operator=frappe.session.user, session_id=session_id)
     return {"reply": reply}

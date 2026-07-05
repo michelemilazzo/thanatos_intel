@@ -1055,6 +1055,13 @@
    "type": "Page"
   },
   {
+   "doc_view": "",
+   "label": "🧠 Cervello AI",
+   "link_to": "thanatos-brain",
+   "type": "Page",
+   "name": "thanatos-brain-shortcut"
+  },
+  {
    "color": "Yellow",
    "doc_view": "",
    "label": "Carica evidenza",
