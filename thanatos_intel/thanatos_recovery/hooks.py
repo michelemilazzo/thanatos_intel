@@ -71,6 +71,11 @@ def setup():
     frappe.logger().info("Vault initialized")
 
 
+# Assets - Load form scripts
+app_include_js = "/assets/thanatos_intel/js/wallet_recovery_form.js"
+app_include_css = "/assets/thanatos_intel/css/wallet_recovery.css"
+
+
 # Permissions
 def has_wallet_recovery_permission(user, doctype, doc=None, ptype="read"):
     """
