@@ -118,7 +118,7 @@ SOURCES = [
          connector="thanatos_intel.osint.engine.lookup_urlscan",
          needs="urlscan_api_key", url="https://urlscan.io",
          note="Search API pubblica no-key; con urlscan_api_key si abilita anche il submit scan."),
-    dict(key="shodan", name="Shodan", tier="free_key", status="needs_key",
+    dict(key="shodan", name="Shodan", tier="free_key", status="operational",
          category="cyber", targets=["IP"],
          connector="thanatos_intel.osint.engine.lookup_shodan",
          needs="shodan_api_key", url="https://shodan.io"),
