@@ -106,6 +106,7 @@ def get_thread(lead_name):
         "status": doc.status,
         "priority": doc.priority,
         "assigned_to": doc.assigned_to,
+        "shared_with": doc.get("shared_with") or "",
         "linked_case": doc.linked_case,
         "linked_contact": doc.linked_contact,
         "whatsapp_number": doc.whatsapp_number,
@@ -113,8 +114,122 @@ def get_thread(lead_name):
     }
 
 
+def _is_manager(user=None):
+    return bool({"System Manager", "Investigation Manager"} &
+                set(frappe.get_roles(user or frappe.session.user)))
+
+
+def _shared_set(lead):
+    return {u.strip() for u in (lead.get("shared_with") or "").split(",") if u.strip()}
+
+
+def _can_reply(lead_name, user=None):
+    """Chi può scrivere: assegnatario, operatori condivisi, manager.
+    Se la chat è libera, il primo che scrive la prende in carico (claim atomico)."""
+    user = user or frappe.session.user
+    lead = frappe.db.get_value("Intel Lead", lead_name,
+                               ["assigned_to", "shared_with"], as_dict=True)
+    if not lead:
+        frappe.throw(_("Lead non trovato"))
+    if not lead.assigned_to:
+        claim_lead(lead_name)
+        return True
+    if user == lead.assigned_to or user in _shared_set(lead) or _is_manager(user):
+        return True
+    op = lead.assigned_to.split("@")[0]
+    frappe.throw(_(f"Chat in carico a {op}. Chiedi il trasferimento o la condivisione."))
+
+
+@frappe.whitelist()
+def claim_lead(lead_name):
+    """Presa in carico: vince il primo (update atomico solo se non assegnata)."""
+    user = frappe.session.user
+    changed = frappe.db.sql("""
+        UPDATE `tabIntel Lead` SET assigned_to = %s
+        WHERE name = %s AND (assigned_to IS NULL OR assigned_to = '')
+    """, (user, lead_name))
+    frappe.db.commit()
+    assigned = frappe.db.get_value("Intel Lead", lead_name, "assigned_to")
+    if assigned == user:
+        _emit(lead_name, "claimed", {"user": user})
+        return {"ok": True, "assigned_to": user}
+    return {"ok": False, "assigned_to": assigned,
+            "error": f"Già presa in carico da {(assigned or '?').split('@')[0]}"}
+
+
+@frappe.whitelist()
+def transfer_lead(lead_name, to_user, note=""):
+    """Trasferimento: solo assegnatario o manager. Notifica il destinatario."""
+    user = frappe.session.user
+    lead = frappe.db.get_value("Intel Lead", lead_name,
+                               ["assigned_to", "shared_with", "source_name",
+                                "source_identifier"], as_dict=True)
+    if not lead:
+        frappe.throw(_("Lead non trovato"))
+    if lead.assigned_to and lead.assigned_to != user and not _is_manager(user):
+        frappe.throw(_("Solo l'assegnatario o un manager può trasferire la chat"))
+    shared = _shared_set(lead) - {to_user}
+    frappe.db.set_value("Intel Lead", lead_name,
+                        {"assigned_to": to_user, "shared_with": ", ".join(sorted(shared))})
+    frappe.db.commit()
+    who = lead.source_name or lead.source_identifier or lead_name
+    _notify_user(to_user, f"↪ Chat WhatsApp trasferita a te: {who}"
+                 + (f" — {note}" if note else ""), lead_name)
+    _emit(lead_name, "transferred", {"from": user, "to": to_user})
+    return {"ok": True}
+
+
+@frappe.whitelist()
+def share_lead(lead_name, user_to_add):
+    """Condivisione: aggiunge un operatore alla chat (resta anche l'assegnatario)."""
+    user = frappe.session.user
+    lead = frappe.db.get_value("Intel Lead", lead_name,
+                               ["assigned_to", "shared_with", "source_name",
+                                "source_identifier"], as_dict=True)
+    if not lead:
+        frappe.throw(_("Lead non trovato"))
+    if lead.assigned_to and lead.assigned_to != user and not _is_manager(user):
+        frappe.throw(_("Solo l'assegnatario o un manager può condividere la chat"))
+    shared = _shared_set(lead) | {user_to_add}
+    frappe.db.set_value("Intel Lead", lead_name, "shared_with", ", ".join(sorted(shared)))
+    frappe.db.commit()
+    who = lead.source_name or lead.source_identifier or lead_name
+    _notify_user(user_to_add, f"➕ Sei stato aggiunto alla chat WhatsApp: {who}", lead_name)
+    _emit(lead_name, "shared", {"user": user_to_add})
+    return {"ok": True}
+
+
+@frappe.whitelist()
+def unshare_lead(lead_name, user_to_remove):
+    user = frappe.session.user
+    lead = frappe.db.get_value("Intel Lead", lead_name,
+                               ["assigned_to", "shared_with"], as_dict=True)
+    if lead.assigned_to != user and not _is_manager(user):
+        frappe.throw(_("Solo l'assegnatario o un manager può rimuovere operatori"))
+    shared = _shared_set(lead) - {user_to_remove}
+    frappe.db.set_value("Intel Lead", lead_name, "shared_with", ", ".join(sorted(shared)))
+    frappe.db.commit()
+    _emit(lead_name, "unshared", {"user": user_to_remove})
+    return {"ok": True}
+
+
+def _notify_user(user, message, lead_name):
+    try:
+        frappe.get_doc({
+            "doctype": "Notification Log", "for_user": user, "type": "Alert",
+            "document_type": "Intel Lead", "document_name": lead_name,
+            "subject": message,
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "centralino _notify_user")
+    frappe.publish_realtime("centralino_personal", {"message": message,
+                            "lead": lead_name}, user=user)
+
+
 @frappe.whitelist()
 def send_reply(lead_name, message_text):
+    _can_reply(lead_name)
     from thanatos_intel.ingest.whatsapp_send import send_reply as _send
     return _send(lead_name, message_text)
 
@@ -127,6 +242,7 @@ def upload_attachment(lead_name):
     from werkzeug.datastructures import FileStorage
     from frappe.utils import get_random_filename, get_safe_filename
 
+    _can_reply(lead_name)
     try:
         # Recupera il file da request.files
         if "file" not in frappe.request.files:

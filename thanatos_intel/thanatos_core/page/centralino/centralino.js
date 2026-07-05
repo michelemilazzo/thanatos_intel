@@ -285,9 +285,26 @@ class CentralinoPage {
 
         const bubbles = (data.messages || []).map(m => this._bubbleHtml(m)).join("");
 
+        const me = frappe.session.user;
+        const shared = (data.shared_with || "").split(",").map(s => s.trim()).filter(Boolean);
+        const isMine = data.assigned_to === me;
+        const isShared = shared.includes(me);
+        const isMgr = frappe.user.has_role("Investigation Manager") || frappe.user.has_role("System Manager");
+        const canWrite = !data.assigned_to || isMine || isShared || isMgr;
+
+        const ownerBadge = data.assigned_to
+            ? `<span class="ctlno-owner-badge" title="In carico a">👤 ${frappe.utils.escape_html(data.assigned_to.split("@")[0])}${shared.length ? ` +${shared.length}` : ""}</span>`
+            : `<span class="ctlno-owner-badge free">✋ libera</span>`;
+
+        const claimBtns = !data.assigned_to
+            ? `<button class="ctlno-act-btn primary" id="ctlno-btn-claim">✋ Prendi in carico</button>`
+            : (isMine || isMgr
+                ? `<button class="ctlno-act-btn" id="ctlno-btn-transfer">↪ Trasferisci</button>
+                   <button class="ctlno-act-btn" id="ctlno-btn-share">➕ Condividi</button>` : "");
+
         const actions = `
 <div class="ctlno-chat-actions">
-  <button class="ctlno-act-btn" id="ctlno-btn-assign" title="Assegna">👤 Assegna</button>
+  ${claimBtns}
   ${data.linked_case
     ? `<a class="ctlno-act-btn" href="/app/investigation-case/${encodeURIComponent(data.linked_case)}" target="_blank">📁 ${data.linked_case}</a>`
     : `<button class="ctlno-act-btn" id="ctlno-btn-promote">📁 Crea pratica</button>`}
@@ -297,7 +314,10 @@ class CentralinoPage {
   <a class="ctlno-act-btn" href="/app/intel-lead/${encodeURIComponent(data.name)}" target="_blank">↗ Apri</a>
 </div>`;
 
-        const replyBox = isClosed ? "" : `
+        const lockedNote = (!isClosed && !canWrite)
+            ? `<div class="ctlno-chat-closed-banner">🔒 In carico a ${frappe.utils.escape_html((data.assigned_to || "").split("@")[0])} — chiedi trasferimento o condivisione</div>` : "";
+
+        const replyBox = (isClosed || !canWrite) ? "" : `
 <div class="ctlno-reply-wrap">
   <div class="ctlno-attachments-list" id="ctlno-attachments-list"></div>
   <div class="ctlno-reply-row">
@@ -318,13 +338,15 @@ class CentralinoPage {
     <span class="ctlno-chat-title">${srcName}</span>
     ${waNum}
   </div>
-  <span class="ctlno-status-badge ${(data.status || "").toLowerCase().replace(/ /g, "-")}">${data.status || ""}</span>
+  <div>${ownerBadge}
+  <span class="ctlno-status-badge ${(data.status || "").toLowerCase().replace(/ /g, "-")}">${data.status || ""}</span></div>
 </div>
 ${actions}
 <div class="ctlno-chat-messages" id="ctlno-messages">
   ${bubbles || `<div class="ctlno-no-msgs">Nessun messaggio</div>`}
 </div>
 ${closedNote}
+${lockedNote}
 ${replyBox}`);
 
         this._scrollBottom();
@@ -422,6 +444,41 @@ ${replyBox}`);
 
         // Assegna
         $(root).on("click.chat", "#ctlno-btn-assign", () => this._openAssignDialog());
+
+        // Prendi in carico (primo che accetta vince)
+        $(root).on("click.chat", "#ctlno-btn-claim", () => {
+            frappe.call({
+                method: "thanatos_intel.api.centralino.claim_lead",
+                args: { lead_name: this.activeLead },
+                callback: (r) => {
+                    if (!r.message?.ok) {
+                        frappe.show_alert({ message: r.message?.error || __("Già assegnata"), indicator: "orange" });
+                    }
+                    this.openConversation(this.activeLead);
+                    this.loadConversations();
+                },
+            });
+        });
+
+        // Trasferisci
+        $(root).on("click.chat", "#ctlno-btn-transfer", () => this._openOperatorDialog(
+            __("Trasferisci chat"), __("Trasferisci"), (op, note) => {
+                frappe.call({
+                    method: "thanatos_intel.api.centralino.transfer_lead",
+                    args: { lead_name: this.activeLead, to_user: op, note: note || "" },
+                    callback: () => { this.openConversation(this.activeLead); this.loadConversations(); },
+                });
+            }, true));
+
+        // Condividi
+        $(root).on("click.chat", "#ctlno-btn-share", () => this._openOperatorDialog(
+            __("Aggiungi operatore alla chat"), __("Condividi"), (op) => {
+                frappe.call({
+                    method: "thanatos_intel.api.centralino.share_lead",
+                    args: { lead_name: this.activeLead, user_to_add: op },
+                    callback: () => this.openConversation(this.activeLead),
+                });
+            }));
 
         // Promuovi a caso
         $(root).on("click.chat", "#ctlno-btn-promote", () => this._openPromoteDialog(data));
@@ -541,6 +598,28 @@ ${replyBox}`);
                             },
                         });
                     },
+                });
+                d.show();
+            },
+        });
+    }
+
+    _openOperatorDialog(title, actionLabel, onConfirm, withNote = false) {
+        frappe.call({
+            method: "thanatos_intel.api.centralino.get_operators",
+            callback: (r) => {
+                const users = (r.message || []).filter(u => u.name !== frappe.session.user);
+                const fields = [{
+                    label: __("Operatore"), fieldname: "to_user", fieldtype: "Select",
+                    reqd: 1, options: users.map(u => u.name).join("\n"),
+                }];
+                if (withNote) {
+                    fields.push({ label: __("Nota (opzionale)"), fieldname: "note", fieldtype: "Small Text" });
+                }
+                const d = new frappe.ui.Dialog({
+                    title, fields,
+                    primary_action_label: actionLabel,
+                    primary_action: (vals) => { d.hide(); onConfirm(vals.to_user, vals.note); },
                 });
                 d.show();
             },
@@ -866,6 +945,10 @@ ${replyBox}`);
 .ctlno-badge.case { background: #111729; color: #A4A9BC; }
 .ctlno-prio-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #E06C6C; margin-right: 4px; }
 .ctlno-assigned { font-size: 9px; color: #5B6276; }
+.ctlno-owner-badge { font-size: 11px; color: #C8A96E; border: 1px solid #C8A96E55;
+  border-radius: 10px; padding: 2px 9px; margin-right: 8px; }
+.ctlno-owner-badge.free { color: #4CAF50; border-color: #4CAF5055; }
+.ctlno-act-btn.primary { background: #C8A96E; color: #0A0E1A; font-weight: 600; }
 
 /* ─── Chat area ───────────────────────────────────────────────────── */
 .ctlno-chat-area {

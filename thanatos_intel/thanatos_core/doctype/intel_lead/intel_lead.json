@@ -100,7 +100,7 @@
   {
    "fieldname": "priority",
    "fieldtype": "Select",
-   "label": "Priorit\u00e0",
+   "label": "Priorità",
    "options": "Bassa\nMedia\nAlta\nCritica",
    "default": "Media",
    "in_list_view": 1,
@@ -122,6 +122,13 @@
    "options": "User",
    "in_list_view": 1,
    "in_standard_filter": 1
+  },
+  {
+   "fieldname": "shared_with",
+   "fieldtype": "Small Text",
+   "label": "Condivisa con",
+   "read_only": 1,
+   "description": "Email operatori aggiunti alla chat (separati da virgola)"
   },
   {
    "fieldname": "bot_handed_off",
