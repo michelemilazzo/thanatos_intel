@@ -901,10 +901,12 @@ def case_tracing_links(case: str) -> dict:
 def generate_keywords_from_news() -> dict:
     """Estrae keyword SEO dalle news/articoli di Thanatos e le salva come SEO Keyword.
     Usa NLP semplice per identificare entità + parole-chiave ricorrenti."""
+    import html
     import re
     from collections import Counter
 
     STOPWORDS = {
+        "alla", "alle", "agli", "dell", "dall", "nell", "sull", "enne", "essi",
         "della", "delle", "degli", "dello", "nella", "nelle", "negli", "sulla", "sulle",
         "questo", "questa", "questi", "queste", "quello", "quella", "sono", "essere",
         "hanno", "aveva", "stato", "stata", "stati", "state", "dopo", "prima", "anche",
@@ -936,7 +938,9 @@ def generate_keywords_from_news() -> dict:
                 if len(tag) >= 4 and tag not in STOPWORDS:
                     counter[tag] += 3
 
-            text = f"{a.title or ''} {a.excerpt or ''}".lower()
+            text = html.unescape(f"{a.title or ''} {a.excerpt or ''}")
+            text = re.sub(r"<[^>]+>", " ", text)
+            text = re.sub(r"&[a-z]+;|&#\d+;", " ", text).lower()
             words = [w for w in re.findall(r"[a-zàèéìòù]{4,}", text) if w not in STOPWORDS]
             counter.update(words)
             for w1, w2 in zip(words, words[1:]):
