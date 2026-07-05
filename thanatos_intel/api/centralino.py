@@ -166,8 +166,8 @@ def transfer_lead(lead_name, to_user, note=""):
                                 "source_identifier"], as_dict=True)
     if not lead:
         frappe.throw(_("Lead non trovato"))
-    if lead.assigned_to and lead.assigned_to != user and not _is_manager(user):
-        frappe.throw(_("Solo l'assegnatario o un manager può trasferire la chat"))
+    if not ((lead.assigned_to and lead.assigned_to == user) or _is_manager(user)):
+        frappe.throw(_("Solo chi ha preso in carico la chat o un manager può trasferirla"))
     shared = _shared_set(lead) - {to_user}
     frappe.db.set_value("Intel Lead", lead_name,
                         {"assigned_to": to_user, "shared_with": ", ".join(sorted(shared))})
@@ -188,8 +188,8 @@ def share_lead(lead_name, user_to_add):
                                 "source_identifier"], as_dict=True)
     if not lead:
         frappe.throw(_("Lead non trovato"))
-    if lead.assigned_to and lead.assigned_to != user and not _is_manager(user):
-        frappe.throw(_("Solo l'assegnatario o un manager può condividere la chat"))
+    if not ((lead.assigned_to and lead.assigned_to == user) or _is_manager(user)):
+        frappe.throw(_("Solo chi ha preso in carico la chat o un manager può condividerla"))
     shared = _shared_set(lead) | {user_to_add}
     frappe.db.set_value("Intel Lead", lead_name, "shared_with", ", ".join(sorted(shared)))
     frappe.db.commit()

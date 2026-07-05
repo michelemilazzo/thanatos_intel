@@ -69,8 +69,8 @@ def transfer_case(case, to_user, note=""):
     """Trasferimento pratica: solo assegnatario o manager."""
     user = frappe.session.user
     doc = frappe.get_doc("Investigation Case", case)
-    if doc.assigned_investigator and not _is_case_owner(doc, user) and not _is_manager(user):
-        frappe.throw(_("Solo l'assegnatario o un manager può trasferire la pratica"))
+    if not (_is_case_owner(doc, user) or _is_manager(user)):
+        frappe.throw(_("Solo chi ha preso in carico la pratica o un manager può trasferirla"))
     target = frappe.db.get_value("Investigator", {"platform_user": to_user},
                                  ["name", "full_name"], as_dict=True)
     if not target:
@@ -89,8 +89,8 @@ def share_case(case, to_user, role_description=""):
     """Condivisione: aggiunge un operatore al team della pratica (Case Assignment)."""
     user = frappe.session.user
     doc = frappe.get_doc("Investigation Case", case)
-    if doc.assigned_investigator and not _is_case_owner(doc, user) and not _is_manager(user):
-        frappe.throw(_("Solo l'assegnatario o un manager può condividere la pratica"))
+    if not (_is_case_owner(doc, user) or _is_manager(user)):
+        frappe.throw(_("Solo chi ha preso in carico la pratica o un manager può condividerla"))
     if to_user in _team_users(doc):
         return {"ok": True, "already": True}
     target = frappe.db.get_value("Investigator", {"platform_user": to_user},
