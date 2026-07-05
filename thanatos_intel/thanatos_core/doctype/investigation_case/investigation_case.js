@@ -73,7 +73,8 @@ frappe.ui.form.on('Investigation Case', {
                             filters: {
                                 reference_doctype: "Investigation Case",
                                 reference_name: frm.doc.name,
-                                communication_type: ["in", ["Email", "Incoming Email", "Outgoing Email"]]
+                                communication_type: "Communication",
+                        communication_medium: "Email"
                             },
                             fields: ["name", "sender", "recipients", "subject", "creation", "communication_date", "read"],
                             order_by: "creation desc",
