@@ -205,9 +205,56 @@ _CLI_SYS = (
 )
 
 
+# ─────────────────────────── metering / billing ─────────────────────────────
+
+def _track(engine, model, tin=0, tout=0):
+    """Registra (per-richiesta, thread-safe) motore+token per la fatturazione."""
+    frappe.local._ob_meter = {"engine": engine, "model": model,
+                              "tin": int(tin or 0), "tout": int(tout or 0)}
+
+
+def _bill_last(reference=None, client=None):
+    """Fattura l'ultima richiesta a €0.03/1000 token (MMOS→Thanatos). Registra su
+    AI Usage Log con motore, modello, token, costo. Rate override:
+    site_config ops_brain_bill_rate (EUR per 1000 token)."""
+    m = getattr(frappe.local, "_ob_meter", None)
+    if not m:
+        return
+    frappe.local._ob_meter = None
+    rate = float(frappe.conf.get("ops_brain_bill_rate") or 0.03)  # EUR / 1000 token
+    total = m["tin"] + m["tout"]
+    client_cost = round(total / 1000.0 * rate, 6)
+    # se non abbiamo token (CLI senza usage), forfait minimo per non perdere revenue
+    if total == 0:
+        client_cost = round(float(frappe.conf.get("ops_brain_bill_min") or 0.01), 6)
+    # provider = valore valido del Select AI Usage Log; motore/modello nel campo model
+    provider = _PROVIDER.get(m["engine"], "Other")
+    model_label = f"{m['engine']}/{m['model']}"
+    try:
+        frappe.get_doc({
+            "doctype": "AI Usage Log", "client": client,
+            "provider": provider, "model": model_label,
+            "tokens_in": m["tin"], "tokens_out": m["tout"],
+            "real_cost": 0, "client_cost": client_cost,
+            "reference": reference, "usage_date": frappe.utils.nowdate(),
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ops_brain bill")
+    return client_cost
+
+
+# motore ops_brain → provider valido (Select di AI Usage Log)
+_PROVIDER = {
+    "opencode-zen": "OpenCode", "claude": "Anthropic", "codex": "OpenAI",
+    "openrouter": "OpenRouter", "gateway": "Other", "ollama": "Other",
+}
+
+
 def _cli_answer(text, operator=None, ctx_case=None, session_id=None):
     """Interroga il cervello via Claude Code CLI + MCP thanatos (tutti gli
     strumenti). Ritorna il testo, o None se il CLI non è disponibile."""
+    import json as _json
     import subprocess
     claude = frappe.conf.get("ops_brain_claude_bin") or "/usr/local/bin/claude"
     if not os.path.exists(claude):
@@ -216,14 +263,29 @@ def _cli_answer(text, operator=None, ctx_case=None, session_id=None):
     cmd = [claude, "-p", prompt,
            "--append-system-prompt", _CLI_SYS,
            "--allowedTools", *_MCP_TOOLS,
-           "--output-format", "text"]
+           "--output-format", "json"]
     env = dict(os.environ)
     env["HOME"] = frappe.conf.get("ops_brain_home") or "/home/frappe"
     env["THANATOS_SITE"] = frappe.local.site or "thanatos.onekeyco.com"
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=170, env=env)
-        out = (r.stdout or "").strip()
-        return out or None
+        raw = (r.stdout or "").strip()
+        if not raw:
+            return None
+        try:
+            d = _json.loads(raw)
+        except Exception:
+            return raw  # output text non-json: usalo comunque
+        if d.get("is_error"):
+            return None
+        out = (d.get("result") or "").strip()
+        if not out or "Not logged in" in out:
+            return None
+        u = d.get("usage") or {}
+        tin = int(u.get("input_tokens", 0)) + int(u.get("cache_read_input_tokens", 0))
+        _track("claude", d.get("modelUsage") and next(iter(d["modelUsage"]), "claude") or "claude",
+               tin, int(u.get("output_tokens", 0)))
+        return out
     except Exception:
         frappe.log_error(frappe.get_traceback(), "ops_brain cli")
         return None
@@ -262,6 +324,10 @@ def _codex_answer(text, operator=None, ctx_case=None):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=175)
         out = (r.stdout or "").strip()
+        # token: codex stampa "tokens used\n<N>"
+        tm = re.search(r"tokens used\s*\n?\s*([\d,]+)", out)
+        toks = int(tm.group(1).replace(",", "")) if tm else 0
+        _track("codex", "codex-gpt", 0, toks)
         # codex exec stampa header + "codex\n<risposta>\ntokens used…" → estrai il corpo
         if "codex\n" in out:
             body = out.split("codex\n", 1)[1]
@@ -328,24 +394,31 @@ def _cheap_chat(convo, system):
         return "", {}
 
 
-def _agentic_loop(text, ctx_case, llm_fn, lead_name=None, max_steps=3):
+def _agentic_loop(text, ctx_case, llm_fn, lead_name=None, max_steps=3,
+                  label="cheap", model="ext"):
     """Ciclo agentico riusabile: il modello (llm_fn) riceve snapshot+catalogo,
     emette {tool,args} JSON che eseguiamo, poi risponde. llm_fn(convo, system)
-    → (testo, usage). Ritorna la risposta finale o None se il modello non parla."""
+    → (testo, usage). Accumula i token di tutti gli step e traccia il motore per
+    la fatturazione. Ritorna la risposta finale o None se il modello non parla."""
     snapshot = _structure_snapshot()
     convo = (f"Contesto struttura (aggiornato):\n{snapshot}\n"
              + (f"\nCaso di contesto attuale: {ctx_case}\n" if ctx_case else "")
              + f"\nRichiesta operatore: «{text}»")
     out = ""
+    tot_in = tot_out = 0
     for _step in range(max_steps):
         out, usage = llm_fn(convo, _SYS)
         out = (out or "").strip()
         if usage:
-            _meter({"usage": usage, "model": "ext"}, lead_name)
+            tot_in += int(usage.get("prompt_tokens") or usage.get("prompt_eval_count")
+                          or usage.get("tokens_in") or 0)
+            tot_out += int(usage.get("completion_tokens") or usage.get("eval_count")
+                           or usage.get("tokens_out") or 0)
         if not out:
             return None
         call = _extract_toolcall(out)
         if not call:
+            _track(label, model, tot_in, tot_out)
             return out
         tool = call["tool"]
         args = call.get("args") or {}
@@ -362,7 +435,10 @@ def _agentic_loop(text, ctx_case, llm_fn, lead_name=None, max_steps=3):
                  f"{json.dumps(result, ensure_ascii=False, default=str)[:3500]}\n\n"
                  "Ora rispondi all'operatore in testo, breve e operativo. "
                  "Se serve un altro strumento, richiamalo col JSON.")
-    return out if not _extract_toolcall(out) else None
+    if out and not _extract_toolcall(out):
+        _track(label, model, tot_in, tot_out)
+        return out
+    return None
 
 
 # domande "semplici" (saluti, generiche) che non richiedono i tool investigativi
@@ -399,30 +475,37 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
                 return r
         return None
 
+    cheap_model = frappe.conf.get("ops_brain_cheap_model") or "deepseek-v4-flash-free"
+    ollama_model = frappe.conf.get("ops_brain_ollama_model") or "qwen2.5:7b"
     E_claude = lambda: _cli_answer(text, operator=operator, ctx_case=ctx_case,
                                    session_id=session_id)
     E_codex = lambda: _codex_answer(text, operator=operator, ctx_case=ctx_case)
-    E_ollama = lambda: _agentic_loop(text, ctx_case, _ollama_chat, lead_name, max_steps)
-    E_cheap = lambda: (_agentic_loop(text, ctx_case, _cheap_chat, lead_name, max_steps)
+    E_ollama = lambda: _agentic_loop(text, ctx_case, _ollama_chat, lead_name,
+                                     max_steps, label="ollama", model=ollama_model)
+    E_cheap = lambda: (_agentic_loop(text, ctx_case, _cheap_chat, lead_name,
+                                     max_steps, label="opencode-zen", model=cheap_model)
                        if (frappe.conf.get("ops_brain_cheap_key") or frappe.conf.get("openrouter_api_key")) else None)
     E_gw = lambda: _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps)
 
+    # Router a costi scalati. cheap (OpenCode Zen free) è il workhorse; Claude è
+    # l'escalation per il complesso; Codex/gateway alternative; Ollama (CPU,
+    # lento) ultimo fallback offline.
     if engine == "auto":
-        # Router a costi scalati. OpenRouter economico è il workhorse (veloce +
-        # tool-capable); Claude è l'escalation per il complesso; Codex/gateway
-        # alternative; Ollama (CPU, lento) solo ultimo fallback offline.
         r = _chain(E_cheap, E_claude, E_codex, E_gw, E_ollama)
-        return r or "Assistente AI momentaneamente non disponibile."
-    if engine == "codex":
-        return _chain(E_codex, E_claude, E_gw) or "Assistente AI non disponibile."
-    if engine == "ollama":
-        return _chain(E_ollama, E_claude, E_gw) or "Assistente AI non disponibile."
-    if engine == "openrouter":
-        return _chain(E_cheap, E_ollama, E_claude, E_gw) or "Assistente AI non disponibile."
-    if engine == "gateway":
-        return _chain(E_gw, E_claude) or "Assistente AI non disponibile."
-    # cli (default)
-    return _chain(E_claude, E_codex, E_cheap, E_ollama, E_gw) or "Assistente AI non disponibile."
+    elif engine == "codex":
+        r = _chain(E_codex, E_claude, E_gw)
+    elif engine == "ollama":
+        r = _chain(E_ollama, E_claude, E_gw)
+    elif engine == "openrouter":
+        r = _chain(E_cheap, E_ollama, E_claude, E_gw)
+    elif engine == "gateway":
+        r = _chain(E_gw, E_claude)
+    else:  # cli (default)
+        r = _chain(E_claude, E_codex, E_cheap, E_ollama, E_gw)
+
+    # fatturazione MMOS→Thanatos a €0.03/1000 token del motore che ha risposto
+    _bill_last(reference=lead_name)
+    return r or "Assistente AI momentaneamente non disponibile."
 
 
 def _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps):
@@ -434,7 +517,8 @@ def _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps):
         resp = _gateway(convo, system=system, task_type="chat", session_id=sid)
         return (_resp_text(resp) or ""), ((resp or {}).get("usage") or {})
 
-    return _agentic_loop(text, ctx_case, _gw_fn, lead_name, max_steps)
+    return _agentic_loop(text, ctx_case, _gw_fn, lead_name, max_steps,
+                         label="gateway", model="mmos-gateway")
 
 
 def _meter(resp, ref):
