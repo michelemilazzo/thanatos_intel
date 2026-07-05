@@ -285,6 +285,11 @@ def lookup_company(query: str, jurisdiction: str = "") -> dict:
     if cached:
         return {**cached, "cached": True}
     api_key = _cfg("opencorporates_api_key")
+    if not api_key:
+        # OpenCorporates ha rimosso il tier free no-key: ogni chiamata API
+        # richiede un token. Senza -> stub (nessun 401 rumoroso nel semaforo).
+        return {"stub": True, "source": "opencorporates",
+                "message": "opencorporates_api_key non configurata"}
     params = {"q": query, "format": "json"}
     if jurisdiction:
         params["jurisdiction_code"] = jurisdiction

@@ -18,7 +18,7 @@ import frappe
 import requests
 
 from thanatos_intel.osint.engine import (UA, _cache_get, _cache_set,
-                                         _cfg, _persist_lookup)
+                                         _cfg, _is_ip, _persist_lookup)
 
 OPENSANCTIONS_URL = "https://api.opensanctions.org/search/default"
 TRONSCAN_ACCOUNT_URL = "https://apilist.tronscanapi.com/api/accountv2"
