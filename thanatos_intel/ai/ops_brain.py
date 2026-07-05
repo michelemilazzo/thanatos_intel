@@ -296,18 +296,24 @@ def _ollama_chat(convo, system):
         return "", {}
 
 
-def _openrouter_chat(convo, system):
-    """LLM callable su OpenRouter (economico, tool-capable). Modello configurabile."""
+def _cheap_chat(convo, system):
+    """LLM callable su un endpoint OpenAI-compatibile economico (default OpenCode
+    Zen, modello free tool-capable). Configurabile: ops_brain_cheap_url/key/model.
+    Fallback storico: openrouter_api_key."""
     import requests
-    key = frappe.conf.get("openrouter_api_key")
+    url = (frappe.conf.get("ops_brain_cheap_url")
+           or "https://opencode.ai/zen/v1/chat/completions")
+    key = (frappe.conf.get("ops_brain_cheap_key")
+           or frappe.conf.get("openrouter_api_key"))
     if not key:
         return "", {}
-    model = frappe.conf.get("ops_brain_openrouter_model") or "google/gemini-2.0-flash-001"
+    model = frappe.conf.get("ops_brain_cheap_model") or "deepseek-v4-flash-free"
     try:
-        r = requests.post("https://openrouter.ai/api/v1/chat/completions",
+        r = requests.post(url,
             headers={"Authorization": f"Bearer {key}",
                      "HTTP-Referer": "https://thanatos.agency",
-                     "X-Title": "Thanatos Ops Brain"},
+                     "X-Title": "Thanatos Ops Brain",
+                     "Content-Type": "application/json"},
             json={"model": model,
                   "messages": [{"role": "system", "content": system},
                                {"role": "user", "content": convo}],
@@ -318,7 +324,7 @@ def _openrouter_chat(convo, system):
         txt = (d.get("choices", [{}])[0].get("message", {}).get("content", "") or "").strip()
         return txt, (d.get("usage") or {})
     except Exception:
-        frappe.log_error(frappe.get_traceback(), "ops_brain openrouter")
+        frappe.log_error(frappe.get_traceback(), "ops_brain cheap")
         return "", {}
 
 
@@ -397,26 +403,26 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
                                    session_id=session_id)
     E_codex = lambda: _codex_answer(text, operator=operator, ctx_case=ctx_case)
     E_ollama = lambda: _agentic_loop(text, ctx_case, _ollama_chat, lead_name, max_steps)
-    E_openr = lambda: (_agentic_loop(text, ctx_case, _openrouter_chat, lead_name, max_steps)
-                       if frappe.conf.get("openrouter_api_key") else None)
+    E_cheap = lambda: (_agentic_loop(text, ctx_case, _cheap_chat, lead_name, max_steps)
+                       if (frappe.conf.get("ops_brain_cheap_key") or frappe.conf.get("openrouter_api_key")) else None)
     E_gw = lambda: _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps)
 
     if engine == "auto":
         # Router a costi scalati. OpenRouter economico è il workhorse (veloce +
         # tool-capable); Claude è l'escalation per il complesso; Codex/gateway
         # alternative; Ollama (CPU, lento) solo ultimo fallback offline.
-        r = _chain(E_openr, E_claude, E_codex, E_gw, E_ollama)
+        r = _chain(E_cheap, E_claude, E_codex, E_gw, E_ollama)
         return r or "Assistente AI momentaneamente non disponibile."
     if engine == "codex":
         return _chain(E_codex, E_claude, E_gw) or "Assistente AI non disponibile."
     if engine == "ollama":
         return _chain(E_ollama, E_claude, E_gw) or "Assistente AI non disponibile."
     if engine == "openrouter":
-        return _chain(E_openr, E_ollama, E_claude, E_gw) or "Assistente AI non disponibile."
+        return _chain(E_cheap, E_ollama, E_claude, E_gw) or "Assistente AI non disponibile."
     if engine == "gateway":
         return _chain(E_gw, E_claude) or "Assistente AI non disponibile."
     # cli (default)
-    return _chain(E_claude, E_codex, E_openr, E_ollama, E_gw) or "Assistente AI non disponibile."
+    return _chain(E_claude, E_codex, E_cheap, E_ollama, E_gw) or "Assistente AI non disponibile."
 
 
 def _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps):
