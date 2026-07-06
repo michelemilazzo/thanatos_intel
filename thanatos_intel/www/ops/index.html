@@ -1393,7 +1393,7 @@ function initHeader() {
   updateStatusMenu();
   const btnStatus = $('#btn-status');
   btnStatus.addEventListener('click', () => menu.classList.add('open'));
-  $('#menu-logout').addEventListener('click', () => location.href = '/api/method/logout');
+  $('#menu-logout').addEventListener('click', () => location.href = '/logout');
   $('#menu-notif').addEventListener('click', () => { toggleNotifications(); menu.classList.remove('open'); });
   $('#menu-test-push').addEventListener('click', async () => {
     try { await call('thanatos_intel.api.push.send_test_push'); toast('Push di test inviata'); }
