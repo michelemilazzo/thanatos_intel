@@ -200,13 +200,13 @@ function switchMode(m) {
   const msgs = $('#msgs');
   if (m === 'ai') {
     $('#hsub').textContent = 'Assistente AI — solo i tuoi casi';
-    $('#reply').placeholder = 'Chiedi all\'assistente sui tuoi casi…';
+    $('#reply').placeholder = 'Chiedi all\'assistente o allega un documento…';
     $('#compose').style.display = 'flex';
     msgs.innerHTML = `<div class="ai-hint"><h3>ASSISTENTE THANATOS</h3>
-      <p>Chiedimi lo stato dei tuoi casi, cosa manca, o spiegazioni sui documenti.
-      Vedo <b>solo le tue pratiche</b>.<br><br>
+      <p>Chiedimi lo stato dei tuoi casi, cosa manca, o <b>allega un documento (📎)</b>
+      e te lo spiego io. Vedo <b>solo le tue pratiche</b>.<br><br>
       Es: «a che punto è il mio caso», «quali documenti servono», «riassumi la situazione».</p></div>`;
-    $('#attach-btn').style.display = 'none'; $('#mic-btn').style.display = 'none';
+    $('#attach-btn').style.display = ''; $('#mic-btn').style.display = 'none';
   } else {
     $('#hsub').textContent = 'Chat con l\'agenzia';
     $('#reply').placeholder = 'Scrivi al team Thanatos…';
@@ -257,7 +257,8 @@ $('#reply').addEventListener('input', () => {
 $('#attach-btn').addEventListener('click', () => $('#attach-file').click());
 $('#attach-file').addEventListener('change', e => uploadFiles(e.target.files));
 async function uploadFiles(files) {
-  if (!files?.length || !APP.activeCase) return;
+  if (!files?.length) return;
+  if (!APP.activeCase) { toast('Seleziona prima un caso'); return; }
   for (const f of files) {
     try {
       toast('⬆️ Carico ' + f.name);
@@ -270,16 +271,51 @@ async function uploadFiles(files) {
       const uj = await up.json();
       const fu = uj.message?.file_url;
       if (!fu) throw new Error('no file_url');
-      const r = await call('thanatos_intel.api.portal_chat.send_media',
-                          {case_name: APP.activeCase, file_url: fu, caption: ''});
-      if (r?.ok) {
-        $('#msgs').insertAdjacentHTML('beforeend', renderBubble({
-          direction:'Inbound', content:'📎 ' + (r.filename || f.name),
-          sent_at:new Date().toISOString(),
-        }));
-        $('#msgs').scrollTop = $('#msgs').scrollHeight;
-        toast('✓ inviato');
-      } else toast('Errore invio');
+      if (APP.mode === 'ai') {
+        // MODO AI: leggi + spiega + salva estratto per l'operatore
+        const msgs = $('#msgs');
+        if (msgs.querySelector('.ai-hint')) msgs.innerHTML = '';
+        msgs.insertAdjacentHTML('beforeend', `<div class="bubble out">📎 ${esc(f.name)}</div>`);
+        const think = document.createElement('div');
+        think.className = 'bubble ai thinking';
+        think.innerHTML = 'Sto leggendo il documento… <span class="dots"><i></i><i></i><i></i></span>';
+        msgs.appendChild(think); msgs.scrollTop = msgs.scrollHeight;
+        try {
+          const q = $('#reply').value.trim();
+          if (q) $('#reply').value = '';
+          const r = await call('thanatos_intel.api.portal_chat.ai_explain_document',
+                               {case_name: APP.activeCase, file_url: fu, question: q});
+          think.remove();
+          if (r?.ok) {
+            const meta = [];
+            if (r.tipo) meta.push(`Tipo: <b>${esc(r.tipo)}</b>`);
+            if (r.leggi?.length) meta.push(`Riferimenti: ${r.leggi.map(esc).join(', ')}`);
+            const metaHtml = meta.length ? `<div style="font-size:11.5px;color:var(--tx-mid);margin-top:6px;padding-top:6px;border-top:1px solid var(--line)">${meta.join(' · ')}</div>` : '';
+            const spieg = esc(r.spiegazione || '').replace(/\n/g,'<br>');
+            msgs.insertAdjacentHTML('beforeend',
+              `<div class="bubble ai">${spieg}${metaHtml}
+               <div style="font-size:10.5px;color:var(--tx-mid);margin-top:6px;font-style:italic">✓ Estratto salvato per il team operatore.</div></div>`);
+          } else {
+            msgs.insertAdjacentHTML('beforeend', `<div class="bubble ai">Non sono riuscito ad analizzare: ${esc(r?.error||'errore')}</div>`);
+          }
+          msgs.scrollTop = msgs.scrollHeight;
+        } catch (e) {
+          think.remove();
+          msgs.insertAdjacentHTML('beforeend', '<div class="bubble ai">Assistente non disponibile ora.</div>');
+        }
+      } else {
+        // MODO OPERATORE: inoltra normalmente al team
+        const r = await call('thanatos_intel.api.portal_chat.send_media',
+                            {case_name: APP.activeCase, file_url: fu, caption: ''});
+        if (r?.ok) {
+          $('#msgs').insertAdjacentHTML('beforeend', renderBubble({
+            direction:'Inbound', content:'📎 ' + (r.filename || f.name),
+            sent_at:new Date().toISOString(),
+          }));
+          $('#msgs').scrollTop = $('#msgs').scrollHeight;
+          toast('✓ inviato');
+        } else toast('Errore invio');
+      }
     } catch (e) { console.error(e); toast('Errore su ' + f.name); }
   }
 }

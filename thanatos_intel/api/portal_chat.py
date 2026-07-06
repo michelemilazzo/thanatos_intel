@@ -140,3 +140,111 @@ def send_media(case_name, file_url, caption=""):
     except Exception:
         pass
     return {"ok": True, "lead": lead, "filename": fname}
+
+
+_EXPLAIN_SYS = (
+    "Sei l'assistente Thanatos Intel per un CLIENTE. Ricevi il testo di un "
+    "documento che il cliente ti ha appena caricato. Rispondi SOLO con JSON "
+    "valido, nessun testo fuori: "
+    '{"spiegazione":"spiegazione chiara e sintetica al cliente (del Lei, '
+    'max 120 parole, cosa e il documento e cosa comporta)",'
+    '"riassunto":"riassunto tecnico 2-3 frasi per l operatore",'
+    '"tipo_documento":"tipo (contratto/visura/fattura/sentenza/...)",'
+    '"leggi_citate":["eventuali riferimenti normativi/articoli citati nel testo"],'
+    '"dati_chiave":{"campo":"valore per i dati salienti (importi, date, parti, '
+    'P.IVA, numeri)"},'
+    '"da_approfondire":["eventuali punti che l operatore dovrebbe verificare"]}'
+)
+
+
+@frappe.whitelist()
+def ai_explain_document(case_name, file_url, question=""):
+    """Il cliente carica un documento in modalità AI: lo leggiamo (OCR),
+    l'AI lo spiega al cliente e SALVA l'estratto strutturato (riassunto, leggi
+    citate, dati chiave) in una cartella Drive del caso per consultazione rapida
+    dell'operatore + Case Activity. Scope: solo casi del cliente."""
+    _guard(case_name)
+    import json
+    import os
+    # 1) OCR / lettura testo del documento
+    from thanatos_intel.ai.ops_brain import _t_read_document
+    r = _t_read_document(file_url=file_url)
+    if r.get("error"):
+        return {"ok": False, "error": r["error"]}
+    text = (r.get("text") or "").strip()
+    if not text or "illeggibile" in text:
+        return {"ok": False, "error": "Documento vuoto o illeggibile."}
+
+    # 2) estrazione strutturata via motore economico
+    from thanatos_intel.ai.ops_brain import _cheap_chat
+    from thanatos_intel.ai.doc_ingest import _extract_json
+    q = f"\n\nDomanda del cliente: «{question}»" if question else ""
+    out, _u = _cheap_chat(f"Testo del documento:\n\n{text[:9000]}{q}", _EXPLAIN_SYS)
+    parsed = _extract_json(out) or {}
+    spiegazione = (parsed.get("spiegazione")
+                   or out[:600] if out else "Non sono riuscito ad analizzare il documento.")
+
+    fname = os.path.basename((file_url or "").split("/files/")[-1]) or "documento"
+
+    # 3) salva l'estratto in una cartella del caso per l'operatore
+    md = _estratto_md(fname, parsed, question)
+    _save_estratto(case_name, fname, md, parsed)
+
+    return {"ok": True, "spiegazione": spiegazione,
+            "tipo": parsed.get("tipo_documento", ""),
+            "leggi": parsed.get("leggi_citate") or [],
+            "filename": fname}
+
+
+def _estratto_md(fname, parsed, question):
+    lines = [f"# Estratto AI — {fname}",
+             f"**Tipo:** {parsed.get('tipo_documento', 'n/d')}",
+             ""]
+    if question:
+        lines += [f"**Domanda del cliente:** {question}", ""]
+    if parsed.get("riassunto"):
+        lines += ["## Riassunto (operatore)", parsed["riassunto"], ""]
+    if parsed.get("spiegazione"):
+        lines += ["## Spiegazione data al cliente", parsed["spiegazione"], ""]
+    dk = parsed.get("dati_chiave") or {}
+    if dk:
+        lines += ["## Dati chiave"] + [f"- **{k}:** {v}" for k, v in dk.items()] + [""]
+    leggi = parsed.get("leggi_citate") or []
+    if leggi:
+        lines += ["## Riferimenti normativi citati"] + [f"- {x}" for x in leggi] + [""]
+    da = parsed.get("da_approfondire") or []
+    if da:
+        lines += ["## Da approfondire"] + [f"- [ ] {x}" for x in da] + [""]
+    return "\n".join(lines)
+
+
+def _save_estratto(case_name, fname, md, parsed):
+    """Salva l'estratto MD nella cartella Drive '08 Estratti AI' del caso +
+    registra una Case Activity (consultazione rapida operatore)."""
+    try:
+        from thanatos_intel.reporting.case_reports import _put_in_drive, _client_name
+        client = _client_name(frappe.get_doc("Investigation Case", case_name))
+        base = fname.rsplit(".", 1)[0]
+        _put_in_drive(case_name, f"Estratto AI - {base}.md",
+                      md.encode("utf-8"), "text/markdown", client,
+                      subfolder="08 Estratti AI")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "portal ai estratto drive")
+    try:
+        c = frappe.get_doc("Investigation Case", case_name)
+        riass = (parsed.get("riassunto") or "")[:400]
+        leggi = ", ".join(parsed.get("leggi_citate") or [])
+        desc = (f"🤖 Estratto AI da documento caricato dal cliente: {fname}\n"
+                f"Tipo: {parsed.get('tipo_documento', 'n/d')}\n{riass}"
+                + (f"\nLeggi citate: {leggi}" if leggi else ""))
+        c.append("case_activities", {
+            "activity_date": now_datetime(), "activity_type": "Document Analysis",
+            "description": desc[:1000], "operator": "Administrator"})
+        c.flags.ignore_mandatory = True
+        c.save(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "portal ai estratto activity")
+
+
+# ─────────────── AI: spiega documento al cliente + estratto operatore ─────────
