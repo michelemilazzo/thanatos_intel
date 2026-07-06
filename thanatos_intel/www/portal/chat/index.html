@@ -58,6 +58,21 @@
     border:1px solid var(--line); border-radius:14px; cursor:pointer;
     color:var(--tx-mid); background:transparent; white-space:nowrap; }
   .case-chip.active { color:var(--gold); border-color:var(--gold); background:rgba(200,169,110,.10); }
+  .mode-switch { margin-left:auto; display:flex; gap:2px; background:rgba(0,0,0,.25);
+    border:1px solid var(--line); border-radius:16px; padding:2px; }
+  .mode-btn { background:transparent; border:0; color:var(--tx-mid); font-size:12px;
+    padding:5px 11px; border-radius:14px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .mode-btn.active { background:var(--gold); color:var(--navy); font-weight:600; }
+  header .close { margin-left:12px; }
+  .bubble.ai { align-self:flex-start; background:#0f1a38; border:1px solid var(--line); }
+  .bubble.ai b { color:var(--gold); }
+  .ai-hint { align-self:center; text-align:center; color:var(--tx-mid); font-size:12.5px;
+    max-width:380px; margin:auto; padding:24px; line-height:1.5; }
+  .ai-hint h3 { font-family:'Cinzel',serif; color:var(--gold); letter-spacing:2px; }
+  .thinking .dots i { display:inline-block; width:5px; height:5px; border-radius:50%;
+    background:var(--tx-mid); margin:0 1px; animation:tk 1.2s infinite; }
+  .thinking .dots i:nth-child(2){animation-delay:.2s} .thinking .dots i:nth-child(3){animation-delay:.4s}
+  @keyframes tk{0%,60%,100%{opacity:.3}30%{opacity:1}}
   .empty { margin:auto; text-align:center; color:var(--tx-mid); padding:32px; }
   .empty h3 { font-family:'Cinzel',serif; color:var(--gold); letter-spacing:3px; }
   .toast { position:fixed; bottom:70px; left:50%; transform:translateX(-50%);
@@ -71,7 +86,11 @@
     <img class="logo" src="/assets/thanatos_intel/images/thanatos-icon-192.png" alt="Thanatos">
     <div>
       <div class="title">THANATOS</div>
-      <div class="sub">Chat con l'agenzia</div>
+      <div class="sub" id="hsub">Chat con l'agenzia</div>
+    </div>
+    <div class="mode-switch">
+      <button class="mode-btn active" data-mode="operator">💬 Operatore</button>
+      <button class="mode-btn" data-mode="ai">🧠 Assistente AI</button>
     </div>
     <a class="close" href="/portal">Torna al portale ›</a>
   </header>
@@ -167,9 +186,64 @@ async function sendReply() {
 }
 document.querySelectorAll('.case-chip').forEach(c =>
   c.addEventListener('click', () => openCaseThread(c.dataset.case)));
-$('#send').addEventListener('click', sendReply);
+
+// ─── Modalità: Operatore (chat umana) / Assistente AI (cervello scoped) ───
+APP.mode = 'operator';
+const AI_SID = 'portal-' + Math.random().toString(36).slice(2, 10);
+document.querySelectorAll('.mode-btn').forEach(b =>
+  b.addEventListener('click', () => switchMode(b.dataset.mode)));
+
+function switchMode(m) {
+  APP.mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === m));
+  const msgs = $('#msgs');
+  if (m === 'ai') {
+    $('#hsub').textContent = 'Assistente AI — solo i tuoi casi';
+    $('#reply').placeholder = 'Chiedi all\'assistente sui tuoi casi…';
+    $('#compose').style.display = 'flex';
+    msgs.innerHTML = `<div class="ai-hint"><h3>ASSISTENTE THANATOS</h3>
+      <p>Chiedimi lo stato dei tuoi casi, cosa manca, o spiegazioni sui documenti.
+      Vedo <b>solo le tue pratiche</b>.<br><br>
+      Es: «a che punto è il mio caso», «quali documenti servono», «riassumi la situazione».</p></div>`;
+    $('#attach-btn').style.display = 'none'; $('#mic-btn').style.display = 'none';
+  } else {
+    $('#hsub').textContent = 'Chat con l\'agenzia';
+    $('#reply').placeholder = 'Scrivi al team Thanatos…';
+    $('#attach-btn').style.display = ''; $('#mic-btn').style.display = '';
+    if (APP.activeCase) openCaseThread(APP.activeCase);
+    else { msgs.innerHTML = '<div class="empty"><h3>SCEGLI IL CASO</h3><p style="max-width:340px;margin:8px auto">Seleziona un caso per aprire il thread con Thanatos.</p></div>'; $('#compose').style.display='none'; }
+  }
+}
+
+async function askAI() {
+  const t = $('#reply').value.trim();
+  if (!t) return;
+  const msgs = $('#msgs');
+  if (msgs.querySelector('.ai-hint')) msgs.innerHTML = '';
+  $('#reply').value = '';
+  msgs.insertAdjacentHTML('beforeend', `<div class="bubble out">${esc(t)}</div>`);
+  const think = document.createElement('div');
+  think.className = 'bubble ai thinking';
+  think.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
+  msgs.appendChild(think); msgs.scrollTop = msgs.scrollHeight;
+  try {
+    const q = APP.activeCase ? `[${APP.activeCase}] ${t}` : t;
+    const r = await call('thanatos_intel.ai.ops_brain.ask', {message: q, session_id: AI_SID});
+    think.remove();
+    const reply = (r?.reply || 'Nessuna risposta.').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+    msgs.insertAdjacentHTML('beforeend', `<div class="bubble ai">${reply}</div>`);
+  } catch (e) {
+    think.remove();
+    msgs.insertAdjacentHTML('beforeend', '<div class="bubble ai">Assistente non disponibile ora.</div>');
+  }
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function sendOrAsk() { return APP.mode === 'ai' ? askAI() : sendReply(); }
+$('#send').addEventListener('click', sendOrAsk);
 $('#reply').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendOrAsk(); }
 });
 // typing broadcast cliente
 let typingTimer;
