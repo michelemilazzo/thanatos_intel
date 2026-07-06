@@ -152,34 +152,36 @@ html,body{margin:0;padding:0;background:var(--bg);color:#E8E9F0;
     <div id="hint-imap" class="provider-hint">
       Inserisci host IMAP, porta e credenziali del tuo provider.
     </div>
+    <form id="ext-form" autocomplete="on" onsubmit="event.preventDefault(); addConnector(); return false;">
     <div id="imap-fields" style="display:none">
       <div class="form-row two">
         <div>
           <label>Host IMAP</label>
-          <input type="text" id="imap_host" placeholder="imap.example.com">
+          <input type="text" id="imap_host" placeholder="imap.example.com" autocomplete="off">
         </div>
         <div>
           <label>Porta</label>
-          <input type="number" id="imap_port" value="993" style="width:90px">
+          <input type="number" id="imap_port" value="993" style="width:90px" autocomplete="off">
         </div>
       </div>
     </div>
     <div class="form-row">
       <label>Indirizzo email</label>
-      <input type="email" id="ext-email" placeholder="tu@gmail.com">
+      <input type="email" id="ext-email" placeholder="tu@gmail.com" autocomplete="username">
     </div>
     <div class="form-row">
       <label>Password (o App Password)</label>
-      <input type="password" id="ext-pw" placeholder="••••••••••••••••">
+      <input type="password" id="ext-pw" placeholder="••••••••••••••••" autocomplete="current-password">
     </div>
     <div class="form-row">
       <label>Etichetta (opzionale)</label>
-      <input type="text" id="ext-label" placeholder="es. Gmail personale">
+      <input type="text" id="ext-label" placeholder="es. Gmail personale" autocomplete="off">
     </div>
-    <button class="btn btn-gold" onclick="addConnector()">
+    <button type="submit" class="btn btn-gold">
       <span id="add-spin" style="display:none" class="spin"></span>
       Collega account
     </button>
+    </form>
     <div id="add-msg" class="msg"></div>
   </div>
 </div>
