@@ -42,6 +42,15 @@ def _docuengine_voci():
         return []
 
 
+_BOLLO = 16.0
+
+
+def prezzo_cliente(fid, label, cost, mk):
+    """Prezzo cliente con marca da bollo (€16) pass-through: markup solo sul servizio."""
+    b = _BOLLO if "marca da bollo" in (label or "").lower() else 0.0
+    return round((flt(cost) - b) * mk + b, 2)
+
+
 def _price(fid):
     over = frappe.conf.get("openapi_prices") or {}
     if fid in over:
@@ -134,7 +143,7 @@ def listino(client=None, case=None):
     out = []
     for fid, (label, cost) in list(_PRICES.items()) + _docuengine_voci():
         lbl, c = _price(fid)
-        out.append({"id": fid, "label": lbl, "costo": c, "prezzo": round(c * mk, 2)})
+        out.append({"id": fid, "label": lbl, "costo": c, "prezzo": prezzo_cliente(fid, lbl, c, mk)})
     iva_rate, iva_note = _iva(case)
     return {"markup": mk, "voci": out, "iva_rate": iva_rate, "iva_note": iva_note}
 
@@ -203,7 +212,7 @@ def genera_preventivo(case, items, payer="cliente", channels="email", email=None
     for it in items:
         lbl, cost = _price(it.get("id"))
         p = it.get("prezzo")
-        prezzo = round(float(p), 2) if p not in (None, "", "null") else round(cost * mk, 2)
+        prezzo = round(float(p), 2) if p not in (None, "", "null") else prezzo_cliente(it.get("id"), lbl, cost, mk)
         tot_real += cost
         tot_cli += prezzo
         righe.append({"id": it.get("id"), "label": it.get("label") or lbl,

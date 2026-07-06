@@ -241,11 +241,11 @@ def docuengine_catalog(case=None, force=0):
             docs.append({"id": x.get("id"), "name": x.get("name"), "category": x.get("category"),
                          "costo": float(x.get("totalPrice") or 0), "fields": ordered})
         frappe.cache().set_value("docuengine_catalog", docs, expires_in_sec=86400)
-    # prezzo cliente = costo × markup del cliente del caso
-    from thanatos_intel.billing.openapi_billing import _markup
+    # prezzo cliente = costo × markup del cliente del caso (marca da bollo pass-through)
+    from thanatos_intel.billing.openapi_billing import _markup, prezzo_cliente
     client = frappe.db.get_value("Investigation Case", case, "client") if case else None
     mk = _markup(client)
-    out = [dict(d, prezzo=round(d["costo"] * mk, 2)) for d in docs]
+    out = [dict(d, prezzo=prezzo_cliente("de_" + d["id"], d["name"], d["costo"], mk)) for d in docs]
     return {"markup": mk, "documenti": out}
 
 
@@ -281,11 +281,13 @@ def richiedi_docuengine(case, document_id, valori=None, self_mode=None):
         self_mode = _is_self_purchase(case)
     client = frappe.db.get_value("Investigation Case", case, "client")
     if client:
-        from thanatos_intel.billing.openapi_billing import _markup, _mmos_markup
+        from thanatos_intel.billing.openapi_billing import _markup, _mmos_markup, prezzo_cliente
         from thanatos_intel.billing.credits import ensure_credit
         from thanatos_intel.billing.mmos_wallet import mmos_ensure
-        ensure_credit(client, round(doc["costo"] * _markup(client), 2), f"DocuEngine {doc['name']}")
-        mmos_ensure(round(doc["costo"] * _mmos_markup(), 2), label=f"DocuEngine {doc['name']}")
+        ensure_credit(client, prezzo_cliente(document_id, doc["name"], doc["costo"], _markup(client)),
+                      f"DocuEngine {doc['name']}")
+        mmos_ensure(prezzo_cliente(document_id, doc["name"], doc["costo"], _mmos_markup()),
+                    label=f"DocuEngine {doc['name']}")
     import requests
     r = requests.post(_DE + "/requests", headers=_hdr(),
                       json={"documentId": document_id, "search": search}, timeout=60)
@@ -358,14 +360,14 @@ def _docuengine_scarica(case, req_id, document_id, target, self_mode=0):
     try:
         client = frappe.db.get_value("Investigation Case", case, "client")
         if client:
-            from thanatos_intel.billing.openapi_billing import _markup, _mmos_markup
+            from thanatos_intel.billing.openapi_billing import _markup, _mmos_markup, prezzo_cliente
             from thanatos_intel.billing.credits import charge
             from thanatos_intel.billing.mmos_wallet import mmos_charge
             _ref = "%s-de-%s" % (case, req_id[-8:])
-            charge(client, round(doc["costo"] * _markup(client), 2),
+            charge(client, prezzo_cliente(document_id, doc["name"], doc.get("costo") or 0, _markup(client)),
                    "DocuEngine %s" % doc["name"], ref_dt="Investigation Case", ref_name=_ref)
-            mmos_charge(round(doc["costo"] * _mmos_markup(), 2), ref_name=_ref,
-                        notes="DocuEngine %s (caso %s)" % (doc["name"], case))
+            mmos_charge(prezzo_cliente(document_id, doc["name"], doc.get("costo") or 0, _mmos_markup()),
+                        ref_name=_ref, notes="DocuEngine %s (caso %s)" % (doc["name"], case))
     except Exception:
         frappe.log_error(frappe.get_traceback(), "docuengine charge")
     frappe.db.commit()
