@@ -65,6 +65,7 @@ body.thanatos-article .page_content{display:block;max-width:100%;padding:0;}
 .tx-pitch .lbl{color:var(--gold);font-size:11px;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;}
 .tx-pitch h4{color:#F2F3F6;font-weight:400;font-size:18px;margin:0 0 8px;}
 .tx-pitch p{color:#C8CBD4;font-size:14px;line-height:1.6;margin:0 0 12px;}
+.tx-more{margin-top:6px;} .tx-more a{color:var(--gold);font-size:13px;text-decoration:none;border-bottom:1px solid rgba(200,169,110,.4);} .tx-more a:hover{border-color:var(--gold);}
 .tx-pitch .tx-explain{color:#AEB4C2;font-size:13.5px;line-height:1.65;margin:0 0 12px;}
 .tx-caps{list-style:none;margin:0 0 18px;padding:0;display:flex;flex-wrap:wrap;gap:8px;}
 .tx-caps li{position:relative;font-size:12px;color:#D4D7E0;background:rgba(10,14,26,.5);
@@ -153,6 +154,8 @@ body.thanatos-article .page_content{display:block;max-width:100%;padding:0;}
   {% elif 'finanz' in _cat or 'financ' in _cat %}{% set _key = 'finanza' %}
   {% endif %}
   {% set s = SVC[_key] %}
+  {% set PILLAR = {'default':'verifica-aziende','cyber':'cyber-domain-intelligence','crypto':'osint-crypto','frodi':'antifrode-pagamenti','due':'verifica-aziende','osint':'rintraccio-persone','sequestri':'indagini-patrimoniali','finanza':'due-diligence-rischio'} %}
+  {% set _pillar = PILLAR[_key] %}
   {% if doc.featured_image %}<div class="art-hero"><img src="{{ doc.featured_image }}" alt="{{ doc.image_caption or doc.title }}"/>
     {% if doc.image_caption %}<small style="color:#5B6276;font-size:11px">{{ doc.image_caption }}</small>{% endif %}
   </div>{% else %}<div class="art-hero"><img src="/assets/thanatos_intel/images/news/{{ _key }}.svg" alt="{{ doc.category or 'Intelligence' }}"/></div>{% endif %}
@@ -179,6 +182,7 @@ body.thanatos-article .page_content{display:block;max-width:100%;padding:0;}
         <a class="cta" href="/portal/billing?svc={{ s.ac }}">Richiedi l'accertamento →</a>
       </div>
     </div>
+    {% if _pillar %}<div class="tx-more"><a href="/servizi/{{ _pillar }}">Approfondisci il servizio e i casi d'uso →</a></div>{% endif %}
   </div>
   {% if doc.source_url %}<div class="art-source">Fonte originale: <a href="{{ doc.source_url }}" rel="noopener nofollow" target="_blank">{{ doc.source_name_label or doc.source_url }}</a></div>{% endif %}
 </article>
