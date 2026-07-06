@@ -147,7 +147,7 @@ SOURCES = [
          connector="thanatos_intel.osint.companies_house.search_by_name",
          needs="companies_house_api_key", url="https://find-and-update.company-information.service.gov.uk",
          note="Ricerca aziende UK per nome libero. Per KYB completo (officers/PSC) usa kyb_lookup su Investigation Entity."),
-    dict(key="greynoise", name="GreyNoise Community", tier="free_key", status="needs_key",
+    dict(key="greynoise", name="GreyNoise Community", tier="free_auto", status="operational",
          category="cyber", targets=["IP"],
          connector="thanatos_intel.osint.free_sources.lookup_greynoise",
          needs="greynoise_api_key", url="https://greynoise.io",

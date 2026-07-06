@@ -578,21 +578,22 @@ def lookup_greynoise(ip: str) -> dict:
     cached = _cache_get("greynoise", ip)
     if cached:
         return {**cached, "cached": True}
+    # Community API v3 funziona KEYLESS (rate-limited). La chiave, se presente,
+    # alza il rate limit. GreyNoise ha rimosso la chiave dal tier gratuito 2024.
     key = _cfg("greynoise_api_key")
-    if not key:
-        result = {"stub": True, "source": "greynoise",
-                  "message": "greynoise_api_key non configurata"}
-        _cache_set("greynoise", ip, result)
-        return result
+    headers = {"user-agent": UA}
+    if key:
+        headers["key"] = key
     try:
-        r = requests.get(GREYNOISE_URL.format(ip=ip),
-                         headers={"key": key, "user-agent": UA}, timeout=12)
+        r = requests.get(GREYNOISE_URL.format(ip=ip), headers=headers, timeout=12)
         if r.status_code in (200, 404):
             d = r.json() or {}
             result = {"ip": ip, "noise": d.get("noise"), "riot": d.get("riot"),
                       "classification": d.get("classification"),
                       "name": d.get("name"), "last_seen": d.get("last_seen"),
-                      "source": "greynoise"}
+                      "message": d.get("message"), "source": "greynoise"}
+        elif r.status_code == 429:
+            result = {"error": "greynoise_rate_limited", "source": "greynoise"}
         else:
             result = {"error": f"greynoise_status_{r.status_code}", "source": "greynoise"}
     except Exception as e:
