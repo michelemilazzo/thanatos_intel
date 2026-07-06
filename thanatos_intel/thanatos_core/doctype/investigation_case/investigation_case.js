@@ -1316,13 +1316,18 @@ window.ThanatosVerifiche = {
 				{ fieldtype: 'HTML', fieldname: 'nota', options: '<div class="text-muted" style="font-size:11.5px">Prezzo cliente (markup incluso). Certificati anagrafici (Patronato): consegna ~2 giorni lavorativi, ritiro automatico nei reperti. La versione esente bollo richiede motivo e documento di esenzione; «Con Marca Da Bollo» no.</div>' }
 			], v => {
 				const d = docs.find(x => x.id === v.doc);
-				if (d) self.docuFields(frm, d, e);
+				if (!d) return;
+				// certificati anagrafici: scelta automatica ESENTE vs CON MARCA DA BOLLO dal mandato
+				frappe.call('thanatos_intel.osint.official_documents.scegli_variante_certificato', { case: frm.doc.name, document_id: d.id }).then(rr => {
+					const s = rr.message || {};
+					self.docuFields(frm, s.document || d, e, { prefill: s.prefill || {}, note: s.note });
+				});
 			}, '📜 Documenti ufficiali (DocuEngine)', __('Avanti'));
 		});
 	},
-	docuFields(frm, d, e) {
+	docuFields(frm, d, e, extra) {
 		const self = this;
-		const pre = {};
+		const pre = Object.assign({}, (extra && extra.prefill) || {});
 		if (e) {
 			if (e.type === 'Company') {
 				pre.taxCode = e.piva || e.cf || ''; pre.vatCode = e.piva || ''; pre.companyName = e.full_name || '';
@@ -1341,6 +1346,7 @@ window.ThanatosVerifiche = {
 			if (pre[f.name]) fl.default = pre[f.name];
 			return fl;
 		});
+		if (extra && extra.note) flds.unshift({ fieldtype: 'HTML', fieldname: 'variante_nota', options: '<div style="font-size:11.5px;padding:6px 8px;border-radius:6px;background:var(--bg-light-gray, #f4f5f6);margin-bottom:4px">⚖ ' + frappe.utils.escape_html(extra.note) + '</div>' });
 		frappe.prompt(flds, v => {
 			const valori = {};
 			d.fields.forEach(f => { if (v[f.name] != null && v[f.name] !== '') valori[f.name] = v[f.name]; });

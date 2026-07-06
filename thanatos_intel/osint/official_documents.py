@@ -256,6 +256,77 @@ def _de_doc(document_id):
     return None
 
 
+# ── Esenzione bollo certificati anagrafici (residenza/AIRE/stato famiglia/storico) ──
+# La variante esente richiede exemptionReason (lista chiusa openapi) + exemptionDocument
+# (file di prova); quella "Con Marca Da Bollo" no. MAI dichiarare un'esenzione senza
+# documento reale (evasione imposta di bollo): il titolo vive nel vault del cliente.
+_BOLLO_SUFFIX = " Con Marca Da Bollo"
+_ESENZIONE_VAULT = [("Nomina CTU", "CTU"), ("Tesserino Avvocato", None)]
+
+
+@frappe.whitelist()
+def esenzione_bollo(case):
+    """Titolo di esenzione bollo del caso: Nomina CTU → CTU; Tesserino Avvocato →
+    PROCESSUALE (DIVORZIO se il caso è Family). Richiede un documento reale nel vault."""
+    client = frappe.db.get_value("Investigation Case", case, "client")
+    if not client:
+        return {"reason": None, "note": "Caso senza cliente: usare la variante Con Marca Da Bollo."}
+    case_type = frappe.db.get_value("Investigation Case", case, "case_type") or ""
+    for kind, reason in _ESENZIONE_VAULT:
+        it = frappe.get_all("Client Vault Item",
+                            filters={"client": client, "doc_kind": kind,
+                                     "status": ["in", ["Valido", "In verifica"]]},
+                            fields=["name", "file", "title", "status"],
+                            order_by="modified desc", limit=1)
+        if it and it[0].file:
+            r = reason or ("DIVORZIO" if case_type == "Family" else "PROCESSUALE")
+            return {"reason": r, "document": it[0].file, "title": it[0].title or kind,
+                    "vault_item": it[0].name, "vault_status": it[0].status,
+                    "note": "Esenzione %s — %s dal vault del cliente (%s)." % (r, it[0].title or kind, it[0].status)}
+    return {"reason": None,
+            "note": "Nessun titolo di esenzione (Tesserino Avvocato / Nomina CTU) nel vault del cliente: si usa la variante Con Marca Da Bollo."}
+
+
+@frappe.whitelist()
+def scegli_variante_certificato(case, document_id):
+    """Per i certificati anagrafici con doppia variante sceglie ESENTE vs CON MARCA
+    DA BOLLO in base al mandato del caso e precompila i campi di esenzione."""
+    cat = docuengine_catalog(case=case)
+    docs = cat.get("documenti") or []
+    d = next((x for x in docs if x["id"] == document_id), None)
+    if not d:
+        return {"error": f"documento non trovato: {document_id}"}
+    by_name = {x["name"]: x for x in docs}
+    base = d["name"].replace(_BOLLO_SUFFIX, "")
+    esente, bollo = by_name.get(base), by_name.get(base + _BOLLO_SUFFIX)
+    if not (esente and bollo) or not any(f["name"] == "exemptionReason" for f in esente["fields"]):
+        return {"document": d}
+    ex = esenzione_bollo(case)
+    if ex.get("reason"):
+        return {"document": esente, "esenzione": ex,
+                "prefill": {"exemptionReason": ex["reason"], "exemptionDocument": ex["document"]},
+                "note": "%s Variante ESENTE € %.2f (con bollo sarebbe € %.2f)." % (ex["note"], esente["prezzo"], bollo["prezzo"])}
+    return {"document": bollo, "esenzione": ex, "prefill": {},
+            "note": "%s Variante CON MARCA DA BOLLO € %.2f." % (ex["note"], bollo["prezzo"])}
+
+
+def _file_b64(value):
+    """Campo DocuEngine type=file: da file_url Frappe (o base64 già pronto) a base64.
+    Il documento DEVE esistere davvero — niente esenzioni dichiarate senza prova."""
+    v = (value or "").strip()
+    if v.startswith("/files/") or v.startswith("/private/files/"):
+        fname = frappe.db.get_value("File", {"file_url": v}, "name")
+        if not fname:
+            frappe.throw(f"file non trovato sul sito: {v}")
+        content = frappe.get_doc("File", fname).get_content()
+        if isinstance(content, str):
+            content = content.encode()
+        return base64.b64encode(content).decode()
+    if v.startswith("http"):
+        frappe.throw("il documento di esenzione deve essere un file caricato sul sito (/files/… o /private/files/…)")
+    return v  # già base64
+
+
 @frappe.whitelist()
 def richiedi_docuengine(case, document_id, valori=None, self_mode=None):
     """Ordina un documento DocuEngine. valori = JSON {nomeCampo: valore};
@@ -274,9 +345,14 @@ def richiedi_docuengine(case, document_id, valori=None, self_mode=None):
             if f["required"]:
                 missing.append(f["label"] or f["name"])
             continue
-        search[f["key"]] = v
+        search[f["key"]] = _file_b64(v) if f["type"] == "file" else v
     if missing:
-        return {"error": "campi obbligatori mancanti: " + ", ".join(missing)}
+        hint = ""
+        if any(m in ("motivo esenzione", "documento esenzione") for m in missing):
+            hint = " — senza titolo di esenzione usare la variante Con Marca Da Bollo"
+        return {"error": "campi obbligatori mancanti: " + ", ".join(missing) + hint}
+    if valori.get("exemptionReason") and not valori.get("exemptionDocument"):
+        return {"error": "esenzione bollo dichiarata senza documento di prova: vietato (imposta di bollo)"}
     if self_mode is None:
         self_mode = _is_self_purchase(case)
     client = frappe.db.get_value("Investigation Case", case, "client")
