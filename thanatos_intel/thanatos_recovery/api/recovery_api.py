@@ -20,7 +20,40 @@ from cryptography.hazmat.primitives import serialization
 
 VAULT_BASE_PATH = "/mnt/thanatos-box/recovery-vault"
 VAULT_TTL_HOURS = 48
-VAULT_SECRET_KEY = frappe.local.conf.get("wallet_recovery_secret_key", "dev-secret-12345")
+
+# Mappa il valore del campo DocType "Wallet Type" all'argomento --wallet-type del CLI
+WALLET_TYPE_CLI_MAP = {
+    "BIP39 Seed": "bip39",
+    "Electrum Seed": "electrum",
+    "BIP38 Encrypted": "bip38",
+    "Ledger Passphrase": "bip39",  # Ledger usa derivazione BIP39 + passphrase
+}
+
+
+def _get_vault_secret() -> str:
+    """
+    Secret HMAC per firmare i download link.
+
+    Priorità:
+      1. site_config `wallet_recovery_secret_key`
+      2. file persistente nel vault (generato una tantum, 0600)
+
+    Non usa mai una costante hardcoded: un secret prevedibile permetterebbe
+    di forgiare token di download validi.
+    """
+    conf_key = frappe.local.conf.get("wallet_recovery_secret_key")
+    if conf_key:
+        return conf_key
+
+    secret_file = Path(VAULT_BASE_PATH) / "keys" / "hmac_secret.key"
+    if secret_file.exists():
+        return secret_file.read_text().strip()
+
+    secret_file.parent.mkdir(parents=True, exist_ok=True)
+    secret = os.urandom(32).hex()
+    secret_file.write_text(secret)
+    os.chmod(secret_file, 0o600)
+    return secret
 
 # Generate RSA keypair on first run
 def get_or_create_keys():
@@ -55,7 +88,7 @@ def get_or_create_keys():
 # ==================== FRAPPE API ENDPOINTS ====================
 
 @frappe.whitelist()
-def create_recovery_job(case_id):
+def create_recovery_job(case_id, wallet_type=None, missing_words_count=None, wordlist_type=None):
     """
     Crea un nuovo Wallet Recovery Job legato a un caso
 
@@ -67,17 +100,65 @@ def create_recovery_job(case_id):
     """
     frappe.only_for(["Investigator", "Investigation Manager"])
 
-    case = frappe.get_doc("Investigation Case", case_id)
+    if not frappe.db.exists("Investigation Case", case_id):
+        frappe.throw(f"Investigation Case {case_id} inesistente")
 
     job = frappe.new_doc("Wallet Recovery Job")
     job.case_id = case_id
     job.operator = frappe.session.user
     job.status = "Draft"
+    if wallet_type:
+        job.wallet_type = wallet_type
+    if missing_words_count:
+        job.missing_words_count = int(missing_words_count)
+    if wordlist_type:
+        job.wordlist_type = wordlist_type
     job.insert()
 
     _log_audit(job.name, f"Job created by {frappe.session.user}")
 
     return job.as_dict()
+
+
+@frappe.whitelist()
+def create_recovery_batch(case_id, jobs):
+    """
+    Crea più Wallet Recovery Job in un colpo solo (Fase 3: batch multi-job).
+
+    Utile quando un cliente ha più wallet/seed da recuperare nello stesso caso.
+
+    Args:
+        case_id: Investigation Case ID
+        jobs: JSON list di dict, es:
+              [{"wallet_type":"BIP39 Seed","missing_words_count":3,"wordlist_type":"english"}, ...]
+
+    Returns:
+        dict: {created: [job_name, ...], count: N}
+    """
+    frappe.only_for(["Investigator", "Investigation Manager"])
+
+    if not frappe.db.exists("Investigation Case", case_id):
+        frappe.throw(f"Investigation Case {case_id} inesistente")
+
+    if isinstance(jobs, str):
+        jobs = json.loads(jobs)
+    if not isinstance(jobs, list) or not jobs:
+        frappe.throw("Parametro 'jobs' deve essere una lista non vuota")
+
+    created = []
+    for spec in jobs:
+        job = frappe.new_doc("Wallet Recovery Job")
+        job.case_id = case_id
+        job.operator = frappe.session.user
+        job.status = "Draft"
+        job.wallet_type = spec.get("wallet_type")
+        job.missing_words_count = int(spec.get("missing_words_count") or 1)
+        job.wordlist_type = spec.get("wordlist_type") or "english"
+        job.insert()
+        _log_audit(job.name, f"Job created (batch) by {frappe.session.user}")
+        created.append(job.name)
+
+    return {"created": created, "count": len(created)}
 
 
 @frappe.whitelist()
@@ -147,10 +228,15 @@ def generate_cli_command(job_id, parameters):
 
     vault_job_path = f"{VAULT_BASE_PATH}/{job_id}"
 
+    cli_wallet_type = WALLET_TYPE_CLI_MAP.get(job.wallet_type)
+    if not cli_wallet_type:
+        frappe.throw(f"Wallet type non supportato dal CLI: {job.wallet_type}")
+
     cmd = f"""thanatos-recovery-cli \\
   --job-id {job_id} \\
   --input-file {vault_job_path}/seed_input.enc \\
-  --wallet-type {job.wallet_type.lower().replace(' ', '-')} \\
+  --private-key {VAULT_BASE_PATH}/keys/private.pem \\
+  --wallet-type {cli_wallet_type} \\
   --missing-words {params.get('missing_words_count', 3)} \\
   --wordlist {params.get('wordlist_type', 'english')} \\
   --output-file {vault_job_path}/seed_output.enc"""
@@ -196,7 +282,7 @@ def upload_recovery_result(job_id, encrypted_result_base64):
     expires_at = datetime.now() + timedelta(hours=VAULT_TTL_HOURS)
     token = _generate_vault_token(job_id, expires_at)
 
-    download_link = f"/api/method/thanatos_intel.api.recovery_api.get_recovery_result?job_id={job_id}&token={token}"
+    download_link = f"/api/method/thanatos_intel.thanatos_recovery.api.recovery_api.get_recovery_result?job_id={job_id}&token={token}"
 
     # Salva metadata nel job
     job.seed_output_file = f"file://{seed_output_file}"
@@ -255,7 +341,7 @@ def _generate_vault_token(job_id, expires_at):
     """
     message = f"{job_id}:{expires_at.isoformat()}".encode()
     token = hmac.new(
-        VAULT_SECRET_KEY.encode(),
+        _get_vault_secret().encode(),
         message,
         hashlib.sha256
     ).hexdigest()

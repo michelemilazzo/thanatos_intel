@@ -36,18 +36,10 @@ import tempfile
 import shutil
 from pathlib import Path
 from cryptography.fernet import Fernet
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 import os
 
-
-# ==================== CONFIG ====================
-
-# FERNET_KEY = os.environ.get("THANATOS_RECOVERY_KEY", "DEVELOPMENT_KEY_CHANGE_ME")
-# Per ora usiamo chiave hardcoded per POC; in produzione via env var o file protetto
-
-FERNET_KEY = Fernet.generate_key()  # POC: generiamo una key temporanea
-cipher_suite = Fernet(FERNET_KEY)
 
 # Wordlist paths (da installare localmente)
 WORDLIST_PATHS = {
@@ -80,28 +72,62 @@ logger.handlers = [h for h in logger.handlers if not isinstance(h, logging.Strea
 
 # ==================== CRYPTO ====================
 
-def encrypt_result(plaintext: str, output_file: Path) -> None:
+def encrypt_result(plaintext: str, output_file: Path) -> Path:
     """
-    Cripta il seed recuperato con Fernet
+    Cripta il seed recuperato con Fernet.
+
+    La chiave Fernet viene generata QUI e salvata in <output_file>.key (0600):
+    senza persisterla il risultato sarebbe indecifrabile da chiunque.
+    Lo staff consegna la chiave al cliente su canale separato dal link di download.
 
     Args:
         plaintext: seed completo (string, es. "word1 word2 ...")
         output_file: dove salvare il file .enc
+
+    Returns:
+        Path: percorso del file chiave
     """
-    encrypted = cipher_suite.encrypt(plaintext.encode())
+    key = Fernet.generate_key()
+    encrypted = Fernet(key).encrypt(plaintext.encode())
     with open(output_file, "wb") as f:
         f.write(encrypted)
+
+    key_file = output_file.with_suffix(output_file.suffix + ".key")
+    with open(key_file, "wb") as f:
+        f.write(key)
+    os.chmod(key_file, 0o600)
+
     logger.info(f"Result encrypted and saved to {output_file}")
+    logger.info(f"Fernet key saved to {key_file}")
+    return key_file
 
 
-def decrypt_input(input_file: Path) -> str:
+def decrypt_input(input_file: Path, private_key_path: Path) -> str:
     """
-    Decripta il seed input (facoltativo se pre-decriptato dal client)
-    In questo POC assumiamo che il file sia plaintext.
-    In produzione: decripta con PRIVATE_KEY RSA
+    Decripta il seed input cifrato RSA-OAEP con la chiave privata del vault.
+
+    Il client cifra il seed parziale con la public key del vault; la private key
+    viene copiata offline sulla recovery machine e usata solo qui.
+
+    Args:
+        input_file: file .enc (RSA-OAEP)
+        private_key_path: chiave privata PEM del vault
     """
-    with open(input_file, "r") as f:
-        return f.read().strip()
+    with open(private_key_path, "rb") as f:
+        private_key = serialization.load_pem_private_key(f.read(), password=None)
+
+    with open(input_file, "rb") as f:
+        ciphertext = f.read()
+
+    plaintext = private_key.decrypt(
+        ciphertext,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
+    return plaintext.decode().strip()
 
 
 # ==================== BTCRECOVER WRAPPER ====================
@@ -208,6 +234,8 @@ def main():
     )
     parser.add_argument("--job-id", required=True, help="Job ID (es. CASE-2026-0042_REC-001)")
     parser.add_argument("--input-file", required=True, help="Path to encrypted seed input")
+    parser.add_argument("--private-key", required=True,
+                        help="Vault RSA private key (PEM) per decriptare l'input")
     parser.add_argument("--wallet-type", required=True, choices=["bip39", "electrum", "bip38"],
                         help="Type of wallet")
     parser.add_argument("--missing-words", type=int, default=3, help="Number of missing/wrong words")
@@ -221,6 +249,11 @@ def main():
     input_file = Path(args.input_file)
     if not input_file.exists():
         logger.error(f"Input file not found: {input_file}")
+        sys.exit(1)
+
+    private_key_file = Path(args.private_key)
+    if not private_key_file.exists():
+        logger.error(f"Private key not found: {private_key_file}")
         sys.exit(1)
 
     if not args.output_file:
@@ -237,7 +270,7 @@ def main():
     try:
         # Step 1: Leggi seed input (crittografato)
         logger.info("Step 1: Reading encrypted seed input...")
-        seed_partial = decrypt_input(input_file)
+        seed_partial = decrypt_input(input_file, private_key_file)
         logger.info(f"Input seed read: {len(seed_partial.split())} words")
 
         # Step 2: Run BTCRecover

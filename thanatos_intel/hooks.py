@@ -36,6 +36,7 @@ app_include_js=['/assets/thanatos_intel/js/bootstrap_jq.js?v=20260627b',
                 '/assets/thanatos_intel/js/call_logger.js?v=20260627b',
                 '/assets/thanatos_intel/js/cockpit_land.js?v=20260627b',
                 '/assets/thanatos_intel/js/thanatos_shell.js?v=20260627b',
+                '/assets/thanatos_intel/js/wallet_recovery_form.js?v=20260706a',
 ]
 web_include_css=['/assets/thanatos_intel/css/thanatos_web.css?v=20260627b']
 web_include_js=['/assets/thanatos_intel/js/fx_widget.js?v=20260627b', '/assets/thanatos_intel/js/thanatos_login.js?v=20260627b', '/assets/thanatos_intel/js/thanatos_intro.js?v=20260627b']
@@ -222,7 +223,8 @@ scheduler_events={
           'thanatos_intel.notifications.onboarding_completion.daily_completion_reminder',
           'thanatos_intel.gsc.fetch_rankings',
           'thanatos_intel.billing.credit_ledger_audit.daily_chain_audit',
-          'thanatos_intel.billing.party_payout_runner.daily_execute_pending_payouts'],
+          'thanatos_intel.billing.party_payout_runner.daily_execute_pending_payouts',
+          'thanatos_intel.thanatos_recovery.api.vault_manager.cleanup_expired_recoveries'],
  'daily_long':['thanatos_intel.maintenance.file_tiering.tier_cold_files'],
  'weekly':['thanatos_intel.thanatos_core.compliance_ops.policy_review_check'],
  'weekly_long':[],
