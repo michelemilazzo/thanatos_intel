@@ -33,6 +33,56 @@ _SYS = (
 _HANDOFF_MARK = "[[HANDOFF]]"
 _HISTORY = 12
 
+_STATUS_IT = {"Draft": "in preparazione", "Open": "aperta", "In Progress": "in lavorazione",
+              "Review": "in revisione", "Closed": "conclusa", "Cancelled": "annullata"}
+
+
+def _client_case_context(lead_name):
+    """Contesto CONFINATO al cliente di questa chat: solo le SUE pratiche,
+    identificate dal numero WhatsApp del lead. Nessun dato di altri clienti,
+    nessun dettaglio operativo/reperti. Ritorna '' se il numero non corrisponde
+    a un cliente censito."""
+    try:
+        lead = frappe.db.get_value("Intel Lead", lead_name,
+                                   ["whatsapp_number", "source_identifier"], as_dict=True)
+        if not lead:
+            return ""
+        phone = (lead.whatsapp_number or lead.source_identifier or "").strip()
+        digits = "".join(ch for ch in phone if ch.isdigit())[-10:]
+        if not digits:
+            return ""
+        client = frappe.db.sql("""
+            SELECT name, client_name FROM `tabInvestigation Client`
+            WHERE REPLACE(REPLACE(REPLACE(phone,' ',''),'+',''),'-','') LIKE %s
+            LIMIT 1
+        """, (f"%{digits}",), as_dict=True)
+        if not client:
+            return ""
+        client = client[0]
+        cases = frappe.get_all("Investigation Case",
+                               filters={"client": client.name},
+                               fields=["name", "case_title", "status", "payment_status"],
+                               order_by="modified desc", limit_page_length=5)
+        if not cases:
+            return ""
+        lines = [f"CLIENTE IDENTIFICATO: {client.client_name}. Le sue pratiche:"]
+        for c in cases:
+            st = _STATUS_IT.get(c.status, c.status or "?")
+            pay = {"Pending": "pagamento in attesa", "Paid": "pagata",
+                   "Partial": "pagamento parziale"}.get(c.payment_status, "")
+            lines.append(f"- {c.name} «{c.case_title or ''}»: {st}"
+                         + (f", {pay}" if pay else ""))
+        lines.append(
+            "Se il cliente chiede lo stato della sua pratica riferisci SOLO queste "
+            "informazioni (stato e pagamento), in modo rassicurante, senza dettagli "
+            "operativi, reperti o nomi interni. Per domande di merito sulla pratica, "
+            "presa in carico + [[HANDOFF]].")
+        return "\n".join(lines)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "wa_bot _client_case_context")
+        return ""
+
+
 _META_SIGNS = (
     "non c'è ancora", "non c'e ancora", "sto aspettando", "risponderò quando",
     "rispondero quando", "il cliente non ha", "in attesa che il cliente",
@@ -301,7 +351,9 @@ def generate_reply(lead_name, wa_number, to_number):
         _handoff(lead_name, wa_doc)
         return {"ok": True, "handoff": True, "reason": "human requested"}
 
-    prompt = (f"Storico conversazione:\n{convo}\n\n"
+    client_ctx = _client_case_context(lead_name)
+    prompt = ((f"{client_ctx}\n\n" if client_ctx else "")
+              + f"Storico conversazione:\n{convo}\n\n"
               f"Ultimo messaggio del cliente: «{last}»\n\n"
               "Scrivi ORA, in prima persona, il messaggio WhatsApp da inviare al "
               "cliente in risposta. Solo il messaggio, nient'altro.")
