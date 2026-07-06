@@ -295,5 +295,33 @@ def _save_estratto(case_name, fname, md, parsed, file_url=None):
     except Exception:
         frappe.log_error(frappe.get_traceback(), "portal ai estratto activity")
 
+    try:
+        leggi = ", ".join(parsed.get("leggi_citate") or [])
+        notes = ((parsed.get("riassunto") or "")[:1500]
+                 + (f"\n\nLeggi citate: {leggi}" if leggi else "")
+                 + f"\n\nCartella Drive: {sub}")
+        ev = frappe.get_doc({
+            "doctype": "Investigation Evidence",
+            "investigation_case": case_name,
+            "evidence_name": f"[ESTRATTO AI] {fname}",
+            "evidence_type": "Document",
+            "source": "portale AI cliente",
+            "custody_status": "Received",
+            "acquisition_date": now_datetime(),
+            "notes": notes[:5000],
+        })
+        ev.flags.ignore_mandatory = True
+        ev.insert(ignore_permissions=True)
+        try:
+            from frappe.utils.file_manager import save_file
+            save_file(f"{base} [ESTRATTO AI].md", md.encode("utf-8"),
+                     "Investigation Evidence", ev.name, is_private=1)
+            ev.reload()
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "portal ai evidence attach")
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "portal ai evidence create")
+
 
 # ─────────────── AI: spiega documento al cliente + estratto operatore ─────────
