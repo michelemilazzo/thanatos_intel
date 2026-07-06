@@ -31,10 +31,26 @@ _PRICES = {
 }
 
 
+def _docuengine_voci():
+    """Voci listino dai 53 documenti DocuEngine (catalogo cached; id 'de_<documentId>')."""
+    try:
+        from thanatos_intel.osint.official_documents import docuengine_catalog
+        cat = docuengine_catalog()
+        return [("de_" + d["id"], ("%s (%s)" % (d["name"], d["category"]), flt(d["costo"])))
+                for d in cat.get("documenti") or []]
+    except Exception:
+        return []
+
+
 def _price(fid):
     over = frappe.conf.get("openapi_prices") or {}
     if fid in over:
         return _PRICES.get(fid, (fid, 0))[0], flt(over[fid])
+    if fid and str(fid).startswith("de_"):
+        for did, (label, cost) in _docuengine_voci():
+            if did == fid:
+                return label, cost
+        return fid, 0.0
     return _PRICES.get(fid, (fid, 0.0))
 
 
@@ -116,7 +132,7 @@ def listino(client=None, case=None):
         client = frappe.db.get_value("Investigation Case", case, "client")
     mk = _markup(client)
     out = []
-    for fid, (label, cost) in _PRICES.items():
+    for fid, (label, cost) in list(_PRICES.items()) + _docuengine_voci():
         lbl, c = _price(fid)
         out.append({"id": fid, "label": lbl, "costo": c, "prezzo": round(c * mk, 2)})
     iva_rate, iva_note = _iva(case)

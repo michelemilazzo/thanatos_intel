@@ -1176,9 +1176,9 @@ window.ThanatosVerifiche = {
 					+ '<div class="vf-acts">';
 				if (isCo) {
 					if (!e.piva) h += this.btn('🔗 Trova P.IVA', 'piva', e) + this.btn('🌍 Estero', 'estero', e);
-					h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 Sanzioni/PEP', 'free', e);
+					h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('📜 Documenti', 'docs', e);
 				} else if (e.type === 'Person') {
-					h += this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('⚖ Negatività', 'neg', e) + this.btn('🏦 Patrimoniale', 'patr', e);
+					h += this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('⚖ Negatività', 'neg', e) + this.btn('🏦 Patrimoniale', 'patr', e) + this.btn('📜 Documenti', 'docs', e);
 				} else if (e.type === 'Domain') {
 					h += this.btn('🛡 VirusTotal', 'vt', e) + this.btn('🔬 urlscan', 'urlscan', e) + this.btn('🛂 Sanzioni/PEP', 'free', e);
 				} else if (e.type === 'IP') {
@@ -1196,12 +1196,14 @@ window.ThanatosVerifiche = {
 			+ (missing ? '<button class="btn btn-xs btn-primary vf-resolve">🔗 Risolvi ' + missing + ' P.IVA mancanti</button>' : '')
 			+ '<button class="btn btn-xs btn-default vf-prev">🧾 Preventivo & pagamento cliente</button>'
 			+ '<button class="btn btn-xs btn-default vf-cat">🧰 Catalogo strumenti (free/paid)</button>'
+			+ '<button class="btn btn-xs btn-default vf-docs">📜 Documenti ufficiali (DocuEngine)</button>'
 			+ '<button class="btn btn-xs btn-default vf-free">🔎 Ricerca libera</button></div>';
 		h += '<div class="vf-out" style="display:none"></div></div>';
 		$w.html(h);
 		const self = this;
 		$w.find('.vf-btn').on('click', function () { self.run(frm, $w, $(this).data('act'), $(this).data('idx'), ents); });
 		$w.find('.vf-cat').on('click', () => self.catalog($w, frm));
+		$w.find('.vf-docs').on('click', () => self.docuDialog(frm, $w, null));
 		$w.find('.vf-free').on('click', () => self.freeForm(frm, $w));
 		$w.find('.vf-prev').on('click', () => self.preventivo(frm, $w));
 		$w.find('.vf-resolve').on('click', () => {
@@ -1224,6 +1226,7 @@ window.ThanatosVerifiche = {
 		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
 		const cb = (fmt) => ({ callback: r => done(fmt(r.message || {})), freeze: true, freeze_message: 'Interrogazione…' });
 		const args = { investigation_case: frm.doc.name };
+		if (act === 'docs') { $o.hide(); return this.docuDialog(frm, $w, e); }
 		if (act === 'visura') {
 			if (!e.piva) return done('⚠ Manca la P.IVA su questa entità.');
 			frappe.call(Object.assign({ method: 'thanatos_intel.osint.registro_imprese.verifica_impresa', args: Object.assign({ piva: e.piva }, args) }, cb(m => {
@@ -1297,6 +1300,61 @@ window.ThanatosVerifiche = {
 				return '<b>Tracciamento ' + esc((m.chain || '').toUpperCase()) + ' ' + esc(m.address) + '</b><br>' + lk;
 			})));
 		}
+	},
+	// ── DocuEngine: 53 documenti ufficiali on-demand (camerali/catastali/patronato) ──
+	docuDialog(frm, $w, e) {
+		const self = this;
+		const esc = s => frappe.utils.escape_html(s == null ? '' : String(s));
+		frappe.call('thanatos_intel.osint.official_documents.docuengine_catalog', { case: frm.doc.name }).then(r => {
+			const m = r.message || {};
+			if (m.error) { frappe.msgprint('⚠ DocuEngine: ' + esc(m.error)); return; }
+			const docs = (m.documenti || []).slice().sort((a, b) => (a.category + a.name).localeCompare(b.category + b.name));
+			if (!docs.length) { frappe.msgprint(__('Catalogo DocuEngine vuoto.')); return; }
+			const opts = docs.map(d => ({ label: d.category + ' · ' + d.name + ' — € ' + (d.prezzo || 0).toFixed(2), value: d.id }));
+			frappe.prompt([
+				{ fieldtype: 'Select', fieldname: 'doc', label: __('Documento ufficiale'), reqd: 1, options: opts },
+				{ fieldtype: 'HTML', fieldname: 'nota', options: '<div class="text-muted" style="font-size:11.5px">Prezzo cliente (markup incluso). Certificati anagrafici (Patronato): consegna ~2 giorni lavorativi, ritiro automatico nei reperti. La versione esente bollo richiede motivo e documento di esenzione; «Con Marca Da Bollo» no.</div>' }
+			], v => {
+				const d = docs.find(x => x.id === v.doc);
+				if (d) self.docuFields(frm, d, e);
+			}, '📜 Documenti ufficiali (DocuEngine)', __('Avanti'));
+		});
+	},
+	docuFields(frm, d, e) {
+		const self = this;
+		const pre = {};
+		if (e) {
+			if (e.type === 'Company') {
+				pre.taxCode = e.piva || e.cf || ''; pre.vatCode = e.piva || ''; pre.companyName = e.full_name || '';
+			} else if (e.type === 'Person') {
+				const parts = (e.full_name || '').trim().split(/\s+/);
+				pre.name = parts[0] || ''; pre.surname = parts.slice(1).join(' ');
+				pre.taxCode = e.cf || '';
+			}
+		}
+		const flds = d.fields.map(f => {
+			const fl = { fieldname: f.name, label: (f.label || f.name) + (f.required ? '' : ' (opz.)'), reqd: f.required ? 1 : 0, description: f.help || '' };
+			if (f.type === 'date') { fl.fieldtype = 'Date'; }
+			else if (f.options && f.options.length) { fl.fieldtype = 'Select'; fl.options = [{ label: '', value: '' }].concat(f.options.map(o => ({ label: o.code + ' — ' + o.description, value: o.code }))); }
+			else if (f.type === 'file') { fl.fieldtype = 'Data'; fl.description = ((f.help || '') + ' (URL di un file già caricato sul caso)').trim(); }
+			else { fl.fieldtype = 'Data'; }
+			if (pre[f.name]) fl.default = pre[f.name];
+			return fl;
+		});
+		frappe.prompt(flds, v => {
+			const valori = {};
+			d.fields.forEach(f => { if (v[f.name] != null && v[f.name] !== '') valori[f.name] = v[f.name]; });
+			frappe.call({
+				method: 'thanatos_intel.osint.official_documents.richiedi_docuengine',
+				args: { case: frm.doc.name, document_id: d.id, valori: JSON.stringify(valori) },
+				freeze: true, freeze_message: __('Invio richiesta DocuEngine…'),
+				callback: r => {
+					const m = r.message || {};
+					if (m.error) { frappe.msgprint('⚠ ' + frappe.utils.escape_html(m.error)); return; }
+					frappe.show_alert({ message: '✓ ' + (m.documento || d.name) + ': ' + (m.message || 'richiesta inviata'), indicator: 'green' }, 10);
+				}
+			});
+		}, d.name + ' — € ' + (d.prezzo || 0).toFixed(2), __('Ordina documento'));
 	},
 	catalog($w, frm) {
 		const self = this;

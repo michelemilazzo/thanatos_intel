@@ -195,3 +195,226 @@ def _log(case, tipo, cf_piva, msg):
 def tipi_documenti():
     """Elenco tipi documento ufficiale disponibili (per la UI)."""
     return [{"id": k, "label": v[1]} for k, v in TIPI.items()]
+
+
+# ── DocuEngine (docuengine.openapi.com) — 53 documenti on-demand ─────────────
+# Camerali (visure/bilanci/fascicoli/protesti/DURC), Catastali (mappa/planimetrie),
+# Patronato (certificati anagrafici: residenza/stato famiglia/matrimonio, targa PRA).
+# Flusso: GET /documents (catalogo+requestStructure) → POST /requests
+# {documentId, search:{field0..N nell'ordine del requestStructure}} → poll
+# GET /requests/{id} (WAIT→DONE, patronato ~2gg) → GET /requests/{id}/documents
+# → downloadUrl (GCS, scade). GOTCHA: i campi vanno SEMPRE in "search" anche con
+# hasSearch=false; date ISO YYYY-MM-DD; certificati esente-bollo richiedono
+# exemptionReason+exemptionDocument (la versione "Con Marca Da Bollo" no).
+
+_DE = "https://docuengine.openapi.com"
+_DE_ERROR = {"ERROR", "FAILED", "REJECTED", "KO", "CANCELED", "CANCELLED"}
+_DE_PENDING_KEY = "docuengine_pending"
+
+
+def _de_get(path):
+    import requests
+    r = requests.get(_DE + path, headers=_hdr(), timeout=60)
+    try:
+        return r.status_code, r.json()
+    except Exception:
+        return r.status_code, {"message": (r.text or "")[:300]}
+
+
+@frappe.whitelist()
+def docuengine_catalog(case=None, force=0):
+    """Catalogo DocuEngine (cache 24h): documenti + campi + prezzi (costo e cliente)."""
+    docs = None if frappe.utils.cint(force) else frappe.cache().get_value("docuengine_catalog")
+    if not docs:
+        st, body = _de_get("/documents")
+        if st != 200:
+            return {"error": f"HTTP {st}: {body.get('message') or body}"}
+        docs = []
+        for x in body.get("data") or []:
+            fields = (x.get("requestStructure") or {}).get("fields") or {}
+            ordered = []
+            for k in sorted(fields, key=lambda s: int(s[5:])):
+                f = fields[k]
+                ordered.append({"key": k, "name": f.get("name"), "label": f.get("nameIT") or f.get("name"),
+                                "type": f.get("type"), "required": 1 if f.get("required") else 0,
+                                "options": f.get("options"), "help": f.get("help")})
+            docs.append({"id": x.get("id"), "name": x.get("name"), "category": x.get("category"),
+                         "costo": float(x.get("totalPrice") or 0), "fields": ordered})
+        frappe.cache().set_value("docuengine_catalog", docs, expires_in_sec=86400)
+    # prezzo cliente = costo × markup del cliente del caso
+    from thanatos_intel.billing.openapi_billing import _markup
+    client = frappe.db.get_value("Investigation Case", case, "client") if case else None
+    mk = _markup(client)
+    out = [dict(d, prezzo=round(d["costo"] * mk, 2)) for d in docs]
+    return {"markup": mk, "documenti": out}
+
+
+def _de_doc(document_id):
+    for d in (docuengine_catalog().get("documenti") or []):
+        if d["id"] == document_id:
+            return d
+    return None
+
+
+@frappe.whitelist()
+def richiedi_docuengine(case, document_id, valori=None, self_mode=None):
+    """Ordina un documento DocuEngine. valori = JSON {nomeCampo: valore};
+    viene rimappato in search:{field0..N} nell'ordine del requestStructure."""
+    import json as _json
+    doc = _de_doc(document_id)
+    if not doc:
+        return {"error": f"documento non trovato: {document_id}"}
+    if isinstance(valori, str):
+        valori = _json.loads(valori or "{}")
+    valori = valori or {}
+    search, missing = {}, []
+    for f in doc["fields"]:
+        v = valori.get(f["name"])
+        if v in (None, ""):
+            if f["required"]:
+                missing.append(f["label"] or f["name"])
+            continue
+        search[f["key"]] = v
+    if missing:
+        return {"error": "campi obbligatori mancanti: " + ", ".join(missing)}
+    if self_mode is None:
+        self_mode = _is_self_purchase(case)
+    client = frappe.db.get_value("Investigation Case", case, "client")
+    if client:
+        from thanatos_intel.billing.openapi_billing import _markup, _mmos_markup
+        from thanatos_intel.billing.credits import ensure_credit
+        from thanatos_intel.billing.mmos_wallet import mmos_ensure
+        ensure_credit(client, round(doc["costo"] * _markup(client), 2), f"DocuEngine {doc['name']}")
+        mmos_ensure(round(doc["costo"] * _mmos_markup(), 2), label=f"DocuEngine {doc['name']}")
+    import requests
+    r = requests.post(_DE + "/requests", headers=_hdr(),
+                      json={"documentId": document_id, "search": search}, timeout=60)
+    if r.status_code not in (200, 201):
+        try:
+            msg = (r.json() or {}).get("message") or r.text
+        except Exception:
+            msg = r.text
+        return {"error": f"HTTP {r.status_code}: {str(msg)[:300]}"}
+    data = (r.json() or {}).get("data") or {}
+    req_id = data.get("id")
+    if not req_id:
+        return {"error": "nessun id richiesta", "raw": str(data)[:200]}
+    target = valori.get("taxCode") or valori.get("plate") or " ".join(
+        str(valori.get(k) or "") for k in ("name", "surname")).strip() or "-"
+    frappe.enqueue("thanatos_intel.osint.official_documents._docuengine_bg",
+                   queue="long", timeout=700, case=case, req_id=req_id,
+                   document_id=document_id, target=target, self_mode=int(self_mode or 0))
+    return {"ok": True, "id": req_id, "documento": doc["name"],
+            "message": "Richiesta inviata; il documento arriverà nei reperti del caso "
+                       "(certificati anagrafici richiedono ~2 giorni lavorativi, ritiro automatico)."}
+
+
+def _docuengine_bg(case, req_id, document_id, target, self_mode=0, max_wait=480):
+    """Poll breve in background; se non pronta, passa al ritiro orario (scheduler)."""
+    deadline = time.time() + max_wait
+    while time.time() < deadline:
+        time.sleep(15)
+        st, body = _de_get(f"/requests/{req_id}")
+        d = body.get("data") or {}
+        if isinstance(d, list):
+            d = d[0] if d else {}
+        state = (d.get("state") or "").upper()
+        if state == "DONE":
+            _docuengine_scarica(case, req_id, document_id, target, self_mode)
+            return
+        if state in _DE_ERROR:
+            doc = _de_doc(document_id) or {"name": document_id}
+            _log(case, doc["name"], target, f"richiesta {state}")
+            return
+    _de_pending_add({"case": case, "req_id": req_id, "document_id": document_id,
+                     "target": target, "self_mode": int(self_mode or 0)})
+    doc = _de_doc(document_id) or {"name": document_id}
+    _log(case, doc["name"], target,
+         "in lavorazione (ritiro automatico orario; certificati anagrafici ~2 giorni)")
+
+
+def _docuengine_scarica(case, req_id, document_id, target, self_mode=0):
+    """Scarica i PDF pronti (downloadUrl) e li salva come reperti + addebita."""
+    import requests
+    doc = _de_doc(document_id) or {"name": document_id, "costo": 0.0}
+    st, body = _de_get(f"/requests/{req_id}/documents")
+    files = body.get("data") if isinstance(body, dict) else body
+    if isinstance(files, dict):
+        files = [files]
+    saved = 0
+    for i, f in enumerate(files or []):
+        url = f.get("downloadUrl")
+        if not url:
+            continue
+        r = requests.get(url, timeout=120)
+        if r.status_code != 200:
+            continue
+        fname = f.get("fileName") or f"{frappe.scrub(doc['name'])}_{i}.pdf"
+        _salva_reperto(case, doc["name"], target, fname, r.content, self_mode)
+        saved += 1
+    if not saved:
+        _log(case, doc["name"], target, "DONE ma nessun file scaricabile")
+        return
+    try:
+        client = frappe.db.get_value("Investigation Case", case, "client")
+        if client:
+            from thanatos_intel.billing.openapi_billing import _markup, _mmos_markup
+            from thanatos_intel.billing.credits import charge
+            from thanatos_intel.billing.mmos_wallet import mmos_charge
+            _ref = "%s-de-%s" % (case, req_id[-8:])
+            charge(client, round(doc["costo"] * _markup(client), 2),
+                   "DocuEngine %s" % doc["name"], ref_dt="Investigation Case", ref_name=_ref)
+            mmos_charge(round(doc["costo"] * _mmos_markup(), 2), ref_name=_ref,
+                        notes="DocuEngine %s (caso %s)" % (doc["name"], case))
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "docuengine charge")
+    frappe.db.commit()
+
+
+def _de_pending_load():
+    import json as _json
+    try:
+        return _json.loads(frappe.db.get_default(_DE_PENDING_KEY) or "[]")
+    except Exception:
+        return []
+
+
+def _de_pending_save(items):
+    import json as _json
+    frappe.db.set_default(_DE_PENDING_KEY, _json.dumps(items))
+    frappe.db.commit()
+
+
+def _de_pending_add(item):
+    items = _de_pending_load()
+    if not any(x.get("req_id") == item["req_id"] for x in items):
+        items.append(item)
+        _de_pending_save(items)
+
+
+def docuengine_poll_pending():
+    """Scheduler orario: ritira le richieste DocuEngine lente (patronato ~2gg)."""
+    items = _de_pending_load()
+    if not items:
+        return
+    still = []
+    for it in items:
+        try:
+            st, body = _de_get(f"/requests/{it['req_id']}")
+            d = body.get("data") or {}
+            if isinstance(d, list):
+                d = d[0] if d else {}
+            state = (d.get("state") or "").upper()
+            if state == "DONE":
+                _docuengine_scarica(it["case"], it["req_id"], it["document_id"],
+                                    it.get("target") or "-", it.get("self_mode") or 0)
+            elif state in _DE_ERROR:
+                doc = _de_doc(it["document_id"]) or {"name": it["document_id"]}
+                _log(it["case"], doc["name"], it.get("target") or "-", f"richiesta {state}")
+            else:
+                still.append(it)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "docuengine poll")
+            still.append(it)
+    if len(still) != len(items):
+        _de_pending_save(still)
