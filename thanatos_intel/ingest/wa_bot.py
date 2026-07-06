@@ -156,13 +156,135 @@ def _handoff(lead_name, wa_doc):
         pass
 
 
+def _resolve_client_user(sender):
+    """Se il mittente WA e' un CLIENTE riconosciuto (Investigation Client.phone),
+    ritorna il suo platform_user. Match sugli ultimi 9 digit come per operatori."""
+    import re
+    d = re.sub(r"\D", "", sender or "")
+    if len(d) < 8:
+        return None
+    tail = d[-9:]
+    rows = frappe.db.sql(
+        """SELECT platform_user, phone FROM `tabInvestigation Client`
+           WHERE phone IS NOT NULL AND phone != '' AND platform_user IS NOT NULL""",
+        as_dict=True)
+    for r in rows:
+        if re.sub(r"\D", "", r["phone"] or "").endswith(tail):
+            return r["platform_user"]
+    return None
+
+
+def _client_case_for_media(user, lead_name):
+    """Ritorna il caso del cliente su cui salvare l'estratto: il linked_case del
+    lead, oppure l'UNICO caso visibile del cliente."""
+    lc = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+    if lc:
+        return lc
+    try:
+        from thanatos_intel.permissions import visible_case_names
+        vc = visible_case_names(user) or []
+        if len(vc) == 1:
+            return vc[0]
+    except Exception:
+        pass
+    return None
+
+
+def _try_client_media_explain(lead_name, wa_doc, to_number, user):
+    """Se l'ULTIMO messaggio inbound e' un allegato (immagine/doc/video), il
+    cliente lo ha appena mandato: chiama ai_explain_document (stessa logica del
+    portale). L'estratto va nella cartella Drive '08 Estratti AI' e Case
+    Activity per l'operatore. Il cliente riceve la spiegazione via WA."""
+    rows = frappe.db.sql(
+        """SELECT content, media_url FROM `tabIntel Lead Message`
+           WHERE parent=%s AND direction='Inbound'
+           ORDER BY sent_at DESC LIMIT 1""",
+        lead_name, as_dict=True)
+    if not rows:
+        return False
+    msg = rows[0]
+    media_url = msg.get("media_url") or ""
+    if not media_url:
+        return False
+    case = _client_case_for_media(user, lead_name)
+    if not case:
+        send_text(wa_doc, to_number,
+                  "Grazie per il documento. Ho piu' pratiche a Suo nome: "
+                  "mi indichi il codice caso (es. CASE-AAAA-N) e Le fornisco la spiegazione.",
+                  lead_name)
+        return True
+    # didascalia = eventuale domanda del cliente
+    caption = (msg.get("content") or "").strip()
+    if "\n" in caption:
+        caption = caption.split("\n", 1)[1].strip()  # rimuove label icona
+    question = caption if caption and not caption.startswith("[") else ""
+    try:
+        from thanatos_intel.api.portal_chat import ai_explain_document
+        # esegui come il cliente (scope corretto)
+        prev_user = frappe.session.user
+        frappe.set_user(user)
+        try:
+            r = ai_explain_document(case, media_url, question=question)
+        finally:
+            frappe.set_user(prev_user)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "wa client media explain")
+        return False
+    if not r or not r.get("ok"):
+        return False
+    parts = [r.get("spiegazione", "")]
+    if r.get("tipo"):
+        parts.append(f"\n_Tipo documento:_ {r['tipo']}")
+    if r.get("leggi"):
+        parts.append(f"_Riferimenti:_ {', '.join(r['leggi'][:3])}")
+    parts.append("\n_Il documento e' stato archiviato nel Suo fascicolo._")
+    send_text(wa_doc, to_number, "\n".join(p for p in parts if p), lead_name)
+    return True
+
+
+def _try_client_ai_reply(lead_name, wa_doc, to_number):
+    """Se il mittente e' un cliente riconosciuto: passa al cervello scoped
+    (vede solo i suoi casi). Se l'ultimo msg e' un allegato -> ai_explain_document
+    (spiega + salva estratto). Altrimenti risposta testuale scoped."""
+    user = _resolve_client_user(to_number)
+    if not user:
+        return False
+    # 1) allegato appena mandato -> spiegazione + estratto per operatore
+    if _try_client_media_explain(lead_name, wa_doc, to_number, user):
+        return True
+    # 2) risposta testuale scoped
+    try:
+        from thanatos_intel.ai import ops_brain as ob
+    except Exception:
+        return False
+    last = _last_inbound(lead_name) or ""
+    if not last.strip() or last.strip().startswith("["):
+        return False
+    try:
+        reply = ob.answer(last, user=user, lead_name=lead_name,
+                          session_id=f"wa-client-{user}")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "wa client ai reply")
+        return False
+    if not reply or "non disponibile" in reply.lower():
+        return False
+    send_text(wa_doc, to_number, reply, lead_name)
+    return True
+
+
 @frappe.whitelist()
 def generate_reply(lead_name, wa_number, to_number):
-    """Genera e invia la risposta del bot AI per un messaggio entrante.
-    Pensato per girare in background (frappe.enqueue)."""
+    """Genera e invia la risposta AI per un messaggio entrante (background job).
+
+    - Se il mittente e' un CLIENTE riconosciuto (Investigation Client.phone),
+      passa al cervello scoped (vede solo i suoi casi).
+    - Altrimenti bot commerciale generico (nuovi lead, accoglienza)."""
     wa_doc = _wa_doc(wa_number)
     if not wa_doc or not int(wa_doc.get("ai_bot_enabled") or 0):
         return {"ok": False, "reason": "bot disabled"}
+    # Cliente riconosciuto -> assistente AI scoped ai suoi casi
+    if _try_client_ai_reply(lead_name, wa_doc, to_number):
+        return {"ok": True, "mode": "client_scoped_ai"}
     # il bot risponde SEMPRE; bot_handed_off serve solo a NON ri-avvisare l'operatore
     already_ho = int(frappe.db.get_value("Intel Lead", lead_name, "bot_handed_off") or 0)
     from thanatos_intel.ai.doc_ingest import _gateway
