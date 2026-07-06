@@ -188,7 +188,7 @@ def ai_explain_document(case_name, file_url, question=""):
 
     # 3) salva l'estratto in una cartella del caso per l'operatore
     md = _estratto_md(fname, parsed, question)
-    _save_estratto(case_name, fname, md, parsed)
+    _save_estratto(case_name, fname, md, parsed, file_url)
 
     return {"ok": True, "spiegazione": spiegazione,
             "tipo": parsed.get("tipo_documento", ""),
@@ -218,23 +218,72 @@ def _estratto_md(fname, parsed, question):
     return "\n".join(lines)
 
 
-def _save_estratto(case_name, fname, md, parsed):
-    """Salva l'estratto MD nella cartella Drive '08 Estratti AI' del caso +
-    registra una Case Activity (consultazione rapida operatore)."""
+_TIPO_LEGALE = ("contratto", "sentenza", "atto", "delega", "procura",
+                "mandato", "diffida", "notarile", "notaio", "verbale",
+                "citazione", "decreto", "ordinanza", "querela", "denuncia")
+_TIPO_REPORT = ("dossier", "perizia", "relazione", "report",
+                "investigativ", "screening", "due diligence")
+
+
+def _subfolder_by_tipo(tipo, fname=""):
+    """Cartella Drive per NATURA del documento (allineata alle sub esistenti
+    del sistema): 07 Legale / 05 Report / 01 Documenti (default)."""
+    t = ((tipo or "") + " " + (fname or "")).lower()
+    if any(k in t for k in _TIPO_LEGALE):
+        return "07 Legale"
+    if any(k in t for k in _TIPO_REPORT):
+        return "05 Report"
+    return "01 Documenti"
+
+
+def _load_file_bytes(file_url):
+    """Legge i bytes di un file Frappe dal filesystem locale."""
+    import os
+    if not file_url:
+        return None, "application/octet-stream"
+    rel = file_url.split("/files/", 1)[-1]
+    subdir = "private" if "/private/" in file_url else "public"
+    path = frappe.get_site_path(subdir, "files", rel)
+    if not os.path.exists(path):
+        return None, "application/octet-stream"
+    import mimetypes
+    mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
+    with open(path, "rb") as f:
+        return f.read(), mime
+
+
+def _save_estratto(case_name, fname, md, parsed, file_url=None):
+    """Archivia ORIGINALE + estratto AI nella stessa subfolder Drive scelta
+    per NATURA. L'estratto ha suffisso '[ESTRATTO AI]' nel nome per essere
+    riconoscibile dall'operatore. Registra Case Activity con destinazione."""
+    from thanatos_intel.reporting.case_reports import _put_in_drive, _client_name
     try:
-        from thanatos_intel.reporting.case_reports import _put_in_drive, _client_name
         client = _client_name(frappe.get_doc("Investigation Case", case_name))
-        base = fname.rsplit(".", 1)[0]
-        _put_in_drive(case_name, f"Estratto AI - {base}.md",
+    except Exception:
+        client = ""
+    sub = _subfolder_by_tipo(parsed.get("tipo_documento", ""), fname)
+    base = fname.rsplit(".", 1)[0]
+
+    try:
+        content, mime = _load_file_bytes(file_url)
+        if content:
+            _put_in_drive(case_name, fname, content, mime, client, subfolder=sub)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "portal ai originale drive")
+
+    try:
+        _put_in_drive(case_name,
+                      f"{base} [ESTRATTO AI].md",
                       md.encode("utf-8"), "text/markdown", client,
-                      subfolder="08 Estratti AI")
+                      subfolder=sub)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "portal ai estratto drive")
+
     try:
         c = frappe.get_doc("Investigation Case", case_name)
         riass = (parsed.get("riassunto") or "")[:400]
         leggi = ", ".join(parsed.get("leggi_citate") or [])
-        desc = (f"🤖 Estratto AI da documento caricato dal cliente: {fname}\n"
+        desc = (f"🤖 [Estratto AI] {fname} → archiviato in *{sub}*\n"
                 f"Tipo: {parsed.get('tipo_documento', 'n/d')}\n{riass}"
                 + (f"\nLeggi citate: {leggi}" if leggi else ""))
         c.append("case_activities", {
