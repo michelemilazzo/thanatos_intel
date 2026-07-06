@@ -301,6 +301,19 @@ def case_ai_chat(case, message):
         res = send_case_report_wa(case, lead.name, lead.whatsapp_number, lead.source_identifier, include_pdf=1)
         return done(f"📲 Relazione inviata su WhatsApp: {res.get('messaggi')} messaggi + {res.get('documenti')} PDF.", "invia_wa")
 
+    # — domande globali (struttura, altri casi, statistiche) → cervello operativo —
+    if re.search(r"quanti cas|tutti i cas|lista cas|elenc\w+ (i |le )?cas|altri cas|"
+                 r"statistich|quanti client|tutti i client|quanti lead|"
+                 r"cerca (in tutt|ovunque|nella struttura)|struttura|panoramica|overview", t):
+        try:
+            from thanatos_intel.ai.ops_brain import answer as ops_answer
+            reply = ops_answer(message, operator=frappe.session.user,
+                               session_id=f"case-{case}")
+            if reply:
+                return done(reply, "ops_brain")
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "case_ai_chat ops_brain escalation")
+
     # — fallback conversazionale col contesto del caso —
     try:
         from thanatos_intel.ai.doc_ingest import _gateway
