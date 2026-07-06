@@ -389,13 +389,23 @@ def operator_assistant_reply(lead_name, wa_phone, sender, text, operator):
                 return {"ok": True, "case": case, "action": r.get("action")}
         except Exception:
             frappe.log_error(frappe.get_traceback(), "operator case_ai_chat")
-    from thanatos_intel.ai.doc_ingest import _gateway
-    from thanatos_intel.ai.case_architect import _resp_text
-    ctx = _operator_context(operator, lead_name, text)
-    msg = (f"Contesto operativo:\n{ctx}\n\n"
-           f"Messaggio dell'operatore: «{text}»\n\nRispondi all'operatore.")
-    resp = _gateway(msg, system=_OP_SYS, task_type="chat", session_id=f"op-{operator}")
-    out = (_resp_text(resp) or "").strip()
+    # senza caso → cervello operativo globale (stessi strumenti/contesto del desk)
+    resp = None
+    try:
+        from thanatos_intel.ai.ops_brain import answer as ops_answer
+        out = (ops_answer(text, operator=operator, lead_name=lead_name,
+                          session_id=f"op-{operator}") or "").strip()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "operator ops_brain")
+        out = ""
+    if not out:
+        from thanatos_intel.ai.doc_ingest import _gateway
+        from thanatos_intel.ai.case_architect import _resp_text
+        ctx = _operator_context(operator, lead_name, text)
+        msg = (f"Contesto operativo:\n{ctx}\n\n"
+               f"Messaggio dell'operatore: «{text}»\n\nRispondi all'operatore.")
+        resp = _gateway(msg, system=_OP_SYS, task_type="chat", session_id=f"op-{operator}")
+        out = (_resp_text(resp) or "").strip()
     if not out:
         out = "Ricevuto. (assistente AI momentaneamente non disponibile)"
     _reply(wa_phone, sender, lead_name, out)
