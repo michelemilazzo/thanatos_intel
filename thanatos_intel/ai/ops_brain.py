@@ -30,6 +30,58 @@ def _secret(field, conf_key):
     return _vault(field) or frappe.conf.get(conf_key)
 
 
+# ─────────────────────── autorizzazione / scope utente ───────────────────────
+
+def _scope(user=None):
+    """Scope casi dell'utente: None = full access (operatore/admin), altrimenti
+    set dei soli casi che l'utente (cliente) può vedere."""
+    from thanatos_intel.permissions import is_full_access, visible_case_names
+    user = user or frappe.session.user
+    if is_full_access(user):
+        return None
+    return set(visible_case_names(user) or [])
+
+
+def _in_scope(case):
+    """True se il caso è visibile all'utente corrente (o se full access)."""
+    sc = getattr(frappe.local, "_ob_scope", None)
+    return sc is None or (case in sc)
+
+
+def _is_client():
+    """True se l'utente corrente è un cliente (scope ristretto), non operatore."""
+    return getattr(frappe.local, "_ob_scope", None) is not None
+
+
+def _lead_case(lead):
+    return frappe.db.get_value("Intel Lead", lead, "linked_case")
+
+
+def _file_allowed(file_url):
+    """True se il file appartiene a un caso/lead nello scope dell'utente."""
+    sc = getattr(frappe.local, "_ob_scope", None)
+    if sc is None:
+        return True
+    f = frappe.db.get_value("File", {"file_url": file_url},
+                            ["attached_to_doctype", "attached_to_name"], as_dict=True)
+    if not f:
+        return False
+    dt, dn = f.attached_to_doctype, f.attached_to_name
+    if dt == "Investigation Case":
+        return dn in sc
+    if dt == "Intel Lead":
+        lc = _lead_case(dn)
+        return bool(lc and lc in sc)
+    if dt == "Investigation Evidence":
+        c = frappe.db.get_value("Investigation Evidence", dn, "investigation_case")
+        return bool(c and c in sc)
+    return False
+
+
+_DENIED = {"error": "Accesso negato: non sei autorizzato per questo caso/documento."}
+_DENIED_OSINT = {"error": "Strumento riservato agli operatori Thanatos."}
+
+
 # ─────────────────────────── snapshot struttura ──────────────────────────────
 
 def _structure_snapshot():
@@ -64,8 +116,21 @@ def _structure_snapshot():
 def _t_global_search(q=None, **kw):
     from thanatos_intel.api.centralino import global_search
     r = global_search(q or "", limit=8)
+    sc = getattr(frappe.local, "_ob_scope", None)
     out = {}
     for k, v in r.items():
+        if not v:
+            continue
+        if sc is not None:
+            # cliente: filtra ai soli casi visibili
+            if k == "cases":
+                v = [x for x in v if x.get("name") in sc]
+            elif k == "evidences":
+                v = [x for x in v if x.get("investigation_case") in sc]
+            elif k in ("chats", "messages"):
+                v = [x for x in v if _lead_case(x.get("lead") or x.get("name")) in sc]
+            elif k == "clients":
+                v = []  # anagrafiche clienti non esposte ai clienti
         if v:
             out[k] = v
     return out or {"info": "nessun risultato"}
@@ -75,6 +140,9 @@ def _t_list_cases(status=None, **kw):
     filters = {}
     if status:
         filters["status"] = status
+    sc = getattr(frappe.local, "_ob_scope", None)
+    if sc is not None:
+        filters["name"] = ["in", list(sc) or ["__none__"]]
     return frappe.get_all("Investigation Case", filters=filters,
                           fields=["name", "case_title", "status", "case_type",
                                   "priority", "client"],
@@ -84,6 +152,8 @@ def _t_list_cases(status=None, **kw):
 def _t_case_detail(case=None, **kw):
     if not case:
         return {"error": "manca il codice caso"}
+    if not _in_scope(case):
+        return dict(_DENIED)
     from thanatos_intel.api.centralino import get_case_detail
     try:
         return get_case_detail(case)
@@ -92,10 +162,14 @@ def _t_case_detail(case=None, **kw):
 
 
 def _t_stats(**kw):
+    if _is_client():
+        return {"error": "Statistiche riservate agli operatori."}
     return {"snapshot": _structure_snapshot()}
 
 
 def _t_screening_kyc(nome=None, mode="pep", case=None, **kw):
+    if _is_client():
+        return dict(_DENIED_OSINT)
     if not nome:
         return {"error": "manca il nominativo"}
     from thanatos_intel.osint.openapi_client import screening_kyc
@@ -103,6 +177,8 @@ def _t_screening_kyc(nome=None, mode="pep", case=None, **kw):
 
 
 def _t_soci_ubo(piva=None, case=None, **kw):
+    if _is_client():
+        return dict(_DENIED_OSINT)
     if not piva:
         return {"error": "manca la P.IVA"}
     from thanatos_intel.osint.openapi_client import soci_titolari
@@ -110,6 +186,8 @@ def _t_soci_ubo(piva=None, case=None, **kw):
 
 
 def _t_negativita(id=None, case=None, **kw):
+    if _is_client():
+        return dict(_DENIED_OSINT)
     if not id:
         return {"error": "manca CF o P.IVA"}
     from thanatos_intel.osint.openapi_client import negativita
@@ -117,6 +195,8 @@ def _t_negativita(id=None, case=None, **kw):
 
 
 def _t_visura(piva=None, case=None, **kw):
+    if _is_client():
+        return dict(_DENIED_OSINT)
     if not piva:
         return {"error": "manca la P.IVA"}
     from thanatos_intel.osint.openapi_client import visura
@@ -128,6 +208,10 @@ def _t_case_tool(case=None, instruction=None, **kw):
     dossier, proforma, avanzamento, collegamenti, assicurazione…)."""
     if not case or not instruction:
         return {"error": "servono case e instruction"}
+    if not _in_scope(case):
+        return dict(_DENIED)
+    if _is_client():
+        return dict(_DENIED_OSINT)  # strumenti operativi solo agli operatori
     from thanatos_intel.ai.case_assistant import case_ai_chat
     return case_ai_chat(case, instruction)
 
@@ -137,6 +221,12 @@ def _t_list_documents(case=None, lead=None, **kw):
     ingeriti come reperti), con stato. Serve al cervello per vedere i documenti
     che l'operatore ha appena mandato, prima che siano processati."""
     docs = []
+    if case and not _in_scope(case):
+        return dict(_DENIED)
+    if lead and _is_client():
+        lc = _lead_case(lead)
+        if not (lc and _in_scope(lc)):
+            return dict(_DENIED)
     if case:
         for f in frappe.get_all("File",
                 filters={"attached_to_doctype": "Investigation Case",
@@ -163,6 +253,8 @@ def _t_read_document(file_url=None, **kw):
     reperto sintetizzato."""
     if not file_url:
         return {"error": "manca file_url"}
+    if not _file_allowed(file_url):
+        return dict(_DENIED)
     from thanatos_intel.ai.doc_ingest import _read_text_fallback
     text = ""
     try:
@@ -186,6 +278,8 @@ def _t_ingest_document(case=None, file_url=None, **kw):
     vuole che diventi parte del fascicolo."""
     if not (case and file_url):
         return {"error": "servono case e file_url"}
+    if not _in_scope(case) or _is_client():
+        return dict(_DENIED)
     from thanatos_intel.ai.doc_ingest import ingest_document
     try:
         r = ingest_document(file_url=file_url, investigation_case=case,
@@ -242,6 +336,26 @@ _SYS = (
     "in testo normale, breve e operativo (max ~140 parole).\n"
     "- Quando citi un caso usa il codice CASE-AAAA-N. Non inventare dati: se non "
     "ce l'hai, usa lo strumento giusto o dillo.\n"
+)
+
+# System prompt per i CLIENTI (scope ristretto ai propri casi).
+_SYS_CLIENT = (
+    "Sei l'assistente di Thanatos Intel per un CLIENTE. Dagli del Lei, tono "
+    "cortese e professionale. Il cliente vede SOLO i propri casi: gli strumenti "
+    "sono limitati ai suoi dati e alcuni sono riservati agli operatori (se uno "
+    "strumento risponde 'Accesso negato' o 'riservato agli operatori', spiega "
+    "gentilmente che quell'informazione la gestisce il team Thanatos).\n\n"
+    "STRUMENTI (rispondi con JSON {\"tool\":\"nome\",\"args\":{...}} per usarne uno):\n"
+    "- list_cases {}: elenca i TUOI casi\n"
+    "- case_detail {case}: dettaglio di un tuo caso (stato, documenti, avanzamento)\n"
+    "- global_search {q}: cerca nei tuoi casi/documenti\n"
+    "- list_documents {case}: elenca i documenti di un tuo caso\n"
+    "- read_document {file_url}: leggi un documento di un tuo caso\n"
+    "\nREGOLE:\n"
+    "- Se serve un dato, USA uno strumento: rispondi SOLO con il JSON.\n"
+    "- Altrimenti rispondi in testo, cortese e chiaro (max ~140 parole).\n"
+    "- Non promettere risultati, non dare consulenza legale, non rivelare dati "
+    "di altri clienti o casi non tuoi.\n"
 )
 
 
@@ -516,7 +630,7 @@ def _agentic_loop(text, ctx_case, llm_fn, lead_name=None, max_steps=3,
     out = ""
     tot_in = tot_out = 0
     for _step in range(max_steps):
-        out, usage = llm_fn(convo, _SYS)
+        out, usage = llm_fn(convo, _SYS_CLIENT if _is_client() else _SYS)
         out = (out or "").strip()
         if usage:
             tot_in += int(usage.get("prompt_tokens") or usage.get("prompt_eval_count")
@@ -556,23 +670,31 @@ _SIMPLE_RE = re.compile(
     r"chi sei|cosa sai fare|aiuto|help|test)\b", re.I)
 
 
-def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
-    """Cervello operativo. Motore via site_config `ops_brain_engine`:
-      auto    = router a costi scalati (ollama gratis per semplice/economico →
-                openrouter economico → claude per il complesso)
-      cli     = Claude Code CLI + MCP (default)
-      codex   = Codex CLI su ai-core + MCP
-      ollama  = ciclo agentico su Ollama locale (gratis)
-      openrouter = ciclo agentico su OpenRouter (economico)
-      gateway = ciclo agentico su gateway MMOS AI
-    Ogni motore cade sul successivo se non risponde."""
-    # caso di contesto (se la chat è agganciata o citato nel testo)
+def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, user=None):
+    """Cervello operativo con AUTORIZZAZIONE. `user` (o operator) determina lo
+    scope: operatore/admin = tutti i casi e strumenti; cliente = SOLO i propri
+    casi (visible_case_names), niente OSINT/stats/strumenti operativi.
+    Motore via site_config `ops_brain_engine` (auto|cli|codex|ollama|openrouter|
+    gateway). Ogni motore cade sul successivo."""
+    # scope autorizzazione (thread-safe, letto da tutti i tool). L'operatore
+    # WhatsApp arriva come NOME Investigator → risolvi al suo platform_user.
+    scope_user = user
+    if not scope_user and operator:
+        pu = frappe.db.get_value("Investigator", operator, "platform_user")
+        scope_user = pu or operator
+    scope_user = scope_user or frappe.session.user
+    frappe.local._ob_scope = _scope(scope_user)
+    is_client = frappe.local._ob_scope is not None
+
+    # caso di contesto (se la chat è agganciata o citato nel testo) — validato su scope
     ctx_case = None
     if lead_name:
         ctx_case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
     m = re.search(r"CASE-\d{4}-\d+", text or "", re.I)
     if m and frappe.db.exists("Investigation Case", m.group(0).upper()):
         ctx_case = m.group(0).upper()
+    if ctx_case and not _in_scope(ctx_case):
+        ctx_case = None  # cliente non può agganciare un caso non suo
 
     engine = frappe.conf.get("ops_brain_engine", "cli")
 
@@ -597,10 +719,12 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3):
                            or _secret("openrouter_api_key", "openrouter_api_key")) else None)
     E_gw = lambda: _gateway_answer(text, ctx_case, lead_name, session_id, operator, max_steps)
 
-    # Router a costi scalati. cheap (OpenCode Zen free) è il workhorse; Claude è
-    # l'escalation per il complesso; Codex/gateway alternative; Ollama (CPU,
-    # lento) ultimo fallback offline.
-    if engine == "auto":
+    # CLIENTE: MAI i motori CLI (Claude/Codex girano come Administrator via MCP =
+    # bypasserebbero lo scope). Solo motori in-process con i tool scoped.
+    if is_client:
+        r = _chain(E_cheap, E_gw, E_ollama)
+    # OPERATORE: router a costi scalati completo.
+    elif engine == "auto":
         r = _chain(E_cheap, E_claude, E_codex, E_gw, E_ollama)
     elif engine == "codex":
         r = _chain(E_codex, E_claude, E_gw)
@@ -643,37 +767,14 @@ def _meter(resp, ref):
         pass
 
 
-STAFF_ROLES = {"System Manager", "Investigation Manager", "Investigator",
-               "Thanatos Investigator", "Thanatos Supervisor",
-               "Thanatos Director", "Thanatos Analyst"}
-
-
-def _require_staff():
-    if frappe.session.user == "Guest":
-        frappe.throw("Login richiesto")
-    if not STAFF_ROLES & set(frappe.get_roles()):
-        frappe.throw("Riservato allo staff Thanatos", frappe.PermissionError)
-
-
 @frappe.whitelist()
 def ask(message, session_id=None):
-    """Endpoint per il pannello AI della Switchboard (web) e la pagina desk Cervello."""
-    _require_staff()
-    reply = answer(message, operator=frappe.session.user, session_id=session_id)
+    """Endpoint AI: operatori (PWA Switchboard) e clienti (portale). Lo scope è
+    calcolato dall'utente loggato: operatore = tutto, cliente = solo i suoi casi."""
+    if frappe.session.user == "Guest":
+        frappe.throw("Login richiesto")
+    reply = answer(message, user=frappe.session.user, session_id=session_id)
     return {"reply": reply}
-
-
-@frappe.whitelist()
-def chat_upload(file_url, file_name, content_type="", case=None, session_id=None):
-    """Allegato dalla chat Cervello (desk). Se è indicato un caso, il file diventa
-    reperto nel dossier (riusa case_assistant.chat_upload); altrimenti resta un
-    File libero e il cervello lo riceve come contesto."""
-    _require_staff()
-    result = {"ok": True, "evidence": None}
-    if case:
-        from thanatos_intel.ai.case_assistant import chat_upload as case_upload
-        result["evidence"] = case_upload(case, file_url, file_name, content_type).get("evidence")
-    return result
 
 
 # ─────────────────────── report costi / fatturazione AI ──────────────────────
