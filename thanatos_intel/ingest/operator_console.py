@@ -67,8 +67,10 @@ _CLOSE_RE = re.compile(
 _ASSIGN_RE = re.compile(
     r"\bassegna(re)?\s+(a|al|alla)\s+([\w\.\-]+(\s+(?!CASE-)[\w\.\-]+)*)\b", re.I)
 _ADD_TO_CASE_RE = re.compile(
-    r"(aggiungi|attacca|allega|inserisci|metti|carica).{0,40}\b(al\s*)?(cas[oi]|pratica|"
-    r"CASE-\d{4}-\d+)", re.I)
+    # accetta radici verbali per coprire imperativo/infinito/participio con pronomi
+    # ("mettili", "metterli", "aggiungili", "aggiungerli", "allegali", "attaccarli"…)
+    r"\b(mett|aggiung|attacc|alleg|inseris|caric).{0,50}\b(al\s+)?(cas[oi]|pratica|"
+    r"CASE-\d{4}-\d+)\b", re.I)
 
 
 # ─── Ruoli operatore ─────────────────────────────────────────────────────────

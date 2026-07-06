@@ -288,7 +288,11 @@ def case_ai_chat(case, message):
                         f"{'ok' if (r['checks']['piva_checksum'].get('valid')) else 'NON valido'}, "
                         f"VIES {vies.get('valid')}.", "verifica_camerale")
         return done("Indicami la P.IVA (11 cifre) da verificare, es. «verifica camerale 03293360966».")
-    if re.search(r"\bmandat", t):
+    # matcha "mandato d'incarico" o comandi espliciti (crea/genera/nuovo/prepara/redigi)
+    # NON matcha il participio "mandato" del verbo mandare ("ti ho mandato")
+    if re.search(r"mandat[oi]\s+d[i\u2019']?\s*incarico|"
+                 r"\b(crea|generi?|nuov[oa]|prepar[ai]|redig[ai]|registr[ai])[a-z\s]{0,20}\bmandat[oi]\b|"
+                 r"\bmandat[oi]\b(?=\s+(bozza|pdf|professional|d[i\u2019']))", t):
         r = crea_mandato(case)
         return done(("📜 Mandato già presente: " + r["mandate"]) if r.get("existing")
                     else f"📜 Mandato d'incarico creato e auto-compilato: {r['mandate']} (bozza, rivedi e genera PDF).",
