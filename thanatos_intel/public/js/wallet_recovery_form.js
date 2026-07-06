@@ -3,6 +3,65 @@
  * Integra il Vue component nel desk Frappe
  */
 
+/* ==================== BROWSER RSA ENCRYPTION ====================
+ * Cifra il seed lato browser con la public key RSA-4096 del vault (RSA-OAEP
+ * SHA-256), coerente con decrypt_input() del CLI offline. Il plaintext non
+ * lascia mai il browser in chiaro: viaggia solo il ciphertext base64.
+ */
+
+function _b64FromBuffer(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return window.btoa(binary);
+}
+
+function _bufferFromB64(b64) {
+  const binary = window.atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function _pemToDer(pem) {
+  const body = pem
+    .replace(/-----BEGIN PUBLIC KEY-----/, '')
+    .replace(/-----END PUBLIC KEY-----/, '')
+    .replace(/\s+/g, '');
+  return _bufferFromB64(body);
+}
+
+// Importa la public key PEM (SubjectPublicKeyInfo) in WebCrypto
+async function import_vault_public_key(pem) {
+  return window.crypto.subtle.importKey(
+    'spki',
+    _pemToDer(pem),
+    { name: 'RSA-OAEP', hash: 'SHA-256' },
+    false,
+    ['encrypt']
+  );
+}
+
+// Cifra una stringa e restituisce base64(ciphertext)
+async function rsa_encrypt_to_b64(pem, plaintext) {
+  const key = await import_vault_public_key(pem);
+  const data = new TextEncoder().encode(plaintext);
+  const ct = await window.crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, data);
+  return _b64FromBuffer(ct);
+}
+
+// Recupera la public key del vault (cache in-memory per la sessione)
+let _vault_pubkey_cache = null;
+function get_vault_public_key() {
+  if (_vault_pubkey_cache) return Promise.resolve(_vault_pubkey_cache);
+  return frappe.call({
+    method: 'thanatos_intel.thanatos_recovery.api.recovery_api.get_vault_public_key'
+  }).then(function (r) {
+    _vault_pubkey_cache = r.message;
+    return r.message;
+  });
+}
+
 frappe.ui.form.on('Investigation Case', {
   refresh: function(frm) {
     // Aggiungi tab Wallet Recovery se non esiste
@@ -66,28 +125,80 @@ function show_wallet_recovery_modal(frm) {
         reqd: 1
       },
       {
+        label: __('Missing Words'),
+        fieldname: 'missing_words_count',
+        fieldtype: 'Int',
+        default: 1,
+        description: __('Numero di parole mancanti/sbagliate')
+      },
+      {
+        fieldname: 'cb_params',
+        fieldtype: 'Column Break'
+      },
+      {
+        label: __('BIP39 Wordlist'),
+        fieldname: 'wordlist_type',
+        fieldtype: 'Select',
+        options: ['english', 'italian', 'spanish', 'french', 'german'],
+        default: 'english'
+      },
+      {
         label: __('Seed Input (Partial)'),
         fieldname: 'seed_input',
-        fieldtype: 'Text Editor',
-        description: __('Use ???? for missing words')
+        fieldtype: 'Small Text',
+        reqd: 1,
+        description: __('Usa ???? per le parole mancanti. Cifrato nel browser (RSA-4096) prima dell\'invio — il testo in chiaro non lascia mai questa pagina.')
       }
     ],
-    primary_action_label: __('Create Recovery Job'),
+    primary_action_label: __('🔐 Cifra e crea job'),
     primary_action(values) {
       if (!values.wallet_type || !values.seed_input) {
-        frappe.throw(__('Please fill wallet type and seed input'));
+        frappe.throw(__('Compila wallet type e seed input'));
+      }
+      if (!(window.crypto && window.crypto.subtle)) {
+        frappe.throw(__('WebCrypto non disponibile: usa un browser moderno su HTTPS.'));
       }
 
+      const seed = (values.seed_input || '').trim();
+      d.disable_primary_action();
+      frappe.dom.freeze(__('Cifratura e upload seed...'));
+
+      let job_id = null;
+
+      // 1) crea job con parametri  2) cifra RSA nel browser  3) upload ciphertext
       frappe.call({
         method: 'thanatos_intel.thanatos_recovery.api.recovery_api.create_recovery_job',
-        args: { case_id: frm.doc.name },
-        callback: function(r) {
-          if (r.message) {
-            frappe.msgprint(__('✅ Recovery Job Created: {0}', [r.message.name]));
-            d.hide();
-            load_recovery_jobs(frm);
-          }
+        args: {
+          case_id: frm.doc.name,
+          wallet_type: values.wallet_type,
+          missing_words_count: values.missing_words_count || 1,
+          wordlist_type: values.wordlist_type || 'english'
         }
+      }).then(function (r) {
+        if (!r.message) throw new Error('create_recovery_job vuoto');
+        job_id = r.message.name;
+        return get_vault_public_key();
+      }).then(function (pem) {
+        return rsa_encrypt_to_b64(pem, seed);
+      }).then(function (ciphertext_b64) {
+        return frappe.call({
+          method: 'thanatos_intel.thanatos_recovery.api.recovery_api.upload_seed_input',
+          args: { job_id: job_id, encrypted_seed_base64: ciphertext_b64 }
+        });
+      }).then(function () {
+        frappe.dom.unfreeze();
+        frappe.show_alert({ message: __('✅ Job {0} creato, seed cifrato e caricato', [job_id]), indicator: 'green' });
+        d.hide();
+        load_recovery_jobs(frm);
+      }).catch(function (err) {
+        frappe.dom.unfreeze();
+        d.enable_primary_action();
+        console.error('Wallet recovery encrypt/upload failed', err);
+        frappe.msgprint({
+          title: __('Errore'),
+          message: __('Cifratura/upload seed fallito: {0}', [(err && err.message) || err]),
+          indicator: 'red'
+        });
       });
     }
   });
@@ -263,10 +374,12 @@ function update_form_ui(frm) {
  * Upload seed input
  */
 function upload_seed_input(frm, file) {
+  // Path per upload diretto di un file .enc GIÀ cifrato (RSA) fuori dal browser.
+  // Il flusso normale (cifratura nel browser) passa dal modal.
   const reader = new FileReader();
 
   reader.onload = function(e) {
-    const content = btoa(e.target.result); // Base64 encode
+    const content = _b64FromBuffer(e.target.result); // base64 dei byte grezzi
 
     frappe.call({
       method: 'thanatos_intel.thanatos_recovery.api.recovery_api.upload_seed_input',
@@ -334,26 +447,48 @@ function show_result_upload(frm) {
   d.show();
 }
 
-function upload_recovery_result(frm, file) {
-  // In real scenario, read file and encrypt
-  // For now, use file attachment system
+function upload_recovery_result(frm, file_or_url) {
+  // file_or_url = File (da input file) oppure URL del file .enc allegato,
+  // già cifrato Fernet dalla recovery machine offline. Inviamo i byte reali.
+  if (!file_or_url) {
+    frappe.throw(__('Nessun file risultato selezionato'));
+  }
 
-  frappe.call({
-    method: 'thanatos_intel.thanatos_recovery.api.recovery_api.upload_recovery_result',
-    args: {
-      job_id: frm.doc.name,
-      encrypted_result_base64: btoa('mock_encrypted_result') // Mock for now
-    },
-    callback: function(r) {
+  frappe.dom.freeze(__('Upload risultato...'));
+
+  const buf_promise = (typeof file_or_url === 'string')
+    ? fetch(file_or_url).then(function (resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status + ' leggendo il file');
+        return resp.arrayBuffer();
+      })
+    : file_or_url.arrayBuffer();
+
+  buf_promise
+    .then(function (buf) {
+      return frappe.call({
+        method: 'thanatos_intel.thanatos_recovery.api.recovery_api.upload_recovery_result',
+        args: {
+          job_id: frm.doc.name,
+          encrypted_result_base64: _b64FromBuffer(buf)
+        }
+      });
+    })
+    .then(function (r) {
+      frappe.dom.unfreeze();
       if (r.message) {
-        frm.set_value('status', 'Completed');
-        frm.set_value('result_vault_url', r.message.download_link);
-        frm.set_value('result_expires_at', r.message.expires_at);
-        frm.save();
-        frappe.show_alert({ message: __('✅ Result uploaded!'), indicator: 'green' });
+        frm.reload_doc();
+        frappe.show_alert({ message: __('✅ Risultato caricato, link generato'), indicator: 'green' });
       }
-    }
-  });
+    })
+    .catch(function (err) {
+      frappe.dom.unfreeze();
+      console.error('upload_recovery_result failed', err);
+      frappe.msgprint({
+        title: __('Errore'),
+        message: __('Upload risultato fallito: {0}', [(err && err.message) || err]),
+        indicator: 'red'
+      });
+    });
 }
 
 /**

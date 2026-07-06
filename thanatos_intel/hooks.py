@@ -36,7 +36,7 @@ app_include_js=['/assets/thanatos_intel/js/bootstrap_jq.js?v=20260627b',
                 '/assets/thanatos_intel/js/call_logger.js?v=20260627b',
                 '/assets/thanatos_intel/js/cockpit_land.js?v=20260627b',
                 '/assets/thanatos_intel/js/thanatos_shell.js?v=20260627b',
-                '/assets/thanatos_intel/js/wallet_recovery_form.js?v=20260706a',
+                '/assets/thanatos_intel/js/wallet_recovery_form.js?v=20260706b',
 ]
 web_include_css=['/assets/thanatos_intel/css/thanatos_web.css?v=20260627b']
 web_include_js=['/assets/thanatos_intel/js/fx_widget.js?v=20260627b', '/assets/thanatos_intel/js/thanatos_login.js?v=20260627b', '/assets/thanatos_intel/js/thanatos_intro.js?v=20260627b']
@@ -237,13 +237,19 @@ scheduler_events={
 }
 website_route_rules=[
  {'from_route': '/portal/case/<name>', 'to_route': 'portal/case'},
+ # /portal (+sottopagine omonime) collide con mmos_brand/www/portal, che vince
+ # perché installata dopo (reversed installed_apps): le pagine Thanatos vivono
+ # su path univoci e queste rules tengono gli URL pubblici invariati.
+ {'from_route': '/portal', 'to_route': 'portal/home'},
+ {'from_route': '/portal/email-connectors', 'to_route': 'portal/connettori-email'},
+ {'from_route': '/portal/oauth/microsoft-callback', 'to_route': 'portal/oauth/ms-callback'},
  # --- bilingue IT/EN (slug IT canonico + alias EN, stessa pagina) ---
  {'from_route': '/piani', 'to_route': 'pricing'},
  {'from_route': '/plans', 'to_route': 'pricing'},
  {'from_route': '/notizie', 'to_route': 'news'},
  {'from_route': '/notizie/categoria/<slug>', 'to_route': 'news/categoria'},
  {'from_route': '/chi-siamo', 'to_route': 'about'},
- {'from_route': '/portale', 'to_route': 'portal'},
+ {'from_route': '/portale', 'to_route': 'portal/home'},
  {'from_route': '/solutions', 'to_route': 'soluzioni'},
  {'from_route': '/solutions/<slug>', 'to_route': 'soluzioni'},
  {'from_route': '/services', 'to_route': 'servizi'},
