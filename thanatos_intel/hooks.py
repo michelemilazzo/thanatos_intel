@@ -225,6 +225,7 @@ scheduler_events={
           'thanatos_intel.billing.credit_ledger_audit.daily_chain_audit',
           'thanatos_intel.billing.party_payout_runner.daily_execute_pending_payouts',
           'thanatos_intel.workflow.stuck_monitor.daily_stuck_case_check',
+          'thanatos_intel.osint.entity_monitor.run_entity_monitor',
           'thanatos_intel.thanatos_recovery.api.vault_manager.cleanup_expired_recoveries'],
  'daily_long':['thanatos_intel.maintenance.file_tiering.tier_cold_files'],
  'weekly':['thanatos_intel.thanatos_core.compliance_ops.policy_review_check'],
