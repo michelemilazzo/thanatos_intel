@@ -643,13 +643,37 @@ def _meter(resp, ref):
         pass
 
 
-@frappe.whitelist()
-def ask(message, session_id=None):
-    """Endpoint per il pannello AI della Switchboard (web)."""
+STAFF_ROLES = {"System Manager", "Investigation Manager", "Investigator",
+               "Thanatos Investigator", "Thanatos Supervisor",
+               "Thanatos Director", "Thanatos Analyst"}
+
+
+def _require_staff():
     if frappe.session.user == "Guest":
         frappe.throw("Login richiesto")
+    if not STAFF_ROLES & set(frappe.get_roles()):
+        frappe.throw("Riservato allo staff Thanatos", frappe.PermissionError)
+
+
+@frappe.whitelist()
+def ask(message, session_id=None):
+    """Endpoint per il pannello AI della Switchboard (web) e la pagina desk Cervello."""
+    _require_staff()
     reply = answer(message, operator=frappe.session.user, session_id=session_id)
     return {"reply": reply}
+
+
+@frappe.whitelist()
+def chat_upload(file_url, file_name, content_type="", case=None, session_id=None):
+    """Allegato dalla chat Cervello (desk). Se è indicato un caso, il file diventa
+    reperto nel dossier (riusa case_assistant.chat_upload); altrimenti resta un
+    File libero e il cervello lo riceve come contesto."""
+    _require_staff()
+    result = {"ok": True, "evidence": None}
+    if case:
+        from thanatos_intel.ai.case_assistant import chat_upload as case_upload
+        result["evidence"] = case_upload(case, file_url, file_name, content_type).get("evidence")
+    return result
 
 
 # ─────────────────────── report costi / fatturazione AI ──────────────────────
