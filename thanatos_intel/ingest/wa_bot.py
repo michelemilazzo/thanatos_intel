@@ -47,7 +47,8 @@ def _client_case_context(lead_name):
                                    ["whatsapp_number", "source_identifier"], as_dict=True)
         if not lead:
             return ""
-        phone = (lead.whatsapp_number or lead.source_identifier or "").strip()
+        # source_identifier = numero del CLIENTE (whatsapp_number è il nostro business number)
+        phone = (lead.source_identifier or "").strip()
         digits = "".join(ch for ch in phone if ch.isdigit())[-10:]
         if not digits:
             return ""
