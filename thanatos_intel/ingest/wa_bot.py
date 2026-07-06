@@ -293,6 +293,41 @@ def _try_client_media_explain(lead_name, wa_doc, to_number, user):
     return True
 
 
+def _try_operator_ai_reply(lead_name, wa_doc, to_number):
+    """Se il sender WA e' un Investigator (operatore MMOS/Thanatos), il brain
+    risponde in modalita' operatore: FULL access se super_admin/admin, casi
+    assegnati se Investigator. Nessuno scope su un singolo caso, TUTTI i tool.
+    Ha PRIORITA' sul branch cliente (un operatore ha sempre pieno controllo)."""
+    try:
+        from thanatos_intel.ingest.operator_console import find_operator, _operator_user
+        from thanatos_intel.ai import ops_brain as ob
+    except Exception:
+        return False
+    op = find_operator(to_number)
+    if not op:
+        return False
+    user = _operator_user(op)  # platform_user dell'Investigator (fallback Administrator)
+    if not user:
+        return False
+    # allegato inviato dall'operatore -> ingest generale (non client-explain scoped)
+    last_msg = _last_inbound(lead_name) or ""
+    if last_msg.strip().startswith("[") and "media_url" not in last_msg:
+        return False
+    # Testo: il brain risponde con TUTTI i tool, scope determinato dai ruoli dell'user
+    if not last_msg.strip() or last_msg.strip().startswith("["):
+        return False
+    try:
+        reply = ob.answer(last_msg, user=user, operator=op, lead_name=lead_name,
+                          session_id=f"wa-op-{op}")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "wa operator ai reply")
+        return False
+    if not reply or "non disponibile" in reply.lower():
+        return False
+    send_text(wa_doc, to_number, reply, lead_name)
+    return True
+
+
 def _try_client_ai_reply(lead_name, wa_doc, to_number):
     """Se il mittente e' un cliente riconosciuto: passa al cervello scoped
     (vede solo i suoi casi). Se l'ultimo msg e' un allegato -> ai_explain_document
@@ -333,6 +368,9 @@ def generate_reply(lead_name, wa_number, to_number):
     wa_doc = _wa_doc(wa_number)
     if not wa_doc or not int(wa_doc.get("ai_bot_enabled") or 0):
         return {"ok": False, "reason": "bot disabled"}
+    # Operatore riconosciuto -> brain in modalita' operatore (priorita' massima)
+    if _try_operator_ai_reply(lead_name, wa_doc, to_number):
+        return {"ok": True, "mode": "operator_ai"}
     # Cliente riconosciuto -> assistente AI scoped ai suoi casi
     if _try_client_ai_reply(lead_name, wa_doc, to_number):
         return {"ok": True, "mode": "client_scoped_ai"}
