@@ -77,7 +77,7 @@ frappe.ui.form.on('Investigation Case', {
                                 communication_type: "Communication",
                         communication_medium: "Email"
                             },
-                            fields: ["name", "sender", "recipients", "subject", "creation", "communication_date", "read"],
+                            fields: ["name", "sender", "recipients", "subject", "creation", "communication_date", "seen"],
                             order_by: "creation desc",
                             limit_page_length: 50
                         },
@@ -896,13 +896,13 @@ function renderCaseEmail(frm, emails) {
             const sender = frappe.utils.escape_html(e.sender || "—");
             const subject = frappe.utils.escape_html(e.subject || "(no subject)");
             const ts = e.creation ? frappe.datetime.str_to_user(e.creation) : "";
-            const unread = e.read ? "" : " ⭕";
+            const unread = e.seen ? "" : " ⭕";
 
             html += `
-<div style="padding:10px;border-bottom:1px solid #eee;cursor:pointer;background:${e.read ? "#fff" : "#f5f5f5"}" onclick="frappe.set_route('Form','Communication','${e.name}')">
+<div style="padding:10px;border-bottom:1px solid #eee;cursor:pointer;background:${e.seen ? "#fff" : "#f5f5f5"}" onclick="frappe.set_route('Form','Communication','${e.name}')">
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
     <div style="flex:1">
-      <div style="font-weight:600;color:${e.read ? "#333" : "#000"}">${subject}${unread}</div>
+      <div style="font-weight:600;color:${e.seen ? "#333" : "#000"}">${subject}${unread}</div>
       <div style="font-size:11px;color:#666;margin-top:2px">Da: ${sender}</div>
     </div>
     <div style="font-size:11px;color:#888;white-space:nowrap">${ts}</div>
