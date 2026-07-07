@@ -16,6 +16,79 @@ import re
 import subprocess
 import frappe
 
+
+# ---------------------------------------------------------------------------
+# Fallback VISION AI — per immagini dove Tesseract fallisce (bassa risoluzione,
+# foto/thumbnail compresse, documenti identita' con font decorativi/MRZ).
+# Usa un modello multimodale via OpenRouter (chiave nel vault ai_engines,
+# fallback site_config). Nessuna regressione se la chiave manca: si torna al
+# comportamento Tesseract-only.
+# ---------------------------------------------------------------------------
+_VISION_DOC_TYPES = {"passport", "id_card", "driving_license"}
+
+
+def _vision_secret(field):
+    try:
+        from thanatos_intel.ai.ops_brain import _vault
+        return _vault(field, "ai_engines")
+    except Exception:
+        return None
+
+
+def _vision_ocr_image(image_path: str) -> str:
+    """Legge un'immagine con un modello vision AI e ritorna il testo/i campi
+    rilevanti come testo libero (poi ri-parsato dagli _EXTRACTORS esistenti).
+    Ritorna '' se non disponibile o in errore (nessuna eccezione propagata)."""
+    import base64
+    import requests
+
+    key = _vision_secret("openrouter_key")
+    if not key:
+        return ""
+    base_url = (_vision_secret("openrouter_url") or "https://openrouter.ai/api/v1").rstrip("/")
+    model = _vision_secret("vision_model") or "nvidia/nemotron-nano-12b-v2-vl:free"
+
+    try:
+        with open(image_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode()
+        ext = os.path.splitext(image_path)[1].lstrip(".").lower() or "jpeg"
+        mime = "image/jpeg" if ext in ("jpg", "jpeg") else f"image/{ext}"
+        prompt = (
+            "Trascrivi TUTTO il testo leggibile in questa immagine di documento, "
+            "riga per riga, incluse eventuali righe MRZ (le due righe in fondo ai "
+            "passaporti con simboli < e maiuscole). Non riassumere, non tradurre: "
+            "trascrizione letterale, anche se il documento è ruotato o di bassa "
+            "qualità. Se vedi campi come nome, cognome, data di nascita, numero "
+            "documento, elencali chiaramente."
+        )
+        r = requests.post(
+            f"{base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {key}",
+                     "HTTP-Referer": "https://thanatos.agency",
+                     "X-Title": "Thanatos OCR Vision",
+                     "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url",
+                         "image_url": {"url": f"data:{mime};base64,{b64}"}},
+                    ],
+                }],
+                "temperature": 0.1,
+            },
+            timeout=60,
+        )
+        r.raise_for_status()
+        d = r.json()
+        return (d.get("choices", [{}])[0].get("message", {}).get("content", "") or "").strip()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ocr_service vision fallback")
+        return ""
+
+
 SUPPORTED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".webp"}
 TESSERACT_LANGS = "eng+ita+ron"
 OCR_DPI = 300
@@ -320,6 +393,17 @@ class OCRService:
         active_lang = _build_lang_string(lang) if lang else self.lang
         text, provider = _extract_text_from_file(source, active_lang)
 
+        # Fallback VISION AI: Tesseract vuoto, oppure documento identità dove
+        # la lettura visiva accurata (MRZ, foto compresse) conta di più.
+        used_vision = False
+        is_image = os.path.splitext(source)[1].lower() in SUPPORTED_IMAGE_EXT
+        if is_image and (not text or document_type in _VISION_DOC_TYPES):
+            vtext = _vision_ocr_image(source)
+            if vtext and len(vtext) > len(text or ""):
+                text = vtext
+                provider = "vision_ai"
+                used_vision = True
+
         if provider == "error" or not text:
             return self._empty(document_type, provider or "no_text")
 
@@ -329,9 +413,12 @@ class OCRService:
         required = _REQUIRED_FIELDS.get(document_type, [])
         missing = [f for f in required if not fields.get(f)]
 
-        confidence = _avg_confidence(source, active_lang) if provider == "tesseract_image" else (
-            0.85 if provider == "native_pdf" else 0.70
-        )
+        if used_vision:
+            confidence = 0.75
+        else:
+            confidence = _avg_confidence(source, active_lang) if provider == "tesseract_image" else (
+                0.85 if provider == "native_pdf" else 0.70
+            )
 
         return {
             "document_type": document_type,
