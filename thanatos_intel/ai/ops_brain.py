@@ -324,6 +324,17 @@ _OR_VISION_MODELS = ("nvidia/nemotron-nano-12b-v2-vl:free",
                      "google/gemma-4-26b-a4b-it:free")
 
 
+def _url_to_path(file_url):
+    """Risolve un file_url Frappe al path locale (private/public). None se assente."""
+    import os
+    if not file_url:
+        return None
+    p = frappe.get_site_path("private", "files", file_url.split("/private/files/")[-1])
+    if not os.path.exists(p):
+        p = frappe.get_site_path("public", "files", file_url.split("/files/")[-1])
+    return p if os.path.exists(p) else None
+
+
 def _openrouter_vision_id(path):
     """Legge un documento d'identità con un modello-visione FREE su OpenRouter.
     NON verificato dai check-digit → sempre da confermare. None se manca la chiave
@@ -899,12 +910,12 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
         want_read = bool(re.search(r"legg|analizz|contenut|contengon|apri|cosa c", tl))
         if want_read:
             lines = [f"📎 Leggo gli ultimi allegati WhatsApp:"]
+            vision_budget = 6  # letture-visione OpenRouter free per batch (rate-limit)
             for d in docs[:8]:
                 url = d.get("url")
                 is_img = str(d.get("file") or "").lower().endswith(
                     (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".pdf"))
-                # in blocco: solo MRZ ottica (veloce), niente Claude ×N. La lettura
-                # AI dei documenti scadenti è on-demand per singolo file (vedi sotto).
+                # 1) MRZ ottica (veloce, verificata)
                 pp = _t_read_passport(file_url=url, vision=False) if is_img else {}
                 if pp.get("is_document"):
                     ver = pp.get("verdetto") or "?"
@@ -919,13 +930,27 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
                     continue
                 r = _t_read_document(file_url=url) or {}
                 txt = (r.get("text") or "").strip()
-                if is_img and any(k in txt.upper() for k in
-                                  ("PASSPORT", "PASSAPORTO", "REPUBBLICA", "CARTA D",
-                                   "IDENTITY", "IDENTITA", "MRZ", "<<")):
+                looks_id = is_img and any(k in txt.upper() for k in
+                                          ("PASSPORT", "PASSAPORTO", "REPUBBLICA", "CARTA D",
+                                           "IDENTITY", "IDENTITA", "MRZ", "<<"))
+                # 2) documento scadente → lettura-visione OpenRouter free (veloce)
+                if looks_id and vision_budget > 0:
+                    vision_budget -= 1
+                    v = _openrouter_vision_id(_url_to_path(url) or "") if _url_to_path(url) else None
+                    if v:
+                        lines.append(
+                            f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO "
+                            f"(lettura AI free, DA CONFERMARE):\n"
+                            f"  {v.get('tipo') or 'documento'} · {v.get('cognome') or ''} {v.get('nome') or ''} · "
+                            f"n. {v.get('numero') or '?'} · {v.get('nazionalita') or '?'} · "
+                            f"scad. {v.get('scadenza') or '?'}"
+                            + (f" · sesso {v.get('sesso')}" if v.get('sesso') else ""))
+                        continue
+                if looks_id:
                     lines.append(
-                        f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 sembra un DOCUMENTO "
-                        f"D'IDENTITÀ, foto a bassa risoluzione (MRZ non leggibile). "
-                        f"Dimmi «leggi il documento {d.get('file')}» e lo estraggo con l'AI.")
+                        f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 documento d'identità, "
+                        f"lettura AI non riuscita (free tier occupato). Dimmi «leggi il documento "
+                        f"{d.get('file')}» per riprovare.")
                     continue
                 snippet = (txt[:400] + "…") if len(txt) > 400 else (txt or "(vuoto/illeggibile)")
                 lines.append(f"\n• **{d.get('file')}** — da {d.get('da')} "
