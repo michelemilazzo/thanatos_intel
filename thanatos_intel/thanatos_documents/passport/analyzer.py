@@ -218,14 +218,18 @@ def analyze(file_path: str) -> dict:
     if res.get("is_diplomatic"):
         anomalies.append("Passaporto DIPLOMATICO — verifica accreditamento MAECI")
         risk += 10
-    if not l1:
-        risk = 60
 
     res["anomalies"] = "\n".join(anomalies) if anomalies else ""
-    res["risk_score"] = min(risk, 100)
-    res["verdict"] = ("Authentic" if risk < 20 else
-                      "Suspect" if risk < 50 else
-                      "Forged" if risk < 80 else "Inconclusive")
+    if not l1:
+        # MRZ non letta: NON è una falsificazione — è illeggibile (scan/foto scarsa)
+        res["mrz_unreadable"] = 1
+        res["risk_score"] = 0
+        res["verdict"] = "Inconclusive"
+    else:
+        res["risk_score"] = min(risk, 100)
+        res["verdict"] = ("Authentic" if risk < 20 else
+                          "Suspect" if risk < 50 else
+                          "Forged" if risk < 80 else "Inconclusive")
     res["checksum_details"] = json.dumps(res["checksum_details"], indent=2, default=str)
     return res
 

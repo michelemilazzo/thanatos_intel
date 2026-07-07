@@ -771,6 +771,18 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
                 is_img = str(d.get("file") or "").lower().endswith(
                     (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".pdf"))
                 pp = _t_read_passport(file_url=url) if is_img else {}
+                if not pp.get("is_document") and is_img:
+                    # OCR grezzo: capiamo se è comunque un documento d'identità
+                    rr = _t_read_document(file_url=url) or {}
+                    raw = (rr.get("text") or "").upper()
+                    if any(k in raw for k in ("PASSPORT", "PASSAPORTO", "REPUBBLICA",
+                                              "CARTA D", "IDENTITY", "MRZ", "<<")):
+                        lines.append(
+                            f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 sembra un "
+                            f"DOCUMENTO D'IDENTITÀ ma la foto è a bassa risoluzione: MRZ non "
+                            f"leggibile automaticamente. Serve uno scan più nitido per estrarre "
+                            f"nome/numero/scadenza e validare i check-digit.")
+                        continue
                 if pp.get("is_document"):
                     ver = pp.get("verdetto") or "?"
                     lines.append(
