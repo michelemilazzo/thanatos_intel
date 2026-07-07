@@ -61,6 +61,19 @@ def settle(session):
     res["mmos_amount"] = _mmos_share(cost, total)
     res["mmos_payout"] = "via_wallet_cascade"
 
+    # 1b) auto-esecuzione degli ordini DocuEngine allegati al preventivo (documenti PDF
+    #     ufficiali): il pagamento è ricevuto → si può ordinare senza altra conferma.
+    de_orders = [o for o in (meta.get("de_orders") or "").split(",") if o]
+    if de_orders:
+        from thanatos_intel.osint.official_documents import de_order_run
+        res["de_orders"] = []
+        for oid in de_orders:
+            try:
+                res["de_orders"].append(de_order_run(oid, self_mode=1))
+            except Exception as e:
+                res["de_orders"].append({"error": str(e)[:160]})
+                frappe.log_error(frappe.get_traceback(), "openapi settle de_order")
+
     # 2) ricevuta Thanatos al cliente (ARES Sales Invoice) — elevata a Administrator
     if client and total > 0:
         prev = frappe.session.user

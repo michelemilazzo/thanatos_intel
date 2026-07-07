@@ -238,15 +238,29 @@ def docuengine_catalog(case=None, force=0):
                 ordered.append({"key": k, "name": f.get("name"), "label": f.get("nameIT") or f.get("name"),
                                 "type": f.get("type"), "required": 1 if f.get("required") else 0,
                                 "options": f.get("options"), "help": f.get("help")})
+            opts = [{"name": o.get("name"), "price": float(o.get("price") or 0)}
+                    for o in (x.get("options") or [])]
             docs.append({"id": x.get("id"), "name": x.get("name"), "category": x.get("category"),
-                         "costo": float(x.get("totalPrice") or 0), "fields": ordered})
+                         "costo": float(x.get("totalPrice") or 0), "options": opts, "fields": ordered})
         frappe.cache().set_value("docuengine_catalog", docs, expires_in_sec=86400)
     # prezzo cliente = costo × markup del cliente del caso (marca da bollo pass-through)
     from thanatos_intel.billing.openapi_billing import _markup, prezzo_cliente
     client = frappe.db.get_value("Investigation Case", case, "client") if case else None
     mk = _markup(client)
-    out = [dict(d, prezzo=prezzo_cliente("de_" + d["id"], d["name"], d["costo"], mk)) for d in docs]
+    out = []
+    for d in docs:
+        opts = [dict(o, prezzo=round(o["price"] * mk, 2)) for o in d.get("options") or []]
+        out.append(dict(d, options=opts,
+                        prezzo=prezzo_cliente("de_" + d["id"], d["name"], d["costo"], mk)))
     return {"markup": mk, "documenti": out}
+
+
+def _de_options_price(doc, options, markup=1.0):
+    """Somma costo e prezzo cliente delle opzioni selezionate (urgenza/assistenza)."""
+    sel = set(options or [])
+    by = {o["name"]: o for o in doc.get("options") or []}
+    cost = sum(by[n]["price"] for n in sel if n in by)
+    return round(cost, 2), round(cost * markup, 2)
 
 
 def _de_doc(document_id):
@@ -272,17 +286,28 @@ def esenzione_bollo(case):
     if not client:
         return {"reason": None, "note": "Caso senza cliente: usare la variante Con Marca Da Bollo."}
     case_type = frappe.db.get_value("Investigation Case", case, "case_type") or ""
-    for kind, reason in _ESENZIONE_VAULT:
+
+    def _vault(kind):
         it = frappe.get_all("Client Vault Item",
                             filters={"client": client, "doc_kind": kind,
                                      "status": ["in", ["Valido", "In verifica"]]},
                             fields=["name", "file", "title", "status"],
                             order_by="modified desc", limit=1)
-        if it and it[0].file:
+        return it[0] if it and it[0].file else None
+
+    delega = _vault("Delega Mandato")
+    for kind, reason in _ESENZIONE_VAULT:
+        it = _vault(kind)
+        if it:
             r = reason or ("DIVORZIO" if case_type == "Family" else "PROCESSUALE")
-            return {"reason": r, "document": it[0].file, "title": it[0].title or kind,
-                    "vault_item": it[0].name, "vault_status": it[0].status,
-                    "note": "Esenzione %s — %s dal vault del cliente (%s)." % (r, it[0].title or kind, it[0].status)}
+            note = "Esenzione %s — %s dal vault del cliente (%s)." % (r, it.title or kind, it.status)
+            if delega:
+                note += " Delega mandato allegata (%s)." % (delega.title or "Delega Mandato")
+            return {"reason": r, "document": it.file, "title": it.title or kind,
+                    "vault_item": it.name, "vault_status": it.status,
+                    "delegation": (delega.file if delega else None),
+                    "delegation_title": (delega.title if delega else None),
+                    "note": note}
     return {"reason": None,
             "note": "Nessun titolo di esenzione (Tesserino Avvocato / Nomina CTU) nel vault del cliente: si usa la variante Con Marca Da Bollo."}
 
@@ -303,8 +328,12 @@ def scegli_variante_certificato(case, document_id):
         return {"document": d}
     ex = esenzione_bollo(case)
     if ex.get("reason"):
-        return {"document": esente, "esenzione": ex,
-                "prefill": {"exemptionReason": ex["reason"], "exemptionDocument": ex["document"]},
+        prefill = {"exemptionReason": ex["reason"], "exemptionDocument": ex["document"]}
+        if ex.get("delegation"):
+            for f in esente["fields"]:
+                if "delegation" in (f["name"] or "").lower() or "delega" in (f["name"] or "").lower():
+                    prefill[f["name"]] = ex["delegation"]
+        return {"document": esente, "esenzione": ex, "prefill": prefill,
                 "note": "%s Variante ESENTE € %.2f (con bollo sarebbe € %.2f)." % (ex["note"], esente["prezzo"], bollo["prezzo"])}
     return {"document": bollo, "esenzione": ex, "prefill": {},
             "note": "%s Variante CON MARCA DA BOLLO € %.2f." % (ex["note"], bollo["prezzo"])}
@@ -328,9 +357,10 @@ def _file_b64(value):
 
 
 @frappe.whitelist()
-def richiedi_docuengine(case, document_id, valori=None, self_mode=None):
+def richiedi_docuengine(case, document_id, valori=None, options=None, self_mode=None):
     """Ordina un documento DocuEngine. valori = JSON {nomeCampo: valore};
-    viene rimappato in search:{field0..N} nell'ordine del requestStructure."""
+    viene rimappato in search:{field0..N} nell'ordine del requestStructure.
+    options = JSON lista nomi opzione a pagamento (urgenza / assistenza_dedicata)."""
     import json as _json
     doc = _de_doc(document_id)
     if not doc:
@@ -338,14 +368,21 @@ def richiedi_docuengine(case, document_id, valori=None, self_mode=None):
     if isinstance(valori, str):
         valori = _json.loads(valori or "{}")
     valori = valori or {}
+    if isinstance(options, str):
+        options = _json.loads(options or "[]")
+    valid_opts = {o["name"] for o in doc.get("options") or []}
+    options = [o for o in (options or []) if o in valid_opts]
     search, missing = {}, []
-    for f in doc["fields"]:
-        v = valori.get(f["name"])
-        if v in (None, ""):
-            if f["required"]:
-                missing.append(f["label"] or f["name"])
-            continue
-        search[f["key"]] = _file_b64(v) if f["type"] == "file" else v
+    try:
+        for f in doc["fields"]:
+            v = valori.get(f["name"])
+            if v in (None, ""):
+                if f["required"]:
+                    missing.append(f["label"] or f["name"])
+                continue
+            search[f["key"]] = _file_b64(v) if f["type"] == "file" else v
+    except frappe.ValidationError as e:
+        return {"error": str(e)}
     if missing:
         hint = ""
         if any(m in ("motivo esenzione", "documento esenzione") for m in missing):
@@ -360,13 +397,17 @@ def richiedi_docuengine(case, document_id, valori=None, self_mode=None):
         from thanatos_intel.billing.openapi_billing import _markup, _mmos_markup, prezzo_cliente
         from thanatos_intel.billing.credits import ensure_credit
         from thanatos_intel.billing.mmos_wallet import mmos_ensure
-        ensure_credit(client, prezzo_cliente(document_id, doc["name"], doc["costo"], _markup(client)),
+        _oc_cli, _op_cli = _de_options_price(doc, options, _markup(client))
+        _oc_mm, _op_mm = _de_options_price(doc, options, _mmos_markup())
+        ensure_credit(client, prezzo_cliente(document_id, doc["name"], doc["costo"], _markup(client)) + _op_cli,
                       f"DocuEngine {doc['name']}")
-        mmos_ensure(prezzo_cliente(document_id, doc["name"], doc["costo"], _mmos_markup()),
+        mmos_ensure(prezzo_cliente(document_id, doc["name"], doc["costo"], _mmos_markup()) + _op_mm,
                     label=f"DocuEngine {doc['name']}")
     import requests
-    r = requests.post(_DE + "/requests", headers=_hdr(),
-                      json={"documentId": document_id, "search": search}, timeout=60)
+    payload = {"documentId": document_id, "search": search}
+    if options:
+        payload["selectedOptions"] = options
+    r = requests.post(_DE + "/requests", headers=_hdr(), json=payload, timeout=60)
     if r.status_code not in (200, 201):
         try:
             msg = (r.json() or {}).get("message") or r.text
@@ -381,13 +422,14 @@ def richiedi_docuengine(case, document_id, valori=None, self_mode=None):
         str(valori.get(k) or "") for k in ("name", "surname")).strip() or "-"
     frappe.enqueue("thanatos_intel.osint.official_documents._docuengine_bg",
                    queue="long", timeout=700, case=case, req_id=req_id,
-                   document_id=document_id, target=target, self_mode=int(self_mode or 0))
+                   document_id=document_id, target=target, self_mode=int(self_mode or 0),
+                   options=options)
     return {"ok": True, "id": req_id, "documento": doc["name"],
             "message": "Richiesta inviata; il documento arriverà nei reperti del caso "
                        "(certificati anagrafici richiedono ~2 giorni lavorativi, ritiro automatico)."}
 
 
-def _docuengine_bg(case, req_id, document_id, target, self_mode=0, max_wait=480):
+def _docuengine_bg(case, req_id, document_id, target, self_mode=0, max_wait=480, options=None):
     """Poll breve in background; se non pronta, passa al ritiro orario (scheduler)."""
     deadline = time.time() + max_wait
     while time.time() < deadline:
@@ -398,20 +440,20 @@ def _docuengine_bg(case, req_id, document_id, target, self_mode=0, max_wait=480)
             d = d[0] if d else {}
         state = (d.get("state") or "").upper()
         if state == "DONE":
-            _docuengine_scarica(case, req_id, document_id, target, self_mode)
+            _docuengine_scarica(case, req_id, document_id, target, self_mode, options)
             return
         if state in _DE_ERROR:
             doc = _de_doc(document_id) or {"name": document_id}
             _log(case, doc["name"], target, f"richiesta {state}")
             return
     _de_pending_add({"case": case, "req_id": req_id, "document_id": document_id,
-                     "target": target, "self_mode": int(self_mode or 0)})
+                     "target": target, "self_mode": int(self_mode or 0), "options": options or []})
     doc = _de_doc(document_id) or {"name": document_id}
     _log(case, doc["name"], target,
          "in lavorazione (ritiro automatico orario; certificati anagrafici ~2 giorni)")
 
 
-def _docuengine_scarica(case, req_id, document_id, target, self_mode=0):
+def _docuengine_scarica(case, req_id, document_id, target, self_mode=0, options=None):
     """Scarica i PDF pronti (downloadUrl) e li salva come reperti + addebita."""
     import requests
     doc = _de_doc(document_id) or {"name": document_id, "costo": 0.0}
@@ -440,9 +482,11 @@ def _docuengine_scarica(case, req_id, document_id, target, self_mode=0):
             from thanatos_intel.billing.credits import charge
             from thanatos_intel.billing.mmos_wallet import mmos_charge
             _ref = "%s-de-%s" % (case, req_id[-8:])
-            charge(client, prezzo_cliente(document_id, doc["name"], doc.get("costo") or 0, _markup(client)),
+            _, _op_cli = _de_options_price(doc, options, _markup(client))
+            _, _op_mm = _de_options_price(doc, options, _mmos_markup())
+            charge(client, prezzo_cliente(document_id, doc["name"], doc.get("costo") or 0, _markup(client)) + _op_cli,
                    "DocuEngine %s" % doc["name"], ref_dt="Investigation Case", ref_name=_ref)
-            mmos_charge(prezzo_cliente(document_id, doc["name"], doc.get("costo") or 0, _mmos_markup()),
+            mmos_charge(prezzo_cliente(document_id, doc["name"], doc.get("costo") or 0, _mmos_markup()) + _op_mm,
                         ref_name=_ref, notes="DocuEngine %s (caso %s)" % (doc["name"], case))
     except Exception:
         frappe.log_error(frappe.get_traceback(), "docuengine charge")
@@ -485,7 +529,8 @@ def docuengine_poll_pending():
             state = (d.get("state") or "").upper()
             if state == "DONE":
                 _docuengine_scarica(it["case"], it["req_id"], it["document_id"],
-                                    it.get("target") or "-", it.get("self_mode") or 0)
+                                    it.get("target") or "-", it.get("self_mode") or 0,
+                                    it.get("options") or [])
             elif state in _DE_ERROR:
                 doc = _de_doc(it["document_id"]) or {"name": it["document_id"]}
                 _log(it["case"], doc["name"], it.get("target") or "-", f"richiesta {state}")
@@ -496,3 +541,36 @@ def docuengine_poll_pending():
             still.append(it)
     if len(still) != len(items):
         _de_pending_save(still)
+
+
+# ── Ordini DocuEngine "a pagamento ricevuto" (preventivo Stripe → auto-esecuzione) ──
+# Il preventivo salva i valori dell'ordine in un DefaultValue keyed by uuid e mette
+# l'uuid nei metadata del checkout; al webhook di pagamento settle() li esegue.
+_DE_ORDER_KEY = "docuengine_order:"
+
+
+def de_order_stage(case, document_id, valori, options=None):
+    """Salva un ordine DocuEngine da eseguire al pagamento; ritorna l'order_id."""
+    import json as _json
+    oid = frappe.generate_hash(length=16)
+    frappe.db.set_default(_DE_ORDER_KEY + oid, _json.dumps({
+        "case": case, "document_id": document_id, "valori": valori or {},
+        "options": options or []}))
+    return oid
+
+
+@frappe.whitelist()
+def de_order_run(order_id, self_mode=1):
+    """Esegue un ordine DocuEngine staged (chiamato dal webhook di pagamento)."""
+    import json as _json
+    raw = frappe.db.get_default(_DE_ORDER_KEY + order_id)
+    if not raw:
+        return {"error": "ordine non trovato o già eseguito: " + order_id}
+    o = _json.loads(raw)
+    frappe.db.set_default(_DE_ORDER_KEY + order_id, "")  # consuma (idempotente)
+    res = richiedi_docuengine(o["case"], o["document_id"], valori=o.get("valori") or {},
+                              options=o.get("options") or [], self_mode=int(self_mode or 0))
+    if res.get("ok"):
+        _log(o["case"], (_de_doc(o["document_id"]) or {}).get("name") or o["document_id"],
+             (o.get("valori") or {}).get("taxCode") or "-", "ordine eseguito a pagamento ricevuto")
+    return res

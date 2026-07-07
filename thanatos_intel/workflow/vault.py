@@ -65,7 +65,7 @@ def vault_upload(doc_kind, title=None, file_url=None, valid_until=None):
     cl = client_of_user()
     if not cl:
         frappe.throw(_("Nessun profilo cliente associato."))
-    if doc_kind not in ("KYC", "KYB", "CIS", "KIT", "Altro"):
+    if doc_kind not in ("KYC", "KYB", "CIS", "KIT", "Tesserino Avvocato", "Nomina CTU", "Delega Mandato", "Altro"):
         frappe.throw(_("Tipo documento non valido."))
     doc = frappe.get_doc({
         "doctype": "Client Vault Item", "client": cl.name, "doc_kind": doc_kind,

@@ -22,6 +22,20 @@ SELF_SERVE = [
     {"key": "veicolo",     "label": "Veicolo per targa",                "kind": "veicolo",     "gated": True, "cap": "veicolo",     "engine": "lookup", "target_label": "Targa"},
 ]
 
+# Documenti DocuEngine self-serve dal portale: SOLO quelli a un unico campo dati
+# (Codice Fiscale/P.IVA azienda). I certificati anagrafici (molti campi + esenzione
+# bollo) restano al desk. Campo dati = "taxCode". engine "docuengine".
+SELF_SERVE_DE = [
+    {"key": "de_bilancio_ottico",  "label": "Bilancio ottico (azienda)",       "document_id": "667443c29e6f0e447bc265aa"},
+    {"key": "de_bilancio_xbrl",    "label": "Bilancio XBRL (azienda)",         "document_id": "667c131a9e6f0e447bc265c1"},
+    {"key": "de_statuto",          "label": "Statuto (azienda)",               "document_id": "6687eed51a241a5d1be0f9fa"},
+    {"key": "de_cert_iscrizione",  "label": "Certificato di iscrizione (azienda)", "document_id": "689c99942d09c0a9bcb946e8"},
+    {"key": "de_soci_attivi",      "label": "Soci attivi (azienda)",           "document_id": "6932c9602a2ea4883e6ebba9"},
+    {"key": "de_esponenti_attivi", "label": "Esponenti/amministratori attivi (azienda)", "document_id": "69cbcb52e9834541b0415e79"},
+    {"key": "de_fascicolo_cap",    "label": "Fascicolo società di capitali",   "document_id": "69c40e2f327b41417c839015"},
+    {"key": "de_visura_inglese",   "label": "Visura camerale in inglese (azienda)", "document_id": "66840ce41a241a5d1be0f9e5"},
+]
+
 
 @frappe.whitelist()
 def list_services():
@@ -32,6 +46,18 @@ def list_services():
     services = [{"key": s["key"], "label": s["label"], "gated": s["gated"],
                  "target_label": s.get("target_label") or "P.IVA / Codice Fiscale",
                  "prezzo": tool_price(None, s["cap"])} for s in SELF_SERVE]
+    # documenti DocuEngine (prezzo dal catalogo openapi, markup cliente incluso)
+    try:
+        from thanatos_intel.osint.official_documents import docuengine_catalog
+        by_id = {d["id"]: d for d in docuengine_catalog(case=None).get("documenti") or []}
+        for s in SELF_SERVE_DE:
+            d = by_id.get(s["document_id"])
+            if d:
+                services.append({"key": s["key"], "label": s["label"], "gated": False,
+                                 "target_label": "Codice Fiscale / P.IVA azienda",
+                                 "prezzo": d["prezzo"]})
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "self_service DocuEngine catalog")
     return {"services": services,
             "wallet": (available_to_spend(cl.name) if cl else 0),
             "client": (cl.name if cl else None)}
@@ -44,11 +70,21 @@ def buy_document(service, target, finalita=None, accept_declaration=0, name=None
     if not cl:
         frappe.throw("Devi essere un cliente registrato per acquistare.")
     s = next((x for x in SELF_SERVE if x["key"] == service), None)
-    if not s:
+    de = next((x for x in SELF_SERVE_DE if x["key"] == service), None) if not s else None
+    if not s and not de:
         frappe.throw("Servizio non valido.")
     target = "".join(ch for ch in (target or "") if ch.isalnum())
     if not target:
-        frappe.throw("Inserisci il target (%s)." % (s.get("target_label") or "P.IVA / Codice Fiscale"))
+        frappe.throw("Inserisci il target (%s)." % ((s or de).get("target_label") or "Codice Fiscale / P.IVA"))
+
+    # documento DocuEngine a campo singolo (taxCode) — dati pubblici, non gated
+    if de:
+        case = _personal_case(cl.name)
+        from thanatos_intel.osint.official_documents import richiedi_docuengine
+        res = richiedi_docuengine(case, de["document_id"], valori={"taxCode": target}, self_mode=1)
+        res["servizio"] = de["label"]
+        res["case"] = case
+        return res
 
     # gate legale per servizi su terzi
     if s["gated"]:

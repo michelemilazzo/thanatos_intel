@@ -1347,12 +1347,19 @@ window.ThanatosVerifiche = {
 			return fl;
 		});
 		if (extra && extra.note) flds.unshift({ fieldtype: 'HTML', fieldname: 'variante_nota', options: '<div style="font-size:11.5px;padding:6px 8px;border-radius:6px;background:var(--bg-light-gray, #f4f5f6);margin-bottom:4px">⚖ ' + frappe.utils.escape_html(extra.note) + '</div>' });
+		const dopts = d.options || [];
+		if (dopts.length) {
+			flds.push({ fieldtype: 'Section Break', label: __('Opzioni a pagamento') });
+			dopts.forEach(o => flds.push({ fieldtype: 'Check', fieldname: 'opt_' + o.name,
+				label: (o.name === 'urgenza' ? 'Urgenza' : o.name === 'assistenza_dedicata' ? 'Assistenza dedicata' : o.name) + ' (+€ ' + (o.prezzo != null ? o.prezzo : o.price).toFixed(2) + ')' }));
+		}
 		frappe.prompt(flds, v => {
 			const valori = {};
 			d.fields.forEach(f => { if (v[f.name] != null && v[f.name] !== '') valori[f.name] = v[f.name]; });
+			const options = dopts.filter(o => v['opt_' + o.name]).map(o => o.name);
 			frappe.call({
 				method: 'thanatos_intel.osint.official_documents.richiedi_docuengine',
-				args: { case: frm.doc.name, document_id: d.id, valori: JSON.stringify(valori) },
+				args: { case: frm.doc.name, document_id: d.id, valori: JSON.stringify(valori), options: JSON.stringify(options) },
 				freeze: true, freeze_message: __('Invio richiesta DocuEngine…'),
 				callback: r => {
 					const m = r.message || {};

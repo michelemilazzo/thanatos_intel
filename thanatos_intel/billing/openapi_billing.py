@@ -208,11 +208,15 @@ def genera_preventivo(case, items, payer="cliente", channels="email", email=None
         items = json.loads(items)
     client = _client_of(case)
     mk = _markup(client)
-    righe, tot_real, tot_cli = [], 0.0, 0.0
+    righe, tot_real, tot_cli, de_orders = [], 0.0, 0.0, []
     for it in items:
         lbl, cost = _price(it.get("id"))
         p = it.get("prezzo")
         prezzo = round(float(p), 2) if p not in (None, "", "null") else prezzo_cliente(it.get("id"), lbl, cost, mk)
+        # documento DocuEngine con valori → si esegue automaticamente a pagamento ricevuto
+        if str(it.get("id") or "").startswith("de_") and it.get("valori"):
+            from thanatos_intel.osint.official_documents import de_order_stage
+            de_orders.append(de_order_stage(case, it["id"][3:], it.get("valori"), it.get("options")))
         tot_real += cost
         tot_cli += prezzo
         righe.append({"id": it.get("id"), "label": it.get("label") or lbl,
@@ -240,7 +244,9 @@ def genera_preventivo(case, items, payer="cliente", channels="email", email=None
             out["link"] = _stripe_link(
                 client if payer == "cliente" else None,
                 to_email if payer != "cliente" else None,
-                totale, desc, case, round(tot_real, 2))
+                totale, desc, case, round(tot_real, 2), de_orders=de_orders)
+            if de_orders:
+                out["auto_exec"] = len(de_orders)
         except Exception as e:
             out["link_error"] = str(e)[:200]
 
@@ -269,11 +275,13 @@ def genera_preventivo(case, items, payer="cliente", channels="email", email=None
     return out
 
 
-def _stripe_link(client, payer_email, amount_eur, desc, case, real_cost=0):
+def _stripe_link(client, payer_email, amount_eur, desc, case, real_cost=0, de_orders=None):
     from thanatos_intel.integrations.stripe_bridge import _get_stripe, get_or_create_stripe_customer, _success_url, _cancel_url
     stripe = _get_stripe()
     meta = {"thanatos_case": case, "kind": "openapi_quote", "thanatos_client": client or "",
             "openapi_cost": str(real_cost), "openapi_total": str(amount_eur)}
+    if de_orders:
+        meta["de_orders"] = ",".join(de_orders)
     kw = dict(
         mode="payment",
         line_items=[{"price_data": {"currency": "eur",

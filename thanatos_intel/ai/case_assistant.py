@@ -204,6 +204,28 @@ def case_ai_chat(case, message):
     if re.search(r"analisi completa|analizza tutto|esegui tutto|pipeline", t):
         _enq("thanatos_intel.ai.case_orchestrator.run_full_analysis", case=case)
         return done("▶ Pipeline completa avviata (esito + checklist nelle attività).", "full")
+    # — documenti DocuEngine a P.IVA singola (fascicolo, statuto, soci/esponenti, bilancio XBRL) —
+    _DE_CHAT = [
+        (r"fascicolo", "69c40e2f327b41417c839015", "Fascicolo società di capitali"),
+        (r"statuto", "6687eed51a241a5d1be0f9fa", "Statuto"),
+        (r"soci attiv", "6932c9602a2ea4883e6ebba9", "Soci attivi azienda"),
+        (r"esponenti|amministratori attiv", "69cbcb52e9834541b0415e79", "Esponenti attivi azienda"),
+        (r"bilancio xbrl", "667c131a9e6f0e447bc265c1", "Bilancio XBRL"),
+        (r"bilancio riclassif", "669533fe6d4f51cbde8da353", "Bilancio riclassificato"),
+        (r"visura ingles|visura in ingles", "66840ce41a241a5d1be0f9e5", "Visura camerale inglese"),
+    ]
+    for pat, doc_id, dname in _DE_CHAT:
+        if re.search(pat, t):
+            mpv = re.search(r"\b(\d{11})\b", message or "")
+            if not mpv:
+                return done(f"Indicami la P.IVA (11 cifre) per «{dname}», es. «{dname.lower()} 12485671007».")
+            from thanatos_intel.osint.official_documents import richiedi_docuengine
+            r = richiedi_docuengine(case, doc_id, valori={"taxCode": mpv.group(1)})
+            if r.get("error"):
+                return done(f"⚠️ {dname}: {r['error']}")
+            return done(f"📄 Richiesta avviata: {dname} per P.IVA {mpv.group(1)}. "
+                        "Il PDF arriverà nei reperti del caso.", "documento_docuengine")
+
     # — download documento ufficiale PDF (visura camerale, bilancio ottico, certificato) —
     if re.search(r"scarica|documento ufficial|visura ufficial|visura in pdf|estratto camerale|bilancio ottico|\bcertificat", t):
         mpv = re.search(r"\b(\d{11})\b", message or "")
