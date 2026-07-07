@@ -718,22 +718,34 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
         ctx_case = None  # cliente non può agganciare un caso non suo
 
     # shortcut deterministico: "allegati/documenti whatsapp" senza caso citato →
-    # esegue list_documents e formatta i dati reali (il modello economico a volte
-    # allucina invece di invocare il tool).
+    # esegue list_documents (+ OCR se richiesto) coi dati reali. Il modello
+    # economico a volte allucina invece di invocare il tool: qui bypassiamo.
     tl = (text or "").lower()
     if (not is_client and not ctx_case
             and re.search(r"allegat|document|file", tl)
             and re.search(r"whatsapp|\bwa\b|chat", tl)
-            and re.search(r"elenc|lista|mostra|vedi|guarda|quali|tutti", tl)):
+            and re.search(r"elenc|lista|mostra|vedi|guarda|quali|tutti|legg|analizz|contenut|contengon|apri", tl)):
         data = _t_list_documents()
         docs = data.get("documents") or []
         if not docs:
             return "Nessun allegato WhatsApp trovato nelle chat."
+        want_read = bool(re.search(r"legg|analizz|contenut|contengon|apri|cosa c", tl))
+        if want_read:
+            lines = [f"📎 Leggo gli ultimi allegati WhatsApp (OCR):"]
+            for d in docs[:8]:
+                r = _t_read_document(file_url=d.get("url")) or {}
+                txt = (r.get("text") or "").strip()
+                snippet = (txt[:400] + "…") if len(txt) > 400 else (txt or "(vuoto/illeggibile)")
+                lines.append(f"\n• **{d.get('file')}** — da {d.get('da')} "
+                             f"(caso {d.get('caso')}, {d.get('quando')}):\n{snippet}")
+            if len(docs) > 8:
+                lines.append(f"\n(+{len(docs) - 8} altri allegati non letti — chiedi «leggi i prossimi» o cita un caso)")
+            return "\n".join(lines)
         lines = [f"📎 Ultimi {len(docs)} allegati WhatsApp:"]
         for d in docs[:30]:
             lines.append(f"• {d.get('file')} — da {d.get('da')} "
                          f"(chat {d.get('chat')}, caso {d.get('caso')}, {d.get('quando')})")
-        lines.append("\nDimmi «leggi <file>» per l'OCR o «ingerisci sul caso CASE-… » per farne reperti.")
+        lines.append("\nDimmi «leggi gli allegati whatsapp» per l'OCR o «ingerisci sul caso CASE-… » per farne reperti.")
         return "\n".join(lines)
 
     engine = frappe.conf.get("ops_brain_engine", "cli")
