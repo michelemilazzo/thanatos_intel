@@ -156,7 +156,7 @@ SOURCES = [
          category="cyber", targets=["IP", "Domain", "Hash"],
          connector="thanatos_intel.osint.free_sources.lookup_otx",
          needs="otx_api_key", url="https://otx.alienvault.com"),
-    dict(key="pulsedive", name="Pulsedive", tier="free_key", status="needs_key",
+    dict(key="pulsedive", name="Pulsedive", tier="free_key", status="operational",
          category="cyber", targets=["IP", "Domain", "Url"],
          connector="thanatos_intel.osint.free_sources.lookup_pulsedive",
          needs="pulsedive_api_key", url="https://pulsedive.com"),
