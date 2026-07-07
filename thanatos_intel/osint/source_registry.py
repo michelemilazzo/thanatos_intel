@@ -161,7 +161,7 @@ SOURCES = [
          category="cyber", targets=["IP", "Domain", "Url"],
          connector="thanatos_intel.osint.free_sources.lookup_pulsedive",
          needs="pulsedive_api_key", url="https://pulsedive.com"),
-    dict(key="mapillary", name="Mapillary", tier="free_key", status="needs_key",
+    dict(key="mapillary", name="Mapillary", tier="free_key", status="operational",
          category="geo", targets=["Address"],
          connector="thanatos_intel.osint.free_sources.lookup_mapillary",
          needs="mapillary_token", url="https://mapillary.com"),
