@@ -47,6 +47,7 @@ URLSCAN_SEARCH_URL = "https://urlscan.io/api/v1/search/"
 URLSCAN_SCAN_URL = "https://urlscan.io/api/v1/scan/"
 SHODAN_HOST_URL = "https://api.shodan.io/shodan/host/{ip}"
 CENSYS_HOSTS_URL = "https://search.censys.io/api/v2/hosts/{ip}"
+CENSYS_PLATFORM_URL = "https://api.platform.censys.io/v3/global/asset/host/{ip}"
 
 CACHE_TTL_HOURS = 24
 UA = "Thanatos-Intel/1.0"
@@ -582,29 +583,36 @@ def lookup_censys(ip: str) -> dict:
     cached = _cache_get("censys", ip)
     if cached:
         return {**cached, "cached": True}
+    pat = _cfg("censys_pat")
     api_id = _cfg("censys_api_id")
     api_secret = _cfg("censys_api_secret")
-    if not api_id or not api_secret:
+    if not pat and not (api_id and api_secret):
         result = {"stub": True, "source": "censys",
-                  "message": "Censys API credentials not configured"}
+                  "message": "Censys credentials not configured"}
         _cache_set("censys", ip, result)
         return result
     try:
-        r = requests.get(CENSYS_HOSTS_URL.format(ip=ip),
-                         auth=(api_id, api_secret),
-                         headers={"user-agent": UA}, timeout=15)
+        if pat:
+            # Platform API v3 (Bearer PAT) — search.censys.io v2 e' deprecato
+            r = requests.get(CENSYS_PLATFORM_URL.format(ip=ip),
+                             headers={"Authorization": f"Bearer {pat}", "user-agent": UA},
+                             timeout=15)
+            rd = (r.json().get("result") or {}).get("resource") or {} if r.status_code == 200 else {}
+        else:
+            r = requests.get(CENSYS_HOSTS_URL.format(ip=ip), auth=(api_id, api_secret),
+                             headers={"user-agent": UA}, timeout=15)
+            rd = (r.json().get("result") or {}) if r.status_code == 200 else {}
         if r.status_code == 200:
-            result_data = (r.json().get("result") or {})
-            services = result_data.get("services") or []
+            services = rd.get("services") or []
             result = {
-                "ip": result_data.get("ip"),
-                "last_updated_at": result_data.get("last_updated_at"),
-                "autonomous_system": (result_data.get("autonomous_system") or {}).get("name"),
-                "country": (result_data.get("location") or {}).get("country"),
-                "services": [{"port": s.get("port"),
-                              "service_name": s.get("service_name"),
-                              "transport_protocol": s.get("transport_protocol")}
-                             for s in services[:30]],
+                "ip": rd.get("ip"),
+                "last_updated_at": rd.get("last_updated_at"),
+                "autonomous_system": (rd.get("autonomous_system") or {}).get("name"),
+                "country": (rd.get("location") or {}).get("country"),
+                "services": [{"port": sv.get("port"),
+                              "service_name": sv.get("service_name") or sv.get("protocol"),
+                              "transport_protocol": sv.get("transport_protocol")}
+                             for sv in services[:30]],
                 "source": "censys",
             }
         elif r.status_code == 404:

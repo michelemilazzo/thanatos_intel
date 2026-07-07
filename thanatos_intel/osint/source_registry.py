@@ -122,7 +122,7 @@ SOURCES = [
          category="cyber", targets=["IP"],
          connector="thanatos_intel.osint.engine.lookup_shodan",
          needs="shodan_api_key", url="https://shodan.io"),
-    dict(key="censys", name="Censys", tier="free_key", status="needs_key",
+    dict(key="censys", name="Censys", tier="free_key", status="operational",
          category="cyber", targets=["IP"],
          connector="thanatos_intel.osint.engine.lookup_censys",
          needs="censys_api_id", url="https://censys.io"),
