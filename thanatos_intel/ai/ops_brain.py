@@ -300,16 +300,71 @@ def _t_read_passport(file_url=None, vision=True, **kw):
             "verdetto": r.get("verdict"), "risk_score": r.get("risk_score"),
             "anomalie": r.get("anomalies"),
         }
-    # MRZ non leggibile → fallback lettura-visione con Claude CLI (multimodale)
+    # MRZ non leggibile → fallback lettura-visione. Prima OpenRouter free
+    # (veloce, gratis), poi Claude CLI (più lento ma robusto).
     if not vision:
         return {"is_document": False, "nota": "MRZ non leggibile (foto scarsa)"}
-    v = _claude_vision_id(path)
+    v = _openrouter_vision_id(path)
+    fonte = "lettura AI (OpenRouter free)"
+    if not v:
+        v = _claude_vision_id(path)
+        fonte = "lettura AI (Claude)"
     if v:
         v["is_document"] = True
-        v["fonte"] = "lettura AI (Claude) — DA CONFERMARE sull'originale"
+        v["fonte"] = f"{fonte} — DA CONFERMARE sull'originale"
         return v
     return {"is_document": False,
             "nota": "documento non riconosciuto o immagine illeggibile"}
+
+
+# modelli visione free su OpenRouter, in ordine di preferenza (fallback su 429)
+_OR_VISION_MODELS = ("nvidia/nemotron-nano-12b-v2-vl:free",
+                     "google/gemma-4-31b-it:free",
+                     "google/gemma-4-26b-a4b-it:free")
+
+
+def _openrouter_vision_id(path):
+    """Legge un documento d'identità con un modello-visione FREE su OpenRouter.
+    NON verificato dai check-digit → sempre da confermare. None se manca la chiave
+    o tutti i modelli falliscono/rate-limitano."""
+    import base64
+    import json as _json
+    import re as _re
+    import urllib.request
+    key = _vault("openrouter_key") or frappe.conf.get("openrouter_api_key")
+    if not key:
+        return None
+    url = (_vault("openrouter_url") or "https://openrouter.ai/api/v1").rstrip("/")
+    try:
+        b64 = base64.b64encode(open(path, "rb").read()).decode()
+    except Exception:
+        return None
+    prompt = ("Documento d'identità. Estrai SOLO un JSON con: tipo, cognome, nome, "
+              "numero, nazionalita, nascita, scadenza, sesso. null se illeggibile. "
+              "Nessun altro testo.")
+    content = [{"type": "text", "text": prompt},
+               {"type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}]
+    for model in _OR_VISION_MODELS:
+        body = _json.dumps({"model": model, "temperature": 0,
+                            "messages": [{"role": "user", "content": content}]}).encode()
+        req = urllib.request.Request(f"{url}/chat/completions", data=body, headers={
+            "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+        try:
+            r = _json.loads(urllib.request.urlopen(req, timeout=45).read())
+            txt = r["choices"][0]["message"]["content"]
+            u = r.get("usage") or {}
+            _track("openrouter", model, int(u.get("prompt_tokens", 0)),
+                   int(u.get("completion_tokens", 0)))
+            m = _re.search(r"\{.*\}", txt, _re.DOTALL)
+            if not m:
+                continue
+            f = _json.loads(m.group(0))
+            return {k: f.get(k) for k in ("tipo", "cognome", "nome", "numero",
+                    "nazionalita", "nascita", "scadenza", "sesso")}
+        except Exception:
+            continue  # 429/timeout/parse → prova il modello successivo
+    return None
 
 
 def _claude_vision_id(path):
