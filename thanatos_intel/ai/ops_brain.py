@@ -268,7 +268,7 @@ def _t_list_documents(case=None, lead=None, **kw):
     return {"count": len(docs), "documents": docs}
 
 
-def _t_read_passport(file_url=None, **kw):
+def _t_read_passport(file_url=None, vision=True, **kw):
     """Legge un documento d'identità (passaporto/CIE) via lettore MRZ ICAO 9303:
     estrae nome, numero documento, nazionalità, scadenza, valida i check-digit e
     dà un verdetto di autenticità. Read-only (non crea Passport Analysis)."""
@@ -301,6 +301,8 @@ def _t_read_passport(file_url=None, **kw):
             "anomalie": r.get("anomalies"),
         }
     # MRZ non leggibile → fallback lettura-visione con Claude CLI (multimodale)
+    if not vision:
+        return {"is_document": False, "nota": "MRZ non leggibile (foto scarsa)"}
     v = _claude_vision_id(path)
     if v:
         v["is_document"] = True
@@ -802,10 +804,34 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
     if ctx_case and not _in_scope(ctx_case):
         ctx_case = None  # cliente non può agganciare un caso non suo
 
+    tl = (text or "").lower()
+
+    # shortcut lettura AI on-demand di un singolo documento citato per nome file
+    fm = re.search(r"(wa-[\w.-]+\.(?:jpg|jpeg|png|webp|pdf|tif|tiff))", tl)
+    if not is_client and fm and re.search(r"legg|analizz|estrai|documento|passaport|identit", tl):
+        fn = fm.group(1)
+        furl = frappe.db.get_value("File", {"file_name": ["like", fn]}, "file_url") \
+            or frappe.db.get_value("File", {"file_url": ["like", f"%{fn}"]}, "file_url")
+        if not furl:
+            return f"Non trovo l'allegato {fn}."
+        pp = _t_read_passport(file_url=furl, vision=True)
+        if pp.get("is_document"):
+            testa = (f"{pp.get('tipo') or 'documento'} · {pp.get('cognome') or ''} "
+                     f"{pp.get('nome') or ''} · n. {pp.get('numero') or '?'} · "
+                     f"{pp.get('nazionalita') or '?'} · scad. {pp.get('scadenza') or '?'}"
+                     + (f" · sesso {pp.get('sesso')}" if pp.get('sesso') else ""))
+            if pp.get("mrz_valido") is not None:
+                return (f"🛂 **{fn}** ({pp.get('fonte')}):\n{testa}\n"
+                        f"MRZ {'valida ✅' if pp.get('mrz_valido') else 'NON valida ⚠️'} · "
+                        f"verdetto {pp.get('verdetto')}"
+                        + (f"\n⚠️ {pp.get('anomalie')}" if pp.get('anomalie') else ""))
+            return f"🛂 **{fn}**:\n{testa}\n📷 {pp.get('fonte')}"
+        r = _t_read_document(file_url=furl) or {}
+        return f"📄 **{fn}**:\n{(r.get('text') or '(illeggibile)')[:1500]}"
+
     # shortcut deterministico: "allegati/documenti whatsapp" senza caso citato →
     # esegue list_documents (+ OCR se richiesto) coi dati reali. Il modello
     # economico a volte allucina invece di invocare il tool: qui bypassiamo.
-    tl = (text or "").lower()
     if (not is_client and not ctx_case
             and re.search(r"allegat|document|file", tl)
             and re.search(r"whatsapp|\bwa\b|chat", tl)
@@ -821,31 +847,33 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
                 url = d.get("url")
                 is_img = str(d.get("file") or "").lower().endswith(
                     (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".pdf"))
-                pp = _t_read_passport(file_url=url) if is_img else {}
+                # in blocco: solo MRZ ottica (veloce), niente Claude ×N. La lettura
+                # AI dei documenti scadenti è on-demand per singolo file (vedi sotto).
+                pp = _t_read_passport(file_url=url, vision=False) if is_img else {}
                 if pp.get("is_document"):
-                    testa = (f"{pp.get('tipo') or 'documento'} · "
-                             f"{pp.get('cognome') or ''} {pp.get('nome') or ''} · "
-                             f"n. {pp.get('numero') or '?'} · {pp.get('nazionalita') or '?'} · "
-                             f"scad. {pp.get('scadenza') or '?'}")
-                    if pp.get("mrz_valido") is not None:  # lettura MRZ verificata
-                        ver = pp.get("verdetto") or "?"
-                        lines.append(
-                            f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO ({pp.get('fonte')}):\n"
-                            f"  {testa}\n"
-                            f"  MRZ {'valida ✅' if pp.get('mrz_valido') else 'NON valida ⚠️'} · "
-                            f"verdetto **{ver}** (risk {pp.get('risk_score')})"
-                            + (f"\n  ⚠️ {pp.get('anomalie')}" if pp.get('anomalie') else ""))
-                    else:  # fallback lettura AI Claude — da confermare
-                        lines.append(
-                            f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO:\n"
-                            f"  {testa}\n"
-                            f"  📷 {pp.get('fonte')}")
-                else:
-                    r = _t_read_document(file_url=url) or {}
-                    txt = (r.get("text") or "").strip()
-                    snippet = (txt[:400] + "…") if len(txt) > 400 else (txt or "(vuoto/illeggibile)")
-                    lines.append(f"\n• **{d.get('file')}** — da {d.get('da')} "
-                                 f"(caso {d.get('caso')}, {d.get('quando')}):\n{snippet}")
+                    ver = pp.get("verdetto") or "?"
+                    lines.append(
+                        f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO ({pp.get('fonte')}):\n"
+                        f"  {pp.get('tipo') or 'documento'} · {pp.get('cognome') or ''} {pp.get('nome') or ''} · "
+                        f"n. {pp.get('numero') or '?'} · {pp.get('nazionalita') or '?'} · "
+                        f"scad. {pp.get('scadenza') or '?'}\n"
+                        f"  MRZ {'valida ✅' if pp.get('mrz_valido') else 'NON valida ⚠️'} · "
+                        f"verdetto **{ver}** (risk {pp.get('risk_score')})"
+                        + (f"\n  ⚠️ {pp.get('anomalie')}" if pp.get('anomalie') else ""))
+                    continue
+                r = _t_read_document(file_url=url) or {}
+                txt = (r.get("text") or "").strip()
+                if is_img and any(k in txt.upper() for k in
+                                  ("PASSPORT", "PASSAPORTO", "REPUBBLICA", "CARTA D",
+                                   "IDENTITY", "IDENTITA", "MRZ", "<<")):
+                    lines.append(
+                        f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 sembra un DOCUMENTO "
+                        f"D'IDENTITÀ, foto a bassa risoluzione (MRZ non leggibile). "
+                        f"Dimmi «leggi il documento {d.get('file')}» e lo estraggo con l'AI.")
+                    continue
+                snippet = (txt[:400] + "…") if len(txt) > 400 else (txt or "(vuoto/illeggibile)")
+                lines.append(f"\n• **{d.get('file')}** — da {d.get('da')} "
+                             f"(caso {d.get('caso')}, {d.get('quando')}):\n{snippet}")
             if len(docs) > 8:
                 lines.append(f"\n(+{len(docs) - 8} altri allegati non letti — chiedi «leggi i prossimi» o cita un caso)")
             return "\n".join(lines)
