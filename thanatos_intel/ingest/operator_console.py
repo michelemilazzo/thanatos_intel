@@ -67,10 +67,13 @@ _CLOSE_RE = re.compile(
 _ASSIGN_RE = re.compile(
     r"\bassegna(re)?\s+(a|al|alla)\s+([\w\.\-]+(\s+(?!CASE-)[\w\.\-]+)*)\b", re.I)
 _ADD_TO_CASE_RE = re.compile(
-    # accetta radici verbali per coprire imperativo/infinito/participio con pronomi
-    # ("mettili", "metterli", "aggiungili", "aggiungerli", "allegali", "attaccarli"…)
-    r"\b(mett|aggiung|attacc|alleg|inseris|caric).{0,50}\b(al\s+)?(cas[oi]|pratica|"
-    r"CASE-\d{4}-\d+)\b", re.I)
+    # match bidirezionale: "verbo … caso" oppure "caso … verbo".
+    # Radici verbali per coprire coniugazioni (metterli, aggiungerli, allegali, ecc.)
+    r"("
+    r"\b(mett|aggiung|attacc|alleg|inseris|caric).{0,50}\b(al\s+)?(cas[oi]|pratica|CASE-\d{4}-\d+)\b"
+    r"|"
+    r"\b(al\s+)?(cas[oi]|pratica|CASE-\d{4}-\d+)\b.{0,50}\b(mett|aggiung|attacc|alleg|inseris|caric)"
+    r")", re.I)
 
 
 # ─── Ruoli operatore ─────────────────────────────────────────────────────────
@@ -360,16 +363,16 @@ def _operator_context(operator, lead_name, text):
 
 
 def _resolve_case(lead_name, text):
-    """Caso di riferimento per i comandi operativi: quello agganciato alla chat,
-    o un CASE-AAAA-N citato nel messaggio."""
-    lc = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
-    if lc:
-        return lc
+    """Caso di riferimento per i comandi operativi. Priorità:
+       1) CASE-AAAA-N esplicito nel messaggio (l'operatore ha citato un caso preciso)
+       2) altrimenti il linked_case della chat
+    L'ordine è importante: se sto lavorando in una chat agganciata al caso X ma
+    scrivo "metti al CASE-2026-0010 questi link", il caso di destinazione è 0010."""
     for tok in re.findall(r"CASE-\d{4}-\d+", text or "", re.I):
         tok = tok.upper()
         if frappe.db.exists("Investigation Case", tok):
             return tok
-    return None
+    return frappe.db.get_value("Intel Lead", lead_name, "linked_case")
 
 
 @frappe.whitelist()
@@ -1185,6 +1188,95 @@ def reprocess_case_docs(case, lead_name=None, wa_phone=None, sender=None, only_f
 
 # ─── Job: aggiungi allegati recenti dell'operatore a un caso ─────────────────
 
+# ── ingest link/wallet da messaggi testuali WA ───────────────────────────────
+_BTC_RE = re.compile(r"\b((?:bc1[ac-hj-np-z02-9]{6,87})|(?:[13][a-km-zA-HJ-NP-Z1-9]{25,34}))\b")
+_EVM_RE = re.compile(r"\b0x[a-fA-F0-9]{40}\b")
+_TRX_RE = re.compile(r"\bT[1-9A-HJ-NP-Za-km-z]{33}\b")
+_URL_RE = re.compile(r"https?://[^\s<>\"]+", re.I)
+_CHAIN_OF = {"BTC": "Bitcoin", "EVM": "Ethereum", "TRX": "TRON"}
+
+
+def _extract_links_wallets_from_lead(lead_name, minutes=15):
+    """Scansiona gli inbound testuali RECENTI (Communication) del lead e ne
+    estrae URL e indirizzi wallet. Ritorna {wallets:[(addr,chain)], links:[url]}"""
+    from frappe.utils import now_datetime, add_to_date
+    since = add_to_date(now_datetime(), minutes=-int(minutes))
+    rows = frappe.db.sql("""
+        SELECT content FROM `tabCommunication`
+        WHERE reference_doctype='Intel Lead' AND reference_name=%s
+        AND sent_or_received='Received' AND creation > %s
+    """, (lead_name, since), as_dict=True)
+    text = " \n ".join((r["content"] or "") for r in rows)
+    # fallback: se non ci sono Communication, prova last_message del lead
+    if not text.strip():
+        text = frappe.db.get_value("Intel Lead", lead_name, "content") or ""
+    wallets, seen_w = [], set()
+    for addr in _BTC_RE.findall(text):
+        if addr not in seen_w:
+            wallets.append((addr, "BTC")); seen_w.add(addr)
+    for addr in _EVM_RE.findall(text):
+        if addr.lower() not in seen_w:
+            wallets.append((addr, "EVM")); seen_w.add(addr.lower())
+    for addr in _TRX_RE.findall(text):
+        if addr not in seen_w:
+            wallets.append((addr, "TRX")); seen_w.add(addr)
+    links, seen_u = [], set()
+    for url in _URL_RE.findall(text):
+        url = url.rstrip(".,;)")
+        if url not in seen_u:
+            links.append(url); seen_u.add(url)
+    return {"wallets": wallets, "links": links}
+
+
+def _ingest_links_wallets(case, extract, operator):
+    """Crea Investigation Entity per ogni wallet + Investigation Evidence per
+    ogni link, li aggancia al caso. Idempotente."""
+    added_w, added_l = [], []
+    c = frappe.get_doc("Investigation Case", case)
+    existing_entities = {ce.entity for ce in (c.case_entities or [])}
+    for addr, chain in extract["wallets"]:
+        if not frappe.db.exists("Investigation Entity", addr):
+            try:
+                frappe.get_doc({
+                    "doctype": "Investigation Entity",
+                    "primary_identifier": addr,
+                    "entity_type": "Wallet",
+                    "display_name": f"{_CHAIN_OF.get(chain, chain)}: {addr[:10]}…",
+                }).insert(ignore_permissions=True)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"create wallet entity {addr}")
+                continue
+        if addr not in existing_entities:
+            c.append("case_entities", {"entity": addr, "role_in_case": "Subject",
+                                       "notes": f"Wallet {chain} da WA"})
+            existing_entities.add(addr)
+        added_w.append(addr)
+    if added_w:
+        try:
+            c.flags.ignore_mandatory = True
+            c.save(ignore_permissions=True)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "save case wallets")
+
+    for url in extract["links"]:
+        try:
+            frappe.get_doc({
+                "doctype": "Investigation Evidence",
+                "investigation_case": case,
+                "evidence_name": f"Link WA: {url[:80]}",
+                "evidence_type": "Document",
+                "source": "WA operatore",
+                "custody_status": "Received",
+                "acquisition_date": now_datetime(),
+                "notes": url,
+            }).insert(ignore_permissions=True)
+            added_l.append(url)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"evidence link {url[:60]}")
+    frappe.db.commit()
+    return {"wallets": added_w, "links": added_l}
+
+
 @frappe.whitelist()
 def run_add_docs_to_case(lead_name, case, wa_phone=None, sender=None,
                           operator=None, minutes=15):
@@ -1208,11 +1300,35 @@ def run_add_docs_to_case(lead_name, case, wa_phone=None, sender=None,
         order_by="creation asc", limit=0,
     )
     docs = [f for f in files if (f.file_name or "").lower().endswith(_DOC_EXT)]
+
+    # Se non ci sono file, prova a estrarre link/wallet dai messaggi testuali
+    # recenti (l'operatore ha mandato URL/indirizzi crypto, non PDF).
     if not docs:
+        extra = _extract_links_wallets_from_lead(lead_name, minutes)
+        if extra["wallets"] or extra["links"]:
+            r = _ingest_links_wallets(case, extra, operator or "Administrator")
+            body_lines = [f"✅ Aggiunti a *{case}*:"]
+            if r["wallets"]:
+                body_lines.append("")
+                body_lines.append(f"💰 *{len(r['wallets'])} wallet* come Entity del caso:")
+                body_lines += [f"- `{w}`" for w in r["wallets"][:12]]
+                if len(r["wallets"]) > 12:
+                    body_lines.append(f"… e altri {len(r['wallets']) - 12}")
+            if r["links"]:
+                body_lines.append("")
+                body_lines.append(f"🔗 *{len(r['links'])} link* come reperti:")
+                body_lines += [f"- {u}" for u in r["links"][:8]]
+                if len(r["links"]) > 8:
+                    body_lines.append(f"… e altri {len(r['links']) - 8}")
+            body_lines.append("")
+            body_lines.append("🔗 " + frappe.utils.get_url("/app/investigation-case/" + case))
+            _reply(wa_phone, sender, lead_name, "\n".join(body_lines))
+            return {"ok": True, "case": case, "wallets": len(r["wallets"]),
+                    "links": len(r["links"])}
         _reply(wa_phone, sender, lead_name,
-               f"Non trovo allegati recenti (ultimi {minutes} min) da aggiungere "
-               f"a *{case}*. Mandami prima i documenti e poi ripeti il comando.")
-        return {"ok": False, "reason": "no recent docs"}
+               f"Non trovo allegati né link/wallet negli ultimi {minutes} min "
+               f"per *{case}*. Mandami prima i documenti o gli indirizzi e ripeti.")
+        return {"ok": False, "reason": "no recent content"}
 
     ok_n, fail_n = 0, 0
     lines = []
