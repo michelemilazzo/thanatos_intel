@@ -335,10 +335,11 @@ def _url_to_path(file_url):
     return p if os.path.exists(p) else None
 
 
-def _openrouter_vision_id(path):
+def _openrouter_vision_id(path, quick=False):
     """Legge un documento d'identità con un modello-visione FREE su OpenRouter.
     NON verificato dai check-digit → sempre da confermare. None se manca la chiave
-    o tutti i modelli falliscono/rate-limitano."""
+    o tutti i modelli falliscono/rate-limitano. quick=True: 1 modello, 15s (per il
+    batch, evita di sommare latenze e sforare il timeout web)."""
     import base64
     import json as _json
     import re as _re
@@ -357,13 +358,15 @@ def _openrouter_vision_id(path):
     content = [{"type": "text", "text": prompt},
                {"type": "image_url",
                 "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}]
-    for model in _OR_VISION_MODELS:
+    models = _OR_VISION_MODELS[:1] if quick else _OR_VISION_MODELS
+    to = 15 if quick else 22
+    for model in models:
         body = _json.dumps({"model": model, "temperature": 0,
                             "messages": [{"role": "user", "content": content}]}).encode()
         req = urllib.request.Request(f"{url}/chat/completions", data=body, headers={
             "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
         try:
-            r = _json.loads(urllib.request.urlopen(req, timeout=22).read())
+            r = _json.loads(urllib.request.urlopen(req, timeout=to).read())
             txt = r["choices"][0]["message"]["content"]
             u = r.get("usage") or {}
             _track("openrouter", model, int(u.get("prompt_tokens", 0)),
@@ -910,7 +913,7 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
         want_read = bool(re.search(r"legg|analizz|contenut|contengon|apri|cosa c", tl))
         if want_read:
             lines = [f"📎 Leggo gli ultimi allegati WhatsApp:"]
-            vision_budget = 6  # letture-visione OpenRouter free per batch (rate-limit)
+            vision_budget = 3  # letture-visione free per batch (quick, evita timeout web)
             for d in docs[:8]:
                 url = d.get("url")
                 is_img = str(d.get("file") or "").lower().endswith(
@@ -933,10 +936,11 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
                 looks_id = is_img and any(k in txt.upper() for k in
                                           ("PASSPORT", "PASSAPORTO", "REPUBBLICA", "CARTA D",
                                            "IDENTITY", "IDENTITA", "MRZ", "<<"))
-                # 2) documento scadente → lettura-visione OpenRouter free (veloce)
+                # documento scadente → lettura-visione OpenRouter free (veloce) solo per
+                # i primi (budget), il resto on-demand: evita timeout se il free tier è lento
                 if looks_id and vision_budget > 0:
                     vision_budget -= 1
-                    v = _openrouter_vision_id(_url_to_path(url) or "") if _url_to_path(url) else None
+                    v = _openrouter_vision_id(_url_to_path(url), quick=True) if _url_to_path(url) else None
                     if v:
                         lines.append(
                             f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO "
@@ -948,9 +952,8 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
                         continue
                 if looks_id:
                     lines.append(
-                        f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 documento d'identità, "
-                        f"lettura AI non riuscita (free tier occupato). Dimmi «leggi il documento "
-                        f"{d.get('file')}» per riprovare.")
+                        f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 documento d'identità "
+                        f"(foto scarsa). Dimmi «leggi il documento {d.get('file')}» per l'estrazione AI.")
                     continue
                 snippet = (txt[:400] + "…") if len(txt) > 400 else (txt or "(vuoto/illeggibile)")
                 lines.append(f"\n• **{d.get('file')}** — da {d.get('da')} "
