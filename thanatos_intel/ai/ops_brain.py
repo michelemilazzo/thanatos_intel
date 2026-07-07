@@ -268,6 +268,38 @@ def _t_list_documents(case=None, lead=None, **kw):
     return {"count": len(docs), "documents": docs}
 
 
+def _t_read_passport(file_url=None, **kw):
+    """Legge un documento d'identità (passaporto/CIE) via lettore MRZ ICAO 9303:
+    estrae nome, numero documento, nazionalità, scadenza, valida i check-digit e
+    dà un verdetto di autenticità. Read-only (non crea Passport Analysis)."""
+    if not file_url:
+        return {"error": "manca file_url"}
+    if not _file_allowed(file_url):
+        return dict(_DENIED)
+    import os
+    from thanatos_intel.thanatos_documents.passport import analyzer
+    path = frappe.get_site_path("private", "files",
+                                file_url.split("/private/files/")[-1])
+    if not os.path.exists(path):
+        path = frappe.get_site_path("public", "files", file_url.split("/files/")[-1])
+    if not os.path.exists(path):
+        return {"error": "file non trovato"}
+    try:
+        r = analyzer.analyze(path)
+    except Exception as e:
+        return {"error": str(e)[:200]}
+    return {
+        "is_document": bool(r.get("mrz_line_1")),
+        "tipo": r.get("document_type"), "cognome": r.get("surname"),
+        "nome": r.get("given_names"), "numero": r.get("document_number"),
+        "nazionalita": r.get("nationality"), "stato_emittente": r.get("issuing_country"),
+        "nascita": str(r.get("dob") or ""), "scadenza": str(r.get("expiry") or ""),
+        "sesso": r.get("sex"), "mrz_valido": r.get("mrz_valid"),
+        "verdetto": r.get("verdict"), "risk_score": r.get("risk_score"),
+        "anomalie": r.get("anomalies"),
+    }
+
+
 def _t_read_document(file_url=None, **kw):
     """Legge/OCR il contenuto testuale COMPLETO di un documento on-demand (PDF,
     immagine, docx…). Usa questo per analizzare un allegato che non è ancora un
@@ -326,6 +358,7 @@ TOOLS = {
     "case_tool": _t_case_tool,            # {case, instruction}  → cluster/dossier/proforma/…
     "list_documents": _t_list_documents,  # {case?, lead?} → file allegati (anche non ingeriti)
     "read_document": _t_read_document,    # {file_url} → testo OCR completo on-demand
+    "read_passport": _t_read_passport,    # {file_url} → lettore MRZ passaporto/CIE
     "ingest_document": _t_ingest_document,  # {case, file_url} → reperto (OCR+AI+hash)
 }
 
@@ -341,6 +374,7 @@ _TOOL_DOC = """STRUMENTI (rispondi con JSON {"tool":"nome","args":{...}} per usa
 - case_tool {case, instruction}: esegue sul caso strumenti avanzati — cluster societario, dossier, proforma, avanzamento/checklist, collegamenti, valutazione assicurativa. Passa l'istruzione in linguaggio naturale.
 - list_documents {case?, lead?}: elenca i file allegati a un caso o lead. SENZA parametri elenca gli ultimi allegati WhatsApp su TUTTE le chat (usa questo se l'operatore chiede "gli allegati su whatsapp" senza citare un caso)
 - read_document {file_url}: legge/OCR il testo completo di un documento on-demand (per analizzare un allegato non ancora sintetizzato)
+- read_passport {file_url}: lettore documenti d'identità (passaporto/CIE) — MRZ ICAO 9303: nome, numero, nazionalità, scadenza, check-digit e verdetto autenticità. Usa questo per foto di documenti anziché read_document
 - ingest_document {case, file_url}: ingerisce un allegato come reperto del caso (OCR + estrazione AI + hash catena di custodia)
 """
 
@@ -731,13 +765,28 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
             return "Nessun allegato WhatsApp trovato nelle chat."
         want_read = bool(re.search(r"legg|analizz|contenut|contengon|apri|cosa c", tl))
         if want_read:
-            lines = [f"📎 Leggo gli ultimi allegati WhatsApp (OCR):"]
+            lines = [f"📎 Leggo gli ultimi allegati WhatsApp:"]
             for d in docs[:8]:
-                r = _t_read_document(file_url=d.get("url")) or {}
-                txt = (r.get("text") or "").strip()
-                snippet = (txt[:400] + "…") if len(txt) > 400 else (txt or "(vuoto/illeggibile)")
-                lines.append(f"\n• **{d.get('file')}** — da {d.get('da')} "
-                             f"(caso {d.get('caso')}, {d.get('quando')}):\n{snippet}")
+                url = d.get("url")
+                is_img = str(d.get("file") or "").lower().endswith(
+                    (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".pdf"))
+                pp = _t_read_passport(file_url=url) if is_img else {}
+                if pp.get("is_document"):
+                    ver = pp.get("verdetto") or "?"
+                    lines.append(
+                        f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO D'IDENTITÀ:\n"
+                        f"  {pp.get('tipo') or 'documento'} · {pp.get('cognome') or ''} {pp.get('nome') or ''} · "
+                        f"n. {pp.get('numero') or '?'} · {pp.get('nazionalita') or '?'} · "
+                        f"scad. {pp.get('scadenza') or '?'}\n"
+                        f"  MRZ {'valida ✅' if pp.get('mrz_valido') else 'NON valida ⚠️'} · "
+                        f"verdetto **{ver}** (risk {pp.get('risk_score')})"
+                        + (f"\n  ⚠️ {pp.get('anomalie')}" if pp.get('anomalie') else ""))
+                else:
+                    r = _t_read_document(file_url=url) or {}
+                    txt = (r.get("text") or "").strip()
+                    snippet = (txt[:400] + "…") if len(txt) > 400 else (txt or "(vuoto/illeggibile)")
+                    lines.append(f"\n• **{d.get('file')}** — da {d.get('da')} "
+                                 f"(caso {d.get('caso')}, {d.get('quando')}):\n{snippet}")
             if len(docs) > 8:
                 lines.append(f"\n(+{len(docs) - 8} altri allegati non letti — chiedi «leggi i prossimi» o cita un caso)")
             return "\n".join(lines)
