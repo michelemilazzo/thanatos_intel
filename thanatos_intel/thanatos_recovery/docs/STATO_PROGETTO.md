@@ -58,11 +58,13 @@
 
 ## ⏳ MANCA (solo hardening produzione, niente codice bloccante)
 
-| Cosa | Perché non fatto | Serve |
-|------|------------------|-------|
-| **Recovery machine di produzione** | il recupero è provato su dev con seed di test; in produzione va su macchina **air-gapped** dedicata con `git clone` di btcrecover (NON `pip install`, non è su PyPI) + `cryptography` + `bip_utils` | 1 macchina offline allestita |
-| **Security audit / pen-test** | va fatto sul flusso deployato completo | slot di test dedicato |
-| **Staff training reale** | la guida c'è; manca la sessione + firma certificazione | organizzare sessione |
+| Cosa | Stato | Serve |
+|------|-------|-------|
+| **Recovery machine di produzione** | ✅ **Bundle offline pronto e provato** (install `--no-index` + self-test PASS). Tarball 39M in box storage `/mnt/thanatos-box/recovery-bundle/`. Sorgenti in `thanatos_recovery/recovery_machine/` | Solo l'azione fisica: copiare il bundle via USB su un laptop, scollegarlo dalla rete, `./install-offline.sh` + `./selftest.sh` |
+| **Security audit / pen-test** | ⏳ da fare sul flusso deployato | slot di test dedicato |
+| **Staff training reale** | ⏳ guida pronta, manca la sessione | organizzare sessione + firma |
+
+**Bundle recovery machine** (`recovery_machine/`): `install-offline.sh` (venv + wheel, zero rete), `selftest.py/.sh` (recupero di prova con vettore noto → certifica), `RUNBOOK.md` (procedura air-gap/chiave/wipe), `build-bundle.sh` (rigenera il tarball). Il tarball binario (btcrecover + wheelhouse) NON è in git: sta in box storage.
 
 > ⚠️ **Requisito chiave emerso dal test reale**: il recupero è impossibile senza un **indirizzo noto** del wallet (o xpub). seedrecover valida i candidati derivando gli indirizzi e confrontandoli: senza target, qualsiasi seed con checksum valido sembrerebbe corretto. Il campo `known_address` è ora obbligatorio.
 
