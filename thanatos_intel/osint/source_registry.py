@@ -152,7 +152,7 @@ SOURCES = [
          connector="thanatos_intel.osint.free_sources.lookup_greynoise",
          needs="greynoise_api_key", url="https://greynoise.io",
          note="Distingue rumore internet da attività targetizzata."),
-    dict(key="otx", name="OTX AlienVault", tier="free_key", status="needs_key",
+    dict(key="otx", name="OTX AlienVault", tier="free_key", status="operational",
          category="cyber", targets=["IP", "Domain", "Hash"],
          connector="thanatos_intel.osint.free_sources.lookup_otx",
          needs="otx_api_key", url="https://otx.alienvault.com"),
