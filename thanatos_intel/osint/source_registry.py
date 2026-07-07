@@ -134,7 +134,7 @@ SOURCES = [
          category="aziende", targets=["Company"],
          connector="thanatos_intel.osint.engine.lookup_company",
          needs="opencorporates_api_key", url="https://opencorporates.com"),
-    dict(key="etherscan", name="Etherscan (ETH)", tier="free_key", status="needs_key",
+    dict(key="etherscan", name="Etherscan (ETH)", tier="free_key", status="operational",
          category="crypto", targets=["Wallet"],
          connector="thanatos_intel.osint.free_sources.lookup_eth_wallet",
          needs="etherscan_api_key", url="https://etherscan.io"),
