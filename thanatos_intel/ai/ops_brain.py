@@ -244,6 +244,27 @@ def _t_list_documents(case=None, lead=None, **kw):
                          "attached_to_name": lead},
                 fields=["file_name", "file_url"], limit=0):
             docs.append({"file": f.file_name, "url": f.file_url, "stato": "allegato chat"})
+    # senza case/lead → allegati WhatsApp recenti su TUTTA la struttura (solo operatori)
+    if not case and not lead:
+        if _is_client():
+            return dict(_DENIED)
+        rows = frappe.db.sql("""
+            SELECT f.file_name, f.file_url, f.creation, f.attached_to_name AS lead,
+                   l.source_name, l.source_identifier, l.linked_case
+            FROM `tabFile` f
+            JOIN `tabIntel Lead` l ON l.name = f.attached_to_name
+            WHERE f.attached_to_doctype = 'Intel Lead'
+            ORDER BY f.creation DESC LIMIT 30
+        """, as_dict=True)
+        for r in rows:
+            docs.append({
+                "file": r.file_name, "url": r.file_url,
+                "da": r.source_name or r.source_identifier,
+                "chat": r.lead, "caso": r.linked_case or "—",
+                "quando": str(r.creation)[:16], "stato": "allegato WhatsApp",
+            })
+        return {"count": len(docs), "documents": docs,
+                "nota": "Ultimi 30 allegati WhatsApp su tutte le chat. Per leggerne uno usa read_document(file_url)."}
     return {"count": len(docs), "documents": docs}
 
 
@@ -318,7 +339,7 @@ _TOOL_DOC = """STRUMENTI (rispondi con JSON {"tool":"nome","args":{...}} per usa
 - negativita {id}: protesti/pregiudizievoli (CF persona o P.IVA impresa)
 - visura {piva}: visura camerale impresa
 - case_tool {case, instruction}: esegue sul caso strumenti avanzati — cluster societario, dossier, proforma, avanzamento/checklist, collegamenti, valutazione assicurativa. Passa l'istruzione in linguaggio naturale.
-- list_documents {case?, lead?}: elenca TUTTI i file allegati a un caso o lead, anche quelli non ancora ingeriti come reperti (i documenti che l'operatore ha appena mandato)
+- list_documents {case?, lead?}: elenca i file allegati a un caso o lead. SENZA parametri elenca gli ultimi allegati WhatsApp su TUTTE le chat (usa questo se l'operatore chiede "gli allegati su whatsapp" senza citare un caso)
 - read_document {file_url}: legge/OCR il testo completo di un documento on-demand (per analizzare un allegato non ancora sintetizzato)
 - ingest_document {case, file_url}: ingerisce un allegato come reperto del caso (OCR + estrazione AI + hash catena di custodia)
 """
