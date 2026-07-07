@@ -1196,18 +1196,19 @@ _URL_RE = re.compile(r"https?://[^\s<>\"]+", re.I)
 _CHAIN_OF = {"BTC": "Bitcoin", "EVM": "Ethereum", "TRX": "TRON"}
 
 
-def _extract_links_wallets_from_lead(lead_name, minutes=15):
+def _extract_links_wallets_from_lead(lead_name, minutes=1440):
     """Scansiona gli inbound testuali RECENTI (Communication) del lead e ne
     estrae URL e indirizzi wallet. Ritorna {wallets:[(addr,chain)], links:[url]}"""
     from frappe.utils import now_datetime, add_to_date
     since = add_to_date(now_datetime(), minutes=-int(minutes))
+    # i messaggi WA vivono nel child `Intel Lead Message` (non in Communication).
+    # Timestamp affidabile = sent_at (creation e' quello del parent).
     rows = frappe.db.sql("""
-        SELECT content FROM `tabCommunication`
-        WHERE reference_doctype='Intel Lead' AND reference_name=%s
-        AND sent_or_received='Received' AND creation > %s
+        SELECT content FROM `tabIntel Lead Message`
+        WHERE parent=%s AND direction='Inbound' AND sent_at > %s
     """, (lead_name, since), as_dict=True)
     text = " \n ".join((r["content"] or "") for r in rows)
-    # fallback: se non ci sono Communication, prova last_message del lead
+    # fallback: se il child non trova niente, prova il campo content del lead
     if not text.strip():
         text = frappe.db.get_value("Intel Lead", lead_name, "content") or ""
     wallets, seen_w = [], set()
@@ -1279,7 +1280,7 @@ def _ingest_links_wallets(case, extract, operator):
 
 @frappe.whitelist()
 def run_add_docs_to_case(lead_name, case, wa_phone=None, sender=None,
-                          operator=None, minutes=15):
+                          operator=None, minutes=1440):
     """Prende i documenti allegati al lead operatore negli ultimi N minuti e li
     ingerisce come Investigation Evidence del caso indicato. Nessun re-download
     da Meta: usa i File Frappe già scaricati da _dispatch_media."""
@@ -1326,7 +1327,7 @@ def run_add_docs_to_case(lead_name, case, wa_phone=None, sender=None,
             return {"ok": True, "case": case, "wallets": len(r["wallets"]),
                     "links": len(r["links"])}
         _reply(wa_phone, sender, lead_name,
-               f"Non trovo allegati né link/wallet negli ultimi {minutes} min "
+               f"Non trovo allegati né link/wallet nelle ultime {minutes // 60}h "
                f"per *{case}*. Mandami prima i documenti o gli indirizzi e ripeti.")
         return {"ok": False, "reason": "no recent content"}
 
