@@ -362,16 +362,41 @@ def _operator_context(operator, lead_name, text):
     return "\n\n".join(parts)
 
 
+_CASE_MENTION_RE = re.compile(
+    r"(?:\bCASE-(\d{4})-(\d+)\b)|"       # CASE-2026-0010
+    r"(?:\bcas[oei]?\s+(\d{4})-(\d+)\b)|"  # caso 2026-0010
+    r"(?:\bcas[oei]?\s+(\d{1,5})\b)",     # caso 10, caso 0010
+    re.I,
+)
+
+
 def _resolve_case(lead_name, text):
     """Caso di riferimento per i comandi operativi. Priorità:
-       1) CASE-AAAA-N esplicito nel messaggio (l'operatore ha citato un caso preciso)
+       1) caso citato esplicitamente nel messaggio (CASE-YYYY-N, o formati
+          abbreviati: 'caso 2026-0010', 'caso 10', 'caso 0010', ecc.)
        2) altrimenti il linked_case della chat
-    L'ordine è importante: se sto lavorando in una chat agganciata al caso X ma
-    scrivo "metti al CASE-2026-0010 questi link", il caso di destinazione è 0010."""
-    for tok in re.findall(r"CASE-\d{4}-\d+", text or "", re.I):
-        tok = tok.upper()
-        if frappe.db.exists("Investigation Case", tok):
-            return tok
+    L'ordine è importante: se sto in una chat agganciata al caso X ma scrivo
+    'sul caso 0010', il target è 0010."""
+    from frappe.utils import today
+    current_year = today().split("-")[0]
+
+    for m in _CASE_MENTION_RE.finditer(text or ""):
+        y_full, n_full, y_short, n_short, n_only = m.groups()
+        candidates = []
+        if y_full and n_full:
+            candidates.append(f"CASE-{y_full}-{n_full}")
+        elif y_short and n_short:
+            candidates.append(f"CASE-{y_short}-{n_short}")
+        elif n_only:
+            n = n_only.zfill(4)
+            candidates.append(f"CASE-{current_year}-{n}")
+            # se non esiste, prova anni indietro
+            for y in range(int(current_year) - 1, int(current_year) - 4, -1):
+                candidates.append(f"CASE-{y}-{n}")
+        for c in candidates:
+            c = c.upper()
+            if frappe.db.exists("Investigation Case", c):
+                return c
     return frappe.db.get_value("Intel Lead", lead_name, "linked_case")
 
 
