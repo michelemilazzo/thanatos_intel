@@ -22,7 +22,7 @@ from thanatos_intel.osint.engine import (UA, _cache_get, _cache_set,
 
 OPENSANCTIONS_URL = "https://api.opensanctions.org/search/default"
 TRONSCAN_ACCOUNT_URL = "https://apilist.tronscanapi.com/api/accountv2"
-ETHERSCAN_URL = "https://api.etherscan.io/api"
+ETHERSCAN_URL = "https://api.etherscan.io/v2/api"  # V2 (V1 deprecato); richiede chainid
 BLOCKCHAIN_RAWADDR_URL = "https://blockchain.info/rawaddr/{addr}"
 WAYBACK_AVAILABLE_URL = "https://archive.org/wayback/available"
 WAYBACK_CDX_URL = "http://web.archive.org/cdx/search/cdx"
@@ -202,12 +202,17 @@ def lookup_eth_wallet(address: str) -> dict:
         return result
     try:
         bal = requests.get(ETHERSCAN_URL, headers={"user-agent": UA}, params={
-            "module": "account", "action": "balance", "address": address,
+            "chainid": 1, "module": "account", "action": "balance", "address": address,
             "tag": "latest", "apikey": api_key}, timeout=12).json()
         txc = requests.get(ETHERSCAN_URL, headers={"user-agent": UA}, params={
-            "module": "proxy", "action": "eth_getTransactionCount",
+            "chainid": 1, "module": "proxy", "action": "eth_getTransactionCount",
             "address": address, "tag": "latest", "apikey": api_key}, timeout=12).json()
-        wei = int(bal.get("result") or 0)
+        _r = bal.get("result")
+        # result numerico = ok; stringa non-numerica = messaggio errore API
+        try:
+            wei = int(_r or 0)
+        except (ValueError, TypeError):
+            return {"error": str(_r)[:200], "source": "etherscan"}
         nonce = int((txc.get("result") or "0x0"), 16)
         result = {"chain": "eth", "balance_eth": wei / 1e18,
                   "tx_count": nonce, "source": "etherscan"}
