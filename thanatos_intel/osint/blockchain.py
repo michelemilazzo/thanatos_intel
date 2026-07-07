@@ -26,7 +26,9 @@ def _get(path):
     return r.json()
 
 
-def _all_txs(addr, max_pages=20):
+def _all_txs(addr, max_pages=40):
+    """Default 40 pagine da 25 tx = fino a ~1000 transazioni per indirizzo.
+    Parametrizzabile per estrazioni piu' aggressive quando serve."""
     txs, last = [], None
     for _ in range(max_pages):
         page = _get(f"/address/{addr}/txs/chain" + (f"/{last}" if last else ""))
@@ -99,14 +101,16 @@ def _report_html(result):
 
 
 @frappe.whitelist()
-def trace_wallet(address: str, top_n: int = 15) -> dict:
-    """Traccia un wallet BTC: controparti, saldi, hub, report sui case collegati."""
+def trace_wallet(address: str, top_n: int = 15, max_pages: int = 40) -> dict:
+    """Traccia un wallet BTC: controparti, saldi, hub, report sui case collegati.
+    max_pages controlla il numero di pagine di TX (25 tx/pagina, 40=~1000 TX)."""
     frappe.only_for(("System Manager", "Investigation Manager", "Investigator"))
     address = address.strip()
     top_n = min(int(top_n), 20)
+    max_pages = max(1, min(int(max_pages), 200))
 
     stats = _balance(address)
-    txs = _all_txs(address)
+    txs = _all_txs(address, max_pages=max_pages)
     inflow, outflow, timeline = _aggregate(address, txs)
     top_out = sorted(outflow.items(), key=lambda x: -x[1])[:top_n]
     top_in = sorted(inflow.items(), key=lambda x: -x[1])[:top_n]

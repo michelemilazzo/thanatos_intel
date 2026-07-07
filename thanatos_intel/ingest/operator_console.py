@@ -75,6 +75,15 @@ _ADD_TO_CASE_RE = re.compile(
     r"\b(al\s+)?(cas[oi]|pratica|CASE-\d{4}-\d+)\b.{0,50}\b(mett|aggiung|attacc|alleg|inseris|caric)"
     r")", re.I)
 
+# Traccia on-chain: "estrai N tx", "traccia i wallet", "trace on-chain"
+_TRACE_WALLETS_RE = re.compile(
+    r"(\bestrai\b.{0,20}\b(?:tx|transazion)|"
+    r"\btracci?a\b.{0,20}\bwallet\b|"
+    r"\btrace\b.{0,10}\b(?:on.?chain|wallet)|"
+    r"\banalisi\b.{0,20}\b(?:on.?chain|blockchain))",
+    re.I,
+)
+
 
 # ─── Ruoli operatore ─────────────────────────────────────────────────────────
 
@@ -297,6 +306,29 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
         return
     if _HELP_RE.search(t):
         _reply(wa_phone, sender, lead_name, _help_text(operator))
+        return
+    # Estrai TX on-chain per tutti i wallet del caso di contesto
+    if _TRACE_WALLETS_RE.search(t):
+        case = _resolve_case(lead_name, t)
+        if not case:
+            case = _last_case_from_recent(lead_name) or frappe.db.get_value(
+                "Intel Lead", lead_name, "linked_case")
+        if not case:
+            _reply(wa_phone, sender, lead_name,
+                   "Non c\'e\' un caso di contesto. Cita il caso, es. \«estrai tx caso 2026-0010\».")
+            return
+        m = re.search(r"\b(\d{2,4})\b", t)
+        target = int(m.group(1)) if m else 900
+        max_pages = min(200, max(20, (target // 25) + 10))
+        frappe.enqueue(
+            "thanatos_intel.ingest.operator_console.run_trace_case_wallets",
+            queue="long", timeout=1800,
+            lead_name=lead_name, case=case, wa_phone=wa_phone,
+            sender=sender, operator=operator, max_pages=max_pages, target=target,
+        )
+        _reply(wa_phone, sender, lead_name,
+               f"\U0001F50E Traccio on-chain i wallet del caso *{case}* "
+               f"(target {target} tx). Ti mando l\'esito appena finito.")
         return
     # Messaggio composto SOLO da URL/wallet → auto-ingest sul caso di contesto
     # (l'operatore sta spammando indirizzi; niente chiacchiere, li mette nel caso)
@@ -1466,3 +1498,61 @@ def run_add_docs_to_case(lead_name, case, wa_phone=None, sender=None,
     body += "\n\n🔗 " + frappe.utils.get_url("/app/investigation-case/" + case)
     _reply(wa_phone, sender, lead_name, body)
     return {"ok": True, "case": case, "added": ok_n, "failed": fail_n}
+
+
+@frappe.whitelist()
+def run_trace_case_wallets(lead_name, case, wa_phone=None, sender=None,
+                            operator=None, max_pages=40, target=900):
+    """Traccia on-chain (mempool.space) tutti i wallet BTC agganciati al caso.
+    Aggrega il numero di tx estratte, i counterparties, gli hub creati.
+    Il report HTML/JSON per singolo wallet viene salvato come File del caso
+    da trace_wallet(); qui restituiamo solo il riassunto."""
+    from thanatos_intel.osint.blockchain import trace_wallet
+    if not frappe.db.exists("Investigation Case", case):
+        _reply(wa_phone, sender, lead_name, f"\u26a0\ufe0f Caso {case} non trovato.")
+        return {"ok": False}
+    c = frappe.get_doc("Investigation Case", case)
+    wallets = []
+    for ce in (c.case_entities or []):
+        if frappe.db.get_value("Investigation Entity", ce.entity, "entity_type") == "Wallet":
+            # solo BTC (per ora): esclude 0x… e T… → solo bech32/legacy/script
+            if not (ce.entity.startswith("0x") or ce.entity.startswith("T")):
+                wallets.append(ce.entity)
+    if not wallets:
+        _reply(wa_phone, sender, lead_name,
+               f"Non trovo wallet BTC agganciati a *{case}*. Aggiungili prima "
+               f"con \u00abinserisci al caso {case} <indirizzi>\u00bb.")
+        return {"ok": False, "reason": "no wallets"}
+
+    total_tx = 0
+    per_wallet = []
+    fail = []
+    for addr in wallets:
+        try:
+            r = trace_wallet(addr, top_n=15, max_pages=max_pages)
+            total_tx += int(r.get("tx_count", 0))
+            per_wallet.append((addr, r.get("tx_count", 0), r.get("balance_btc")))
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"trace_wallet {addr}")
+            fail.append(addr)
+    lines = [f"\U0001F50E Tracciamento *{case}* — {total_tx} tx estratte "
+             f"da {len(per_wallet)}/{len(wallets)} wallet."]
+    if total_tx < target:
+        lines.append(f"\u26a0\ufe0f Target {target} non raggiunto "
+                     f"(alcuni wallet potrebbero avere meno tx del previsto).")
+    lines.append("")
+    for addr, n, bal in per_wallet[:15]:
+        b = (f", saldo {bal:.4f} BTC" if bal is not None else "")
+        lines.append(f"- `{addr[:14]}\u2026` {n} tx{b}")
+    if len(per_wallet) > 15:
+        lines.append(f"\u2026 e altri {len(per_wallet) - 15} wallet")
+    if fail:
+        lines.append("")
+        lines.append(f"\u26a0\ufe0f {len(fail)} wallet falliti (log Frappe).")
+    lines.append("")
+    lines.append("Report HTML+JSON per ogni wallet nella scheda Files del caso.")
+    lines.append("\U0001F517 " + frappe.utils.get_url("/app/investigation-case/" + case))
+    _reply(wa_phone, sender, lead_name, "\n".join(lines))
+    return {"ok": True, "case": case, "total_tx": total_tx,
+            "wallets_ok": len(per_wallet), "wallets_failed": len(fail)}
+
