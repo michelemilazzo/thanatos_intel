@@ -288,16 +288,67 @@ def _t_read_passport(file_url=None, **kw):
         r = analyzer.analyze(path)
     except Exception as e:
         return {"error": str(e)[:200]}
-    return {
-        "is_document": bool(r.get("mrz_line_1")),
-        "tipo": r.get("document_type"), "cognome": r.get("surname"),
-        "nome": r.get("given_names"), "numero": r.get("document_number"),
-        "nazionalita": r.get("nationality"), "stato_emittente": r.get("issuing_country"),
-        "nascita": str(r.get("dob") or ""), "scadenza": str(r.get("expiry") or ""),
-        "sesso": r.get("sex"), "mrz_valido": r.get("mrz_valid"),
-        "verdetto": r.get("verdict"), "risk_score": r.get("risk_score"),
-        "anomalie": r.get("anomalies"),
-    }
+    # MRZ letta e validata → dato verificato (check-digit ICAO)
+    if r.get("mrz_line_1"):
+        return {
+            "is_document": True, "fonte": "MRZ (verificata)",
+            "tipo": r.get("document_type"), "cognome": r.get("surname"),
+            "nome": r.get("given_names"), "numero": r.get("document_number"),
+            "nazionalita": r.get("nationality"), "stato_emittente": r.get("issuing_country"),
+            "nascita": str(r.get("dob") or ""), "scadenza": str(r.get("expiry") or ""),
+            "sesso": r.get("sex"), "mrz_valido": r.get("mrz_valid"),
+            "verdetto": r.get("verdict"), "risk_score": r.get("risk_score"),
+            "anomalie": r.get("anomalies"),
+        }
+    # MRZ non leggibile → fallback lettura-visione con Claude CLI (multimodale)
+    v = _claude_vision_id(path)
+    if v:
+        v["is_document"] = True
+        v["fonte"] = "lettura AI (Claude) — DA CONFERMARE sull'originale"
+        return v
+    return {"is_document": False,
+            "nota": "documento non riconosciuto o immagine illeggibile"}
+
+
+def _claude_vision_id(path):
+    """Legge un documento d'identità con Claude CLI (multimodale) quando l'MRZ
+    ottica non è leggibile. NON verificato dai check-digit → sempre da confermare.
+    Ritorna dict campi o None se il CLI non è disponibile/fallisce."""
+    import json as _json
+    import os
+    import subprocess
+    claude = frappe.conf.get("ops_brain_claude_bin") or "/usr/local/bin/claude"
+    if not os.path.exists(claude):
+        return None
+    prompt = (f"Leggi il documento d'identità nell'immagine {path}. Estrai SOLO un JSON "
+              "con: tipo, cognome, nome, numero, nazionalita, nascita, scadenza, sesso. "
+              "Se un campo non è leggibile con certezza mettilo a null. Nessun altro testo.")
+    env = dict(os.environ)
+    env["HOME"] = frappe.conf.get("ops_brain_home") or "/home/frappe"
+    try:
+        r = subprocess.run([claude, "-p", prompt, "--allowedTools", "Read",
+                            "--output-format", "json"],
+                           capture_output=True, text=True, timeout=175, env=env)
+        d = _json.loads((r.stdout or "").strip())
+        if d.get("is_error"):
+            return None
+        u = d.get("usage") or {}
+        _track("claude", "claude-vision",
+               int(u.get("input_tokens", 0)) + int(u.get("cache_read_input_tokens", 0)),
+               int(u.get("output_tokens", 0)))
+        # estrai il JSON dal testo del risultato
+        import re as _re
+        txt = (d.get("result") or "").strip()
+        m = _re.search(r"\{.*\}", txt, _re.DOTALL)
+        if not m:
+            return None
+        fields = _json.loads(m.group(0))
+        return {k: fields.get(k) for k in
+                ("tipo", "cognome", "nome", "numero", "nazionalita", "nascita",
+                 "scadenza", "sesso")}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "ops_brain claude vision id")
+        return None
 
 
 def _t_read_document(file_url=None, **kw):
@@ -771,28 +822,24 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
                 is_img = str(d.get("file") or "").lower().endswith(
                     (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".pdf"))
                 pp = _t_read_passport(file_url=url) if is_img else {}
-                if not pp.get("is_document") and is_img:
-                    # OCR grezzo: capiamo se è comunque un documento d'identità
-                    rr = _t_read_document(file_url=url) or {}
-                    raw = (rr.get("text") or "").upper()
-                    if any(k in raw for k in ("PASSPORT", "PASSAPORTO", "REPUBBLICA",
-                                              "CARTA D", "IDENTITY", "MRZ", "<<")):
-                        lines.append(
-                            f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 sembra un "
-                            f"DOCUMENTO D'IDENTITÀ ma la foto è a bassa risoluzione: MRZ non "
-                            f"leggibile automaticamente. Serve uno scan più nitido per estrarre "
-                            f"nome/numero/scadenza e validare i check-digit.")
-                        continue
                 if pp.get("is_document"):
-                    ver = pp.get("verdetto") or "?"
-                    lines.append(
-                        f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO D'IDENTITÀ:\n"
-                        f"  {pp.get('tipo') or 'documento'} · {pp.get('cognome') or ''} {pp.get('nome') or ''} · "
-                        f"n. {pp.get('numero') or '?'} · {pp.get('nazionalita') or '?'} · "
-                        f"scad. {pp.get('scadenza') or '?'}\n"
-                        f"  MRZ {'valida ✅' if pp.get('mrz_valido') else 'NON valida ⚠️'} · "
-                        f"verdetto **{ver}** (risk {pp.get('risk_score')})"
-                        + (f"\n  ⚠️ {pp.get('anomalie')}" if pp.get('anomalie') else ""))
+                    testa = (f"{pp.get('tipo') or 'documento'} · "
+                             f"{pp.get('cognome') or ''} {pp.get('nome') or ''} · "
+                             f"n. {pp.get('numero') or '?'} · {pp.get('nazionalita') or '?'} · "
+                             f"scad. {pp.get('scadenza') or '?'}")
+                    if pp.get("mrz_valido") is not None:  # lettura MRZ verificata
+                        ver = pp.get("verdetto") or "?"
+                        lines.append(
+                            f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO ({pp.get('fonte')}):\n"
+                            f"  {testa}\n"
+                            f"  MRZ {'valida ✅' if pp.get('mrz_valido') else 'NON valida ⚠️'} · "
+                            f"verdetto **{ver}** (risk {pp.get('risk_score')})"
+                            + (f"\n  ⚠️ {pp.get('anomalie')}" if pp.get('anomalie') else ""))
+                    else:  # fallback lettura AI Claude — da confermare
+                        lines.append(
+                            f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO:\n"
+                            f"  {testa}\n"
+                            f"  📷 {pp.get('fonte')}")
                 else:
                     r = _t_read_document(file_url=url) or {}
                     txt = (r.get("text") or "").strip()
