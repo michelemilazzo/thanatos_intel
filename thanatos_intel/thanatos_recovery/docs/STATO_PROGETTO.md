@@ -17,7 +17,7 @@
 | 1 | **DocType** `Wallet Recovery Job` | `thanatos_recovery/doctype/wallet_recovery_job/` (custom:1, vive nel DB) | ✅ Funziona |
 | 2 | **API backend** (7 endpoint) | `thanatos_recovery/api/recovery_api.py` | ✅ Testato E2E |
 | 3 | **Vault** (RSA keys, cifratura, TTL cleanup) | `thanatos_recovery/api/vault_manager.py` + `/mnt/thanatos-box/recovery-vault/` | ✅ Funziona |
-| 4 | **CLI offline** `thanatos-recovery-cli` | `thanatos_recovery/api/thanatos_recovery_cli.py` | ✅ Crypto provata / ⏳ btcrecover non ancora su HW reale |
+| 4 | **CLI offline** `thanatos-recovery-cli` (usa `seedrecover.py`) | `thanatos_recovery/api/thanatos_recovery_cli.py` | ✅ Recupero reale provato (BIP39 + Ledger passphrase) |
 | 5 | **Form desk** (cifratura RSA browser) | `public/js/wallet_recovery_form.js` | ✅ Testato roundtrip |
 | 6 | **Scheduler** cleanup TTL 48h | `hooks.py` → `scheduler_events['daily']` | ✅ Agganciato |
 
@@ -28,9 +28,9 @@
 ## 🔄 Il flusso (7 passi)
 
 1. Staff apre un Investigation Case → bottone **Wallet Recovery** (Tools)
-2. Inserisce wallet type + seed parziale (`????`) → **il browser cifra RSA-4096**, sale solo il ciphertext
+2. Inserisce wallet type + **seed guess a lunghezza piena** + **indirizzo noto** (obbligatorio!) + eventuale passphrase Ledger → **il browser cifra RSA-4096** il seed, sale solo il ciphertext
 3. Job creato (`WRJ-00001`…), stato `Uploaded`
-4. Staff clicca **Generate Command** → comando CLI con `--private-key`
+4. Staff clicca **Generate Command** → comando CLI con `--private-key --known-address` (+ `--passphrase-list` se Ledger)
 5. Copia la private key + comando su **macchina air-gapped**, esegue `thanatos-recovery-cli` (btcrecover)
 6. Il CLI produce `seed_output.enc` + `seed_output.enc.key` (Fernet) → staff carica il `.enc`
 7. Link di download HMAC (48h) → condiviso al cliente; la `.key` va su **canale separato**
@@ -44,23 +44,27 @@
 - Creazione job singola **e batch multi-job** (`create_recovery_batch`)
 - Cifratura RSA lato browser (WebCrypto) ↔ decifratura CLI Python: **roundtrip provato**
 - CLI: RSA-decrypt input + Fernet result con **chiave persistita** (ri-decifrabile dal cliente)
+- **btcrecover REALE (seedrecover 1.13)**: recupero di una parola sbagliata validato sull'indirizzo → `Seed found` ✅
+- **Ledger / passphrase**: passphrase persa recuperata da lista candidati validando sull'indirizzo derivato ✅
+- **CLI E2E completo reale**: guess cifrato RSA → decifra → seedrecover → Fernet → decifra al seed corretto ✅
 - Download endpoint live (403 su token errato = route OK)
 - Secret HMAC persistente (no più hardcoded)
 - Cleanup TTL nello scheduler daily
-- Bug trovati e risolti: 5 (vedi QA_TEST_RESULTS.md)
+- Bug trovati e risolti: 5 + motore CLI riscritto (vedi QA_TEST_RESULTS.md)
 
-**Commit**: `3f47573` (fix backend + batch) · `92338dd` (doc) · `ff0d5b8` (RSA browser)
+**Commit**: `3f47573` (fix backend + batch) · `92338dd` (doc) · `ff0d5b8` (RSA browser) · `f1430e6` (seedrecover reale + Ledger)
 
 ---
 
-## ⏳ MANCA (deferito, richiede risorse fisiche/decisioni)
+## ⏳ MANCA (solo hardening produzione, niente codice bloccante)
 
 | Cosa | Perché non fatto | Serve |
 |------|------------------|-------|
-| **btcrecover reale** | serve macchina air-gapped fisica con btcrecover + wordlist | 1 recovery machine offline |
-| **Ledger hardware** | oggi mappato a `bip39`; conferma on-device è feature a sé | device Ledger + decisione scope |
+| **Recovery machine di produzione** | il recupero è provato su dev con seed di test; in produzione va su macchina **air-gapped** dedicata con `git clone` di btcrecover (NON `pip install`, non è su PyPI) + `cryptography` + `bip_utils` | 1 macchina offline allestita |
 | **Security audit / pen-test** | va fatto sul flusso deployato completo | slot di test dedicato |
 | **Staff training reale** | la guida c'è; manca la sessione + firma certificazione | organizzare sessione |
+
+> ⚠️ **Requisito chiave emerso dal test reale**: il recupero è impossibile senza un **indirizzo noto** del wallet (o xpub). seedrecover valida i candidati derivando gli indirizzi e confrontandoli: senza target, qualsiasi seed con checksum valido sembrerebbe corretto. Il campo `known_address` è ora obbligatorio.
 
 ---
 

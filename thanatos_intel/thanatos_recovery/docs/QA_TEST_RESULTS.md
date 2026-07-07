@@ -81,6 +81,34 @@ riga scheduler `osint.official_documents.docuengine_poll_pending`. Rilevata a di
 
 ---
 
+## 🔬 Test btcrecover REALE (2026-07-07, commit `f1430e6`)
+
+Eseguito su dev con btcrecover 1.13 (`3rdIteration/btcrecover`) e seed di test
+noti (nessun fondo reale). **Prima esecuzione reale del motore nel progetto.**
+
+### Scoperte (bug di design del motore)
+- **BUG-6 (Critica)**: il wrapper chiamava `btcrecover.py --tokens --bip39` — sbagliato.
+  Il recupero seed usa **`seedrecover.py`**. Riscritto.
+- **BUG-7 (Critica)**: senza un **indirizzo noto** (`--addrs`) il recupero è
+  impossibile — qualsiasi seed con checksum valido sembra corretto. Aggiunto campo
+  `known_address` (obbligatorio) + `--known-address` nel comando.
+- **BUG-8 (Media)**: `pip install btcrecover` non esiste (non è su PyPI). Install =
+  `git clone`. Corretta la guida staff.
+- **Nota**: serve `--language en` esplicito (parole ambigue en/fr).
+
+### Prove
+| Scenario | Comando | Esito |
+|----------|---------|-------|
+| #1 parola sbagliata (12ª) | `seedrecover --wallet-type bip39 --language en --addrs bc1q... --big-typos 1` | ✅ `Seed found: ...about` |
+| #2 Ledger passphrase persa | `... --passphrase-list pplist.txt --addrs <addr con passphrase>` | ✅ `Matched with BIP39 Passphrase: zebra123` |
+| CLI E2E completo | RSA-decrypt input → seedrecover → Fernet output | ✅ output decifrato = seed corretto completo |
+
+### Cosa resta per la produzione
+Il recupero è provato su dev; in produzione va allestita la **macchina air-gapped**
+(git clone btcrecover + cryptography + bip_utils). Il codice è pronto.
+
+---
+
 ## ⏭️ Deferiti (non implementati in questo giro)
 
 - **Real BTCRecover su recovery machine**: richiede la macchina air-gapped fisica con

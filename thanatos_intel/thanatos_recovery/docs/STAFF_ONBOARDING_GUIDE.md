@@ -47,15 +47,25 @@ The **Wallet Recovery Tool** helps clients recover lost or partially-remembered 
 ### Recovery Machine Setup
 If you'll be performing recovery:
 1. Obtain an air-gapped machine (no internet)
-2. Install BTCRecover:
+2. Install BTCRecover — **it is NOT on PyPI**, clone it (do this once, while briefly online, then take the machine offline):
    ```bash
-   pip install btcrecover cryptography pycryptodome
+   git clone https://github.com/3rdIteration/btcrecover.git /opt/btcrecover
+   python3 -m venv /opt/btcr_env
+   /opt/btcr_env/bin/pip install -r /opt/btcrecover/requirements.txt
+   /opt/btcr_env/bin/pip install cryptography bip_utils
+   export THANATOS_BTCRECOVER_DIR=/opt/btcrecover
    ```
-3. Copy the CLI tool:
+   (Ignore build errors for exotic altcoins like `groestlcoin-hash` — not needed for BTC/BIP39.)
+3. Copy the CLI tool and run it with that venv's python:
    ```bash
-   cp /usr/local/bin/thanatos-recovery-cli <recovery_machine>
+   cp thanatos-recovery-cli /opt/thanatos-recovery-cli
+   # esegui con: /opt/btcr_env/bin/python /opt/thanatos-recovery-cli ...
    ```
 4. Keep offline and secure
+
+> **Serve sempre un indirizzo noto del wallet.** seedrecover valida i candidati
+> derivando gli indirizzi: senza un indirizzo (o xpub) noto il recupero è
+> impossibile. Chiedilo al cliente insieme al seed guess.
 
 ---
 
@@ -122,18 +132,25 @@ thanatos-recovery-cli \
   --input-file /mnt/thanatos-box/recovery-vault/WRJ-00001/seed_input.enc \
   --private-key /mnt/thanatos-box/recovery-vault/keys/private.pem \
   --wallet-type bip39 \
-  --missing-words 3 \
+  --known-address bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu \
+  --missing-words 1 \
   --wordlist english \
   --output-file /mnt/thanatos-box/recovery-vault/WRJ-00001/seed_output.enc
 ```
+
+Per un wallet **Ledger** (o BIP39 con passphrase) il comando include anche
+`--passphrase-list .../passphrases.txt` (generato dal form dai candidati inseriti).
 
 The command is generated for you by the desk form ("Generate Command") — copy it as-is.
 
 - `--private-key` decrypts the client's RSA-encrypted seed. The vault private key
   (`keys/private.pem`) must be copied to the air-gapped machine before running, and
   wiped after.
-- `--wallet-type` accepts only `bip39` / `electrum` / `bip38` (the form maps the
-  wallet type automatically).
+- `--known-address` è l'indirizzo noto del wallet: **obbligatorio**, è il target
+  che valida quale candidato è quello giusto.
+- `--wallet-type` accetta `bip39` (copre anche Ledger) o `electrum2` (il form mappa
+  il tipo automaticamente).
+- `--missing-words N` = quante parole mancanti/sbagliate; `0` se cerchi solo la passphrase.
 
 **Keep Safe**: This command contains the encrypted seed location and the vault private key path. Don't share with the client.
 
@@ -157,15 +174,17 @@ The command is generated for you by the desk form ("Generate Command") — copy 
 
 3. **Run command** (copy the vault `private.pem` to the machine first):
    ```bash
-   thanatos-recovery-cli \
+   /opt/btcr_env/bin/python /opt/thanatos-recovery-cli \
      --job-id WRJ-00001 \
      --input-file ~/recovery/seed_input.enc \
      --private-key ~/recovery/private.pem \
      --wallet-type bip39 \
-     --missing-words 3 \
+     --known-address bc1q...  \
+     --missing-words 1 \
      --wordlist english \
      --output-file ~/recovery/seed_output.enc
    ```
+   (Il comando esatto lo genera il form desk — copialo da lì.)
 
 4. **Wait**: BTCRecover will search (5 min to 1 hour depending on difficulty)
 
