@@ -48,7 +48,7 @@ def _gateway(message, system="", task_type="extract", session_id=None):
     try:
         r = requests.post(
             f"{url}/chat",
-            json={"session_id": session_id or frappe.generate_hash(length=12),
+            json={"session_id": session_id or f"{frappe.local.site}:{frappe.session.user}:{frappe.generate_hash(length=8)}",
                   "task_type": task_type, "message": message, "system": system},
             headers={"X-MMOS-AI-KEY": key, "Content-Type": "application/json"},
             timeout=180,
