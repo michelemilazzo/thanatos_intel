@@ -913,7 +913,6 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
         want_read = bool(re.search(r"legg|analizz|contenut|contengon|apri|cosa c", tl))
         if want_read:
             lines = [f"📎 Leggo gli ultimi allegati WhatsApp:"]
-            vision_budget = 3  # letture-visione free per batch (quick, evita timeout web)
             for d in docs[:8]:
                 url = d.get("url")
                 is_img = str(d.get("file") or "").lower().endswith(
@@ -936,24 +935,12 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
                 looks_id = is_img and any(k in txt.upper() for k in
                                           ("PASSPORT", "PASSAPORTO", "REPUBBLICA", "CARTA D",
                                            "IDENTITY", "IDENTITA", "MRZ", "<<"))
-                # documento scadente → lettura-visione OpenRouter free (veloce) solo per
-                # i primi (budget), il resto on-demand: evita timeout se il free tier è lento
-                if looks_id and vision_budget > 0:
-                    vision_budget -= 1
-                    v = _openrouter_vision_id(_url_to_path(url), quick=True) if _url_to_path(url) else None
-                    if v:
-                        lines.append(
-                            f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 DOCUMENTO "
-                            f"(lettura AI free, DA CONFERMARE):\n"
-                            f"  {v.get('tipo') or 'documento'} · {v.get('cognome') or ''} {v.get('nome') or ''} · "
-                            f"n. {v.get('numero') or '?'} · {v.get('nazionalita') or '?'} · "
-                            f"scad. {v.get('scadenza') or '?'}"
-                            + (f" · sesso {v.get('sesso')}" if v.get('sesso') else ""))
-                        continue
+                # documento scadente → lettura-visione on-demand (OpenRouter ~5s per file):
+                # in blocco N letture sincrone sforerebbero il timeout web.
                 if looks_id:
                     lines.append(
                         f"\n• **{d.get('file')}** (caso {d.get('caso')}) — 🛂 documento d'identità "
-                        f"(foto scarsa). Dimmi «leggi il documento {d.get('file')}» per l'estrazione AI.")
+                        f"(foto scarsa). Dimmi «leggi il documento {d.get('file')}» per l'estrazione AI (~5s).")
                     continue
                 snippet = (txt[:400] + "…") if len(txt) > 400 else (txt or "(vuoto/illeggibile)")
                 lines.append(f"\n• **{d.get('file')}** — da {d.get('da')} "
