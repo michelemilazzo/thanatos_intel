@@ -62,7 +62,52 @@ def _extract_text(file_path: str) -> str:
             text = pytesseract.image_to_string(img, lang="eng+ita")
         except Exception as e:
             frappe.log_error(f"OCR fail: {e}", "PassportAnalyzer")
+    # pass MRZ-mirato: banda inferiore, upscale, threshold, whitelist OCR-B.
+    # Le righe MRZ vengono ACCODATE così _find_mrz le può agganciare anche quando
+    # l'OCR generale del documento è sporco.
+    if ext in (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"):
+        mrz = _mrz_ocr(file_path)
+        if mrz:
+            text = (text or "") + "\n" + mrz
     return text
+
+
+_MRZ_WL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<"
+
+
+def _mrz_ocr(file_path: str) -> str:
+    """OCR ottimizzato per la banda MRZ (ICAO 9303): ritaglia il terzo inferiore,
+    ingrandisce, binarizza e usa tesseract con whitelist OCR-B. Prova la banda e,
+    in fallback, l'immagine intera."""
+    try:
+        import cv2
+        import numpy as np
+        import pytesseract
+    except Exception:
+        return ""
+    try:
+        img = cv2.imread(file_path)
+        if img is None:
+            return ""
+        h, w = img.shape[:2]
+        cfg = f"--psm 6 --oem 1 -c tessedit_char_whitelist={_MRZ_WL}"
+        out = []
+        for crop in (img[int(h * 0.68):, :], img):
+            g = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            scale = max(1, int(1600 / max(1, g.shape[1])))
+            if scale > 1:
+                g = cv2.resize(g, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            g = cv2.GaussianBlur(g, (3, 3), 0)
+            g = cv2.threshold(g, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+            txt = pytesseract.image_to_string(g, config=cfg)
+            for ln in txt.splitlines():
+                c = "".join(ch for ch in ln.upper() if ch in _MRZ_WL)
+                if c.count("<") >= 3 and 30 <= len(c) <= 50:
+                    out.append(c)
+        return "\n".join(out)
+    except Exception as e:
+        frappe.log_error(f"MRZ OCR fail: {e}", "PassportAnalyzer")
+        return ""
 
 
 def _find_mrz(text: str):
@@ -75,6 +120,11 @@ def _find_mrz(text: str):
     for i in range(len(cleaned) - 1):
         if cleaned[i].startswith("P") and len(cleaned[i + 1]) == 44:
             return cleaned[i], cleaned[i + 1]
+    # tolleranza: riga1 con molti '<' (nome) seguita da riga2 alfanumerica densa
+    for i in range(len(cleaned) - 1):
+        l1, l2 = cleaned[i], cleaned[i + 1]
+        if l1.count("<") >= 5 and sum(c.isdigit() for c in l2) >= 10:
+            return l1, l2
     return None, None
 
 
