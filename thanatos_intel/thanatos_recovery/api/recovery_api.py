@@ -21,12 +21,13 @@ from cryptography.hazmat.primitives import serialization
 VAULT_BASE_PATH = "/mnt/thanatos-box/recovery-vault"
 VAULT_TTL_HOURS = 48
 
-# Mappa il valore del campo DocType "Wallet Type" all'argomento --wallet-type del CLI
+# Mappa il valore del campo DocType "Wallet Type" all'argomento --wallet-type
+# di seedrecover.py (valori verificati: bip39, electrum2).
 WALLET_TYPE_CLI_MAP = {
     "BIP39 Seed": "bip39",
-    "Electrum Seed": "electrum",
-    "BIP38 Encrypted": "bip38",
-    "Ledger Passphrase": "bip39",  # Ledger usa derivazione BIP39 + passphrase
+    "Electrum Seed": "electrum2",
+    "Ledger Passphrase": "bip39",  # Ledger = BIP39 + passphrase (25a parola)
+    # "BIP38 Encrypted": non supportato da seedrecover (usa btcrecover.py, chiave privata cifrata)
 }
 
 
@@ -88,7 +89,8 @@ def get_or_create_keys():
 # ==================== FRAPPE API ENDPOINTS ====================
 
 @frappe.whitelist()
-def create_recovery_job(case_id, wallet_type=None, missing_words_count=None, wordlist_type=None):
+def create_recovery_job(case_id, wallet_type=None, missing_words_count=None,
+                        wordlist_type=None, known_address=None, passphrase_candidates=None):
     """
     Crea un nuovo Wallet Recovery Job legato a un caso
 
@@ -113,6 +115,10 @@ def create_recovery_job(case_id, wallet_type=None, missing_words_count=None, wor
         job.missing_words_count = int(missing_words_count)
     if wordlist_type:
         job.wordlist_type = wordlist_type
+    if known_address:
+        job.known_address = known_address.strip()
+    if passphrase_candidates:
+        job.passphrase_candidates = passphrase_candidates
     job.insert()
 
     _log_audit(job.name, f"Job created by {frappe.session.user}")
@@ -232,13 +238,30 @@ def generate_cli_command(job_id, parameters):
     if not cli_wallet_type:
         frappe.throw(f"Wallet type non supportato dal CLI: {job.wallet_type}")
 
+    known_address = (job.known_address or "").strip()
+    if not known_address:
+        frappe.throw("Known Address obbligatorio: senza indirizzo noto seedrecover non può validare i candidati.")
+
+    # Passphrase candidate (Ledger/BIP39): scritte in un file nel vault del job,
+    # referenziato con --passphrase-list. Da copiare offline con gli altri file.
+    passphrase_line = ""
+    if (job.passphrase_candidates or "").strip():
+        candidates = [c.strip() for c in job.passphrase_candidates.splitlines() if c.strip()]
+        pp_file = Path(vault_job_path)
+        pp_file.mkdir(parents=True, exist_ok=True)
+        pp_path = pp_file / "passphrases.txt"
+        pp_path.write_text("\n".join(candidates) + "\n")
+        os.chmod(pp_path, 0o600)
+        passphrase_line = f" \\\n  --passphrase-list {vault_job_path}/passphrases.txt"
+
     cmd = f"""thanatos-recovery-cli \\
   --job-id {job_id} \\
   --input-file {vault_job_path}/seed_input.enc \\
   --private-key {VAULT_BASE_PATH}/keys/private.pem \\
   --wallet-type {cli_wallet_type} \\
-  --missing-words {params.get('missing_words_count', 3)} \\
-  --wordlist {params.get('wordlist_type', 'english')} \\
+  --known-address {known_address} \\
+  --missing-words {params.get('missing_words_count', 0)} \\
+  --wordlist {params.get('wordlist_type', 'english')}{passphrase_line} \\
   --output-file {vault_job_path}/seed_output.enc"""
 
     # Salva comando nel doctype

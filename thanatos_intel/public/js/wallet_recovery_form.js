@@ -121,15 +121,22 @@ function show_wallet_recovery_modal(frm) {
         label: __('Wallet Type'),
         fieldname: 'wallet_type',
         fieldtype: 'Select',
-        options: ['BIP39 Seed', 'Electrum Seed', 'BIP38 Encrypted', 'Ledger Passphrase'],
+        options: ['BIP39 Seed', 'Electrum Seed', 'Ledger Passphrase'],
         reqd: 1
       },
       {
-        label: __('Missing Words'),
+        label: __('Missing / Wrong Words'),
         fieldname: 'missing_words_count',
         fieldtype: 'Int',
         default: 1,
-        description: __('Numero di parole mancanti/sbagliate')
+        description: __('Quante parole sono mancanti o sbagliate (0 se cerchi solo la passphrase)')
+      },
+      {
+        label: __('Known Address (obbligatorio)'),
+        fieldname: 'known_address',
+        fieldtype: 'Data',
+        reqd: 1,
+        description: __('Un indirizzo noto del wallet (es. bc1...) o xpub. Serve a validare: senza, il recupero è impossibile.')
       },
       {
         fieldname: 'cb_params',
@@ -143,17 +150,23 @@ function show_wallet_recovery_modal(frm) {
         default: 'english'
       },
       {
-        label: __('Seed Input (Partial)'),
+        label: __('Passphrase Candidates (Ledger)'),
+        fieldname: 'passphrase_candidates',
+        fieldtype: 'Small Text',
+        description: __('Solo per Ledger/BIP39 con 25ª parola: una passphrase candidata per riga. Vuoto se non applicabile.')
+      },
+      {
+        label: __('Seed Guess'),
         fieldname: 'seed_input',
         fieldtype: 'Small Text',
         reqd: 1,
-        description: __('Usa ???? per le parole mancanti. Cifrato nel browser (RSA-4096) prima dell\'invio — il testo in chiaro non lascia mai questa pagina.')
+        description: __('Miglior guess del seed a lunghezza piena (12/24 parole). Riempi le posizioni ignote con una parola BIP39 valida qualsiasi (es. "abandon"). Cifrato nel browser (RSA-4096): il testo in chiaro non lascia mai questa pagina.')
       }
     ],
     primary_action_label: __('🔐 Cifra e crea job'),
     primary_action(values) {
-      if (!values.wallet_type || !values.seed_input) {
-        frappe.throw(__('Compila wallet type e seed input'));
+      if (!values.wallet_type || !values.seed_input || !values.known_address) {
+        frappe.throw(__('Compila wallet type, known address e seed guess'));
       }
       if (!(window.crypto && window.crypto.subtle)) {
         frappe.throw(__('WebCrypto non disponibile: usa un browser moderno su HTTPS.'));
@@ -171,8 +184,10 @@ function show_wallet_recovery_modal(frm) {
         args: {
           case_id: frm.doc.name,
           wallet_type: values.wallet_type,
-          missing_words_count: values.missing_words_count || 1,
-          wordlist_type: values.wordlist_type || 'english'
+          missing_words_count: values.missing_words_count || 0,
+          wordlist_type: values.wordlist_type || 'english',
+          known_address: values.known_address,
+          passphrase_candidates: values.passphrase_candidates || ''
         }
       }).then(function (r) {
         if (!r.message) throw new Error('create_recovery_job vuoto');

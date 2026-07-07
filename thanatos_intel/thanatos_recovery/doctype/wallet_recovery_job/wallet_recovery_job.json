@@ -63,6 +63,18 @@
       "default": "english"
     },
     {
+      "fieldname": "known_address",
+      "fieldtype": "Data",
+      "label": "Known Address (validation target)",
+      "description": "Indirizzo noto del wallet o xpub. OBBLIGATORIO per validare i candidati."
+    },
+    {
+      "fieldname": "passphrase_candidates",
+      "fieldtype": "Small Text",
+      "label": "Passphrase Candidates (Ledger/BIP39)",
+      "description": "Una passphrase per riga (Ledger 25a parola). Vuoto se non applicabile."
+    },
+    {
       "fieldname": "password_hint",
       "fieldtype": "Small Text",
       "label": "Password/Passphrase Hint (optional)",
