@@ -383,11 +383,21 @@ def operator_assistant_reply(lead_name, wa_phone, sender, text, operator):
     negatività, patrimoniale, dossier, proforma, fascicolo, doppia cessione, domande,
     cluster, analisi completa…) e risponde con l'esito — non è un semplice chatbot.
     Senza caso, risponde col contesto (lead/casi recenti)."""
+    # Contesto conversazionale: la history recente della chat WA cosi'
+    # il brain non "perde la chat" tra un messaggio e l'altro
+    try:
+        from thanatos_intel.ingest.wa_bot import _history
+        convo = _history(lead_name)
+    except Exception:
+        convo = ""
+    contextualized = ((f"Storico conversazione WhatsApp con l'operatore:\n{convo}\n\n"
+                       f"Nuovo messaggio dell'operatore: {text}") if convo else text)
+
     case = _resolve_case(lead_name, text)
     if case:
         try:
             from thanatos_intel.ai.case_assistant import case_ai_chat
-            r = case_ai_chat(case, text) or {}
+            r = case_ai_chat(case, contextualized) or {}
             out = (r.get("reply") or "").strip()
             if out:
                 _reply(wa_phone, sender, lead_name, out)
@@ -398,8 +408,9 @@ def operator_assistant_reply(lead_name, wa_phone, sender, text, operator):
     resp = None
     try:
         from thanatos_intel.ai.ops_brain import answer as ops_answer
-        out = (ops_answer(text, operator=operator, lead_name=lead_name,
-                          session_id=f"op-{operator}") or "").strip()
+        # session_id stabile per lead+operatore = coerenza tra turni
+        out = (ops_answer(contextualized, operator=operator, lead_name=lead_name,
+                          session_id=f"op-{operator}-{lead_name}") or "").strip()
     except Exception:
         frappe.log_error(frappe.get_traceback(), "operator ops_brain")
         out = ""
