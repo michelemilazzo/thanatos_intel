@@ -298,6 +298,22 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
     if _HELP_RE.search(t):
         _reply(wa_phone, sender, lead_name, _help_text(operator))
         return
+    # Messaggio composto SOLO da URL/wallet → auto-ingest sul caso di contesto
+    # (l'operatore sta spammando indirizzi; niente chiacchiere, li mette nel caso)
+    if _ONLY_URL_WALLET_RE.match(t):
+        case = _last_case_from_recent(lead_name) or frappe.db.get_value(
+            "Intel Lead", lead_name, "linked_case")
+        if case:
+            frappe.enqueue(
+                "thanatos_intel.ingest.operator_console.run_add_docs_to_case",
+                queue="short", timeout=180,
+                lead_name=lead_name, case=case, wa_phone=wa_phone,
+                sender=sender, operator=operator, minutes=1440,
+            )
+            _reply(wa_phone, sender, lead_name,
+                   f"📎 Ricevuto. Aggiungo al caso *{case}* i link/wallet della "
+                   f"conversazione recente. Ti confermo con l'''esito.")
+            return
     # messaggio operatore libero → assistente AI operativo (co-pilota), in background
     frappe.enqueue(
         "thanatos_intel.ingest.operator_console.operator_assistant_reply",
@@ -368,6 +384,61 @@ _CASE_MENTION_RE = re.compile(
     r"(?:\bcas[oei]?\s+(\d{1,5})\b)",     # caso 10, caso 0010
     re.I,
 )
+
+
+# Message composto SOLO da URL http(s) e/o wallet address → auto-ingest
+_ONLY_URL_WALLET_RE = re.compile(
+    r"^\s*(?:"
+    r"(?:https?://[^\s<>\"]+)|"
+    r"(?:bc1[ac-hj-np-z02-9]{6,87})|"
+    r"(?:[13][a-km-zA-HJ-NP-Z1-9]{25,34})|"
+    r"(?:0x[a-fA-F0-9]{40})|"
+    r"(?:T[1-9A-HJ-NP-Za-km-z]{33})"
+    r")(?:\s+(?:"
+    r"(?:https?://[^\s<>\"]+)|"
+    r"(?:bc1[ac-hj-np-z02-9]{6,87})|"
+    r"(?:[13][a-km-zA-HJ-NP-Z1-9]{25,34})|"
+    r"(?:0x[a-fA-F0-9]{40})|"
+    r"(?:T[1-9A-HJ-NP-Za-km-z]{33})"
+    r"))*\s*$"
+)
+
+
+def _last_case_from_recent(lead_name, n=8):
+    """Ritorna l'ultimo CASE-YYYY-N (o abbreviato) menzionato negli ultimi N
+    messaggi Inbound del lead. Uso per il contesto caso quando l'operatore
+    spamma URL/wallet dopo aver detto 'sono sul caso X'."""
+    rows = frappe.get_all("Intel Lead Message",
+        filters={"parent": lead_name, "direction": "Inbound"},
+        fields=["content"], order_by="sent_at desc", limit=n)
+    for r in rows:
+        c = _resolve_case_from_text(r.get("content") or "")
+        if c:
+            return c
+    return None
+
+
+def _resolve_case_from_text(text):
+    """Estrae il primo caso dal testo, come _resolve_case ma senza fallback."""
+    from frappe.utils import today
+    current_year = today().split("-")[0]
+    for m in _CASE_MENTION_RE.finditer(text or ""):
+        y_full, n_full, y_short, n_short, n_only = m.groups()
+        candidates = []
+        if y_full and n_full:
+            candidates.append(f"CASE-{y_full}-{n_full}")
+        elif y_short and n_short:
+            candidates.append(f"CASE-{y_short}-{n_short}")
+        elif n_only:
+            n = n_only.zfill(4)
+            candidates.append(f"CASE-{current_year}-{n}")
+            for y in range(int(current_year) - 1, int(current_year) - 4, -1):
+                candidates.append(f"CASE-{y}-{n}")
+        for c in candidates:
+            c = c.upper()
+            if frappe.db.exists("Investigation Case", c):
+                return c
+    return None
 
 
 def _resolve_case(lead_name, text):
