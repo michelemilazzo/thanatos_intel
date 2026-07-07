@@ -300,13 +300,14 @@ def _t_read_passport(file_url=None, vision=True, **kw):
             "verdetto": r.get("verdict"), "risk_score": r.get("risk_score"),
             "anomalie": r.get("anomalies"),
         }
-    # MRZ non leggibile → fallback lettura-visione. Prima OpenRouter free
-    # (veloce, gratis), poi Claude CLI (più lento ma robusto).
+    # MRZ non leggibile → lettura-visione. OpenRouter free (veloce, gratis);
+    # Claude CLI solo se richiesto esplicitamente (claude_fallback=True): è ~90s
+    # e da solo rischia il timeout web, quindi off di default nel percorso chat.
     if not vision:
         return {"is_document": False, "nota": "MRZ non leggibile (foto scarsa)"}
     v = _openrouter_vision_id(path)
     fonte = "lettura AI (OpenRouter free)"
-    if not v:
+    if not v and kw.get("claude_fallback"):
         v = _claude_vision_id(path)
         fonte = "lettura AI (Claude)"
     if v:
@@ -314,12 +315,12 @@ def _t_read_passport(file_url=None, vision=True, **kw):
         v["fonte"] = f"{fonte} — DA CONFERMARE sull'originale"
         return v
     return {"is_document": False,
-            "nota": "documento non riconosciuto o immagine illeggibile"}
+            "nota": "modelli visione occupati (free tier): riprova tra poco, "
+                    "oppure carica uno scan più nitido per la lettura MRZ verificata"}
 
 
 # modelli visione free su OpenRouter, in ordine di preferenza (fallback su 429)
 _OR_VISION_MODELS = ("nvidia/nemotron-nano-12b-v2-vl:free",
-                     "google/gemma-4-31b-it:free",
                      "google/gemma-4-26b-a4b-it:free")
 
 
@@ -351,7 +352,7 @@ def _openrouter_vision_id(path):
         req = urllib.request.Request(f"{url}/chat/completions", data=body, headers={
             "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
         try:
-            r = _json.loads(urllib.request.urlopen(req, timeout=45).read())
+            r = _json.loads(urllib.request.urlopen(req, timeout=22).read())
             txt = r["choices"][0]["message"]["content"]
             u = r.get("usage") or {}
             _track("openrouter", model, int(u.get("prompt_tokens", 0)),
