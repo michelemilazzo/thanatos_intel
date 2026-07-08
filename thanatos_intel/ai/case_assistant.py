@@ -251,16 +251,21 @@ def case_ai_chat(case, message, lead_name=None, wa_phone=None, sender=None):
             except Exception:
                 existing_names = set()
             if candidate.lower() not in existing_names:
+                # NON passa investigation_case: screening_kyc crea SEMPRE un
+                # Evidence sul caso se lo riceve, il che equivarrebbe ad
+                # associare la persona al caso senza chiedere. Il legame va
+                # confermato dall'''operatore.
                 from thanatos_intel.osint.openapi_client import screening_kyc
-                r = screening_kyc(candidate, mode="full", investigation_case=case)
+                r = screening_kyc(candidate, mode="full")
                 if r.get("error"):
                     return done(f"⚠️ Screening «{candidate}»: {r['error']}", "screening_persona")
                 hl = "; ".join(h["nome"] for h in (r.get("hits") or [])[:8]) or "nessun match"
                 lines = [f"🛂 Screening *{candidate}* (PEP/sanzioni/adverse media): "
                         f"{r.get('match', 0)} match — {hl}",
                         "",
-                        "_Nota: nome non presente nei reperti del fascicolo — "
-                        "se collegato al caso, aggiungilo come entità._"]
+                        f"*{candidate}* non risulta nei reperti di *{case}*. "
+                        f"È collegato a questo caso? Se sì, dimmelo e lo registro come "
+                        f"reperto — non lo aggancio in automatico."]
                 return done("\n".join(lines), "screening_persona")
         _enq("thanatos_intel.integrations.company_screen.screen_case_parties", "Screening parti", case,
              lead_name=lead_name, wa_phone=wa_phone, sender=sender)
