@@ -335,8 +335,12 @@ def auto_ingest_case_media(lead_name, file_url, wa_phone=None):
                 case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
                 if not case:
                     try:
+                        from thanatos_intel.ai.doc_ingest import _read_text_fallback
                         ocr = ocr_file(file_url, "generic") or {}
-                        case = _match_existing_case_by_identifier(ocr.get("raw_text") or "")
+                        text = (ocr.get("raw_text") or "").strip()
+                        if not text:
+                            text = (_read_text_fallback(file_url) or "").strip()
+                        case = _match_existing_case_by_identifier(text)
                     except Exception:
                         frappe.log_error(frappe.get_traceback(), "auto_ingest match_existing")
                         case = None
