@@ -236,6 +236,17 @@ def process_media_attachment(lead_name: str, media_id: str, media_type: str,
 
         frappe.db.commit()
 
+        # Auto-ingest: ogni immagine/documento arrivato su WA diventa SUBITO
+        # un reperto — nessun comando manuale richiesto. Il routing (caso
+        # esistente agganciato / caso esistente per stesso soggetto / caso
+        # nuovo) e' deciso da auto_ingest_case_media().
+        if media_type in ("image", "document"):
+            frappe.enqueue(
+                "thanatos_intel.ingest.voice_notes.auto_ingest_case_media",
+                queue="long", timeout=300,
+                lead_name=lead_name, file_url=file_doc.file_url, wa_phone=wa_phone,
+            )
+
         # bot AI prende atto del media ricevuto e prosegue la conversazione
         if notify_bot:
             try:
@@ -245,3 +256,109 @@ def process_media_attachment(lead_name: str, media_id: str, media_type: str,
                 frappe.log_error(frappe.get_traceback(), f"wa_bot media {lead_name}")
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"process_media_attachment {lead_name}")
+
+
+_PIVA_RE = __import__("re").compile(r"\b\d{11}\b")
+_CF_RE = __import__("re").compile(r"\b[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]\b")
+
+
+def _match_existing_case_by_identifier(text):
+    """Cerca un caso APERTO che gia' contiene lo stesso identificativo forte
+    (P.IVA 11 cifre o Codice Fiscale) del nuovo documento, tra le sintesi AI
+    dei reperti gia' presenti. Match UNIVOCO -> ritorna il caso; se
+    ambiguo (l'identificativo compare in piu' casi aperti) o assente,
+    ritorna None — si preferisce aprire un caso nuovo piuttosto che
+    sbagliare l'aggancio."""
+    ids = set(_PIVA_RE.findall(text or "")) | set(_CF_RE.findall((text or "").upper()))
+    for ident in ids:
+        rows = frappe.db.sql("""
+            SELECT DISTINCT ie.investigation_case AS c
+            FROM `tabInvestigation Evidence` ie
+            JOIN `tabInvestigation Case` ic ON ic.name = ie.investigation_case
+            WHERE ie.notes LIKE %s AND ic.status NOT IN ('Closed', 'Cancelled')
+        """, (f"%{ident}%",), as_dict=True)
+        cases = {r["c"] for r in rows}
+        if len(cases) == 1:
+            return cases.pop()
+    return None
+
+
+@frappe.whitelist()
+def auto_ingest_case_media(lead_name, file_url, wa_phone=None):
+    """Ingest automatico di un'immagine/documento appena arrivato su WhatsApp.
+
+    Routing:
+      1) chat gia' agganciata a un caso -> reperto in quel caso
+      2) chat senza caso -> cerca un caso APERTO con lo stesso P.IVA/CF gia'
+         visto nei reperti (match univoco); se trovato, aggancia la chat li'
+      3) nessun match -> apre un caso NUOVO (stessa pipeline di "apri un caso",
+         classifica tutti gli allegati recenti del lead)
+
+    Se il documento e' un'identita' (passport/id_card) lancia anche
+    l'analyzer MRZ dedicato per i dati anagrafici strutturati (nome, data di
+    nascita, numero documento). Notifica sempre l'operatore con l'esito."""
+    from thanatos_intel.ai.doc_ingest import ingest_document
+    from thanatos_intel.ai.ocr_service import ocr_file
+    from thanatos_intel.ingest.operator_console import _reply, run_open_case
+
+    sender = frappe.db.get_value("Intel Lead", lead_name, "source_identifier")
+    case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+    matched_now = False
+
+    if not case:
+        try:
+            ocr = ocr_file(file_url, "generic") or {}
+            case = _match_existing_case_by_identifier(ocr.get("raw_text") or "")
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "auto_ingest match_existing")
+            case = None
+        if case:
+            frappe.db.set_value("Intel Lead", lead_name, "linked_case", case)
+            frappe.db.commit()
+            matched_now = True
+        else:
+            # nessun caso esistente corrisponde: ne apre uno nuovo con tutti
+            # gli allegati recenti del lead (stessa logica di "apri un caso")
+            return run_open_case(lead_name, wa_phone=wa_phone, sender=sender, operator=None)
+
+    try:
+        r = ingest_document(file_url=file_url, investigation_case=case,
+                            document_type="generic") or {}
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"auto_ingest_case_media {case}")
+        return {"ok": False}
+
+    ex = r.get("extracted") or {}
+    doc_type = ex.get("document_type", "generic")
+    summary = (ex.get("summary") or "").strip()
+    header = f"\U0001F4CE Nuovo reperto in *{case}*"
+    if matched_now:
+        header += " (stesso soggetto di un caso gia\' aperto)"
+    lines = [header + f": {doc_type}"]
+    if summary:
+        lines.append(summary[:300])
+
+    if doc_type in ("passport", "id_card"):
+        try:
+            from thanatos_intel.thanatos_documents.passport import analyzer
+            pr = analyzer.analyze_file(file_url=file_url, investigation_case=case)
+            if pr and pr.get("name"):
+                paa = frappe.get_doc("Passport Analysis", pr["name"])
+                if paa.surname or paa.given_names:
+                    lines.append("")
+                    lines.append("\U0001F6C2 Documento identita\' letto:")
+                    lines.append(f"{paa.surname or ''} {paa.given_names or ''}".strip())
+                    if paa.date_of_birth:
+                        lines.append(f"Nato: {paa.date_of_birth}")
+                    if paa.document_number:
+                        lines.append(f"Doc: {paa.document_number}")
+                    lines.append(f"Verdetto: {paa.verdict or 'n/d'}")
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"auto_ingest passport {case}")
+
+    if wa_phone and sender:
+        try:
+            _reply(wa_phone, sender, lead_name, "\n".join(lines))
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "auto_ingest_case_media reply")
+    return {"ok": True, "case": case, "document_type": doc_type}

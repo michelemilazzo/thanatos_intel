@@ -69,6 +69,18 @@ def _extract_text(file_path: str) -> str:
         mrz = _mrz_ocr(file_path)
         if mrz:
             text = (text or "") + "\n" + mrz
+    # Fallback vision AI: tesseract (generale + MRZ-mirato) non ha trovato
+    # nulla di utile — tipico su thumbnail WhatsApp compresse. Stesso motore
+    # usato da ocr_service.py (OpenRouter, autorizzato dall'utente per l'uso
+    # su WhatsApp).
+    if not text.strip() and ext in (".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"):
+        try:
+            from thanatos_intel.ai.ocr_service import _vision_ocr_image
+            vtext = _vision_ocr_image(file_path)
+            if vtext:
+                text = vtext
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "PassportAnalyzer vision fallback")
     return text
 
 
