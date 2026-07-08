@@ -20,6 +20,7 @@ READ_ROLES = (
 	"Investigator",
 	"Lawyer",
 	"Accountant",
+	"WalletSaaS Read",   # integrazione wallet-saas: sola lettura casi (import wallet)
 )
 WRITE_ROLES = (
 	"System Manager",
@@ -34,6 +35,7 @@ SUPERVISOR_ROLES = (
 FULL_ACCESS_ROLES = (
 	"System Manager",
 	"Investigation Manager",
+	"WalletSaaS Read",   # integrazione wallet-saas: lettura completa (import wallet dai casi)
 )
 
 
