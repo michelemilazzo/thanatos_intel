@@ -209,6 +209,19 @@ frappe.ui.form.on('Investigation Case', {
                 });
             }, __('File'));
 
+            frm.add_custom_button(__('Esporta wallet (CSV)'), () => {
+                const rows = (frm.doc.case_entities || []).filter(e => e.entity_type === 'Wallet' && (e.entity || '').trim());
+                if (!rows.length) { frappe.msgprint(__('Nessun wallet nel caso')); return; }
+                const chainOf = a => a.startsWith('T') ? 'tron' : (a.startsWith('0x') ? 'ethereum' : 'bitcoin');
+                const esc = s => '"' + String(s || '').replace(/"/g, '""') + '"';
+                const lines = ['chain,address,label,notes'];
+                rows.forEach(e => { const a = (e.entity || '').trim(); lines.push([chainOf(a), a, esc(e.role_in_case), esc(e.notes)].join(',')); });
+                const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob), el = document.createElement('a');
+                el.href = url; el.download = frm.doc.name + '_wallets.csv'; el.click(); URL.revokeObjectURL(url);
+                frappe.show_alert(__('Esportati {0} wallet', [rows.length]));
+            }, __('Wallet-SaaS'));
+
             frm.add_custom_button(__('Documenti cliente'), () => {
                 frappe.call({
                     method: 'thanatos_intel.reporting.case_file_delivery.case_documents',
