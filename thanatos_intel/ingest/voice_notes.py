@@ -306,20 +306,53 @@ def auto_ingest_case_media(lead_name, file_url, wa_phone=None):
     matched_now = False
 
     if not case:
-        try:
-            ocr = ocr_file(file_url, "generic") or {}
-            case = _match_existing_case_by_identifier(ocr.get("raw_text") or "")
-        except Exception:
-            frappe.log_error(frappe.get_traceback(), "auto_ingest match_existing")
-            case = None
-        if case:
-            frappe.db.set_value("Intel Lead", lead_name, "linked_case", case)
-            frappe.db.commit()
-            matched_now = True
+        # Lock per evitare che piu' media arrivati in rapida successione
+        # (parallelizzati su piu' worker) aprano CIASCUNO un caso nuovo per
+        # lo stesso lead. Solo chi prende il lock decide; gli altri aspettano
+        # il suo esito invece di duplicare.
+        import time
+        lock_key = f"auto_ingest_case_lock:{lead_name}"
+        got_lock = bool(frappe.cache.set(lock_key, "1", nx=True, ex=120))
+        if not got_lock:
+            for _ in range(10):
+                time.sleep(1.5)
+                case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+                if case:
+                    break
+            if not case:
+                # l'altro job non ha ancora finito: ri-accoda invece di
+                # rischiare un caso duplicato (evita anche loop stretti)
+                frappe.enqueue(
+                    "thanatos_intel.ingest.voice_notes.auto_ingest_case_media",
+                    queue="long", timeout=300,
+                    lead_name=lead_name, file_url=file_url, wa_phone=wa_phone,
+                )
+                return {"ok": False, "reason": "requeued, case decision in progress"}
         else:
-            # nessun caso esistente corrisponde: ne apre uno nuovo con tutti
-            # gli allegati recenti del lead (stessa logica di "apri un caso")
-            return run_open_case(lead_name, wa_phone=wa_phone, sender=sender, operator=None)
+            try:
+                # doppio controllo: un altro job potrebbe aver appena
+                # agganciato il caso mentre aspettavamo il lock
+                case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+                if not case:
+                    try:
+                        ocr = ocr_file(file_url, "generic") or {}
+                        case = _match_existing_case_by_identifier(ocr.get("raw_text") or "")
+                    except Exception:
+                        frappe.log_error(frappe.get_traceback(), "auto_ingest match_existing")
+                        case = None
+                    if case:
+                        frappe.db.set_value("Intel Lead", lead_name, "linked_case", case)
+                        frappe.db.commit()
+                        matched_now = True
+                    else:
+                        # nessun caso esistente corrisponde: ne apre uno nuovo
+                        # (stessa logica di "apri un caso")
+                        result = run_open_case(lead_name, wa_phone=wa_phone,
+                                               sender=sender, operator=None)
+                        frappe.cache.delete(lock_key)
+                        return result
+            finally:
+                frappe.cache.delete(lock_key)
 
     try:
         r = ingest_document(file_url=file_url, investigation_case=case,

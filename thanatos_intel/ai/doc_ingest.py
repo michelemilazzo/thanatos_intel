@@ -199,6 +199,11 @@ def _doc_forensics(file_url):
 
 
 def _create_evidence(file_url, case, parsed, ocr, forensics=None):
+    # dedup: stesso file gia' ingerito su questo caso -> non duplicare
+    existing = frappe.db.get_value("Investigation Evidence",
+        {"investigation_case": case, "attached_file": file_url}, "name")
+    if existing:
+        return existing
     forensics = forensics or {}
     parsed = parsed or {}
     auth_raw = (parsed.get("authenticity") or "non_determinabile").lower().replace(" ", "_")
