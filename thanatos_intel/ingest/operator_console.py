@@ -525,7 +525,8 @@ def operator_assistant_reply(lead_name, wa_phone, sender, text, operator):
     if case:
         try:
             from thanatos_intel.ai.case_assistant import case_ai_chat
-            r = case_ai_chat(case, contextualized) or {}
+            r = case_ai_chat(case, contextualized, lead_name=lead_name,
+                             wa_phone=wa_phone, sender=sender) or {}
             out = (r.get("reply") or "").strip()
             if out:
                 _reply(wa_phone, sender, lead_name, out)

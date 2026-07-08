@@ -80,13 +80,44 @@ def crea_mandato(case):
 
 
 # ── Router intent → strumento ───────────────────────────────────────────────
-def _enq(method, **kw):
-    frappe.enqueue(method, queue="long", timeout=2400, **kw)
+def _enq(method, label, case, lead_name=None, wa_phone=None, sender=None, **kw):
+    """Accoda un job background. Se ha il contesto WA (lead_name/wa_phone/
+    sender), lo fa passare da _run_and_notify cosi' l'operatore riceve SEMPRE
+    un messaggio di completamento (successo o errore), non solo l'ack
+    iniziale — altrimenti il job finiva solo in Case Activity e su WhatsApp
+    sembrava "inceppato" per sempre."""
+    if lead_name and wa_phone and sender:
+        frappe.enqueue(
+            "thanatos_intel.ai.case_assistant._run_and_notify",
+            queue="long", timeout=2400,
+            target_method=method, label=label, case=case,
+            lead_name=lead_name, wa_phone=wa_phone, sender=sender, job_kwargs=kw,
+        )
+    else:
+        frappe.enqueue(method, queue="long", timeout=2400, case=case, **kw)
+
+
+def _run_and_notify(target_method, label, case, lead_name, wa_phone, sender, job_kwargs=None):
+    """Esegue il job originale e manda SEMPRE l'esito su WhatsApp (successo o
+    errore) — chiude il gap per cui i comandi background rispondevano solo
+    con l'ack iniziale e mai col risultato finale."""
+    from thanatos_intel.ingest.operator_console import _reply
+    fn = frappe.get_attr(target_method)
+    try:
+        fn(case=case, **(job_kwargs or {}))
+        body = (f"✅ {label} completato su *{case}*.\n"
+                f"🔗 {frappe.utils.get_url('/app/investigation-case/' + case)}")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), f"case_assistant job {label}")
+        body = f"⚠️ {label} su *{case}* ha incontrato un errore. Controlla il log su Desk."
+    _reply(wa_phone, sender, lead_name, body)
 
 
 @frappe.whitelist()
-def case_ai_chat(case, message):
-    """Chat operativa sul caso: esegue lo strumento richiesto o risponde col contesto."""
+def case_ai_chat(case, message, lead_name=None, wa_phone=None, sender=None):
+    """Chat operativa sul caso: esegue lo strumento richiesto o risponde col contesto.
+    lead_name/wa_phone/sender (opzionali) instradano la notifica di
+    completamento dei comandi background su WhatsApp."""
     t = (message or "").lower().strip()
     if not t:
         return {"reply": "Dimmi pure cosa vuoi fare sul caso."}
@@ -187,22 +218,60 @@ def case_ai_chat(case, message):
         genera_formulario(case)
         return done("📋 Formulario investigativo generato (domande+normativa+strategia).", "formulario")
     if re.search(r"fascicolo", t):
-        _enq("thanatos_intel.reporting.fascicolo.genera_fascicolo", case=case)
+        _enq("thanatos_intel.reporting.fascicolo.genera_fascicolo", "Fascicolo integrale", case,
+             lead_name=lead_name, wa_phone=wa_phone, sender=sender)
         return done("📑 Genero il fascicolo integrale (in background).", "fascicolo")
     if re.search(r"doppia cession|riconcili.*cession", t):
-        _enq("thanatos_intel.ai.cession_recon.detect_double_cession", case=case)
+        _enq("thanatos_intel.ai.cession_recon.detect_double_cession", "Rilevatore doppia cessione", case,
+             lead_name=lead_name, wa_phone=wa_phone, sender=sender)
         return done("🔁 Rilevatore doppia cessione avviato (esito nelle attività).", "doppia_cessione")
     if re.search(r"domand", t):
-        _enq("thanatos_intel.ai.doc_questions.generate_questions", case=case, post=0)
+        _enq("thanatos_intel.ai.doc_questions.generate_questions", "Domande investigative", case,
+             lead_name=lead_name, wa_phone=wa_phone, sender=sender, post=0)
         return done("🕵️ Genero le domande investigative per ogni documento (in background).", "domande")
     if re.search(r"screening|sanzion|vies", t):
-        _enq("thanatos_intel.integrations.company_screen.screen_case_parties", case=case)
+        # Se il messaggio nomina una persona specifica NON gia' tra le entita'
+        # del caso, screen_case_parties() la ignorerebbe (screena solo le
+        # entita' gia' collegate) -> il nome richiesto sparirebbe nel nulla.
+        # Screening persona singola e' una lookup rapida: la eseguo SINCRONA
+        # (via lo stesso screening_kyc usato per "screening PEP <nome>") e
+        # rispondo subito col risultato reale, niente background silenzioso.
+        name_m = re.search(
+            r"screening\s+(?:su\s+|per\s+|di\s+)?"
+            r"([A-ZÀ-Ý][\wÀ-ÿ'\.]+(?:\s+[A-ZÀ-Ý][\wÀ-ÿ'\.]+){0,4})",
+            message or "")
+        candidate = (name_m.group(1).strip() if name_m else "")
+        if candidate and not re.search(r"^(parti|tutto|tutti|caso|società|azienda)$", candidate, re.I):
+            try:
+                c_doc = frappe.get_doc("Investigation Case", case)
+                existing_names = {
+                    (frappe.db.get_value("Investigation Entity", ce.entity, "full_name") or "").lower()
+                    for ce in (c_doc.case_entities or [])
+                }
+            except Exception:
+                existing_names = set()
+            if candidate.lower() not in existing_names:
+                from thanatos_intel.osint.openapi_client import screening_kyc
+                r = screening_kyc(candidate, mode="full", investigation_case=case)
+                if r.get("error"):
+                    return done(f"⚠️ Screening «{candidate}»: {r['error']}", "screening_persona")
+                hl = "; ".join(h["nome"] for h in (r.get("hits") or [])[:8]) or "nessun match"
+                lines = [f"🛂 Screening *{candidate}* (PEP/sanzioni/adverse media): "
+                        f"{r.get('match', 0)} match — {hl}",
+                        "",
+                        "_Nota: nome non presente nei reperti del fascicolo — "
+                        "se collegato al caso, aggiungilo come entità._"]
+                return done("\n".join(lines), "screening_persona")
+        _enq("thanatos_intel.integrations.company_screen.screen_case_parties", "Screening parti", case,
+             lead_name=lead_name, wa_phone=wa_phone, sender=sender)
         return done("🔎 Screening parti avviato (VIES/sanzioni).", "screening")
     if re.search(r"riconcil.*fattur|fattur.*xml|riconciliazione", t):
-        _enq("thanatos_intel.integrations.fatturapa.reconcile_invoices", case=case)
+        _enq("thanatos_intel.integrations.fatturapa.reconcile_invoices", "Riconciliazione fatture", case,
+             lead_name=lead_name, wa_phone=wa_phone, sender=sender)
         return done("🧾 Riconciliazione fatture avviata.", "riconciliazione")
     if re.search(r"analisi completa|analizza tutto|esegui tutto|pipeline", t):
-        _enq("thanatos_intel.ai.case_orchestrator.run_full_analysis", case=case)
+        _enq("thanatos_intel.ai.case_orchestrator.run_full_analysis", "Pipeline completa", case,
+             lead_name=lead_name, wa_phone=wa_phone, sender=sender)
         return done("▶ Pipeline completa avviata (esito + checklist nelle attività).", "full")
     # — documenti DocuEngine a P.IVA singola (fascicolo, statuto, soci/esponenti, bilancio XBRL) —
     _DE_CHAT = [
