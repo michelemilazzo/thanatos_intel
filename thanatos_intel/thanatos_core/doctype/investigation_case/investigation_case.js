@@ -226,13 +226,15 @@ frappe.ui.form.on('Investigation Case', {
                             const pub = d.published ? `<span style="color:#2ea043">✔ pubblicato</span>` : '';
                             return `<tr><td style="padding:4px 8px;border-top:1px solid #eee">${frappe.utils.escape_html(d.file_name)}</td>
                                 <td style="padding:4px 8px;border-top:1px solid #eee">${sel}</td>
-                                <td style="padding:4px 8px;border-top:1px solid #eee">${pub}</td></tr>`;
+                                <td style="padding:4px 8px;border-top:1px solid #eee">${pub}</td>
+                                <td style="padding:4px 8px;border-top:1px solid #eee"><button class="btn btn-xs btn-default tnt-link" data-file="${d.name}">🔗 Link</button></td></tr>`;
                         }).join('');
                         const warn = m.has_client ? '' : `<div style="color:#c0392b;margin-top:10px">⚠ Il caso non ha un cliente collegato: i documenti non possono essere pubblicati nel portale.</div>`;
                         const html = `<table style="width:100%;font-size:13px"><thead><tr>
                             <th style="text-align:left;padding:4px 8px">Documento</th>
                             <th style="text-align:left;padding:4px 8px">Visibilità</th>
-                            <th style="text-align:left;padding:4px 8px">Stato</th></tr></thead>
+                            <th style="text-align:left;padding:4px 8px">Stato</th>
+                            <th style="text-align:left;padding:4px 8px">Link condivisibile</th></tr></thead>
                             <tbody>${rows}</tbody></table>${warn}`;
                         const dlg = new frappe.ui.Dialog({
                             title: __('Documenti del caso — cosa vede il cliente'),
@@ -273,6 +275,24 @@ frappe.ui.form.on('Investigation Case', {
                             frappe.call({
                                 method: 'thanatos_intel.reporting.case_file_delivery.set_document_visibility',
                                 args: { file: $(this).data('file'), visibilita: $(this).val() }
+                            });
+                        });
+                        dlg.$body.find('.tnt-link').on('click', function () {
+                            frappe.call({
+                                method: 'thanatos_intel.reporting.case_file.share_link',
+                                args: { file: $(this).data('file'), ttl_hours: 72 },
+                                freeze: true, freeze_message: __('Genero il link…'),
+                                callback(r3) {
+                                    const u = (r3.message || {}).url;
+                                    if (!u) { frappe.msgprint(__('Impossibile generare il link.')); return; }
+                                    const d2 = new frappe.ui.Dialog({
+                                        title: __('Link condivisibile (valido 72h)'),
+                                        fields: [{ fieldtype: 'Small Text', fieldname: 'u', label: __('URL — apribile senza login'), default: u, read_only: 1 }],
+                                        primary_action_label: __('Copia'),
+                                        primary_action() { navigator.clipboard.writeText(u); frappe.show_alert({ message: __('Link copiato'), indicator: 'green' }); d2.hide(); }
+                                    });
+                                    d2.show();
+                                }
                             });
                         });
                         dlg.show();
