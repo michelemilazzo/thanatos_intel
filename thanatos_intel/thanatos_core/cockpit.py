@@ -315,3 +315,46 @@ def ai_brief():
     except Exception:
         pass
     return {"ok": True, "text": text}
+
+
+# Configurazione ricerca globale cockpit: (doctype, campo-label, campi extra per sottotitolo, route)
+_SEARCH_TARGETS = [
+    ("Investigation Case", "case_title", ["client", "status"], "Investigation Case"),
+    ("Intel Lead", "content", ["source_type", "status"], "Intel Lead"),
+    ("Investigation Entity", "full_name", ["entity_type"], "Investigation Entity"),
+    ("Investigation Evidence", "evidence_name", ["case", "source"], "Investigation Evidence"),
+    ("Investigation Report", "report_title", ["case"], "Investigation Report"),
+]
+
+
+@frappe.whitelist()
+def search(q):
+    """Ricerca globale del cockpit su piu' doctype Thanatos. Best-effort per target."""
+    q = (q or "").strip()
+    if len(q) < 2:
+        return []
+    like = "%" + q + "%"
+    out = []
+    for dt, label_field, extra, route in _SEARCH_TARGETS:
+        try:
+            meta = frappe.get_meta(dt)
+            fields = ["name"]
+            has_label = label_field and meta.has_field(label_field)
+            if has_label:
+                fields.append(label_field)
+            for f in extra:
+                if meta.has_field(f) and f not in fields:
+                    fields.append(f)
+            or_filters = {"name": ["like", like]}
+            if has_label:
+                or_filters[label_field] = ["like", like]
+            rows = frappe.get_all(dt, or_filters=or_filters, fields=fields,
+                                  order_by="modified desc", limit=6)
+            for r in rows:
+                label = (r.get(label_field) if has_label else None) or r.get("name")
+                sub = " · ".join(str(r.get(f)) for f in extra if r.get(f))
+                out.append({"doctype": dt, "route": route, "name": r.get("name"),
+                            "label": label, "sub": sub})
+        except Exception:
+            continue
+    return out[:24]

@@ -57,7 +57,12 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 
 		// Header + Intel suggerisce
 		h += `<div class="tc-head"><div><div class="tc-hi">Ciao, ${esc((d.fullname || '').split(' ')[0] || 'operatore')}</div>
-			<div class="tc-sub">Ecco la tua giornata — ${frappe.datetime.str_to_user(frappe.datetime.now_date())}</div></div></div>`;
+			<div class="tc-sub">Ecco la tua giornata — ${frappe.datetime.str_to_user(frappe.datetime.now_date())}</div></div>
+			<div class="tc-search">
+				<span class="tc-search-ic">🔎</span>
+				<input type="text" class="tc-search-in" placeholder="Cerca casi, lead, entità, reperti…" autocomplete="off">
+				<div class="tc-search-res"></div>
+			</div></div>`;
 
 		h += '<div class="tc-section-t">🧠 Intel suggerisce</div><div class="tc-sugg">';
 		(d.suggerimenti || []).forEach((s, i) => {
@@ -188,6 +193,54 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		$root.find('.tc-nav-l').on('click', function () { const k = $(this).data('kind'), t = String($(this).data('to')); if (k === 'DocType') go('List', t); else if (t.indexOf('http') === 0 || t.indexOf('/') === 0) window.open(t, '_blank'); else go(t); });
 
 		tcBrief($root);
+		wireSearch($root);
+	}
+
+	function wireSearch($root) {
+		const $box = $root.find('.tc-search');
+		const $in = $box.find('.tc-search-in');
+		const $res = $box.find('.tc-search-res');
+		let timer = null, seq = 0, items = [], active = -1;
+
+		function close() { $res.removeClass('open').empty(); items = []; active = -1; }
+		function open(rows) {
+			items = rows || [];
+			if (!items.length) { $res.addClass('open').html('<div class="tc-search-empty">Nessun risultato</div>'); active = -1; return; }
+			let hh = '';
+			items.forEach((r, i) => {
+				hh += `<div class="tc-search-row" data-i="${i}">
+					<span class="tc-tag">${esc(r.doctype)}</span>
+					<span class="tc-search-lbl">${esc(r.label)}</span>
+					${r.sub ? `<span class="tc-mut">${esc(r.sub)}</span>` : ''}</div>`;
+			});
+			$res.addClass('open').html(hh);
+			active = -1;
+			$res.find('.tc-search-row').on('mousedown', function (e) { e.preventDefault(); pick($(this).data('i')); });
+		}
+		function pick(i) { const r = items[i]; if (r) { close(); $in.val(''); go('Form', r.route || r.doctype, r.name); } }
+		function run(q) {
+			const my = ++seq;
+			frappe.call('thanatos_intel.thanatos_core.cockpit.search', { q })
+				.then(r => { if (my === seq) open(r.message || []); })
+				.catch(() => { if (my === seq) close(); });
+		}
+		$in.on('input', function () {
+			const q = this.value.trim();
+			clearTimeout(timer);
+			if (q.length < 2) { close(); return; }
+			timer = setTimeout(() => run(q), 220);
+		});
+		$in.on('keydown', function (e) {
+			const $rows = $res.find('.tc-search-row');
+			if (e.key === 'ArrowDown') { active = Math.min(active + 1, items.length - 1); }
+			else if (e.key === 'ArrowUp') { active = Math.max(active - 1, 0); }
+			else if (e.key === 'Enter') { if (active >= 0) pick(active); return; }
+			else if (e.key === 'Escape') { close(); return; }
+			else { return; }
+			e.preventDefault();
+			$rows.removeClass('sel').eq(active).addClass('sel');
+		});
+		$in.on('blur', () => setTimeout(close, 150));
 	}
 
 	function tcBrief($root) {
@@ -243,9 +296,20 @@ frappe.pages['thanatos-cockpit'].on_page_load = function (wrapper) {
 		const css = `
 		.tc-wrap{padding:4px 2px 48px}
 		.tc-loading,.tc-empty{color:var(--text-muted);padding:16px;font-size:13px}
-		.tc-head{display:flex;justify-content:space-between;align-items:center;margin:6px 4px 2px}
+		.tc-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:6px 4px 2px}
 		.tc-hi{font-size:22px;font-weight:700;color:var(--text-color)}
 		.tc-sub{font-size:12px;color:var(--text-muted);margin-top:2px}
+		.tc-search{position:relative;flex:1;max-width:460px}
+		.tc-search-ic{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.6;pointer-events:none}
+		.tc-search-in{width:100%;box-sizing:border-box;padding:10px 14px 10px 36px;font-size:13px;border:1px solid var(--border-color);border-radius:8px;background:var(--card-bg);color:var(--text-color);outline:none;transition:border-color .12s}
+		.tc-search-in:focus{border-color:#C8A96E}
+		.tc-search-res{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:50;background:var(--card-bg);border:1px solid var(--border-color);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:360px;overflow-y:auto;display:none}
+		.tc-search-res.open{display:block}
+		.tc-search-row{display:flex;gap:9px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border-color);cursor:pointer}
+		.tc-search-row:last-child{border-bottom:0}
+		.tc-search-row:hover,.tc-search-row.sel{background:var(--bg-color)}
+		.tc-search-lbl{font-size:13px;color:var(--text-color);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+		.tc-search-empty{padding:12px;font-size:12px;color:var(--text-muted)}
 		.tc-section-t{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin:22px 4px 10px;font-weight:600}
 		.tc-sugg{display:flex;flex-wrap:wrap;gap:10px}
 		.tc-sg{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:13px;border:1px solid var(--border-color);background:var(--card-bg);transition:transform .12s}
