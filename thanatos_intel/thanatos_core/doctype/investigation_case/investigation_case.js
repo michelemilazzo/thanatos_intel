@@ -1195,7 +1195,7 @@ window.ThanatosVerifiche = {
 		h += '<div class="vf-foot">'
 			+ (missing ? '<button class="btn btn-xs btn-primary vf-resolve">🔗 Risolvi ' + missing + ' P.IVA mancanti</button>' : '')
 			+ '<button class="btn btn-xs btn-default vf-prev">🧾 Preventivo & pagamento cliente</button>'
-			+ '<button class="btn btn-xs btn-default vf-cat">🧰 Catalogo strumenti (free/paid)</button>'
+			+ '<button class="btn btn-xs btn-default vf-cat">🧰 Catalogo strumenti</button>'
 			+ '<button class="btn btn-xs btn-default vf-docs">📜 Documenti ufficiali (DocuEngine)</button>'
 			+ '<button class="btn btn-xs btn-default vf-free">🔎 Ricerca libera</button></div>';
 		h += '<div class="vf-out" style="display:none"></div></div>';
