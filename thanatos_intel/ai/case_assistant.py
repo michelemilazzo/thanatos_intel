@@ -104,9 +104,12 @@ def _run_and_notify(target_method, label, case, lead_name, wa_phone, sender, job
     from thanatos_intel.ingest.operator_console import _reply
     fn = frappe.get_attr(target_method)
     try:
-        fn(case=case, **(job_kwargs or {}))
-        body = (f"✅ {label} completato su *{case}*.\n"
-                f"🔗 {frappe.utils.get_url('/app/investigation-case/' + case)}")
+        result = fn(case=case, **(job_kwargs or {}))
+        if isinstance(result, dict) and result.get("wa_message"):
+            body = result["wa_message"]
+        else:
+            body = (f"✅ {label} completato su *{case}*.\n"
+                    f"🔗 {frappe.utils.get_url('/app/investigation-case/' + case)}")
     except Exception:
         frappe.log_error(frappe.get_traceback(), f"case_assistant job {label}")
         body = f"⚠️ {label} su *{case}* ha incontrato un errore. Controlla il log su Desk."
@@ -229,6 +232,21 @@ def case_ai_chat(case, message, lead_name=None, wa_phone=None, sender=None):
         _enq("thanatos_intel.ai.doc_questions.generate_questions", "Domande investigative", case,
              lead_name=lead_name, wa_phone=wa_phone, sender=sender, post=0)
         return done("🕵️ Genero le domande investigative per ogni documento (in background).", "domande")
+    if re.search(r"ricerca approfondita|profilo completo|indagine (web|approfondita)|dossier persona", t):
+        m = re.search(
+            r"(?:ricerca approfondita|profilo completo|indagine (?:web|approfondita)|"
+            r"dossier persona)\s+(?:su\s+|di\s+|per\s+)?(.+)",
+            message or "", re.I)
+        candidate = (m.group(1).strip(" ?.") if m else "")
+        if not candidate:
+            return done("Indicami il nominativo, es. «ricerca approfondita Mario Rossi».")
+        _enq("thanatos_intel.ai.deep_research.deep_person_research",
+             f"Ricerca approfondita — {candidate}", case,
+             lead_name=lead_name, wa_phone=wa_phone, sender=sender, name=candidate)
+        return done(f"🔍 Avvio ricerca approfondita su *{candidate}* (PEP/sanzioni + "
+                   f"Wikidata + CourtListener + ricerca web). Richiede qualche decina "
+                   f"di secondi, ti mando il report completo appena pronto.",
+                   "ricerca_approfondita")
     if re.search(r"screening|sanzion|vies", t):
         # Se il messaggio nomina una persona specifica NON gia' tra le entita'
         # del caso, screen_case_parties() la ignorerebbe (screena solo le
