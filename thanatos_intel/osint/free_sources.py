@@ -476,9 +476,12 @@ def lookup_courtlistener(query: str) -> dict:
     cached = _cache_get("courtlistener", query)
     if cached:
         return {**cached, "cached": True}
+    # phrase-match per query multi-parola: senza virgolette l'''API fa OR-matching
+    # su ogni singola parola (rumore massiccio su nomi comuni/generici)
+    q_param = f'"{query}"' if " " in query and not query.startswith('"') else query
     try:
         r = requests.get(COURTLISTENER_URL, headers={"user-agent": UA},
-                         params={"q": query, "type": "r"}, timeout=12)
+                         params={"q": q_param, "type": "r"}, timeout=12)
         if r.status_code == 200:
             d = r.json() or {}
             hits = [{"case": x.get("caseName"), "court": x.get("court"),
