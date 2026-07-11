@@ -197,22 +197,29 @@ def webhook():
         # dedup: la Cloud API consegna at-least-once e ritenta lo stesso wamid se
         # non riceve il 200 abbastanza in fretta -> doppie risposte. Salta i visti.
         _wamid = (m.get("wa_message_id") or "").strip()
-        if _wamid:
-            _seen = f"wa_seen:{_wamid}"
+        _seen = f"wa_seen:{_wamid}" if _wamid else None
+        if _seen:
             if frappe.cache().get_value(_seen):
                 continue
             frappe.cache().set_value(_seen, "1", expires_in_sec=900)
         # Mittente operatore? -> i suoi messaggi NON sono lead-cliente: niente notifica campanella
         _operator = find_operator(m["source_id"])
-        name = _create_lead(
-            source_id=m["source_id"],
-            source_name=m["source_name"],
-            content=m["content"],
-            media_url=m["media_url"],
-            wa_number=wa_number,
-            wa_message_id=m.get("wa_message_id", ""),
-            suppress_notify=bool(_operator),
-        )
+        try:
+            name = _create_lead(
+                source_id=m["source_id"],
+                source_name=m["source_name"],
+                content=m["content"],
+                media_url=m["media_url"],
+                wa_number=wa_number,
+                wa_message_id=m.get("wa_message_id", ""),
+                suppress_notify=bool(_operator),
+            )
+        except Exception:
+            # salvataggio lead fallito: NON marcare il wamid come visto, così il
+            # retry di Meta lo riprocessa (altrimenti la risposta captcha va persa).
+            if _seen:
+                frappe.cache().delete_value(_seen)
+            raise
         created.append(name)
 
         _wa_phone = wa_number.phone_number if wa_number else None

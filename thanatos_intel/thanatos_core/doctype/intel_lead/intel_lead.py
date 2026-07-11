@@ -39,7 +39,37 @@ class IntelLead(frappe.model.document.Document):
         return {"case": case.name, "case_url": f"/app/investigation-case/{case.name}"}
 
 
+def _is_write_conflict(exc) -> bool:
+    """Conflitto transiente di scrittura concorrente sullo stesso documento."""
+    from frappe.exceptions import TimestampMismatchError
+    if isinstance(exc, TimestampMismatchError):
+        return True
+    s = str(exc)
+    return any(k in s for k in ("1205", "Lock wait", "1213", "Deadlock",
+                                "has been modified"))
+
+
 def find_or_create_lead(source_identifier: str, source_name: str, content: str,
+                        source_type: str = "WhatsApp", media_url: str = "",
+                        wa_number: dict | None = None, wa_message_id: str = "",
+                        suppress_notify: bool = False) -> str:
+    """Wrapper con retry: due webhook/salvataggi concorrenti sullo stesso lead
+    causano TimestampMismatch / lock wait -> ritenta rifacendo la query pulita."""
+    import time
+    attempts = 5
+    for i in range(attempts):
+        try:
+            return _find_or_create_lead_once(
+                source_identifier, source_name, content, source_type, media_url,
+                wa_number, wa_message_id, suppress_notify)
+        except Exception as e:
+            frappe.db.rollback()
+            if not _is_write_conflict(e) or i == attempts - 1:
+                raise
+            time.sleep(0.2 * (i + 1))
+
+
+def _find_or_create_lead_once(source_identifier: str, source_name: str, content: str,
                         source_type: str = "WhatsApp", media_url: str = "",
                         wa_number: dict | None = None, wa_message_id: str = "",
                         suppress_notify: bool = False) -> str:

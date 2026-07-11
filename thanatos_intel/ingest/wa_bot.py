@@ -168,17 +168,25 @@ def send_text(wa_doc, to_number, body, lead_name, sent_by="Administrator"):
         mid = data["messages"][0].get("id", "") if ok else ""
     except Exception:
         frappe.log_error(frappe.get_traceback(), "wa_bot send_text")
-    try:
-        lead = frappe.get_doc("Intel Lead", lead_name)
-        lead.append("messages", {
-            "direction": "Outbound", "sent_at": now_datetime(),
-            "content": body, "status": "Inviato" if ok else "Fallito",
-            "sent_by": sent_by, "wa_message_id": mid,
-        })
-        lead.save(ignore_permissions=True)
-        frappe.db.commit()
-    except Exception:
-        frappe.log_error(frappe.get_traceback(), "wa_bot log msg")
+    import time as _time
+    from thanatos_intel.thanatos_core.doctype.intel_lead.intel_lead import _is_write_conflict
+    for _i in range(5):
+        try:
+            lead = frappe.get_doc("Intel Lead", lead_name)
+            lead.append("messages", {
+                "direction": "Outbound", "sent_at": now_datetime(),
+                "content": body, "status": "Inviato" if ok else "Fallito",
+                "sent_by": sent_by, "wa_message_id": mid,
+            })
+            lead.save(ignore_permissions=True)
+            frappe.db.commit()
+            break
+        except Exception as e:
+            frappe.db.rollback()
+            if not _is_write_conflict(e) or _i == 4:
+                frappe.log_error(frappe.get_traceback(), "wa_bot log msg")
+                break
+            _time.sleep(0.2 * (_i + 1))
     return ok
 
 
