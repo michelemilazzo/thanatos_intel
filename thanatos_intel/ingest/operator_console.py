@@ -108,6 +108,31 @@ _WEB_SEARCH_RE = re.compile(
 )
 
 
+# "esci dal contesto" / "caso nuovo": stacca la chat dal caso agganciato.
+_EXIT_CTX_RE = re.compile(
+    r"esci\s+da(l)?\s+contesto|fuori\s+da(l)?\s+contesto|reset\s+contesto|"
+    r"(caso|pratica)\s+nuov[oa]|nuov[oa]\s+(caso|pratica)|cambia\s+caso|"
+    r"scollega\s+(il\s+)?caso|stacca\s+(il\s+)?caso",
+    re.I,
+)
+
+
+def _ctx_cleared_key(lead_name):
+    return f"op_ctx_cleared:{lead_name}"
+
+
+def _set_ctx_cleared(lead_name):
+    frappe.cache().set_value(_ctx_cleared_key(lead_name), "1", expires_in_sec=6 * 3600)
+
+
+def _is_ctx_cleared(lead_name):
+    return bool(frappe.cache().get_value(_ctx_cleared_key(lead_name)))
+
+
+def _clear_ctx_flag(lead_name):
+    frappe.cache().delete_value(_ctx_cleared_key(lead_name))
+
+
 def _is_super_admin_number(sender):
     d = _digits(sender)
     return bool(d) and any(d.endswith(n) for n in _SUPER_ADMIN_NUMBERS)
@@ -185,6 +210,20 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
     t = (text or "").strip()
     if not t or t.startswith("["):
         return  # media/placeholder: gia' allegato, niente da fare
+    # Esci dal contesto del caso: stacca davvero (non solo a parole).
+    # NB: controllato PRIMA di _OPEN_CASE_RE perché "caso nuovo" non deve
+    # essere scambiato per "apri un caso".
+    if _EXIT_CTX_RE.search(t) and not _OPEN_CASE_RE.search(t):
+        _set_ctx_cleared(lead_name)
+        prev = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+        _reply(wa_phone, sender, lead_name,
+               (f"✅ Uscito dal contesto di *{prev}*." if prev else "✅ Nessun caso agganciato.")
+               + " Ora sei fuori da ogni caso.\n\n"
+               "Per procedere:\n"
+               "• *persona* → «cerca su internet <nome>» o «ricerca approfondita <nome>»\n"
+               "• *caso esistente* → cita «CASE-2026-…» o «caso <numero>»\n"
+               "• *nuovo caso* → «apri un caso» (con gli allegati)")
+        return
     if _OPEN_CASE_RE.search(t):
         frappe.enqueue(
             "thanatos_intel.ingest.operator_console.run_open_case",
@@ -532,7 +571,11 @@ def _resolve_case(lead_name, text):
         for c in candidates:
             c = c.upper()
             if frappe.db.exists("Investigation Case", c):
+                _clear_ctx_flag(lead_name)  # caso citato esplicito: rientra nel contesto
                 return c
+    # se l'operatore ha fatto "esci dal contesto", NON ricadere sul linked_case
+    if _is_ctx_cleared(lead_name):
+        return None
     return frappe.db.get_value("Intel Lead", lead_name, "linked_case")
 
 
@@ -823,6 +866,7 @@ def run_open_case(lead_name, wa_phone=None, sender=None, operator=None):
     try:
         lead = frappe.get_doc("Intel Lead", lead_name)
         lead.db_set("linked_case", case.name, notify=False)
+        _clear_ctx_flag(lead_name)  # nuovo caso aperto: diventa il contesto attivo
         lead.db_set("status", "Promosso a Caso", notify=False)
         lead.db_set("promoted_at", now_datetime(), notify=False)
         lead.db_set("promoted_by", op_user, notify=False)
