@@ -117,6 +117,42 @@ _EXIT_CTX_RE = re.compile(
 )
 
 
+# Ricerca albo professionale OCF (consulenti finanziari).
+_OCF_RE = re.compile(
+    r"\b(albo\s+ocf|ocf\b|consulent\w*\s+finanziar\w*|iscritt\w*\s+ocf|"
+    r"ricerca\s+albo|cerca\s+(all.?\s*)?albo)\b",
+    re.I,
+)
+_CAPTCHA_ANS_RE = re.compile(r"^[A-Za-z0-9]{3,8}$")
+
+
+def _ocf_await_key(lead_name):
+    return f"ocf_await:{lead_name}"
+
+
+def _ocf_answer_key(lead_name):
+    return f"ocf_captcha:{lead_name}"
+
+
+def _ocf_parse_query(text):
+    """Estrae (cognome, nome) dal comando. 'albo OCF Dell'Acquila Doriana' ->
+    cognome='Dell'Acquila', nome='Doriana' (primo token cognome, resto nome).
+    Supporta 'Cognome, Nome' con la virgola."""
+    q = text or ""
+    q = re.sub(r"\b(albo|ocf|consulent\w*|finanziar\w*|iscritt\w*|ricerca|cerc\w*|all.?\s*albo)\b", " ", q, flags=re.I)
+    q = re.sub(r"\b(su|per|di|sezione|cff|cfa|scf|persona|soggetto)\b", " ", q, flags=re.I)
+    q = re.sub(r"\s+", " ", q).strip(" :-")
+    if not q:
+        return "", ""
+    if "," in q:
+        parts = [x.strip() for x in q.split(",", 1)]
+        return parts[0], (parts[1] if len(parts) > 1 else "")
+    toks = q.split()
+    if len(toks) == 1:
+        return toks[0], ""
+    return " ".join(toks[:-1]), toks[-1]
+
+
 def _ctx_cleared_key(lead_name):
     return f"op_ctx_cleared:{lead_name}"
 
@@ -238,6 +274,35 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
     t = (text or "").strip()
     if not t or t.startswith("["):
         return  # media/placeholder: gia' allegato, niente da fare
+    # Se il bot sta aspettando il captcha OCF, il messaggio dell'operatore E'
+    # la soluzione: lo passo al job in attesa (via cache) e non lo instrado.
+    if frappe.cache().get_value(_ocf_await_key(lead_name)):
+        if _CAPTCHA_ANS_RE.match(t):
+            frappe.cache().set_value(_ocf_answer_key(lead_name), t, expires_in_sec=180)
+            _reply(wa_phone, sender, lead_name, "🔎 Ricevuto, completo la ricerca all'albo…")
+            return
+        else:
+            # non sembra un captcha: l'operatore ha cambiato idea -> annullo l'attesa
+            frappe.cache().delete_value(_ocf_await_key(lead_name))
+    # Ricerca albo OCF: apre il browser, manda il captcha, attende la soluzione.
+    if _OCF_RE.search(t):
+        cognome, nome = _ocf_parse_query(t)
+        if not cognome:
+            _reply(wa_phone, sender, lead_name,
+                   "Indicami il nominativo, es. «albo OCF Dell'Acquila Doriana».")
+            return
+        sez = ""
+        ms = re.search(r"\b(cff|cfa|scf)\b", t, re.I)
+        if ms:
+            sez = ms.group(1).upper()
+        frappe.enqueue("thanatos_intel.osint.albo_ocf.run_ocf_search",
+                       queue="long", timeout=300,
+                       lead_name=lead_name, cognome=cognome, nome=nome, sezione=sez,
+                       wa_phone=wa_phone, sender=sender)
+        _reply(wa_phone, sender, lead_name,
+               f"🔐 Apro l'albo OCF per *{cognome} {nome}*. Tra poco ti mando "
+               "l'immagine del captcha: scrivimi il codice e completo la ricerca.")
+        return
     # Esci dal contesto del caso: stacca davvero (non solo a parole).
     # NB: controllato PRIMA di _OPEN_CASE_RE perché "caso nuovo" non deve
     # essere scambiato per "apri un caso".

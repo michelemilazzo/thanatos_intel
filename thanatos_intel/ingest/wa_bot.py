@@ -182,6 +182,51 @@ def send_text(wa_doc, to_number, body, lead_name, sent_by="Administrator"):
     return ok
 
 
+def send_image(wa_doc, to_number, image_bytes, caption, lead_name, filename="captcha.png"):
+    """Carica un'immagine su Meta (media API) e la invia come messaggio image.
+    Usato per mandare all'operatore il captcha OCF da risolvere."""
+    from frappe.utils.password import get_decrypted_password
+    pnid = wa_doc.meta_phone_number_id
+    token = get_decrypted_password("WhatsApp Number", wa_doc.name, "meta_access_token")
+    if not pnid or not token:
+        return False
+    to_clean = (to_number or "").lstrip("+").replace(" ", "").replace("-", "")
+    try:
+        import requests
+        # 1) upload media
+        up = requests.post(
+            f"https://graph.facebook.com/v21.0/{pnid}/media",
+            data={"messaging_product": "whatsapp", "type": "image/png"},
+            files={"file": (filename, image_bytes, "image/png")},
+            headers={"Authorization": f"Bearer {token}"}, timeout=30)
+        media_id = (up.json() or {}).get("id")
+        if not media_id:
+            frappe.log_error(str(up.text)[:500], "wa send_image upload")
+            return False
+        # 2) invia messaggio image
+        resp = requests.post(
+            f"https://graph.facebook.com/v21.0/{pnid}/messages",
+            json={"messaging_product": "whatsapp", "recipient_type": "individual",
+                  "to": to_clean, "type": "image",
+                  "image": {"id": media_id, "caption": caption[:1000]}},
+            headers={"Authorization": f"Bearer {token}"}, timeout=20)
+        ok = resp.status_code == 200 and bool((resp.json() or {}).get("messages"))
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "wa_bot send_image")
+        ok = False
+    try:
+        lead = frappe.get_doc("Intel Lead", lead_name)
+        lead.append("messages", {"direction": "Outbound", "sent_at": now_datetime(),
+                                 "content": f"[immagine] {caption}"[:200],
+                                 "status": "Inviato" if ok else "Fallito",
+                                 "sent_by": "Administrator"})
+        lead.save(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        pass
+    return ok
+
+
 def _handoff(lead_name, wa_doc):
     """Passa la conversazione a un operatore umano: assegna + notifica."""
     assignee = (wa_doc.auto_assign_to or "").strip() or "Administrator"
