@@ -7,6 +7,15 @@ il collegamento prima che venga registrato come reperto."""
 import frappe
 
 
+def _maps_link(address):
+    """Link Google Maps per un indirizzo (usabile su dati strutturati)."""
+    import urllib.parse
+    if not address:
+        return ""
+    q = urllib.parse.quote_plus(address.strip())
+    return f"https://www.google.com/maps/search/?api=1&query={q}"
+
+
 def _web_research(name):
     """Ricerca web live via Perplexity Sonar (OpenRouter) — risposta con
     citazioni reali. Ritorna (testo, fonti) o ('', []) se non disponibile."""
@@ -22,7 +31,11 @@ def _web_research(name):
         f"(positive o negative), controversie legali, sanzioni, fallimenti, "
         f"indagini, procedimenti giudiziari. Sii prudente e fattuale: se non "
         f"trovi riscontri affidabili per qualcosa, dillo esplicitamente "
-        f"invece di inventare o supporre. Cita sempre le fonti."
+        f"invece di inventare o supporre. Cita sempre le fonti. "
+        f"Se emerge un INDIRIZZO/sede, aggiungi il link Google Maps "
+        f"(https://www.google.com/maps/search/?api=1&query=INDIRIZZO+urlencoded). "
+        f"Chiudi con «Prossimi passi»: 2-4 suggerimenti operativi concreti per "
+        f"l'investigatore (albi da verificare, registri, controlli incrociati)."
     )
     try:
         r = requests.post(
@@ -64,7 +77,12 @@ def web_search(query):
         f"riscontri reali trovati online. REGOLA FERREA: se non trovi una "
         f"fonte affidabile per un'informazione, dillo esplicitamente invece "
         f"di inventare o supporre — questo serve a un'indagine, i dati falsi "
-        f"sono peggio di nessun dato. Cita sempre le fonti (URL)."
+        f"sono peggio di nessun dato. Cita sempre le fonti (URL). "
+        f"Se emerge un INDIRIZZO o un luogo, aggiungi il link Google Maps "
+        f"(https://www.google.com/maps/search/?api=1&query=INDIRIZZO+urlencoded). "
+        f"Chiudi con una sezione «Prossimi passi» con 2-4 suggerimenti operativi "
+        f"concreti per l'investigatore (verifiche, fonti da consultare, "
+        f"controlli incrociati), pertinenti a ciò che hai trovato."
     )
     try:
         r = requests.post(
