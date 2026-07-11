@@ -94,6 +94,39 @@ _TRACE_WALLETS_RE = re.compile(
 _ROLE_RANK = {"super_admin": 3, "admin": 2, "investigator": 1, "guest": 0}
 
 
+# Numeri super admin: nessuna regola/costo, ricerca web in linguaggio naturale
+# instradata a Perplexity (vedi operator_assistant_reply).
+_SUPER_ADMIN_NUMBERS = {"393898309015"}
+
+# Linguaggio naturale che chiede una ricerca web generica (ammette parole tra
+# il verbo e la web-word: "trova notizie online su X").
+_WEB_SEARCH_RE = re.compile(
+    r"\b(cerc\w*|ricerc\w*|guard\w*|trov\w*|informazion\w*)\b.{0,40}\b(internet|web|online|google|in\s+rete)\b"
+    r"|\b(internet|web|online)\b.{0,40}\b(cerc\w*|trov\w*|guard\w*|notizi\w*)\b"
+    r"|che\s+(cosa\s+)?si\s+trova\s+(su\s+)?(internet|web|online)",
+    re.I,
+)
+
+
+def _is_super_admin_number(sender):
+    d = _digits(sender)
+    return bool(d) and any(d.endswith(n) for n in _SUPER_ADMIN_NUMBERS)
+
+
+def _strip_web_query(text):
+    """Estrae l'oggetto della ricerca togliendo le parole-trigger ovunque
+    compaiano (Perplexity e' comunque robusto a query conversazionali)."""
+    q = text or ""
+    q = re.sub(r"\b(fai|una|per\s+favore|dimmi|cerc\w*|ricerc\w*|guard\w*|trov\w*|"
+               r"informazion\w*|notizi\w*)\b", " ", q, flags=re.I)
+    q = re.sub(r"\b(su|sul|sulla|sullo|nel|nella|in|di|del|dei|delle|riguardo|circa)\s+"
+               r"(internet|web|online|google|rete)\b", " ", q, flags=re.I)
+    q = re.sub(r"\b(internet|web|online|google|rete)\b", " ", q, flags=re.I)
+    q = re.sub(r"\s+", " ", q).strip(" :?.-")
+    q = re.sub(r"^(su|di|per|riguardo|circa|a)\s+", "", q, flags=re.I).strip()
+    return q or (text or "").strip()
+
+
 def _operator_role(operator):
     """Ritorna il ruolo dell'operatore: super_admin | admin | investigator | guest."""
     if not operator:
@@ -511,6 +544,23 @@ def operator_assistant_reply(lead_name, wa_phone, sender, text, operator):
     negatività, patrimoniale, dossier, proforma, fascicolo, doppia cessione, domande,
     cluster, analisi completa…) e risponde con l'esito — non è un semplice chatbot.
     Senza caso, risponde col contesto (lead/casi recenti)."""
+    # Ricerca web in linguaggio naturale — SOLO super admin (+393898309015):
+    # "cerca su internet ...", "trova notizie su ..." → Perplexity (ricerca
+    # vera, non allucina). Per gli altri numeri: nessuna scorciatoia, resta
+    # dietro il comando/gate di fatturazione.
+    if _is_super_admin_number(sender) and _WEB_SEARCH_RE.search(text or ""):
+        query = _strip_web_query(text)
+        if query:
+            try:
+                from thanatos_intel.ai.deep_research import web_search
+                res = web_search(query) or {}
+                body = res.get("wa_message") or "🔎 Nessun riscontro."
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "operator web_search")
+                body = "⚠️ Ricerca web non riuscita, riprova."
+            _reply(wa_phone, sender, lead_name, body)
+            return {"ok": True, "mode": "web_search"}
+
     # Contesto conversazionale: la history recente della chat WA cosi'
     # il brain non "perde la chat" tra un messaggio e l'altro
     try:
