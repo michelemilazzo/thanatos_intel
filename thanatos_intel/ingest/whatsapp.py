@@ -194,6 +194,14 @@ def webhook():
     for m in messages:
         if not m["content"] and not m["media_url"]:
             continue
+        # dedup: la Cloud API consegna at-least-once e ritenta lo stesso wamid se
+        # non riceve il 200 abbastanza in fretta -> doppie risposte. Salta i visti.
+        _wamid = (m.get("wa_message_id") or "").strip()
+        if _wamid:
+            _seen = f"wa_seen:{_wamid}"
+            if frappe.cache().get_value(_seen):
+                continue
+            frappe.cache().set_value(_seen, "1", expires_in_sec=900)
         # Mittente operatore? -> i suoi messaggi NON sono lead-cliente: niente notifica campanella
         _operator = find_operator(m["source_id"])
         name = _create_lead(

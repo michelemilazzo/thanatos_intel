@@ -91,42 +91,52 @@ def run_ocf_search(lead_name, cognome, nome="", sezione="", wa_phone=None, sende
                 return {"ok": False, "reason": "captcha timeout"}
 
             pg.fill("#captchaInput", sol.strip())
-            # click via JS: il submit e AJAX, evita lattesa-navigazione di Playwright
+            # click via JS: il submit è AJAX, evita l'attesa-navigazione di Playwright
             pg.eval_on_selector("#submitRicercaConsulenteButton", "el => el.click()")
-            # attende risultati o messaggio (max ~20s). I risultati OCF sono
-            # una DataTable renderizzata via JS: controlla i contenitori noti.
-            _SEL = ("#tableContainerBody tr, #tableContainerStorico tbody tr, "
-                    "table.dataTable tbody tr, .dataTables_wrapper tbody tr")
+            # attende i risultati: DataTable JS id #resultTable (mappato 2026-07-12)
+            _SEL = ("#resultTable tbody tr, table.dataTable tbody tr, "
+                    ".dataTables_wrapper tbody tr, #tableContainerBody tr")
             for _ in range(20):
                 pg.wait_for_timeout(1000)
                 if pg.locator(_SEL).count() > 0:
                     break
                 _bt = (pg.locator("body").inner_text() or "").lower()
-                if "captcha errato" in _bt or "nessun risultato" in _bt:
+                if ("captcha errato" in _bt or "codice errato" in _bt
+                        or "nessun risultato" in _bt):
                     break
 
             body_txt = (pg.locator("body").inner_text() or "").lower()
-            if "captcha errato" in body_txt:
+            if "captcha errato" in body_txt or "codice errato" in body_txt:
                 reply("❌ Captcha errato. Ripeti la ricerca all'albo e riprova.")
                 return {"ok": False, "reason": "wrong captcha"}
 
-            rows = pg.locator(_SEL)
+            rows = pg.locator("#resultTable tbody tr")
+            if rows.count() == 0:
+                rows = pg.locator(_SEL)
             n = rows.count()
             results = []
             for i in range(min(n, 15)):
-                t = (rows.nth(i).inner_text() or "").strip().replace("\n", " · ")
-                if t and "nessun" not in t.lower():
-                    results.append(t)
-            # log diagnostico per finalizzare dal vivo se serve
+                cells = rows.nth(i).locator("td")
+                cv = [(cells.nth(j).inner_text() or "").strip()
+                      for j in range(cells.count())]
+                if not cv or all(not c for c in cv):
+                    continue
+                if "nessun" in " ".join(cv).lower():
+                    continue
+                # colonne OCF: nome · indirizzo · sezione · stato · [Dettaglio]
+                results.append({
+                    "nome": cv[0] if len(cv) > 0 else "",
+                    "indirizzo": cv[1] if len(cv) > 1 else "",
+                    "sezione": cv[2] if len(cv) > 2 else "",
+                    "stato": cv[3] if len(cv) > 3 else "",
+                })
             if not results:
                 try:
                     tinfo = pg.evaluate(
                         "() => Array.from(document.querySelectorAll('table'))"
                         ".map(t => t.id + ':' + t.querySelectorAll('tbody tr').length)")
                     frappe.log_error(
-                        f"OCF read vuoto: rows_sel={n} no_result="
-                        f"{'nessun risultato' in body_txt} tables={tinfo}",
-                        "OCF diag")
+                        f"OCF read vuoto: rows_sel={n} tables={tinfo}", "OCF diag")
                 except Exception:
                     pass
         finally:
@@ -141,16 +151,38 @@ def run_ocf_search(lead_name, cognome, nome="", sezione="", wa_phone=None, sende
         _bill_ocf(bill_client, bill_price, lead_name)
         return {"ok": True, "count": 0}
 
-    lines = [f"🔎 *Albo OCF* — «{cognome} {nome}» ({label_sez}): "
-             f"{len(results)} riscontro/i", ""]
-    lines += [f"• {r[:200]}" for r in results[:10]]
-    if len(results) > 10:
-        lines.append(f"… e altri {len(results) - 10}")
-    lines.append("")
-    lines.append("_Fonte: Albo OCF (organismocf.it), consultazione semi-automatica._")
-    reply("\n".join(lines))
+    reply(_format_ocf_results(cognome, nome, label_sez, results))
     _bill_ocf(bill_client, bill_price, lead_name)
     return {"ok": True, "count": len(results)}
+
+
+def _format_ocf_results(cognome, nome, label_sez, results):
+    """Formatta i risultati OCF per WhatsApp: nome, stato, indirizzo + Google Maps."""
+    from urllib.parse import quote
+    q = f"{cognome} {nome}".strip()
+    lines = [f"🔎 *Albo OCF* — «{q}» ({label_sez}): {len(results)} riscontro/i", ""]
+    show = results[:10]
+    with_maps = len(show) <= 6  # link mappe solo per ricerche mirate
+    for r in show:
+        nm = r.get("nome") or "—"
+        st = r.get("stato") or ""
+        line = f"• *{nm}*" + (f" — {st}" if st else "")
+        ind = (r.get("indirizzo") or "").strip()
+        if ind and ind.upper().replace(" ", "").rstrip(".") not in ("ND", "N.D"):
+            line += f"\n   📍 {ind}"
+            if with_maps:
+                line += ("\n   🗺️ https://www.google.com/maps/search/"
+                         f"?api=1&query={quote(ind)}")
+        sez = (r.get("sezione") or "").strip()
+        if sez:
+            line += f"\n   _{sez.title()}_"
+        lines.append(line)
+    if len(results) > 10:
+        lines.append(f"… e altri {len(results) - 10}. "
+                     "Restringi col nome per risultati precisi.")
+    lines.append("")
+    lines.append("_Fonte: Albo OCF (organismocf.it), consultazione semi-automatica._")
+    return "\n".join(lines)
 
 
 def _bill_ocf(client, price, lead_name):
