@@ -575,6 +575,10 @@ _MCP_TOOLS = [
     "mcp__thanatos__case_tool", "mcp__thanatos__run_query",
     "mcp__thanatos__list_documents", "mcp__thanatos__read_document",
     "mcp__thanatos__ingest_document",
+    # Ricerca web nativa Claude Code — inclusa nell'abbonamento (NON a consumo
+    # come Perplexity). Disponibile solo per operatori (i clienti girano sui
+    # motori in-process, mai sul CLI).
+    "WebSearch", "WebFetch",
 ]
 
 _CLI_SYS = (
@@ -583,7 +587,9 @@ _CLI_SYS = (
     "tono diretto e concreto, niente disclaimer. Hai gli strumenti MCP thanatos "
     "(stats, global_search, list_cases, case_detail, screening_kyc, soci_ubo, "
     "negativita, visura, case_tool, run_query): USALI per rispondere con dati "
-    "reali invece di inventare. Risposte brevi e operative, in italiano. Quando "
+    "reali invece di inventare. Hai ANCHE la ricerca web (WebSearch/WebFetch): "
+    "usala liberamente quando l'operatore chiede notizie, profili o riscontri "
+    "da internet, e cita sempre le fonti. Risposte brevi e operative, in italiano. Quando "
     "citi un caso usa il codice CASE-AAAA-N. Non chiedere conferme: agisci."
 )
 
