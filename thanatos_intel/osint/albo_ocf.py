@@ -31,7 +31,7 @@ def _answer_key(lead):
 
 @frappe.whitelist()
 def run_ocf_search(lead_name, cognome, nome="", sezione="", wa_phone=None, sender=None,
-                   wait_seconds=150):
+                   wait_seconds=150, bill_client=None, bill_price=0):
     """Job lungo: apre OCF, manda il captcha all'operatore, attende la soluzione,
     completa la ricerca e restituisce i risultati su WhatsApp."""
     from thanatos_intel.ingest.wa_bot import _wa_doc, send_text, send_image
@@ -138,6 +138,7 @@ def run_ocf_search(lead_name, cognome, nome="", sezione="", wa_phone=None, sende
     if not results:
         reply(f"🔎 *Albo OCF* — «{cognome} {nome}» ({label_sez}): "
               f"nessun iscritto trovato.")
+        _bill_ocf(bill_client, bill_price, lead_name)
         return {"ok": True, "count": 0}
 
     lines = [f"🔎 *Albo OCF* — «{cognome} {nome}» ({label_sez}): "
@@ -148,4 +149,17 @@ def run_ocf_search(lead_name, cognome, nome="", sezione="", wa_phone=None, sende
     lines.append("")
     lines.append("_Fonte: Albo OCF (organismocf.it), consultazione semi-automatica._")
     reply("\n".join(lines))
+    _bill_ocf(bill_client, bill_price, lead_name)
     return {"ok": True, "count": len(results)}
+
+
+def _bill_ocf(client, price, lead_name):
+    """Addebita il servizio OCF al wallet cliente (no-op se free/super admin)."""
+    if not client or not price:
+        return
+    try:
+        from thanatos_intel.billing.paid_gate import charge_paid_tool
+        case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
+        charge_paid_tool("albo_ocf", {"client": client, "price": price, "free": False}, case)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "OCF bill")

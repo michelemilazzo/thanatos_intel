@@ -240,6 +240,11 @@ def case_ai_chat(case, message, lead_name=None, wa_phone=None, sender=None):
         candidate = (m.group(1).strip(" ?.") if m else "")
         if not candidate:
             return done("Indicami il nominativo, es. «ricerca approfondita Mario Rossi».")
+        # gate fatturazione: super admin gratis, altri pagano dal wallet cliente
+        from thanatos_intel.billing.paid_gate import gate_paid_tool
+        _g = gate_paid_tool("deep_research", sender, case)
+        if not _g["allow"]:
+            return done(_g["message"], "gate")
         _enq("thanatos_intel.ai.deep_research.deep_person_research",
              f"Ricerca approfondita — {candidate}", case,
              lead_name=lead_name, wa_phone=wa_phone, sender=sender, name=candidate)

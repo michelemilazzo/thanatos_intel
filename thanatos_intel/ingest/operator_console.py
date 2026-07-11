@@ -295,10 +295,17 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
         ms = re.search(r"\b(cff|cfa|scf)\b", t, re.I)
         if ms:
             sez = ms.group(1).upper()
+        # gate fatturazione: super admin gratis, altri pagano dal wallet
+        from thanatos_intel.billing.paid_gate import gate_paid_tool
+        _g = gate_paid_tool("albo_ocf", sender, _resolve_case(lead_name, t))
+        if not _g["allow"]:
+            _reply(wa_phone, sender, lead_name, _g["message"])
+            return
         frappe.enqueue("thanatos_intel.osint.albo_ocf.run_ocf_search",
                        queue="long", timeout=300,
                        lead_name=lead_name, cognome=cognome, nome=nome, sezione=sez,
-                       wa_phone=wa_phone, sender=sender)
+                       wa_phone=wa_phone, sender=sender,
+                       bill_client=_g.get("client"), bill_price=_g.get("price"))
         _reply(wa_phone, sender, lead_name,
                f"🔐 Apro l'albo OCF per *{cognome} {nome}*. Tra poco ti mando "
                "l'immagine del captcha: scrivimi il codice e completo la ricerca.")
