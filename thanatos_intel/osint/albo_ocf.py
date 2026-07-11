@@ -145,13 +145,30 @@ def run_ocf_search(lead_name, cognome, nome="", sezione="", wa_phone=None, sende
             frappe.cache().delete_value(_answer_key(lead_name))
 
     label_sez = _SEZIONI.get(sez, "tutte le sezioni")
+    _case = frappe.db.get_value("Intel Lead", lead_name, "linked_case") if lead_name else None
+    _target = f"{cognome} {nome}".strip()
+    from thanatos_intel.osint.engine import record_lookup, prior_sightings_wa
+    # avvistamenti cross-caso PRIMA di registrare questa ricerca (no auto-match)
+    _sight = prior_sightings_wa(_target, exclude_case=_case)
+
     if not results:
-        reply(f"🔎 *Albo OCF* — «{cognome} {nome}» ({label_sez}): "
-              f"nessun iscritto trovato.")
+        record_lookup("Person", _target,
+                      {"source": "albo_ocf", "count": 0, "sezione": label_sez}, case=_case)
+        body = (f"🔎 *Albo OCF* — «{cognome} {nome}» ({label_sez}): "
+                f"nessun iscritto trovato.")
+        if _sight:
+            body += "\n\n" + _sight
+        reply(body)
         _bill_ocf(bill_client, bill_price, lead_name)
         return {"ok": True, "count": 0}
 
-    reply(_format_ocf_results(cognome, nome, label_sez, results))
+    record_lookup("Person", _target,
+                  {"source": "albo_ocf", "count": len(results),
+                   "sezione": label_sez, "results": results}, case=_case)
+    body = _format_ocf_results(cognome, nome, label_sez, results)
+    if _sight:
+        body = _sight + "\n\n" + body
+    reply(body)
     _bill_ocf(bill_client, bill_price, lead_name)
     return {"ok": True, "count": len(results)}
 

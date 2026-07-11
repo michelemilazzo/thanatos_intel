@@ -16,6 +16,21 @@ def _maps_link(address):
     return f"https://www.google.com/maps/search/?api=1&query={q}"
 
 
+def _classify_target(q):
+    """Company se ha suffisso societario; Person se sembra un nome (2-4 parole,
+    iniziale maiuscola, no cifre); altrimenti Query (ricerca generica)."""
+    import re
+    q = (q or "").strip()
+    if re.search(r"\b(s\.?r\.?l\.?|s\.?p\.?a\.?|ltd|gmbh|inc|s\.?a\.?s\.?|snc|s\.?c\.?)\b",
+                 q.lower()):
+        return "Company"
+    if (q[:1].isupper()
+            and re.fullmatch(r"[A-Za-zÀ-ÿ'.\-]+(?:\s+[A-Za-zÀ-ÿ'.\-]+){1,3}", q)
+            and not any(ch.isdigit() for ch in q)):
+        return "Person"
+    return "Query"
+
+
 def _web_research(name):
     """Ricerca web live via Perplexity Sonar (OpenRouter) — risposta con
     citazioni reali. Ritorna (testo, fonti) o ('', []) se non disponibile."""
@@ -60,7 +75,7 @@ def _web_research(name):
 
 
 @frappe.whitelist()
-def web_search(query):
+def web_search(query, case=None):
     """Ricerca web generica (qualsiasi argomento, non solo persone) via
     Perplexity Sonar — risposta fattuale con fonti reali. Ritorna un dict
     {"wa_message": ...} pronto per l'invio. NON allucina (a differenza della
@@ -114,6 +129,15 @@ def web_search(query):
     if urls:
         out.append("")
         out.append("_Fonti: " + "; ".join(urls) + "_")
+    try:
+        from thanatos_intel.osint.engine import record_lookup, prior_sightings_wa
+        _sight = prior_sightings_wa(query, exclude_case=case)
+        record_lookup(_classify_target(query), query,
+                      {"source": "web_search", "text": text[:4000]}, case=case)
+        if _sight:
+            out = [_sight, ""] + out
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "web_search osint log")
     return {"wa_message": "\n".join(out)}
 
 
@@ -128,6 +152,14 @@ def deep_person_research(case, name):
     lines = [f"🔎 *Ricerca approfondita — {name}*",
              "_(fonti: PEP/sanzioni openapi.it, OpenSanctions, Wikidata, "
              "CourtListener, ricerca web)_", ""]
+    try:
+        from thanatos_intel.osint.engine import prior_sightings_wa
+        _sight = prior_sightings_wa(name, exclude_case=case)
+        if _sight:
+            lines.append(_sight)
+            lines.append("")
+    except Exception:
+        pass
 
     # 1) screening_kyc (PEP/sanction_list/adverse_media insieme, mode=full)
     #    SENZA investigation_case: non deve creare evidence/associare al caso.
@@ -192,4 +224,9 @@ def deep_person_research(case, name):
     lines.append(f"❓ *{name}* è collegato al caso *{case}*? Se sì, dimmelo "
                  f"e lo registro come reperto — non lo aggancio in automatico.")
 
+    try:
+        from thanatos_intel.osint.engine import record_lookup
+        record_lookup("Person", name, {"source": "deep_research"}, case=case)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "deep_research osint log")
     return {"wa_message": "\n".join(lines)}

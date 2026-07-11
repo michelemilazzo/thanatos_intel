@@ -658,25 +658,84 @@ def _is_ip(value: str) -> bool:
         return False
 
 
-def _persist_lookup(target_type: str, target: str, result: dict):
+def _persist_lookup(target_type: str, target: str, result: dict,
+                    case: str = None, entity: str = None):
     try:
         if not frappe.db.exists("DocType", "OSINT Lookup"):
-            return
+            return None
         doc = frappe.get_doc({
             "doctype": "OSINT Lookup",
             "target_type": target_type,
-            "target_value": target,
+            "target_value": (target or "")[:140],
             "source": result.get("source"),
             "is_stub": 1 if result.get("stub") else 0,
             "is_error": 1 if result.get("error") else 0,
-            "result_json": json.dumps(result, default=str),
+            "result_json": json.dumps(result, default=str)[:100000],
             "performed_at": now_datetime(),
             "performed_by": frappe.session.user,
+            "investigation_case": case or None,
+            "investigation_entity": entity or None,
         })
         doc.insert(ignore_permissions=True)
         frappe.db.commit()
+        return doc.name
     except Exception:
         frappe.log_error(frappe.get_traceback(), "OSINT persist failed")
+        return None
+
+
+def record_lookup(target_type: str, target: str, result: dict,
+                  case: str = None, entity: str = None):
+    """Registra una ricerca OSINT come OSINT Lookup, con link opzionale al caso/entità.
+    Punto unico per cablare i tool (OCF, ricerca web, screening…) alla traccia
+    strutturata per-caso. Ritorna il name del record o None."""
+    return _persist_lookup(target_type, target, result, case=case, entity=entity)
+
+
+def _norm_target(v: str) -> str:
+    """Normalizza un target per il match cross-caso (uppercase, spazi collassati)."""
+    return " ".join((v or "").upper().split())
+
+
+@frappe.whitelist()
+def prior_sightings(target_value: str, exclude_case: str = None, limit: int = 8) -> list:
+    """Intelligence cross-caso: ricerche OSINT precedenti sullo STESSO target
+    (match su target_value normalizzato) in ALTRI casi. Ritorna gli avvistamenti
+    più recenti. NB: matcha solo record con target_value uguale (v1)."""
+    norm = _norm_target(target_value)
+    if not norm or len(norm) < 3:
+        return []
+    rows = frappe.db.sql(
+        """select name, target_type, target_value, source, performed_at,
+                  investigation_case
+             from `tabOSINT Lookup`
+            where upper(trim(target_value)) = %s
+              and coalesce(is_error, 0) = 0
+            order by performed_at desc
+            limit %s""",
+        (norm, int(limit) + 8), as_dict=True)
+    out = [r for r in rows if not (exclude_case and r.get("investigation_case") == exclude_case)]
+    return out[:int(limit)]
+
+
+def prior_sightings_wa(target_value: str, exclude_case: str = None) -> str:
+    """Riga «già visto» pronta per WhatsApp, o stringa vuota se nessun avvistamento
+    cross-caso. Mostra solo i riscontri collegati a un ALTRO caso (rilevanza
+    investigativa), non le semplici ripetizioni senza caso."""
+    from frappe.utils import pretty_date
+    sights = prior_sightings(target_value, exclude_case=exclude_case, limit=20)
+    with_case = [s for s in sights if s.get("investigation_case")]
+    if not with_case:
+        return ""
+    cases = {}
+    for s in with_case:
+        c = s["investigation_case"]
+        if c not in cases:
+            cases[c] = s  # il più recente (già ordinati desc)
+    lines = [f"⚠️ *Già visto* «{target_value}» in {len(cases)} altro/i caso/i:"]
+    for c, s in list(cases.items())[:5]:
+        lines.append(f"  • {c} — {s.get('source') or 'osint'} ({pretty_date(s['performed_at'])})")
+    return "\n".join(lines)
 
 
 # ─── LOOKUP PERSONA / AZIENDA (fonti gratuite multiple) ──────────────────────
