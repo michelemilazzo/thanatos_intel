@@ -222,16 +222,23 @@ def send_image(wa_doc, to_number, image_bytes, caption, lead_name, filename="cap
     except Exception:
         frappe.log_error(frappe.get_traceback(), "wa_bot send_image")
         ok = False
-    try:
-        lead = frappe.get_doc("Intel Lead", lead_name)
-        lead.append("messages", {"direction": "Outbound", "sent_at": now_datetime(),
-                                 "content": f"[immagine] {caption}"[:200],
-                                 "status": "Inviato" if ok else "Fallito",
-                                 "sent_by": "Administrator"})
-        lead.save(ignore_permissions=True)
-        frappe.db.commit()
-    except Exception:
-        pass
+    import time as _time
+    from thanatos_intel.thanatos_core.doctype.intel_lead.intel_lead import _is_write_conflict
+    for _i in range(5):
+        try:
+            lead = frappe.get_doc("Intel Lead", lead_name)
+            lead.append("messages", {"direction": "Outbound", "sent_at": now_datetime(),
+                                     "content": f"[immagine] {caption}"[:200],
+                                     "status": "Inviato" if ok else "Fallito",
+                                     "sent_by": "Administrator"})
+            lead.save(ignore_permissions=True)
+            frappe.db.commit()
+            break
+        except Exception as e:
+            frappe.db.rollback()
+            if not _is_write_conflict(e) or _i == 4:
+                break
+            _time.sleep(0.2 * (_i + 1))
     return ok
 
 
