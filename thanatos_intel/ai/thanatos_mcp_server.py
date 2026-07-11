@@ -95,6 +95,18 @@ def screening_kyc(nome: str, mode: str = "pep", case: str = "") -> str:
 
 
 @mcp.tool()
+def web_search(query: str) -> str:
+    """Ricerca su INTERNET (web live) via Perplexity — riscontri reali con
+    fonti citate, NON allucina. USA QUESTO ogni volta che servono notizie,
+    profili di persone, informazioni pubbliche da internet. NON usare la
+    WebSearch nativa (disattivata su questo server). query: cosa cercare in
+    linguaggio naturale."""
+    _init()
+    from thanatos_intel.ai.deep_research import web_search as ws
+    return _j(ws(query))
+
+
+@mcp.tool()
 def soci_ubo(piva: str, case: str = "") -> str:
     """Soci e titolari effettivi (UBO) di un'impresa. piva: 11 cifre."""
     _init()

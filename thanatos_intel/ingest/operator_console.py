@@ -133,6 +133,33 @@ def _clear_ctx_flag(lead_name):
     frappe.cache().delete_value(_ctx_cleared_key(lead_name))
 
 
+# Intento di ricerca/approfondimento su un soggetto (verbi larghi).
+_WEB_RESEARCH_INTENT_RE = re.compile(
+    r"\b(cerc\w*|ricerc\w*|informazion\w*|notizi\w*|profilo|dossier\s+persona|"
+    r"chi\s+[eè]\b|trov\w*|cosa\s+(sai|risult\w*)|dimmi\s+(tutto|di|chi))\b",
+    re.I,
+)
+# Comandi che riguardano il FASCICOLO/caso: NON vanno dirottati al web.
+_CASE_CMD_RE = re.compile(
+    r"\b(screening|sanzion\w*|vies|visur\w*|soci\b|ubo\b|negativ\w*|patrimonial\w*|"
+    r"dossier\s+client|proforma|formulario|fascicolo|doppia\s+cession|domand\w*|"
+    r"riconcil\w*|analisi\s+completa|pagament\w*|apri\b|aggiung\w*|attacc\w*|alleg\w*|"
+    r"stato\b|riassum\w*|document\w*|chiud\w*|assegn\w*|cas[oi]\b|pratica|CASE-\d)",
+    re.I,
+)
+
+
+def _wants_web_research(text):
+    """True se il messaggio chiede una ricerca web/approfondimento su un
+    soggetto e NON e' un comando-caso."""
+    t = text or ""
+    if _WEB_SEARCH_RE.search(t):          # "cerca su internet ..." → sempre web
+        return True
+    if _CASE_CMD_RE.search(t):            # comando fascicolo → mai web
+        return False
+    return bool(_WEB_RESEARCH_INTENT_RE.search(t))
+
+
 def _is_super_admin_number(sender):
     d = _digits(sender)
     return bool(d) and any(d.endswith(n) for n in _SUPER_ADMIN_NUMBERS)
@@ -142,8 +169,9 @@ def _strip_web_query(text):
     """Estrae l'oggetto della ricerca togliendo le parole-trigger ovunque
     compaiano (Perplexity e' comunque robusto a query conversazionali)."""
     q = text or ""
-    q = re.sub(r"\b(fai|una|per\s+favore|dimmi|cerc\w*|ricerc\w*|guard\w*|trov\w*|"
-               r"informazion\w*|notizi\w*)\b", " ", q, flags=re.I)
+    q = re.sub(r"\b(fai|una|un|per\s+favore|dimmi|cerc\w*|ricerc\w*|guard\w*|trov\w*|"
+               r"informazion\w*|notizi\w*|profilo|dossier|chi\s+[eè]|cosa\s+(sai|risult\w*)|"
+               r"tutto|di|persona|soggetto)\b", " ", q, flags=re.I)
     q = re.sub(r"\b(su|sul|sulla|sullo|nel|nella|in|di|del|dei|delle|riguardo|circa)\s+"
                r"(internet|web|online|google|rete)\b", " ", q, flags=re.I)
     q = re.sub(r"\b(internet|web|online|google|rete)\b", " ", q, flags=re.I)
@@ -591,7 +619,7 @@ def operator_assistant_reply(lead_name, wa_phone, sender, text, operator):
     # "cerca su internet ...", "trova notizie su ..." → Perplexity (ricerca
     # vera, non allucina). Per gli altri numeri: nessuna scorciatoia, resta
     # dietro il comando/gate di fatturazione.
-    if _is_super_admin_number(sender) and _WEB_SEARCH_RE.search(text or ""):
+    if _is_super_admin_number(sender) and _wants_web_research(text or ""):
         query = _strip_web_query(text)
         if query:
             try:

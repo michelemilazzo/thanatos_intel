@@ -574,7 +574,7 @@ _MCP_TOOLS = [
     "mcp__thanatos__negativita", "mcp__thanatos__visura",
     "mcp__thanatos__case_tool", "mcp__thanatos__run_query",
     "mcp__thanatos__list_documents", "mcp__thanatos__read_document",
-    "mcp__thanatos__ingest_document",
+    "mcp__thanatos__ingest_document", "mcp__thanatos__web_search",
 ]
 
 _CLI_SYS = (
@@ -583,7 +583,10 @@ _CLI_SYS = (
     "tono diretto e concreto, niente disclaimer. Hai gli strumenti MCP thanatos "
     "(stats, global_search, list_cases, case_detail, screening_kyc, soci_ubo, "
     "negativita, visura, case_tool, run_query): USALI per rispondere con dati "
-    "reali invece di inventare. Risposte brevi e operative, in italiano. Quando "
+    "reali invece di inventare. Per cercare su INTERNET (notizie, profili di "
+    "persone, riscontri pubblici) usa lo strumento web_search (ricerca vera con "
+    "fonti): NON dire mai che la ricerca web non e' autorizzata, hai web_search. "
+    "Risposte brevi e operative, in italiano. Quando "
     "citi un caso usa il codice CASE-AAAA-N. Non chiedere conferme: agisci."
 )
 
