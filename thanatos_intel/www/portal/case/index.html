@@ -331,6 +331,7 @@ table{min-width:520px}
   {% else %}
   <div class="actions">
     <a class="btn solid" href="/portal/upload?case={{ case.name }}">⇪ Carica documento</a>
+    {% if spid_pending %}<a class="btn" href="/portal/documenti-spid">📋 Documenti richiesti <span style="background:#C8A96E;color:#0A0E1A;font-size:11px;font-weight:700;border-radius:8px;padding:1px 7px;margin-left:3px">{{ spid_pending }}</span></a>{% endif %}
     <a class="btn" href="/portal">← Torna al portale</a>
   </div>
   {% endif %}

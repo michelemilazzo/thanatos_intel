@@ -123,6 +123,11 @@ def get_context(context):
         (ce.entity_type or "") == "Wallet" or
         frappe.db.get_value("Investigation Entity", ce.entity, "entity_type") == "Wallet"
         for ce in (case.get("case_entities") or []))
+    try:
+        context.spid_pending = frappe.db.count(
+            "SPID Document Request", {"investigation_case": case.name, "status": "Richiesto"})
+    except Exception:
+        context.spid_pending = 0
     context.title = f"{case.case_number or case.name} — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context
