@@ -1730,6 +1730,15 @@ def run_trace_case_wallets(lead_name, case, wa_phone=None, sender=None,
         except Exception:
             frappe.log_error(frappe.get_traceback(), f"trace_wallet {addr}")
             fail.append(addr)
+
+    from thanatos_intel.osint.engine import record_lookup, prior_sightings
+    _xref = {}
+    for _a, _n, _bal in per_wallet:
+        record_lookup("Wallet", _a, {"source": "blockchain trace", "tx": _n,
+                      "balance_btc": _bal}, case=case)
+        for _s in prior_sightings(_a, exclude_case=case, limit=5):
+            if _s.get("investigation_case"):
+                _xref.setdefault(_a, set()).add(_s["investigation_case"])
     lines = [f"\U0001F50E Tracciamento *{case}* — {total_tx} tx estratte "
              f"da {len(per_wallet)}/{len(wallets)} wallet."]
     if total_tx < target:
@@ -1744,6 +1753,11 @@ def run_trace_case_wallets(lead_name, case, wa_phone=None, sender=None,
     if fail:
         lines.append("")
         lines.append(f"\u26a0\ufe0f {len(fail)} wallet falliti (log Frappe).")
+    if _xref:
+        lines.append("")
+        lines.append("⚠️ *Wallet già visti in altri casi:*")
+        for _a2, _ocs in list(_xref.items())[:10]:
+            lines.append(f"  • `{_a2[:14]}…` → " + ", ".join(sorted(_ocs)))
     lines.append("")
     lines.append("Report HTML+JSON per ogni wallet nella scheda Files del caso.")
     lines.append("\U0001F517 " + frappe.utils.get_url("/app/investigation-case/" + case))

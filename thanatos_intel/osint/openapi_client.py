@@ -166,6 +166,12 @@ def screening_kyc(query, mode="pep", investigation_case=None, birth_date=None, e
         q["entityType"] = entity_type
     data, err = _async("risk", paths.get(mode, "/WW-kyc-pep"), {"query": q}, "/WW-kyc-full")
     if err:
+        try:
+            from thanatos_intel.osint.engine import record_lookup
+            record_lookup("Person", query, {"source": f"openapi.it {mode}", "error": err},
+                          case=investigation_case)
+        except Exception:
+            pass
         return {"error": err, "query": query, "mode": mode}
     ents = data.get("entities") or []
     hits = []
@@ -179,6 +185,14 @@ def screening_kyc(query, mode="pep", investigation_case=None, birth_date=None, e
            "state": data.get("state")}
     out["evidence"] = _evidence(investigation_case,
                                 f"Screening {mode} — {query}", lines, source="openapi risk KYC")
+    try:
+        from thanatos_intel.osint.engine import record_lookup
+        _tt = "Company" if (entity_type or "").lower() in (
+            "company", "legal", "organization", "org", "legalentity") else "Person"
+        record_lookup(_tt, query, {"source": f"openapi.it {mode}",
+                      "match": len(hits), "hits": hits[:15]}, case=investigation_case)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "screening osint log")
     return out
 
 

@@ -189,6 +189,16 @@ def enrich_case_with_arkham(case_name, max_addresses=80):
     cashout = [r for r in found if r.get("is_cashout")]
     illicit = [r for r in found if r.get("is_illicit")]
 
+    try:
+        from thanatos_intel.osint.engine import record_lookup
+        for _r in found:
+            record_lookup("Wallet", _r.get("address"), {"source": "arkham",
+                          "entity": _r.get("entity"), "label": _r.get("label"),
+                          "cashout": _r.get("is_cashout"), "illicit": _r.get("is_illicit")},
+                          case=case_name)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "arkham osint log")
+
     html = _report_html(case_name, results)
     stamp = frappe.utils.nowdate().replace("-", "")
     fname = "arkham_attribution_%s.html" % stamp
