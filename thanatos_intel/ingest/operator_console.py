@@ -125,6 +125,23 @@ _OCF_RE = re.compile(
 )
 _CAPTCHA_ANS_RE = re.compile(r"^(?=.*\d)[A-Za-z0-9]{3,8}$")
 
+# Ricerca albo OAM (agenti in attività finanziaria / mediatori creditizi).
+_OAM_RE = re.compile(
+    r"\b(albo\s+oam|oam\b|agent\w*\s+(in\s+)?attivit|mediator\w*\s+credit\w*|"
+    r"organismo\s+agenti)\b",
+    re.I,
+)
+
+
+def _oam_parse_query(t):
+    """Estrae il nominativo togliendo le parole-trigger OAM."""
+    q = re.sub(
+        r"\b(albo|oam|agent\w*|in\s+attivit\w*|finanziar\w*|mediator\w*|credit\w*|"
+        r"organismo\s+agenti|servizi\s+di\s+pagamento|cerca|ricerca|iscritt\w*|"
+        r"all.?\s*albo)\b",
+        " ", t or "", flags=re.I)
+    return re.sub(r"\s+", " ", q).strip(" ?.,")
+
 
 def _ocf_await_key(lead_name):
     return f"ocf_await:{lead_name}"
@@ -288,6 +305,27 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
             # messaggio non pertinente durante l'attesa (es. «attendo»): lo ignoro,
             # il job continua ad aspettare il captcha (niente cancellazione, niente reply).
             return
+    # Ricerca albo OAM (agenti/mediatori creditizi) — automatica, senza captcha.
+    # Controllata PRIMA di OCF: «cerca albo OAM» non deve finire su OCF.
+    if _OAM_RE.search(t):
+        query = _oam_parse_query(t)
+        if not query:
+            _reply(wa_phone, sender, lead_name,
+                   "Indicami il nominativo, es. «albo OAM Mario Rossi».")
+            return
+        from thanatos_intel.billing.paid_gate import gate_paid_tool
+        _g = gate_paid_tool("albo_oam", sender, _resolve_case(lead_name, t))
+        if not _g["allow"]:
+            _reply(wa_phone, sender, lead_name, _g["message"])
+            return
+        frappe.enqueue("thanatos_intel.osint.albo_oam.run_oam_search",
+                       queue="long", timeout=180,
+                       lead_name=lead_name, query=query,
+                       wa_phone=wa_phone, sender=sender,
+                       bill_client=_g.get("client"), bill_price=_g.get("price"))
+        _reply(wa_phone, sender, lead_name,
+               f"🔎 Cerco *{query}* nell'albo OAM (agenti/mediatori creditizi)…")
+        return
     # Ricerca albo OCF: apre il browser, manda il captcha, attende la soluzione.
     if _OCF_RE.search(t):
         cognome, nome = _ocf_parse_query(t)

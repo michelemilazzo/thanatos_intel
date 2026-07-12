@@ -24,6 +24,7 @@ PAID_TOOL_PRICES = {
     "web_search": 2.0,
     "deep_research": 6.0,
     "albo_ocf": 5.0,
+    "albo_oam": 4.0,
 }
 
 _SUPER_ADMIN_NUMBERS = {"393898309015"}
