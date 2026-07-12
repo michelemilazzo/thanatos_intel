@@ -420,10 +420,13 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
             _reply(wa_phone, sender, lead_name,
                    f"⚠️ Non ho potuto inviare il mandato: {res.get('error', 'errore')}")
             return
-        _reply(wa_phone, sender, lead_name,
-               f"✍️ Mandato inviato in firma al cliente ({res.get('client_email')}) per "
-               f"*{_case}*. Riceve un'email col link per firmarlo elettronicamente; alla "
-               "firma diventa un reperto in catena di custodia con consenso registrato.")
+        _msg = (f"✍️ Mandato inviato in firma al cliente ({res.get('client_email')}) per "
+                f"*{_case}*. Riceve un'email col link.")
+        if res.get("sign_url"):
+            _msg += f"\n\n🔗 Link di firma (puoi inoltrarlo tu): {res['sign_url']}"
+        _msg += ("\n\nAlla firma diventa un reperto in catena di custodia con "
+                 "consenso registrato.")
+        _reply(wa_phone, sender, lead_name, _msg)
         return
     # IVASS RUI (intermediari assicurativi) — operatore-assistito: il server IVASS
     # blocca gli IP datacenter (SYN/ICMP droppati), quindi diamo link + guida.
