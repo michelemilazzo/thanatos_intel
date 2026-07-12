@@ -135,6 +135,17 @@ def get_context(context):
     context.pending_client_actions = pending_client_actions
     context.pending_operator_actions = pending_operator_actions
 
+    try:
+        from thanatos_intel.permissions import is_full_access, visible_case_names
+        if is_full_access(frappe.session.user):
+            context.spid_pending = frappe.db.count("SPID Document Request", {"status": "Richiesto"})
+        else:
+            _n = visible_case_names(frappe.session.user) or []
+            context.spid_pending = frappe.db.count(
+                "SPID Document Request",
+                {"status": "Richiesto", "investigation_case": ["in", _n]}) if _n else 0
+    except Exception:
+        context.spid_pending = 0
     context.title = "Portal — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
     return context
