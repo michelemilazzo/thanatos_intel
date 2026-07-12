@@ -15,7 +15,13 @@
   "legal_basis",
   "active",
   "sb1",
-  "notes"
+  "notes",
+  "target_doctype",
+  "date_field",
+  "filter_json",
+  "anonymize_fields",
+  "last_run",
+  "last_count"
  ],
  "fields": [
   {
@@ -62,6 +68,40 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Note"
+  },
+  {
+   "fieldname": "target_doctype",
+   "fieldtype": "Link",
+   "options": "DocType",
+   "label": "DocType bersaglio (lascia vuoto = solo policy)"
+  },
+  {
+   "fieldname": "date_field",
+   "fieldtype": "Data",
+   "label": "Campo data (default: creation)",
+   "default": "creation"
+  },
+  {
+   "fieldname": "filter_json",
+   "fieldtype": "Small Text",
+   "label": "Filtri extra (JSON, es. {\"status\":\"Archiviato\"})"
+  },
+  {
+   "fieldname": "anonymize_fields",
+   "fieldtype": "Small Text",
+   "label": "Campi da anonimizzare (per azione Anonimizza)"
+  },
+  {
+   "fieldname": "last_run",
+   "fieldtype": "Datetime",
+   "label": "Ultima esecuzione",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_count",
+   "fieldtype": "Int",
+   "label": "Record trattati (ultima)",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
