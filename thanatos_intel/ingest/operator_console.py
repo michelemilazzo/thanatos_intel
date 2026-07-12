@@ -53,9 +53,8 @@ _PAYMENT_RE = re.compile(
     r"\b(link\s*(di\s*)?pagamento|pagamento|paga(re)?|incassa|"
     r"checkout|stripe\s*link)\b", re.I)
 _DELIVER_RE = re.compile(
-    r"(manda.{0,12}(al\s*)?cliente|invia.{0,12}(al\s*)?cliente|"
-    r"consegna.{0,12}(al\s*)?cliente|spedisci.{0,12}cliente|"
-    r"trasmett.{0,12}cliente|recapita.{0,12}cliente)", re.I)
+    r"\b(manda|invia|consegna|spedisci|trasmetti|recapita)\b"
+    r".{0,15}\b(al\s+)?client\w*", re.I)
 _STATUS_RE = re.compile(
     r"\b(stato|status|sintesi|riassumi|riassunto|brief|situazione)\b", re.I)
 _DOCS_RE = re.compile(
@@ -568,6 +567,11 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
             _reply(wa_phone, sender, lead_name,
                    "Non c'e' un caso collegato. Cita il caso (es. «pagamento CASE-2026-0026»).")
             return
+        if not frappe.db.get_value("Investigation Case", case, "client"):
+            _reply(wa_phone, sender, lead_name,
+                   f"\u26a0\ufe0f Il caso *{case}* non ha un cliente collegato: non posso "
+                   "mandare un link di pagamento. Collega prima un cliente.")
+            return
         frappe.enqueue("thanatos_intel.ingest.operator_console.run_send_payment_link",
                        queue="short", timeout=180,
                        case=case, lead_name=lead_name, wa_phone=wa_phone,
@@ -581,6 +585,11 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
         if not case:
             _reply(wa_phone, sender, lead_name,
                    "Non c'e' un caso collegato. Cita il caso (es. «manda al cliente CASE-2026-0026»).")
+            return
+        if not frappe.db.get_value("Investigation Case", case, "client"):
+            _reply(wa_phone, sender, lead_name,
+                   f"\u26a0\ufe0f Il caso *{case}* non ha un cliente collegato: non c'e' a chi "
+                   "consegnare. Collega prima un cliente al caso.")
             return
         frappe.enqueue("thanatos_intel.ingest.operator_console.run_deliver_to_client",
                        queue="long", timeout=900,
