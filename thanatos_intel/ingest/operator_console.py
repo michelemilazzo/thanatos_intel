@@ -172,6 +172,11 @@ _SPID_NL_RE = re.compile(
     r"prend\w+|scaric\w+|voglio|vorrei|fammi\s+avere)\b", re.I)
 
 
+_MANDATE_RE = re.compile(
+    r"\b(manda|invia|spedisci|prepar\w+)\b.{0,20}\b(mandat\w*|delega\w*|procur\w*)\b|"
+    r"\bmandat\w+\s+(al\s+)?client|\bdelega\s+(al\s+)?client", re.I)
+
+
 def _parse_spid_docs(t):
     keys = []
     for pat, k in _SPID_DOC_KEYWORDS:
@@ -396,6 +401,29 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
                f"📋 Richiesti al cliente {len(keys)} documenti per *{_case}*: {labels}.\n"
                "Ho avvisato il cliente via email; li recupera con il suo SPID e li carica "
                "dal portale (/portal/documenti-spid). Mai le sue credenziali.")
+        return
+    # Invio mandato/delega firmato al cliente (mmos_sign) — la "delega" corretta,
+    # niente SPID del cliente. Alla firma diventa reperto in catena di custodia.
+    if _MANDATE_RE.search(t):
+        _case = _resolve_case(lead_name, t)
+        if not _case:
+            _reply(wa_phone, sender, lead_name,
+                   "Per quale pratica? Es. «manda il mandato al cliente per CASE-2026-00XX».")
+            return
+        try:
+            from thanatos_intel.integrations.mmos_sign_bridge import send_case_mandate
+            res = send_case_mandate(_case)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "send_case_mandate wa")
+            res = {"ok": False, "error": "errore interno"}
+        if not res.get("ok"):
+            _reply(wa_phone, sender, lead_name,
+                   f"⚠️ Non ho potuto inviare il mandato: {res.get('error', 'errore')}")
+            return
+        _reply(wa_phone, sender, lead_name,
+               f"✍️ Mandato inviato in firma al cliente ({res.get('client_email')}) per "
+               f"*{_case}*. Riceve un'email col link per firmarlo elettronicamente; alla "
+               "firma diventa un reperto in catena di custodia con consenso registrato.")
         return
     # IVASS RUI (intermediari assicurativi) — operatore-assistito: il server IVASS
     # blocca gli IP datacenter (SYN/ICMP droppati), quindi diamo link + guida.

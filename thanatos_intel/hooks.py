@@ -103,6 +103,7 @@ fixtures=[
 ]
 
 doc_events={
+ 'Signature Request': {'on_update': 'thanatos_intel.integrations.mmos_sign_bridge.on_signature_signed'},
  'Call Log':{'on_update':'thanatos_intel.api.wa_calling.call_log_files_on_update'},
  'Credit Ledger': {
    'after_insert': 'thanatos_intel.referral.on_credit_spent',
