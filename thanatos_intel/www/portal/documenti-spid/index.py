@@ -18,6 +18,8 @@ def get_context(context):
     from thanatos_intel.api.spid_documents import my_spid_requests
     from thanatos_intel.osint.spid_catalog import SPID_HELP
     reqs = my_spid_requests()
+    from thanatos_intel.integrations.mmos_sign_bridge import my_pending_mandates
+    context.mandates = my_pending_mandates()
     context.pending = [r for r in reqs if r["status"] == "Richiesto"]
     context.done = [r for r in reqs if r["status"] != "Richiesto"]
     context.spid_help = SPID_HELP

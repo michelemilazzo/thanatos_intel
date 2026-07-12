@@ -144,6 +144,11 @@ def get_context(context):
             context.spid_pending = frappe.db.count(
                 "SPID Document Request",
                 {"status": "Richiesto", "investigation_case": ["in", _n]}) if _n else 0
+        try:
+            from thanatos_intel.integrations.mmos_sign_bridge import my_pending_mandates
+            context.spid_pending += len(my_pending_mandates(frappe.session.user))
+        except Exception:
+            pass
     except Exception:
         context.spid_pending = 0
     context.title = "Portal — Thanatos Intel"

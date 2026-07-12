@@ -199,3 +199,29 @@ def send_case_mandate(case, subject_matter=None):
     frappe.db.commit()
     return {"ok": True, "mandate": m.name, "signature_request": req.name,
             "sign_url": sign_url, "client_email": email}
+
+
+def my_pending_mandates(user=None):
+    """Mandati in attesa di firma per il cliente loggato, con link /sign/<token>."""
+    user = user or frappe.session.user
+    from thanatos_intel.permissions import is_full_access, visible_case_names
+    filt = {"status": "Pending Signature"}
+    if not is_full_access(user):
+        names = visible_case_names(user) or []
+        if not names:
+            return []
+        filt["investigation_case"] = ["in", names]
+    rows = frappe.get_all("Agency Mandate", filters=filt,
+                          fields=["name", "investigation_case", "subject_matter", "signature_ref"],
+                          order_by="creation desc", limit=50)
+    out = []
+    for r in rows:
+        ref = r.get("signature_ref") or ""
+        if not ref.startswith("MMOSSign:"):
+            continue
+        sr = frappe.db.get_value("Signature Request", ref.split(":", 1)[1],
+                                 ["token", "status"], as_dict=True)
+        if sr and sr.get("token") and sr.get("status") in ("Sent", "Partially Signed"):
+            r["sign_url"] = frappe.utils.get_url("/sign/" + sr["token"])
+            out.append(r)
+    return out

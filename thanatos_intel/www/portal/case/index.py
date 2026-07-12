@@ -126,6 +126,8 @@ def get_context(context):
     try:
         context.spid_pending = frappe.db.count(
             "SPID Document Request", {"investigation_case": case.name, "status": "Richiesto"})
+        context.spid_pending += frappe.db.count(
+            "Agency Mandate", {"investigation_case": case.name, "status": "Pending Signature"})
     except Exception:
         context.spid_pending = 0
     context.title = f"{case.case_number or case.name} — Thanatos Intel"

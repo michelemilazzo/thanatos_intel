@@ -76,6 +76,19 @@ button:disabled{opacity:.5;cursor:default}
     </div>
   </details>
 
+  {% if mandates %}
+  <div class="sec">Mandati da firmare</div>
+  {% for m in mandates %}
+  <div class="card">
+    <h3>Mandato di incarico <span class="badge b-pend">da firmare</span></h3>
+    <div class="ente">{{ m.subject_matter or "Raccolta e trattamento documenti" }} · pratica {{ m.investigation_case }}</div>
+    <p class="steps">Firma elettronicamente il mandato che ci autorizza a raccogliere e
+      trattare i tuoi documenti per questa pratica (firma sicura, dal tuo dispositivo).</p>
+    <a class="golink" href="{{ m.sign_url }}" target="_blank" rel="noopener">✍️ Firma il mandato</a>
+  </div>
+  {% endfor %}
+  {% endif %}
+
   {% if pending %}
   <div class="sec">Da caricare</div>
   {% for r in pending %}
