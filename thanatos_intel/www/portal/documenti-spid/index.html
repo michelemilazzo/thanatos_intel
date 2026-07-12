@@ -16,13 +16,22 @@ html,body{margin:0;background:var(--bg);color:#E8E9F0;
 h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 6px}
 .sub{color:var(--grey);font-size:13px;margin:0 0 20px;line-height:1.6}
 .note{background:rgba(200,169,110,.08);border:1px solid var(--border);border-left:3px solid var(--gold);
-  border-radius:4px;padding:12px 16px;font-size:12.5px;color:#cdd2e0;margin-bottom:28px;line-height:1.6}
+  border-radius:4px;padding:12px 16px;font-size:12.5px;color:#cdd2e0;margin-bottom:18px;line-height:1.6}
+details.help{background:var(--panel);border:1px solid var(--border);border-radius:6px;margin-bottom:28px}
+details.help>summary{cursor:pointer;padding:14px 18px;color:var(--gold);font-size:13.5px;font-weight:600;list-style:none}
+details.help>summary::-webkit-details-marker{display:none}
+details.help>summary::before{content:"❔ ";}
+.help-body{padding:0 18px 16px;font-size:12.5px;color:#cdd2e0;line-height:1.65}
+.help-body h4{color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px}
+.help-body ol,.help-body ul{margin:6px 0;padding-left:20px}
+.help-body a{color:var(--gold)}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px 20px;margin:14px 0}
 .card h3{margin:0 0 4px;font-size:16px;color:#fff;font-weight:600}
 .ente{color:var(--gold);font-size:12px;margin-bottom:10px}
-.steps{color:#cdd2e0;font-size:13px;line-height:1.6;margin:0 0 12px}
+.card ol.steps{color:#cdd2e0;font-size:12.8px;line-height:1.6;margin:8px 0 12px;padding-left:20px}
+.card ol.steps li{margin:3px 0}
 .golink{display:inline-block;color:var(--gold);text-decoration:none;font-size:12.5px;
-  border:1px solid var(--border);border-radius:4px;padding:7px 13px;margin-bottom:14px}
+  border:1px solid var(--border);border-radius:4px;padding:7px 13px;margin-bottom:12px}
 .golink:hover{border-color:var(--gold)}
 .consent{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:#cdd2e0;margin:10px 0;line-height:1.5}
 .consent input{margin-top:2px}
@@ -31,9 +40,13 @@ input[type=file]{color:var(--grey);font-size:12.5px;max-width:100%}
 button{background:var(--gold);color:#0A0E1A;border:0;border-radius:4px;padding:10px 18px;
   font-size:13px;font-weight:600;cursor:pointer}
 button:disabled{opacity:.5;cursor:default}
+.helpbtn{background:transparent;color:var(--grey);border:1px solid var(--border);font-weight:500;padding:8px 14px}
+.helpbtn:hover{color:var(--gold);border-color:var(--gold)}
+.helprow{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
 .badge{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;letter-spacing:.5px}
 .b-done{background:rgba(106,166,106,.15);color:var(--ok);border:1px solid rgba(106,166,106,.4)}
 .b-pend{background:rgba(200,169,110,.12);color:var(--gold);border:1px solid var(--border)}
+.b-help{background:rgba(120,150,220,.14);color:#8fb0e0;border:1px solid rgba(120,150,220,.4)}
 .st{font-size:12px;margin-left:6px}
 .empty{color:var(--grey);font-size:13px;padding:30px 0;text-align:center}
 .sec{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin:30px 0 6px}
@@ -50,13 +63,29 @@ button:disabled{opacity:.5;cursor:default}
     <b>SPID</b> sul sito ufficiale dell'ente, e li carichi qui in sicurezza. <b>Non ti chiederemo mai
     le tue credenziali SPID</b> — sono personali e non vanno condivise con nessuno.</div>
 
+  <details class="help">
+    <summary>Come funziona lo SPID? Non ce l'hai o non sai come usarlo?</summary>
+    <div class="help-body">
+      <p>{{ spid_help.cosa }}</p>
+      <h4>Se non hai SPID</h4>
+      <ul>{% for x in spid_help.no_spid %}<li>{{ x }}</li>{% endfor %}</ul>
+      <p><a href="{{ spid_help.spid_url }}" target="_blank" rel="noopener">↗ Ottieni SPID gratis (spid.gov.it)</a></p>
+      <h4>Come accedere, in generale</h4>
+      <ol>{% for x in spid_help.come_accedere %}<li>{{ x }}</li>{% endfor %}</ol>
+      <p style="color:var(--gold)">Se ti blocchi in qualsiasi punto, usa il pulsante «🆘 Ho bisogno di aiuto» sul documento: ti ricontattiamo noi.</p>
+    </div>
+  </details>
+
   {% if pending %}
   <div class="sec">Da caricare</div>
   {% for r in pending %}
   <div class="card" data-req="{{ r.name }}">
-    <h3>{{ r.doc_label }} <span class="badge b-pend">richiesto</span></h3>
+    <h3>{{ r.doc_label }}
+      {% if r.help_requested %}<span class="badge b-help">assistenza richiesta</span>
+      {% else %}<span class="badge b-pend">richiesto</span>{% endif %}</h3>
     <div class="ente">{{ r.ente }} · pratica {{ r.investigation_case }}</div>
-    <p class="steps">{{ r.istruzioni }}</p>
+    {% if r.steps %}<ol class="steps">{% for s in r.steps %}<li>{{ s }}</li>{% endfor %}</ol>
+    {% else %}<p class="steps">{{ r.istruzioni }}</p>{% endif %}
     {% if r.url %}<a class="golink" href="{{ r.url }}" target="_blank" rel="noopener">↗ Vai al sito {{ r.ente }} (accedi con SPID)</a>{% endif %}
     <label class="consent">
       <input type="checkbox" class="consent-cb">
@@ -67,6 +96,10 @@ button:disabled{opacity:.5;cursor:default}
       <input type="file" class="file-in" accept=".pdf,.jpg,.jpeg,.png,.p7m">
       <button class="up-btn" disabled>Carica</button>
       <span class="st"></span>
+    </div>
+    <div class="helprow">
+      <button class="helpbtn help-btn" {% if r.help_requested %}disabled{% endif %}>🆘 {% if r.help_requested %}Assistenza richiesta{% else %}Ho bisogno di aiuto{% endif %}</button>
+      <span class="st help-st"></span>
     </div>
   </div>
   {% endfor %}
@@ -89,35 +122,50 @@ button:disabled{opacity:.5;cursor:default}
 <script>
 const CSRF = "{{ csrf_token }}";
 document.querySelectorAll('.card[data-req]').forEach(card => {
+  const req = card.dataset.req;
   const cb = card.querySelector('.consent-cb');
   const fin = card.querySelector('.file-in');
   const btn = card.querySelector('.up-btn');
   const st = card.querySelector('.st');
-  if (!btn) return;
   function refresh(){ btn.disabled = !(cb.checked && fin.files.length); }
-  cb.addEventListener('change', refresh);
-  fin.addEventListener('change', refresh);
-  btn.addEventListener('click', async () => {
-    btn.disabled = true; st.textContent = 'invio…'; st.style.color = '#7A8294';
-    const fd = new FormData();
-    fd.append('request', card.dataset.req);
-    fd.append('consent', cb.checked ? '1' : '0');
-    fd.append('file', fin.files[0]);
-    try {
-      const r = await fetch('/api/method/thanatos_intel.api.spid_documents.submit_spid_document', {
-        method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd });
-      const data = await r.json();
-      const msg = data.message || data;
-      if (msg && msg.ok){
-        st.textContent = '✓ caricato'; st.style.color = '#6aa66a';
-        setTimeout(() => window.location.reload(), 1000);
-      } else { throw new Error((msg && msg.error) || 'errore'); }
-    } catch(e){
-      st.textContent = 'errore'; st.style.color = '#d05a5a';
-      btn.disabled = false;
-      alert('Errore: ' + e.message);
-    }
-  });
+  if (cb && fin && btn) {
+    cb.addEventListener('change', refresh);
+    fin.addEventListener('change', refresh);
+    btn.addEventListener('click', async () => {
+      btn.disabled = true; st.textContent = 'invio…'; st.style.color = '#7A8294';
+      const fd = new FormData();
+      fd.append('request', req);
+      fd.append('consent', cb.checked ? '1' : '0');
+      fd.append('file', fin.files[0]);
+      try {
+        const r = await fetch('/api/method/thanatos_intel.api.spid_documents.submit_spid_document', {
+          method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd });
+        const data = await r.json(); const msg = data.message || data;
+        if (msg && msg.ok){ st.textContent = '✓ caricato'; st.style.color = '#6aa66a';
+          setTimeout(() => window.location.reload(), 1000);
+        } else { throw new Error((msg && msg.error) || 'errore'); }
+      } catch(e){ st.textContent = 'errore'; st.style.color = '#d05a5a'; btn.disabled = false;
+        alert('Errore: ' + e.message); }
+    });
+  }
+  // pulsante aiuto
+  const hbtn = card.querySelector('.help-btn');
+  const hst = card.querySelector('.help-st');
+  if (hbtn && !hbtn.disabled) {
+    hbtn.addEventListener('click', async () => {
+      const note = prompt('Vuoi aggiungere un messaggio per l\'operatore? (facoltativo)\nEs. «non ho lo SPID», «non trovo il documento»…') || '';
+      hbtn.disabled = true; hst.textContent = 'invio…'; hst.style.color = '#7A8294';
+      try {
+        const fd = new FormData(); fd.append('request', req); fd.append('note', note);
+        const r = await fetch('/api/method/thanatos_intel.api.spid_documents.request_spid_help', {
+          method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd });
+        const data = await r.json(); const msg = data.message || data;
+        if (msg && msg.ok){ hst.textContent = '✓ ti ricontattiamo'; hst.style.color = '#8fb0e0';
+          hbtn.textContent = '🆘 Assistenza richiesta';
+        } else { throw new Error('errore'); }
+      } catch(e){ hst.textContent = 'errore'; hst.style.color = '#d05a5a'; hbtn.disabled = false; }
+    });
+  }
 });
 </script>
 {% endblock %}

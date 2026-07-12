@@ -125,7 +125,7 @@ def my_spid_requests(user=None):
     from thanatos_intel.permissions import is_full_access, visible_case_names
     if is_full_access(user):
         rows = frappe.get_all("SPID Document Request",
-                              fields=["name", "investigation_case", "doc_key", "doc_label", "status"],
+                              fields=["name", "investigation_case", "doc_key", "doc_label", "status", "help_requested"],
                               order_by="creation desc", limit=100)
     else:
         names = visible_case_names(user) or []
@@ -133,13 +133,14 @@ def my_spid_requests(user=None):
             return []
         rows = frappe.get_all("SPID Document Request",
                               filters={"investigation_case": ["in", names]},
-                              fields=["name", "investigation_case", "doc_key", "doc_label", "status"],
+                              fields=["name", "investigation_case", "doc_key", "doc_label", "status", "help_requested"],
                               order_by="creation desc", limit=100)
     for r in rows:
         g = doc_guidance(r["doc_key"])
         r["ente"] = g["ente"]
         r["url"] = g["url"]
         r["istruzioni"] = g["istruzioni"]
+        r["steps"] = g.get("steps", [])
     return rows
 
 
@@ -236,3 +237,35 @@ def submit_spid_document(request, consent=0):
         frappe.log_error(frappe.get_traceback(), "SPID submit notify")
 
     return {"ok": True, "evidence": ev.name, "status": "Caricato"}
+
+
+@frappe.whitelist(methods=["POST"])
+def request_spid_help(request, note=""):
+    """CLIENTE: chiede assistenza per una richiesta (non sa usare SPID / non ce l'ha).
+    Marca la richiesta e avvisa l'operatore, che lo ricontatta."""
+    user = frappe.session.user
+    if user == "Guest":
+        frappe.throw(_("Authentication required"), frappe.PermissionError)
+    if not frappe.db.exists("SPID Document Request", request):
+        frappe.throw(_("Richiesta non trovata."))
+    req = frappe.get_doc("SPID Document Request", request)
+    from thanatos_intel.permissions import is_full_access, visible_case_names
+    if not is_full_access(user) and req.investigation_case not in (visible_case_names(user) or []):
+        frappe.throw(_("Accesso negato."), frappe.PermissionError)
+    req.help_requested = 1
+    req.help_note = (note or "")[:500]
+    req.save(ignore_permissions=True)
+    frappe.db.commit()
+    try:
+        from thanatos_intel.workflow.notify import _email_operator
+        _email_operator(
+            req.investigation_case,
+            subject=f"[Thanatos] Cliente chiede assistenza SPID — {req.doc_label}",
+            message=(f"Il cliente ha chiesto aiuto per recuperare <b>{req.doc_label}</b> "
+                     f"(pratica <b>{req.investigation_case}</b>).<br>Nota del cliente: "
+                     f"{(note or '-')}<br><br>Contattalo per assisterlo, oppure valuta "
+                     "delega SPID / procura / recupero alternativo."),
+            from_user=user)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "SPID help notify")
+    return {"ok": True}

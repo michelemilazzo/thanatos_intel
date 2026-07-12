@@ -21,25 +21,123 @@
   "consent_record",
   "sb_result",
   "evidence",
-  "sha256"
+  "sha256",
+  "help_requested",
+  "help_note"
  ],
  "fields": [
-  {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Pratica", "options": "Investigation Case", "reqd": 1, "in_list_view": 1},
-  {"fieldname": "client", "fieldtype": "Link", "label": "Cliente", "options": "Investigation Client", "in_list_view": 1},
-  {"fieldname": "doc_key", "fieldtype": "Select", "label": "Tipo documento", "options": "cassetto_fiscale\nestratto_inps\nanagrafe_anpr\ncasellario\nvisura_impresa\nvisura_catastale\nfascicolo_prev\naltro", "reqd": 1},
-  {"fieldname": "doc_label", "fieldtype": "Data", "label": "Documento", "in_list_view": 1},
-  {"fieldname": "status", "fieldtype": "Select", "label": "Stato", "options": "Richiesto\nCaricato\nVerificato\nRifiutato", "default": "Richiesto", "in_list_view": 1},
-  {"fieldname": "cb1", "fieldtype": "Column Break"},
-  {"fieldname": "requested_by", "fieldtype": "Link", "label": "Richiesto da", "options": "User", "read_only": 1},
-  {"fieldname": "requested_on", "fieldtype": "Datetime", "label": "Richiesto il", "read_only": 1},
-  {"fieldname": "notes", "fieldtype": "Small Text", "label": "Note / istruzioni operatore"},
-  {"fieldname": "sb_consent", "fieldtype": "Section Break", "label": "Consenso"},
-  {"fieldname": "consent_given", "fieldtype": "Check", "label": "Consenso prestato dal cliente", "read_only": 1},
-  {"fieldname": "consent_on", "fieldtype": "Datetime", "label": "Consenso il", "read_only": 1},
-  {"fieldname": "consent_record", "fieldtype": "Link", "label": "Consent Record", "options": "Consent Record", "read_only": 1},
-  {"fieldname": "sb_result", "fieldtype": "Section Break", "label": "Documento caricato"},
-  {"fieldname": "evidence", "fieldtype": "Link", "label": "Reperto", "options": "Investigation Evidence", "read_only": 1},
-  {"fieldname": "sha256", "fieldtype": "Data", "label": "SHA-256", "read_only": 1}
+  {
+   "fieldname": "investigation_case",
+   "fieldtype": "Link",
+   "label": "Pratica",
+   "options": "Investigation Case",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "client",
+   "fieldtype": "Link",
+   "label": "Cliente",
+   "options": "Investigation Client",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "doc_key",
+   "fieldtype": "Select",
+   "label": "Tipo documento",
+   "options": "cassetto_fiscale\nestratto_inps\nanagrafe_anpr\ncasellario\nvisura_impresa\nvisura_catastale\nfascicolo_prev\naltro",
+   "reqd": 1
+  },
+  {
+   "fieldname": "doc_label",
+   "fieldtype": "Data",
+   "label": "Documento",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Stato",
+   "options": "Richiesto\nCaricato\nVerificato\nRifiutato",
+   "default": "Richiesto",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "requested_by",
+   "fieldtype": "Link",
+   "label": "Richiesto da",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "requested_on",
+   "fieldtype": "Datetime",
+   "label": "Richiesto il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Note / istruzioni operatore"
+  },
+  {
+   "fieldname": "sb_consent",
+   "fieldtype": "Section Break",
+   "label": "Consenso"
+  },
+  {
+   "fieldname": "consent_given",
+   "fieldtype": "Check",
+   "label": "Consenso prestato dal cliente",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consent_on",
+   "fieldtype": "Datetime",
+   "label": "Consenso il",
+   "read_only": 1
+  },
+  {
+   "fieldname": "consent_record",
+   "fieldtype": "Link",
+   "label": "Consent Record",
+   "options": "Consent Record",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_result",
+   "fieldtype": "Section Break",
+   "label": "Documento caricato"
+  },
+  {
+   "fieldname": "evidence",
+   "fieldtype": "Link",
+   "label": "Reperto",
+   "options": "Investigation Evidence",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sha256",
+   "fieldtype": "Data",
+   "label": "SHA-256",
+   "read_only": 1
+  },
+  {
+   "fieldname": "help_requested",
+   "fieldtype": "Check",
+   "label": "Assistenza richiesta dal cliente",
+   "read_only": 1
+  },
+  {
+   "fieldname": "help_note",
+   "fieldtype": "Small Text",
+   "label": "Nota assistenza cliente",
+   "read_only": 1
+  }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
@@ -49,9 +147,30 @@
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
-  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
-  {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "report": 1, "export": 1},
-  {"role": "Investigator", "read": 1, "write": 1, "create": 1, "report": 1}
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Investigation Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1,
+   "export": 1
+  },
+  {
+   "role": "Investigator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1
+  }
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
