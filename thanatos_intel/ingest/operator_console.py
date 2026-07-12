@@ -167,6 +167,11 @@ _SPID_DOC_KEYWORDS = [
 ]
 
 
+_SPID_NL_RE = re.compile(
+    r"\b(serve|servono|ho\s+bisogno|mi\s+serv\w+|recuper\w+|procur\w+|ottien\w+|"
+    r"prend\w+|scaric\w+|voglio|vorrei|fammi\s+avere)\b", re.I)
+
+
 def _parse_spid_docs(t):
     keys = []
     for pat, k in _SPID_DOC_KEYWORDS:
@@ -367,14 +372,16 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
                f"🔎 Cerco *{query}* nell'albo OAM (agenti/mediatori creditizi)…")
         return
     # Richiesta documenti SPID al cliente (operatore -> il cliente li carica dal portale).
-    if _SPID_REQ_RE.search(t):
+    _spid_docs = _parse_spid_docs(t)
+    if (_SPID_REQ_RE.search(t)
+            or (_spid_docs and _is_super_admin_number(sender) and _SPID_NL_RE.search(t))):
         _case = _resolve_case(lead_name, t)
         if not _case:
             _reply(wa_phone, sender, lead_name,
                    "Per quale pratica? Es. «richiedi al cliente cassetto fiscale e "
                    "casellario per CASE-2026-00XX».")
             return
-        keys = _parse_spid_docs(t)
+        keys = _spid_docs
         if not keys:
             _reply(wa_phone, sender, lead_name,
                    "Quali documenti? Es. «richiedi al cliente cassetto fiscale e casellario"
