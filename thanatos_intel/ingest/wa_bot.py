@@ -168,6 +168,8 @@ def send_text(wa_doc, to_number, body, lead_name, sent_by="Administrator"):
         mid = data["messages"][0].get("id", "") if ok else ""
     except Exception:
         frappe.log_error(frappe.get_traceback(), "wa_bot send_text")
+    if not lead_name:
+        return ok
     import time as _time
     from thanatos_intel.thanatos_core.doctype.intel_lead.intel_lead import _is_write_conflict
     for _i in range(5):
@@ -188,6 +190,29 @@ def send_text(wa_doc, to_number, body, lead_name, sent_by="Administrator"):
                 break
             _time.sleep(0.2 * (_i + 1))
     return ok
+
+
+def notify_operators(message):
+    """Notifica WhatsApp agli operatori (super admin) dal numero business.
+    Best-effort: usato per alert operativi (es. assistenza cliente richiesta)."""
+    try:
+        wan = (frappe.db.get_value("WhatsApp Number", {"is_active": 1, "ai_bot_enabled": 1}, "phone_number")
+               or frappe.db.get_value("WhatsApp Number", {"is_active": 1}, "phone_number"))
+        if not wan:
+            return
+        wa_doc = _wa_doc(wan)
+        try:
+            from thanatos_intel.billing.paid_gate import _SUPER_ADMIN_NUMBERS
+            numbers = list(_SUPER_ADMIN_NUMBERS)
+        except Exception:
+            numbers = []
+        for n in numbers:
+            try:
+                send_text(wa_doc, n, message, None)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "notify_operators send")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "notify_operators")
 
 
 def send_image(wa_doc, to_number, image_bytes, caption, lead_name, filename="captcha.png"):

@@ -268,4 +268,12 @@ def request_spid_help(request, note=""):
             from_user=user)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "SPID help notify")
+    try:
+        from thanatos_intel.ingest.wa_bot import notify_operators
+        notify_operators(
+            f"🆘 *Assistenza SPID* — il cliente non riesce a recuperare «{req.doc_label}» "
+            f"(pratica {req.investigation_case}).\nNota: {note or '—'}\nRicontattalo per "
+            "aiutarlo, o valuta mandato/procura.")
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "SPID help wa")
     return {"ok": True}
