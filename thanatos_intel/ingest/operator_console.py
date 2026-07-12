@@ -123,7 +123,7 @@ _OCF_RE = re.compile(
     r"ricerca\s+albo|cerca\s+(all.?\s*)?albo)\b",
     re.I,
 )
-_CAPTCHA_ANS_RE = re.compile(r"^[A-Za-z0-9]{3,8}$")
+_CAPTCHA_ANS_RE = re.compile(r"^(?=.*\d)[A-Za-z0-9]{3,8}$")
 
 
 def _ocf_await_key(lead_name):
@@ -281,9 +281,13 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
             frappe.cache().set_value(_ocf_answer_key(lead_name), t, expires_in_sec=180)
             _reply(wa_phone, sender, lead_name, "🔎 Ricevuto, completo la ricerca all'albo…")
             return
-        else:
-            # non sembra un captcha: l'operatore ha cambiato idea -> annullo l'attesa
+        elif _OCF_RE.search(t):
+            # nuova ricerca all'albo: annullo l'attesa e proseguo sotto
             frappe.cache().delete_value(_ocf_await_key(lead_name))
+        else:
+            # messaggio non pertinente durante l'attesa (es. «attendo»): lo ignoro,
+            # il job continua ad aspettare il captcha (niente cancellazione, niente reply).
+            return
     # Ricerca albo OCF: apre il browser, manda il captcha, attende la soluzione.
     if _OCF_RE.search(t):
         cognome, nome = _ocf_parse_query(t)

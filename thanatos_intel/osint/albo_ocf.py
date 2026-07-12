@@ -81,7 +81,10 @@ def run_ocf_search(lead_name, cognome, nome="", sezione="", wa_phone=None, sende
             sol = None
             deadline = time.time() + wait_seconds
             while time.time() < deadline:
-                v = frappe.cache().get_value(_answer_key(lead_name))
+                # use_local_cache=False: senza, get_value cacha il None in-process
+                # (frappe.local.cache) e il worker in polling non rileggerebbe MAI
+                # da Redis la risposta scritta dal processo web -> timeout perenne.
+                v = frappe.cache().get_value(_answer_key(lead_name), use_local_cache=False)
                 if v:
                     sol = v.decode() if isinstance(v, bytes) else str(v)
                     break
