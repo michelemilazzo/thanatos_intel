@@ -1,0 +1,123 @@
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;
+  --border:#1F2842;--ok:#6aa66a;--err:#d05a5a;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:#E8E9F0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:840px;margin:0 auto;padding:40px 24px 60px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.crumb a{color:var(--gold);text-decoration:none}
+h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 6px}
+.sub{color:var(--grey);font-size:13px;margin:0 0 20px;line-height:1.6}
+.note{background:rgba(200,169,110,.08);border:1px solid var(--border);border-left:3px solid var(--gold);
+  border-radius:4px;padding:12px 16px;font-size:12.5px;color:#cdd2e0;margin-bottom:28px;line-height:1.6}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px 20px;margin:14px 0}
+.card h3{margin:0 0 4px;font-size:16px;color:#fff;font-weight:600}
+.ente{color:var(--gold);font-size:12px;margin-bottom:10px}
+.steps{color:#cdd2e0;font-size:13px;line-height:1.6;margin:0 0 12px}
+.golink{display:inline-block;color:var(--gold);text-decoration:none;font-size:12.5px;
+  border:1px solid var(--border);border-radius:4px;padding:7px 13px;margin-bottom:14px}
+.golink:hover{border-color:var(--gold)}
+.consent{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:#cdd2e0;margin:10px 0;line-height:1.5}
+.consent input{margin-top:2px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+input[type=file]{color:var(--grey);font-size:12.5px;max-width:100%}
+button{background:var(--gold);color:#0A0E1A;border:0;border-radius:4px;padding:10px 18px;
+  font-size:13px;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.badge{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;letter-spacing:.5px}
+.b-done{background:rgba(106,166,106,.15);color:var(--ok);border:1px solid rgba(106,166,106,.4)}
+.b-pend{background:rgba(200,169,110,.12);color:var(--gold);border:1px solid var(--border)}
+.st{font-size:12px;margin-left:6px}
+.empty{color:var(--grey);font-size:13px;padding:30px 0;text-align:center}
+.sec{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin:30px 0 6px}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> · Documenti richiesti</div>
+  <h1>Documenti richiesti</h1>
+  <p class="sub">Qui trovi i documenti che ti abbiamo chiesto di recuperare per la tua pratica.</p>
+  <div class="note">🔒 <b>Come funziona:</b> i documenti li recuperi <b>tu</b>, autenticandoti con
+    <b>SPID</b> sul sito ufficiale dell'ente, e li carichi qui in sicurezza. <b>Non ti chiederemo mai
+    le tue credenziali SPID</b> — sono personali e non vanno condivise con nessuno.</div>
+
+  {% if pending %}
+  <div class="sec">Da caricare</div>
+  {% for r in pending %}
+  <div class="card" data-req="{{ r.name }}">
+    <h3>{{ r.doc_label }} <span class="badge b-pend">richiesto</span></h3>
+    <div class="ente">{{ r.ente }} · pratica {{ r.investigation_case }}</div>
+    <p class="steps">{{ r.istruzioni }}</p>
+    {% if r.url %}<a class="golink" href="{{ r.url }}" target="_blank" rel="noopener">↗ Vai al sito {{ r.ente }} (accedi con SPID)</a>{% endif %}
+    <label class="consent">
+      <input type="checkbox" class="consent-cb">
+      <span>Confermo di aver recuperato personalmente questo documento con il mio SPID e
+        <b>acconsento</b> a conferirlo per la pratica {{ r.investigation_case }}.</span>
+    </label>
+    <div class="row">
+      <input type="file" class="file-in" accept=".pdf,.jpg,.jpeg,.png,.p7m">
+      <button class="up-btn" disabled>Carica</button>
+      <span class="st"></span>
+    </div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="empty">Nessun documento da caricare al momento.</div>
+  {% endif %}
+
+  {% if done %}
+  <div class="sec">Già caricati</div>
+  {% for r in done %}
+  <div class="card">
+    <h3>{{ r.doc_label }} <span class="badge b-done">{{ r.status|lower }}</span></h3>
+    <div class="ente">{{ r.ente }} · pratica {{ r.investigation_case }}</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{{ thanatos_footer() }}
+
+<script>
+const CSRF = "{{ csrf_token }}";
+document.querySelectorAll('.card[data-req]').forEach(card => {
+  const cb = card.querySelector('.consent-cb');
+  const fin = card.querySelector('.file-in');
+  const btn = card.querySelector('.up-btn');
+  const st = card.querySelector('.st');
+  if (!btn) return;
+  function refresh(){ btn.disabled = !(cb.checked && fin.files.length); }
+  cb.addEventListener('change', refresh);
+  fin.addEventListener('change', refresh);
+  btn.addEventListener('click', async () => {
+    btn.disabled = true; st.textContent = 'invio…'; st.style.color = '#7A8294';
+    const fd = new FormData();
+    fd.append('request', card.dataset.req);
+    fd.append('consent', cb.checked ? '1' : '0');
+    fd.append('file', fin.files[0]);
+    try {
+      const r = await fetch('/api/method/thanatos_intel.api.spid_documents.submit_spid_document', {
+        method:'POST', headers:{'X-Frappe-CSRF-Token':CSRF}, body:fd });
+      const data = await r.json();
+      const msg = data.message || data;
+      if (msg && msg.ok){
+        st.textContent = '✓ caricato'; st.style.color = '#6aa66a';
+        setTimeout(() => window.location.reload(), 1000);
+      } else { throw new Error((msg && msg.error) || 'errore'); }
+    } catch(e){
+      st.textContent = 'errore'; st.style.color = '#d05a5a';
+      btn.disabled = false;
+      alert('Errore: ' + e.message);
+    }
+  });
+});
+</script>
+{% endblock %}
