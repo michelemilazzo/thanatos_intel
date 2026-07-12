@@ -99,20 +99,58 @@ def _anonymize(dt, name, fields_text):
         frappe.db.set_value(dt, name, vals)
 
 
+def _erase_attachments(dt, name):
+    """Erasa i blob File allegati (es. la scansione del documento KYC = dato
+    personale). Usato per l'erasura GDPR quando il record NON si può cancellare
+    (catena di custodia)."""
+    n = 0
+    for _fn in frappe.get_all("File", filters={"attached_to_doctype": dt,
+                              "attached_to_name": name}, pluck="name"):
+        try:
+            frappe.delete_doc("File", _fn, ignore_permissions=True, force=True)
+            n += 1
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "retention file erase")
+    return n
+
+
+def _archive_status(dt, name):
+    """Marca il record come archiviato se ha un campo status/custody idoneo."""
+    m = frappe.get_meta(dt)
+    if m.has_field("custody_status"):
+        frappe.db.set_value(dt, name, "custody_status", "Archived")
+        return True
+    if m.has_field("status"):
+        opts = (next((f.options for f in m.fields if f.fieldname == "status"), "") or "").split("\n")
+        arch = next((o for o in opts if o.strip() in ("Archiviato", "Archived", "Closed")), None)
+        if arch:
+            frappe.db.set_value(dt, name, "status", arch.strip())
+            return True
+    return False
+
+
 def _apply(rule, name):
     dt = rule["target_doctype"]
     action = rule.get("action")
+    erase_att = int(rule.get("erase_attachments") or 0)
     if action == "Cancella":
+        # erasura completa: allegati + record. NB: alcuni doctype vietano il
+        # delete (es. Investigation Evidence, catena di custodia Legea 135/2010)
+        # -> in quel caso delete_doc solleva e il record va gestito con Anonimizza.
+        _erase_attachments(dt, name)
         frappe.delete_doc(dt, name, ignore_permissions=True)
     elif action == "Anonimizza":
+        # dato personale erasato ma record conservato (compatibile con la catena
+        # di custodia): blanka i campi PII + erasa gli allegati (se richiesto) +
+        # marca archiviato.
         _anonymize(dt, name, rule.get("anonymize_fields"))
+        if erase_att:
+            _erase_attachments(dt, name)
+        _archive_status(dt, name)
     elif action == "Archivia":
-        m = frappe.get_meta(dt)
-        if m.has_field("status"):
-            opts = (next((f.options for f in m.fields if f.fieldname == "status"), "") or "").split("\n")
-            arch = next((o for o in opts if o.strip() in ("Archiviato", "Archived", "Closed")), None)
-            if arch:
-                frappe.db.set_value(dt, name, "status", arch.strip())
+        if erase_att:
+            _erase_attachments(dt, name)
+        _archive_status(dt, name)
 
 
 def _audit(report, dry):

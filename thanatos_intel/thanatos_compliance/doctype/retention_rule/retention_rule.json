@@ -21,7 +21,8 @@
   "filter_json",
   "anonymize_fields",
   "last_run",
-  "last_count"
+  "last_count",
+  "erase_attachments"
  ],
  "fields": [
   {
@@ -102,6 +103,11 @@
    "fieldtype": "Int",
    "label": "Record trattati (ultima)",
    "read_only": 1
+  },
+  {
+   "fieldname": "erase_attachments",
+   "fieldtype": "Check",
+   "label": "Erasa allegati (blob File: es. documento KYC) — per Anonimizza/Archivia"
   }
  ],
  "grid_page_length": 50,
