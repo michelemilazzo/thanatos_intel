@@ -150,6 +150,31 @@ _IVASS_RE = re.compile(
 )
 
 
+# Richiesta documenti SPID al cliente (operatore).
+_SPID_REQ_RE = re.compile(
+    r"\b(richied\w+|chied\w+)\b.{0,30}\b(document\w+|cliente)\b|"
+    r"\bdocument\w+\s+(al\s+)?client|\bdocument\w+\s+spid\b",
+    re.I,
+)
+_SPID_DOC_KEYWORDS = [
+    (r"cassett|fiscal|redditi|dichiarazion", "cassetto_fiscale"),
+    (r"casellari|penal|carichi\s+pendenti|precedent", "casellario"),
+    (r"\binps\b|contribut|estratto\s+conto", "estratto_inps"),
+    (r"ecocert|previdenzial", "fascicolo_prev"),
+    (r"residenz|anagraf|stato\s+di\s+famiglia|\banpr\b", "anagrafe_anpr"),
+    (r"visura\s+camer|\bimpresa\b|camerale", "visura_impresa"),
+    (r"catast|immobil|ipotecar", "visura_catastale"),
+]
+
+
+def _parse_spid_docs(t):
+    keys = []
+    for pat, k in _SPID_DOC_KEYWORDS:
+        if re.search(pat, t or "", re.I) and k not in keys:
+            keys.append(k)
+    return keys
+
+
 def _ivass_parse_query(t):
     q = re.sub(
         r"\b(ivass|rui|intermediari?|assicurativ\w*|registro\s+unico(\s+intermediari)?|"
@@ -340,6 +365,30 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
                        bill_client=_g.get("client"), bill_price=_g.get("price"))
         _reply(wa_phone, sender, lead_name,
                f"🔎 Cerco *{query}* nell'albo OAM (agenti/mediatori creditizi)…")
+        return
+    # Richiesta documenti SPID al cliente (operatore -> il cliente li carica dal portale).
+    if _SPID_REQ_RE.search(t):
+        _case = _resolve_case(lead_name, t)
+        if not _case:
+            _reply(wa_phone, sender, lead_name,
+                   "Per quale pratica? Es. «richiedi al cliente cassetto fiscale e "
+                   "casellario per CASE-2026-00XX».")
+            return
+        keys = _parse_spid_docs(t)
+        if not keys:
+            _reply(wa_phone, sender, lead_name,
+                   "Quali documenti? Es. «richiedi al cliente cassetto fiscale e casellario"
+                   f" per {_case}».\nDisponibili: cassetto fiscale, casellario, INPS, "
+                   "residenza/ANPR, visura impresa, catasto, ECOCERT.")
+            return
+        from thanatos_intel.api.spid_documents import _create_spid_requests
+        from thanatos_intel.osint.spid_catalog import doc_label
+        _create_spid_requests(_case, keys, notes=f"richiesta via WhatsApp da {sender}")
+        labels = ", ".join(doc_label(k) for k in keys)
+        _reply(wa_phone, sender, lead_name,
+               f"📋 Richiesti al cliente {len(keys)} documenti per *{_case}*: {labels}.\n"
+               "Ho avvisato il cliente via email; li recupera con il suo SPID e li carica "
+               "dal portale (/portal/documenti-spid). Mai le sue credenziali.")
         return
     # IVASS RUI (intermediari assicurativi) — operatore-assistito: il server IVASS
     # blocca gli IP datacenter (SYN/ICMP droppati), quindi diamo link + guida.

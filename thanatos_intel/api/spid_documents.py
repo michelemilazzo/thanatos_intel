@@ -67,6 +67,14 @@ def request_spid_documents(case, doc_keys, notes=""):
         frappe.throw(_("Nessun tipo documento valido. Disponibili: {0}").format(
             ", ".join(SPID_DOCS.keys())))
 
+    return _create_spid_requests(case, keys, notes=notes, requested_by=user)
+
+
+def _create_spid_requests(case, keys, notes="", requested_by=None):
+    """Crea le richieste (uso interno: chiamato dal gate HTTP e dal webhook WA)."""
+    keys = [k for k in (keys or []) if k in SPID_DOCS]
+    if not keys:
+        return {"created": [], "count": 0}
     client = _client_for_case(case)
     created = []
     for k in keys:
@@ -77,7 +85,7 @@ def request_spid_documents(case, doc_keys, notes=""):
             "doc_key": k,
             "doc_label": doc_label(k),
             "status": "Richiesto",
-            "requested_by": user,
+            "requested_by": requested_by or frappe.session.user,
             "requested_on": now_datetime(),
             "notes": notes or "",
         })
