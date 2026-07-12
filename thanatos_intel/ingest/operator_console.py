@@ -143,6 +143,21 @@ def _oam_parse_query(t):
     return re.sub(r"\s+", " ", q).strip(" ?.,")
 
 
+# IVASS RUI (intermediari assicurativi) — operatore-assistito (server IVASS blocca gli IP datacenter).
+_IVASS_RE = re.compile(
+    r"\b(ivass|rui\b|intermediari?\s+assicurativ\w*|registro\s+unico\s+intermediari)\b",
+    re.I,
+)
+
+
+def _ivass_parse_query(t):
+    q = re.sub(
+        r"\b(ivass|rui|intermediari?|assicurativ\w*|registro\s+unico(\s+intermediari)?|"
+        r"cerca|ricerca|iscritt\w*|all.?\s*albo)\b",
+        " ", t or "", flags=re.I)
+    return re.sub(r"\s+", " ", q).strip(" ?.,")
+
+
 def _ocf_await_key(lead_name):
     return f"ocf_await:{lead_name}"
 
@@ -325,6 +340,28 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
                        bill_client=_g.get("client"), bill_price=_g.get("price"))
         _reply(wa_phone, sender, lead_name,
                f"🔎 Cerco *{query}* nell'albo OAM (agenti/mediatori creditizi)…")
+        return
+    # IVASS RUI (intermediari assicurativi) — operatore-assistito: il server IVASS
+    # blocca gli IP datacenter (SYN/ICMP droppati), quindi diamo link + guida.
+    if _IVASS_RE.search(t):
+        query = _ivass_parse_query(t)
+        _case = _resolve_case(lead_name, t)
+        try:
+            from thanatos_intel.osint.engine import record_lookup
+            record_lookup("Person", query or (t or "").strip(),
+                          {"source": "ivass_rui", "stub": True, "mode": "operator_assisted"},
+                          case=_case)
+        except Exception:
+            pass
+        dest = f" a *{_case}*" if _case else " alla pratica"
+        qline = f" per *{query}*" if query else ""
+        _reply(wa_phone, sender, lead_name,
+               "🛡️ *IVASS — RUI (intermediari assicurativi)*\n"
+               "La ricerca IVASS va fatta a mano: il RUI blocca gli accessi automatici "
+               "server-side.\n\n"
+               "1) Apri: https://servizi.ivass.it/RuirPubblica/\n"
+               f"2) Cerca per cognome/denominazione{qline}\n"
+               f"3) Incolla qui i risultati e li allego{dest}.")
         return
     # Ricerca albo OCF: apre il browser, manda il captcha, attende la soluzione.
     if _OCF_RE.search(t):
