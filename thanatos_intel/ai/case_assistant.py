@@ -259,10 +259,13 @@ def case_ai_chat(case, message, lead_name=None, wa_phone=None, sender=None):
         # Screening persona singola e' una lookup rapida: la eseguo SINCRONA
         # (via lo stesso screening_kyc usato per "screening PEP <nome>") e
         # rispondo subito col risultato reale, niente background silenzioso.
+        # toglie il markup WhatsApp (*grassetto*, _corsivo_) che romperebbe
+        # l'estrazione del nome (es. «screening su *Libero Aloi*»).
+        _msg_clean = re.sub(r"[*_~`]", " ", message or "")
         name_m = re.search(
             r"screening\s+(?:su\s+|per\s+|di\s+)?"
             r"([A-ZÀ-Ý][\wÀ-ÿ'\.]+(?:\s+[A-ZÀ-Ý][\wÀ-ÿ'\.]+){0,4})",
-            message or "")
+            _msg_clean)
         candidate = (name_m.group(1).strip() if name_m else "")
         if candidate and not re.search(r"^(parti|tutto|tutti|caso|società|azienda)$", candidate, re.I):
             try:
@@ -283,13 +286,15 @@ def case_ai_chat(case, message, lead_name=None, wa_phone=None, sender=None):
                 if r.get("error"):
                     return done(f"⚠️ Screening «{candidate}»: {r['error']}", "screening_persona")
                 hl = "; ".join(h["nome"] for h in (r.get("hits") or [])[:8]) or "nessun match"
-                lines = [f"🛂 Screening *{candidate}* (PEP/sanzioni/adverse media): "
-                        f"{r.get('match', 0)} match — {hl}",
-                        "",
-                        f"*{candidate}* non risulta nei reperti di *{case}*. "
-                        f"È collegato a questo caso? Se sì, dimmelo e lo registro come "
-                        f"reperto — non lo aggancio in automatico."]
-                return done("\n".join(lines), "screening_persona")
+                head = (f"🛂 Screening *{candidate}* (PEP/sanzioni/adverse media): "
+                        f"{r.get('match', 0)} match — {hl}")
+                if case:
+                    tail = (f"\n\n*{candidate}* non risulta nei reperti di *{case}*. "
+                            "È collegato a questo caso? Se sì, dimmelo e lo registro come "
+                            "reperto — non lo aggancio in automatico.")
+                else:
+                    tail = "\n\n_Ricerca autonoma: non associata ad alcun caso._"
+                return done(head + tail, "screening_persona")
         _enq("thanatos_intel.integrations.company_screen.screen_case_parties", "Screening parti", case,
              lead_name=lead_name, wa_phone=wa_phone, sender=sender)
         return done("🔎 Screening parti avviato (VIES/sanzioni).", "screening")

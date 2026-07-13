@@ -111,7 +111,10 @@ _WEB_SEARCH_RE = re.compile(
 _EXIT_CTX_RE = re.compile(
     r"esci\s+da(l)?\s+contesto|fuori\s+da(l)?\s+contesto|reset\s+contesto|"
     r"(caso|pratica)\s+nuov[oa]|nuov[oa]\s+(caso|pratica)|cambia\s+caso|"
-    r"scollega\s+(il\s+)?caso|stacca\s+(il\s+)?caso",
+    r"scollega\s+(il\s+)?caso|stacca\s+(il\s+)?caso|"
+    r"(al\s+di\s+)?fuori\s+(di|da)\s+(ogni|qualsiasi|il|questo)\s+cas|"
+    r"senza\s+(alcun\s+)?caso|non\s+associat\w*\s+a\s+(nessun|alcun)\s+caso|"
+    r"al\s+di\s+fuori\s+di\s+ogni\s+caso",
     re.I,
 )
 
