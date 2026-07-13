@@ -869,6 +869,23 @@ _SIMPLE_RE = re.compile(
     r"chi sei|cosa sai fare|aiuto|help|test)\b", re.I)
 
 
+_TRIVIAL_RE = re.compile(
+    r"^(ciao|salve|buongiorno|buonasera|buonanotte|grazie|ok(ay)?|perfetto|"
+    r"va\s+bene|ottimo|si|s[i\u00ec]|no|esatto|capito|d'accordo|bene|prego|"
+    r"ottimo\s+lavoro)[\s!.,\U0001F440-\U0001FAFF]*$", re.I)
+
+
+def _needs_tools(text):
+    """True se il messaggio e' una domanda fattuale/operativa (-> motore con
+    strumenti). False solo per i messaggi banali (saluti/conferme) senza dati."""
+    t = (text or "").strip()
+    if not t or t.startswith("["):
+        return False
+    if _TRIVIAL_RE.match(t):
+        return False
+    return True
+
+
 def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, user=None):
     """Cervello operativo con AUTORIZZAZIONE. `user` (o operator) determina lo
     scope: operatore/admin = tutti i casi e strumenti; cliente = SOLO i propri
@@ -1005,7 +1022,13 @@ def answer(text, operator=None, lead_name=None, session_id=None, max_steps=3, us
         r = _chain(E_cheap, E_gw, E_ollama)
     # OPERATORE: router a costi scalati completo.
     elif engine == "auto":
-        r = _chain(E_cheap, E_claude, E_codex, E_gw, E_ollama)
+        # Domande fattuali/operative -> motore con STRUMENTI (Claude) per primo,
+        # cosi risponde coi dati reali e non inventa. Solo i messaggi banali
+        # (saluti/conferme) restano sull'economico per risparmiare.
+        if _needs_tools(text):
+            r = _chain(E_claude, E_codex, E_cheap, E_gw, E_ollama)
+        else:
+            r = _chain(E_cheap, E_claude, E_codex, E_gw, E_ollama)
     elif engine == "codex":
         r = _chain(E_codex, E_claude, E_gw)
     elif engine == "ollama":
