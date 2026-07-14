@@ -27,6 +27,12 @@ body.thanatos-home #page-content{
   font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif !important;
 }
 body.thanatos-home .page_content{display:block;}
+/* Fix iOS/WebKit: il tema Frappe imposta body{display:flex;flex-direction:column} e il body
+   assume l'altezza del viewport. Su WebKit (Safari e tutti i browser iPhone) i flex item si
+   restringono per rientrare nell'altezza fissa e il hero collassa, spostando il contenuto sul
+   logo. Forziamo il body a crescere con il contenuto. */
+body.thanatos-home{height:auto !important;min-height:100vh;}
+body.thanatos-home>*{flex-shrink:0 !important;}
 section.t-hero{position:relative;padding:80px 24px 60px;text-align:center;overflow:visible;width:100%;box-sizing:border-box;
   background:radial-gradient(ellipse at top,#13192C 0%,#0A0E1A 70%);border-bottom:1px solid var(--line);}
 .t-hero-logo{display:flex;flex-direction:column;align-items:center;justify-content:center;margin-bottom:36px;position:relative;z-index:1;}
