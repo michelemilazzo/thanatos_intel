@@ -200,6 +200,7 @@ doc_events={
 }
 scheduler_events={
  'cron':{'0 7 * * *':['thanatos_intel.news.ingestion.daily_publish'],
+         '*/5 * * * *':['thanatos_intel.thanatos_social.doctype.facebook_post.facebook_post.publish_due_posts'],
          '*/15 * * * *':['thanatos_intel.thanatos_tracking.most_wanted.fetch_interpol_photos_scheduled']},
  'all':[],
  'hourly':['thanatos_intel.news.ingestion.hourly_ingest',
@@ -210,7 +211,8 @@ scheduler_events={
            'thanatos_intel.notifications.appointment_reminders.send_appointment_reminders',
            'thanatos_intel.site_i18n.warm_cache',
            'thanatos_intel.billing.ai_gateway_ingest.ingest_gateway_usage',
-           'thanatos_intel.osint.official_documents.docuengine_poll_pending'],
+           'thanatos_intel.osint.official_documents.docuengine_poll_pending',
+           'thanatos_intel.thanatos_social.doctype.facebook_post.facebook_post.refresh_published_insights'],
  'daily':['thanatos_intel.news.ingestion.daily_case_digest',
           'thanatos_intel.thanatos_core.doctype.investigator.investigator.check_license_expiry',
           'thanatos_intel.thanatos_ddd.opensanctions_sync.daily_refresh',
