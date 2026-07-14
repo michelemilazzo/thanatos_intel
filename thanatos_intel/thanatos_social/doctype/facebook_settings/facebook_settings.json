@@ -1,0 +1,24 @@
+{
+  "doctype": "DocType",
+  "name": "Facebook Settings",
+  "module": "Thanatos Social",
+  "issingle": 1,
+  "fields": [
+    {"fieldname": "intro", "fieldtype": "HTML", "options": "<p class='text-muted'>Credenziali della Pagina Facebook <b>Thanatos</b>. Serve un <b>Page Access Token</b> long-lived con i permessi <code>pages_manage_posts</code>, <code>pages_read_engagement</code>, <code>read_insights</code>. In alternativa i valori possono stare in <code>site_config.json</code> (facebook_page_id / facebook_page_token). I valori qui, se presenti, hanno la precedenza.</p>"},
+    {"fieldname": "enabled", "fieldtype": "Check", "label": "Integrazione attiva", "default": "0"},
+    {"fieldname": "sb_creds", "fieldtype": "Section Break", "label": "Credenziali Pagina"},
+    {"fieldname": "page_id", "fieldtype": "Data", "label": "ID Pagina Facebook"},
+    {"fieldname": "api_version", "fieldtype": "Data", "label": "Versione Graph API", "default": "v19.0"},
+    {"fieldname": "col_creds", "fieldtype": "Column Break"},
+    {"fieldname": "page_token", "fieldtype": "Password", "label": "Page Access Token"},
+    {"fieldname": "sb_publish", "fieldtype": "Section Break", "label": "Pubblicazione"},
+    {"fieldname": "auto_publish_scheduler", "fieldtype": "Check", "label": "Pubblica automaticamente i post programmati", "default": "1", "description": "Se attivo, lo scheduler pubblica i Facebook Post in stato 'Programmato' alla data prevista."},
+    {"fieldname": "default_link", "fieldtype": "Data", "label": "Link predefinito", "description": "Aggiunto ai post che non specificano un link (es. https://thanatos.agency)."},
+    {"fieldname": "sb_test", "fieldtype": "Section Break", "label": "Diagnostica"},
+    {"fieldname": "test_help", "fieldtype": "HTML", "options": "<p class='text-muted'>Usa il pulsante <b>Verifica connessione</b> per controllare che il token sia valido e leggere il nome della Pagina.</p>"}
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1},
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1}
+  ]
+}

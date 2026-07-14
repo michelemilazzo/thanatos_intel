@@ -1,0 +1,43 @@
+{
+  "doctype": "DocType",
+  "name": "Facebook Post",
+  "module": "Thanatos Social",
+  "naming_rule": "By \"Naming Series\" field",
+  "autoname": "field:naming_series",
+  "title_field": "post_title",
+  "track_changes": 1,
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "fields": [
+    {"fieldname": "naming_series", "fieldtype": "Select", "label": "Serie", "options": "FB-POST-.#####", "default": "FB-POST-.#####", "hidden": 1},
+    {"fieldname": "post_title", "fieldtype": "Data", "label": "Titolo interno", "reqd": 1, "in_list_view": 1, "description": "Nome del post a uso interno (non pubblicato)."},
+    {"fieldname": "post_type", "fieldtype": "Select", "label": "Tipo", "options": "Testo\nLink\nFoto", "default": "Testo", "in_list_view": 1, "reqd": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Stato", "options": "Bozza\nProgrammato\nPubblicato\nFallito\nAnnullato", "default": "Bozza", "read_only": 1, "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_head", "fieldtype": "Column Break"},
+    {"fieldname": "scheduled_time", "fieldtype": "Datetime", "label": "Programmato per", "in_list_view": 1, "description": "Data/ora di pubblicazione desiderata. Vuoto = pubblicazione manuale."},
+    {"fieldname": "sb_content", "fieldtype": "Section Break", "label": "Contenuto"},
+    {"fieldname": "message", "fieldtype": "Small Text", "label": "Testo del post"},
+    {"fieldname": "link", "fieldtype": "Data", "label": "Link", "depends_on": "eval:doc.post_type=='Link'"},
+    {"fieldname": "image", "fieldtype": "Attach Image", "label": "Immagine", "depends_on": "eval:doc.post_type=='Foto'"},
+    {"fieldname": "sb_result", "fieldtype": "Section Break", "label": "Risultato pubblicazione", "collapsible": 1},
+    {"fieldname": "fb_post_id", "fieldtype": "Data", "label": "ID Post Facebook", "read_only": 1},
+    {"fieldname": "permalink", "fieldtype": "Data", "label": "Permalink", "read_only": 1},
+    {"fieldname": "published_time", "fieldtype": "Datetime", "label": "Pubblicato il", "read_only": 1},
+    {"fieldname": "col_result", "fieldtype": "Column Break"},
+    {"fieldname": "error_log", "fieldtype": "Small Text", "label": "Ultimo errore", "read_only": 1},
+    {"fieldname": "sb_insights", "fieldtype": "Section Break", "label": "Insights", "collapsible": 1},
+    {"fieldname": "impressions", "fieldtype": "Int", "label": "Impression", "read_only": 1},
+    {"fieldname": "reach", "fieldtype": "Int", "label": "Copertura", "read_only": 1},
+    {"fieldname": "clicks", "fieldtype": "Int", "label": "Clic", "read_only": 1},
+    {"fieldname": "col_insights", "fieldtype": "Column Break"},
+    {"fieldname": "likes", "fieldtype": "Int", "label": "Mi piace", "read_only": 1},
+    {"fieldname": "comments", "fieldtype": "Int", "label": "Commenti", "read_only": 1},
+    {"fieldname": "shares", "fieldtype": "Int", "label": "Condivisioni", "read_only": 1},
+    {"fieldname": "last_insights_sync", "fieldtype": "Datetime", "label": "Ultimo aggiornamento insights", "read_only": 1}
+  ],
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1}
+  ]
+}

@@ -13,3 +13,4 @@ Billing
 Osint
 Thanatos Compliance
 Thanatos Tracking
+Thanatos Social
