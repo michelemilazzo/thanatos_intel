@@ -63,7 +63,7 @@ def address_snapshot(address: str) -> dict:
             "type": "hijacked_permission", "severity": "critical",
             "msg": (f"WALLET DIROTTATO: soglia {threshold}, tuo peso {my_key_weight}. "
                     f"{len(attacker_keys)} chiavi terze (peso "
-                    f"{sum(w["weight"] for w in attacker_keys)}). "
+                    f"{sum(w['weight'] for w in attacker_keys)}). "
                     "Pattern classico furto TRON."),
             "attacker_keys": attacker_keys,
         })

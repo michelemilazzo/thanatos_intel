@@ -25,6 +25,13 @@ body.thanatos-home #page-content{
   font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif !important;
 }
 body.thanatos-home .page_content{display:block;}
+/* Fix iOS/WebKit: il tema Frappe imposta body{display:flex;flex-direction:column} e il body
+   assume l'altezza del viewport. Su WebKit (motore di Safari e di TUTTI i browser iPhone) i
+   flex item si restringono per rientrare nell'altezza fissa, quindi il hero — che ha
+   overflow:hidden — collassa e taglia il logo. Chromium/Android non restringono (min-height:auto),
+   per questo il bug si vede solo su iPhone. Forziamo il body a crescere con il contenuto. */
+body.thanatos-home{height:auto !important;min-height:100vh;}
+body.thanatos-home>*{flex-shrink:0 !important;}
 
 /* HERO */
 section.t-hero{position:relative;padding:64px 24px 60px;text-align:center;overflow:hidden;width:100%;box-sizing:border-box;
