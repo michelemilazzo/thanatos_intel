@@ -78,9 +78,10 @@ class FacebookPost(Document):
             if default_link:
                 link = default_link
 
+        image_url = self.image_url or _absolute_file_url(self.image)
+
         try:
-            if self.post_type == "Foto":
-                image_url = _absolute_file_url(self.image)
+            if self.post_type == "Foto" and image_url:
                 res = fb.publish_photo(
                     image_url=image_url, caption=message,
                     scheduled_time=scheduled_time,
@@ -98,6 +99,18 @@ class FacebookPost(Document):
         post_id = res.get("id") or res.get("post_id") or ""
         self.db_set("fb_post_id", post_id)
         self.db_set("error_log", "")
+
+        # Cross-post su Instagram: richiede un'immagine e un account IG collegato.
+        # Non blocca mai il post Facebook già riuscito.
+        if self.also_instagram and image_url and not scheduled_time:
+            try:
+                ig = fb.publish_instagram(image_url=image_url, caption=message)
+                if ig.get("id"):
+                    self.db_set("instagram_post_id", ig["id"])
+            except Exception as e:
+                frappe.log_error(frappe.get_traceback(), "FacebookPost instagram")
+                self.db_set("error_log", ("Instagram: " + str(e))[:1000])
+
         # Se abbiamo programmato nativamente su FB (>10 min), resta 'Programmato'.
         if scheduled_time and not res.get("id"):
             self.db_set("status", "Programmato")

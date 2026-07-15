@@ -182,6 +182,9 @@ doc_events={
  'Service Catalog': {
    'on_update': 'thanatos_intel.billing.plan_sync.on_service_catalog_update',
  },
+ 'News Article': {
+   'on_update': 'thanatos_intel.thanatos_social.social_publisher.on_news_article_update',
+ },
  'Party Payout': {
    'after_insert': 'thanatos_intel.billing.credits.on_party_payout_update',
    'on_update': 'thanatos_intel.billing.credits.on_party_payout_update',
@@ -212,7 +215,8 @@ scheduler_events={
            'thanatos_intel.site_i18n.warm_cache',
            'thanatos_intel.billing.ai_gateway_ingest.ingest_gateway_usage',
            'thanatos_intel.osint.official_documents.docuengine_poll_pending',
-           'thanatos_intel.thanatos_social.doctype.facebook_post.facebook_post.refresh_published_insights'],
+           'thanatos_intel.thanatos_social.doctype.facebook_post.facebook_post.refresh_published_insights',
+           'thanatos_intel.thanatos_social.social_publisher.sync_published_news'],
  'daily':['thanatos_intel.news.ingestion.daily_case_digest',
           'thanatos_intel.thanatos_core.doctype.investigator.investigator.check_license_expiry',
           'thanatos_intel.thanatos_ddd.opensanctions_sync.daily_refresh',
@@ -232,7 +236,8 @@ scheduler_events={
           'thanatos_intel.thanatos_recovery.api.vault_manager.cleanup_expired_recoveries',
           'thanatos_intel.thanatos_compliance.retention_engine.scheduled_retention'],
  'daily_long':['thanatos_intel.maintenance.file_tiering.tier_cold_files'],
- 'weekly':['thanatos_intel.thanatos_core.compliance_ops.policy_review_check'],
+ 'weekly':['thanatos_intel.thanatos_core.compliance_ops.policy_review_check',
+           'thanatos_intel.thanatos_social.social_publisher.publish_service_spotlight'],
  'weekly_long':[],
  'monthly':['thanatos_intel.billing.cost_invoicing.scheduled_monthly_cost_invoicing',
             'thanatos_intel.billing.erp_sync.scheduled_monthly_invoice_on_erp',
