@@ -277,3 +277,71 @@ def _summary_count(obj) -> int:
     if not isinstance(obj, dict):
         return 0
     return int((obj.get("summary") or {}).get("total_count", 0) or 0)
+
+
+# ---------------------------------------------------------------------------
+# Instagram (richiede un account IG Business collegato alla Pagina)
+# ---------------------------------------------------------------------------
+
+def get_ig_user_id(settings: dict | None = None) -> str:
+    """Restituisce l'Instagram Business Account ID collegato alla Pagina.
+
+    Prima usa il valore forzato in Facebook Settings (ig_user_id); altrimenti
+    lo rileva da Graph API: GET /{page_id}?fields=instagram_business_account.
+    Ritorna "" se non c'è un account IG collegato.
+    """
+    s = settings or get_settings()
+    # valore forzato dal DocType
+    try:
+        if frappe.db.exists("DocType", "Facebook Settings"):
+            forced = frappe.db.get_single_value("Facebook Settings", "ig_user_id")
+            if forced:
+                return forced
+    except Exception:
+        pass
+    if not (s["page_id"] and s["page_token"]):
+        return ""
+    try:
+        res = _graph_request(
+            "GET", f"/{s['page_id']}", s,
+            params={"fields": "instagram_business_account"},
+        )
+        return (res.get("instagram_business_account") or {}).get("id", "") or ""
+    except Exception:
+        return ""
+
+
+def instagram_available() -> bool:
+    return bool(is_enabled() and get_ig_user_id())
+
+
+def publish_instagram(image_url: str, caption: str = "") -> dict:
+    """Pubblica una foto su Instagram (processo a 2 step della Graph API).
+
+    IG NON supporta post di solo testo: serve un'immagine con URL pubblico.
+    1) crea il media container su /{ig_id}/media
+    2) pubblica con /{ig_id}/media_publish
+    Restituisce {"id": "<ig_media_id>"}.
+    """
+    s = _require_config()
+    ig_id = get_ig_user_id(s)
+    if not ig_id:
+        raise frappe.ValidationError(
+            "Nessun account Instagram Business collegato alla Pagina."
+        )
+    if not image_url:
+        raise frappe.ValidationError("Instagram richiede un'immagine (image_url).")
+
+    container = _graph_request(
+        "POST", f"/{ig_id}/media", s,
+        data={"image_url": image_url, "caption": caption or ""},
+    )
+    creation_id = container.get("id")
+    if not creation_id:
+        raise frappe.ValidationError(f"Instagram: creazione media fallita: {container}")
+
+    published = _graph_request(
+        "POST", f"/{ig_id}/media_publish", s,
+        data={"creation_id": creation_id},
+    )
+    return published
