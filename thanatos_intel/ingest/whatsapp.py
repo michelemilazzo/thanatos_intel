@@ -166,6 +166,29 @@ def _parse_meta(data: dict) -> list[dict]:
     return results
 
 
+def _log_raw_webhook(data: dict) -> None:
+    """Salva il payload grezzo di OGNI webhook in ``WABA Webhook Log`` così è
+    sempre ispezionabile da desk (/app/waba-webhook-log), anche per i messaggi
+    che WhatsApp marca come non supportati. Best-effort: non deve MAI bloccare
+    la ricezione. Disattivabile con ``whatsapp_webhook_log: 0`` in site_config.
+    """
+    if not frappe.conf.get("whatsapp_webhook_log", 1):
+        return
+    try:
+        if not frappe.db.exists("DocType", "WABA Webhook Log"):
+            return
+        frappe.get_doc({
+            "doctype": "WABA Webhook Log",
+            "payload": frappe.as_json(data)[:100000],
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+    except Exception:
+        try:
+            frappe.log_error(frappe.get_traceback(), "WA raw webhook log")
+        except Exception:
+            pass
+
+
 @frappe.whitelist(allow_guest=True)
 def webhook():
     """Endpoint webhook multi-numero — auto-detect Twilio vs Meta."""
@@ -194,6 +217,7 @@ def webhook():
     content_type = req.content_type or ""
     if "json" in content_type:
         data = req.json or {}
+        _log_raw_webhook(data)
         if frappe.conf.get("whatsapp_debug_payload"):
             try:
                 frappe.log_error(frappe.as_json(data)[:4000], "WA raw payload")

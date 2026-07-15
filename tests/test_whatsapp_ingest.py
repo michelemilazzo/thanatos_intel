@@ -45,6 +45,13 @@ def test_extract_reads_every_message_type():
     assert "Mario" in f({"type": "contacts", "contacts": [{"name": {"formatted_name": "Mario Rossi"}}]})
 
 
+def test_webhook_logs_raw_payload():
+    # ogni webhook JSON deve salvare il payload grezzo per ispezione
+    assert "def _log_raw_webhook(" in SRC
+    assert "_log_raw_webhook(data)" in SRC
+    assert "WABA Webhook Log" in SRC
+
+
 def test_unsupported_is_informative_not_silent():
     f = _load_extract()
     out = f({"type": "unsupported", "errors": [{"title": "Message type is not currently supported"}]})
