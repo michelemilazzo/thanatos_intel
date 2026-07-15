@@ -69,6 +69,69 @@ def _parse_twilio(data: dict) -> list[dict]:
              "content": body, "media_url": media_url}]
 
 
+def _extract_content(msg: dict) -> str:
+    """Estrae il testo leggibile da un messaggio WhatsApp Cloud API, per
+    QUALSIASI tipo. Ritorna sempre qualcosa di utile: per i tipi che non
+    portano un corpo (unsupported/reaction/…) usa un segnaposto descrittivo
+    invece di perdere il contenuto come faceva il vecchio "[unsupported]".
+    """
+    # Testo semplice
+    body = (msg.get("text") or {}).get("body")
+    if body:
+        return body
+    # Caption di media (image/video/document/audio)
+    for mt in ("image", "video", "document", "audio"):
+        cap = (msg.get(mt) or {}).get("caption")
+        if cap:
+            return cap
+    if msg.get("caption"):
+        return msg["caption"]
+    # Risposte a pulsanti rapidi (template button)
+    btn = msg.get("button") or {}
+    if btn:
+        return btn.get("text") or btn.get("payload") or "[pulsante]"
+    # Messaggi interattivi (button_reply / list_reply)
+    inter = msg.get("interactive") or {}
+    if inter:
+        br = inter.get("button_reply") or {}
+        lr = inter.get("list_reply") or {}
+        title = br.get("title") or lr.get("title") or ""
+        desc = lr.get("description") or ""
+        if title:
+            return f"{title} — {desc}" if desc else title
+        return "[interattivo]"
+    # Reazione (emoji)
+    reac = msg.get("reaction") or {}
+    if reac:
+        return f"[reazione {reac.get('emoji', '')}]".strip()
+    # Posizione
+    loc = msg.get("location") or {}
+    if loc:
+        return (loc.get("name") or loc.get("address")
+                or f"[posizione {loc.get('latitude')},{loc.get('longitude')}]")
+    # Contatti
+    if msg.get("contacts"):
+        names = [((c.get("name") or {}).get("formatted_name") or "")
+                 for c in msg["contacts"]]
+        names = [n for n in names if n]
+        return ("[contatti] " + ", ".join(names)) if names else "[contatti]"
+    # Ordine
+    if msg.get("order"):
+        return "[ordine ricevuto]"
+    # Messaggio di sistema (es. cambio numero)
+    sysm = msg.get("system") or {}
+    if sysm:
+        return "[sistema] " + (sysm.get("body") or "")
+    # Tipo non supportato da WhatsApp: il corpo NON viene fornito dalla
+    # Cloud API. Esponiamo l'eventuale dettaglio errore invece di perderlo.
+    mtype = msg.get("type") or "media"
+    if mtype == "unsupported":
+        errs = msg.get("errors") or []
+        det = (errs[0].get("title") or errs[0].get("message")) if errs else ""
+        return f"[non supportato da WhatsApp{': ' + det if det else ''}]"
+    return f"[{mtype}]"
+
+
 def _parse_meta(data: dict) -> list[dict]:
     results = []
     for entry in data.get("entry", []):
@@ -78,11 +141,7 @@ def _parse_meta(data: dict) -> list[dict]:
                         for c in value.get("contacts", [])}
             for msg in value.get("messages", []):
                 wa_id = msg.get("from", "")
-                content = (
-                    msg.get("text", {}).get("body", "")
-                    or msg.get("caption", "")
-                    or f"[{msg.get('type', 'media')}]"
-                )
+                content = _extract_content(msg)
                 media_url = ""
                 media_type = ""
                 media_id = ""
