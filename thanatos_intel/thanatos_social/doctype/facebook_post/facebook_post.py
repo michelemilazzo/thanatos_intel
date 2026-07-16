@@ -15,8 +15,12 @@ class FacebookPost(Document):
     def validate(self):
         if self.post_type == "Link" and not (self.link or "").strip():
             frappe.throw("Per un post di tipo 'Link' devi indicare il campo Link.")
-        if self.post_type == "Foto" and not (self.image or "").strip():
-            frappe.throw("Per un post di tipo 'Foto' devi allegare un'immagine.")
+        if self.post_type == "Foto" and not (self.image or "").strip() \
+                and not (self.image_url or "").strip():
+            frappe.throw(
+                "Per un post di tipo 'Foto' devi allegare un'immagine "
+                "oppure indicare un URL immagine."
+            )
         if self.post_type != "Foto":
             # Testo/Link devono avere del testo o un link.
             if not (self.message or "").strip() and not (self.link or "").strip():
