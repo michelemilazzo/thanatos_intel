@@ -3,7 +3,7 @@
   "name": "Facebook Post",
   "module": "Thanatos Social",
   "naming_rule": "By \"Naming Series\" field",
-  "autoname": "field:naming_series",
+  "autoname": "naming_series:",
   "title_field": "post_title",
   "track_changes": 1,
   "sort_field": "modified",
