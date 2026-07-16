@@ -41,6 +41,23 @@ def test_facebook_post_schema():
         assert st in status_opts, f"Stato mancante: {st}"
 
 
+def test_facebook_post_naming_series_expands():
+    """L'autoname deve espandere la naming series in un progressivo.
+
+    Con ``field:naming_series`` Frappe userebbe il valore GREZZO del campo
+    (la stringa 'FB-POST-.#####') come nome del documento, identico per ogni
+    record: dal secondo insert in poi si avrebbe un errore di chiave primaria
+    duplicata, rompendo l'auto-pubblicazione. Serve ``naming_series:`` che
+    tratta il valore come pattern ed espande '.#####' in un contatore."""
+    data = json.loads((SOCIAL / "doctype" / "facebook_post" / "facebook_post.json").read_text())
+    assert data.get("autoname") == "naming_series:", (
+        "autoname deve essere 'naming_series:' per espandere il progressivo, "
+        f"trovato {data.get('autoname')!r}")
+    ns = next((f for f in data["fields"] if f["fieldname"] == "naming_series"), None)
+    assert ns is not None and "#" in (ns.get("options") or ""), \
+        "il campo naming_series deve avere un pattern con '#' (es. FB-POST-.#####)"
+
+
 def test_facebook_settings_is_single():
     data = json.loads((SOCIAL / "doctype" / "facebook_settings" / "facebook_settings.json").read_text())
     assert data.get("issingle") == 1
