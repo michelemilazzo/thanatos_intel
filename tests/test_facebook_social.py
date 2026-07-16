@@ -54,6 +54,23 @@ def test_scheduler_jobs_wired_in_hooks():
     assert "facebook_post.refresh_published_insights" in hooks, "refresh insights non schedulato"
 
 
+def test_foto_validate_accepts_image_url():
+    """La validazione di un post 'Foto' deve accettare sia un file allegato
+    (`image`) sia un URL immagine (`image_url`): l'automazione News passa solo
+    `image_url`, quindi il controllo non deve pretendere il solo `image`."""
+    src = _load_module_source(
+        "thanatos_social/doctype/facebook_post/facebook_post.py")
+    tree = ast.parse(src)
+    validate = next(
+        (n for n in ast.walk(tree)
+         if isinstance(n, ast.FunctionDef) and n.name == "validate"), None)
+    assert validate is not None, "metodo validate mancante"
+    body = ast.get_source_segment(src, validate)
+    assert "image_url" in body, (
+        "validate() non considera image_url per i post Foto: "
+        "l'auto-pubblicazione delle news con immagine fallirebbe")
+
+
 def test_graph_client_defines_public_api():
     tree = ast.parse(_load_module_source("integrations/facebook_graph.py"))
     funcs = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
