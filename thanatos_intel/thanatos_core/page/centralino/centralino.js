@@ -713,7 +713,7 @@ ${replyBox}`);
     async _answerCall(callId) {
         try {
             $("#ctlno-callbar .ctlno-call-ring").html("⏳ Connessione audio…");
-            const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+            const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "turn:89.167.24.194:3478?transport=udp", username: "thanatos", credential: "TrnThan2026-x7qKp9" }] });
             this._activeCallPc = pc;
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(t => pc.addTrack(t, stream));
