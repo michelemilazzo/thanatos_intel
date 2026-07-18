@@ -1,69 +1,97 @@
-{% extends "templates/web.html" %}
-{% block page_content %}
-<div style="max-width:860px;margin:0 auto;padding:24px 16px">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
-    <h1 style="margin:0">Acquista documenti</h1>
-    <a href="/portal" style="font-size:13px">← Portale</a>
-  </div>
-  <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:12px 0">
-    <div style="background:#f3f6ff;border:1px solid #dfe7ff;border-radius:8px;padding:8px 14px">
-      Credito disponibile: <b id="wallet">{{ "%.2f"|format(wallet) }}€</b>
-      <a href="/portal/wallet" style="margin-left:8px;font-size:13px">Ricarica →</a>
-    </div>
-    <a href="/portal/legale" style="font-size:13px">Documenti legali</a>
-    <a href="/portal/vault" style="font-size:13px">Il mio archivio →</a>
-  </div>
+{% extends "thanatos_intel/templates/standalone.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer %}
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:8px">
-    {% for s in services %}
-    <div style="border:1px solid #eee;border-radius:10px;padding:14px;background:#fff">
-      <div style="font-weight:600;font-size:14px">{{ s.label }}{% if s.gated %} <span title="richiede dichiarazione" style="color:#b8860b">⚖</span>{% endif %}</div>
-      <div style="color:#1a8a2e;font-weight:700;margin:6px 0">€ {{ "%.2f"|format(s.prezzo) }}</div>
-      <input class="ss-target" data-key="{{ s.key }}" data-label="{{ s.label }}" data-gated="{{ 1 if s.gated else 0 }}"
-             placeholder="{{ s.target_label }}" style="width:100%;padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;margin-bottom:6px">
-      <button class="ss-buy btn btn-primary btn-sm" style="width:100%">Acquista</button>
-      <div class="ss-msg" style="font-size:12px;margin-top:6px"></div>
+{% block title %}{{ title }}{% endblock %}
+
+{% block head %}
+<style>
+:root{--gold:#C8A96E;--grey:#7A8294;--bg:#0A0E1A;--panel:#111729;--panel-2:#161D33;--border:#1F2842;--ok:#6aa66a;}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:#E8E9F0;font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;min-height:100vh}
+.shell{max-width:1000px;margin:0 auto;padding:36px 22px 60px}
+.crumb{font-size:11px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px}
+.crumb a{color:var(--gold);text-decoration:none}
+h1{font-family:Georgia,serif;font-weight:400;font-size:30px;color:#fff;margin:0 0 4px}
+.sub{color:var(--grey);font-size:13px;margin:0 0 8px}
+.wallet{display:inline-block;font-size:12px;color:var(--gold);border:1px solid var(--border);border-radius:20px;padding:5px 13px;margin-bottom:22px}
+.cat{font-size:12px;color:var(--grey);letter-spacing:1.5px;text-transform:uppercase;margin:28px 0 10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:6px;padding:16px 18px;display:flex;flex-direction:column}
+.card h3{margin:0 0 6px;font-size:15px;color:#fff;font-weight:600;line-height:1.3}
+.card .desc{color:#aab0c0;font-size:12px;line-height:1.5;margin:0 0 12px;flex:1}
+.card .meta{color:var(--grey);font-size:11px;margin-bottom:10px}
+.card .price{color:var(--gold);font-size:18px;font-weight:700;margin-bottom:12px}
+.btn{display:block;text-align:center;padding:11px;border:1px solid var(--gold);background:var(--gold);color:#0A0E1A;font-size:13px;font-weight:700;border-radius:4px;text-decoration:none;cursor:pointer}
+.btn:hover{opacity:.9}
+.btn.login{background:transparent;color:var(--gold)}
+.search{width:100%;max-width:360px;background:var(--panel);color:#E8E9F0;border:1px solid var(--border);padding:11px 14px;border-radius:6px;font-size:14px;margin-bottom:8px}
+.empty{color:var(--grey);font-size:13px;padding:20px 0}
+</style>
+{% endblock %}
+
+{% block content %}
+{{ thanatos_header('') }}
+<div class="shell">
+  <div class="crumb"><a href="/portal">Portale</a> · Servizi</div>
+  <h1>Catalogo servizi</h1>
+  <p class="sub">{{ total_count }} servizi disponibili. Scegli, ordina e paga in sicurezza; per i servizi che richiedono un analista veniamo noi da te.</p>
+  {% if client %}<div class="wallet">💳 Credito wallet: € {{ "%.2f"|format(wallet) }}</div>{% endif %}
+  <div><input class="search" id="q" placeholder="Cerca un servizio…" oninput="filtra()"></div>
+
+  {% for cat in categories %}
+  <div class="catblock" data-cat="{{ cat }}">
+    <div class="cat">{{ cat }}</div>
+    <div class="grid">
+      {% for it in by_cat[cat] %}
+      <div class="card" data-name="{{ (it.service_name ~ ' ' ~ (it.description or '') ~ ' ' ~ cat)|lower }}">
+        <h3>{{ it.service_name }}</h3>
+        {% if it.description %}<div class="desc">{{ it.description[:150] }}</div>{% endif %}
+        <div class="meta">
+          {% if it.delivery_hours %}⏱️ {{ it.delivery_hours }}h{% endif %}
+          {% if it.requires_analyst %} · 👤 con analista{% endif %}
+        </div>
+        <div class="price">€ {{ "%.0f"|format(it.price or it.price_min or 0) }}{% if it.price_max and it.price_max != it.price_min %} <span style="font-size:11px;color:var(--grey)">da {{ "%.0f"|format(it.price_min) }}</span>{% endif %}</div>
+        {% if client %}
+        <a class="btn" href="javascript:void(0)" onclick="ordina('{{ it.service_code }}', this)">Ordina →</a>
+        {% else %}
+        <a class="btn login" href="/login?redirect-to=/portal/servizi">Accedi per ordinare</a>
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
   </div>
-  <p style="font-size:12px;color:#888;margin-top:16px">Le visure camerali sono dati pubblici del Registro Imprese. ⚖ = il servizio su soggetti terzi richiede una dichiarazione di base giuridica.</p>
+  {% endfor %}
+  <div class="empty" id="nores" style="display:none">Nessun servizio corrisponde alla ricerca.</div>
 </div>
+{{ thanatos_footer() }}
 
 <script>
-async function ssCall(args){
-  const r = await fetch('/api/method/thanatos_intel.osint.self_service.buy_document',{
-    method:'POST', headers:{'Content-Type':'application/json','X-Frappe-CSRF-Token':frappe.csrf_token},
-    body: JSON.stringify(args)});
-  const d = await r.json();
-  if(!r.ok){ throw new Error((d._server_messages ? JSON.parse(d._server_messages).map(m=>JSON.parse(m).message).join(' ') : d.message) || 'Errore'); }
-  return d.message;
-}
-document.querySelectorAll('.ss-buy').forEach(btn=>{
-  btn.addEventListener('click', async function(){
-    const card = btn.closest('div'); const inp = card.querySelector('.ss-target'); const msg = card.querySelector('.ss-msg');
-    const key = inp.dataset.key, label = inp.dataset.label, target = inp.value.trim();
-    if(!target){ msg.style.color='#c0392b'; msg.textContent='Inserisci il dato richiesto'; return; }
-    let extra = {};
-    if(key === 'patrimoniale'){
-      const nm = prompt('Nome della persona:','') || '';
-      const sn = prompt('Cognome della persona:','') || '';
-      if(!nm || !sn){ msg.style.color='#c0392b'; msg.textContent='Nome e cognome obbligatori'; return; }
-      extra = {name:nm, surname:sn};
-    }
-    btn.disabled=true; msg.style.color='#555'; msg.textContent='Elaborazione…';
-    try{
-      let res = await ssCall(Object.assign({service:key, target:target}, extra));
-      if(res && res.needs_declaration){
-        const ok = confirm('Servizio su soggetto terzo. Dichiari di avere una base giuridica legittima (interesse legittimo / tutela di un diritto / obbligo di legge) e accetti la relativa dichiarazione?');
-        if(!ok){ msg.textContent='Annullato.'; btn.disabled=false; return; }
-        const fin = prompt('Finalità (breve):','') || '';
-        res = await ssCall(Object.assign({service:key, target:target, accept_declaration:1, finalita:fin}, extra));
-      }
-      msg.style.color='#1a8a2e';
-      msg.innerHTML = (res && res.error) ? ('⚠ '+res.error) : '✓ Richiesta avviata. Arriverà nel tuo <a href="/portal/vault">archivio</a> e via email tra qualche minuto.';
-    }catch(e){ msg.style.color='#c0392b'; msg.textContent='⚠ '+e.message; }
-    btn.disabled=false;
+const CSRF = "{{ csrf_token }}";
+function filtra(){
+  const q=(document.getElementById('q').value||'').toLowerCase().trim();
+  let anyGlobal=false;
+  document.querySelectorAll('.catblock').forEach(cb=>{
+    let any=false;
+    cb.querySelectorAll('.card').forEach(c=>{
+      const ok=!q||(c.dataset.name||'').includes(q);
+      c.style.display=ok?'':'none'; if(ok)any=true;
+    });
+    cb.style.display=any?'':'none'; if(any)anyGlobal=true;
   });
-});
+  document.getElementById('nores').style.display=anyGlobal?'none':'';
+}
+async function ordina(code, el){
+  const old=el.textContent; el.textContent='Reindirizzamento…'; el.style.pointerEvents='none';
+  try{
+    const r=await fetch('/api/method/thanatos_intel.billing.checkout.checkout_service',{method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded','X-Frappe-CSRF-Token':CSRF},
+      body:new URLSearchParams({service_code:code}).toString()});
+    const j=await r.json(); const m=j.message||{};
+    if(m.url){window.location.href=m.url;return;}
+    if(m.credit){alert(m.message||'Servizio attivato a credito.');location.href='/portal/billing';return;}
+    el.textContent=old; el.style.pointerEvents='';
+    alert((j._server_messages?JSON.parse(j._server_messages).map(x=>JSON.parse(x).message).join('\n'):'')||'Operazione non riuscita.');
+  }catch(e){el.textContent=old; el.style.pointerEvents=''; alert('Errore di rete.');}
+}
 </script>
 {% endblock %}

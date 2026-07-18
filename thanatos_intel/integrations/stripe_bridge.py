@@ -490,7 +490,32 @@ def _fulfil_onetime(ue_name, session):
                 engagement.on_step_paid(ue.case, seq=meta.get("thanatos_step_seq"), payment_ref=pi)
         except Exception:
             frappe.log_error(frappe.get_traceback(), "case fulfilment")
+    else:
+        try:
+            _notify_onetime_purchase(ue)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "onetime notify team")
     return {"ok": True, "usage_event": ue_name, "status": "Paid"}
+
+
+def _notify_onetime_purchase(ue):
+    """Acquisto servizio SENZA caso: prima veniva solo marcato Paid, senza che
+    nessuno lo evadesse. Ora crea un ToDo per il team + avviso WhatsApp operatori."""
+    svc = frappe.db.get_value("Service Catalog", {"service_code": ue.service}, "service_name") or ue.service
+    cname = frappe.db.get_value("Investigation Client", ue.client, "client_name") or ue.client
+    msg = (f"\U0001F6D2 Nuovo servizio acquistato da evadere: «{svc}» (€{ue.total}) — "
+           f"cliente {cname} (Usage Event {ue.name}). Da prendere in carico.")
+    try:
+        frappe.get_doc({"doctype": "ToDo", "description": msg, "priority": "High",
+                        "reference_type": "Usage Event", "reference_name": ue.name}
+                       ).insert(ignore_permissions=True)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "onetime todo")
+    try:
+        from thanatos_intel.ingest.wa_bot import notify_operators
+        notify_operators(msg)
+    except Exception:
+        pass
 
 
 @frappe.whitelist()
