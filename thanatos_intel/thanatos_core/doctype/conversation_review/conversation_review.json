@@ -1,0 +1,124 @@
+{
+  "doctype": "DocType",
+  "name": "Conversation Review",
+  "module": "Thanatos Core",
+  "autoname": "hash",
+  "title_field": "contact",
+  "sort_field": "reviewed_at",
+  "sort_order": "DESC",
+  "track_changes": 1,
+  "fields": [
+    {
+      "fieldname": "lead",
+      "fieldtype": "Link",
+      "label": "Lead / contatto",
+      "options": "Intel Lead",
+      "in_list_view": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "contact",
+      "fieldtype": "Data",
+      "label": "Nome contatto",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Telefono"
+    },
+    {
+      "fieldname": "col1",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "reviewed_at",
+      "fieldtype": "Datetime",
+      "label": "Revisionata il",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "window_to",
+      "fieldtype": "Datetime",
+      "label": "Fino al messaggio"
+    },
+    {
+      "fieldname": "reviewer",
+      "fieldtype": "Data",
+      "label": "Revisore",
+      "default": "AI"
+    },
+    {
+      "fieldname": "sec_scores",
+      "fieldtype": "Section Break",
+      "label": "Valutazione"
+    },
+    {
+      "fieldname": "humanness_score",
+      "fieldtype": "Int",
+      "label": "Umanità (1-5)",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "issue_count",
+      "fieldtype": "Int",
+      "label": "Problemi",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "handled_by",
+      "fieldtype": "Select",
+      "label": "Gestita da",
+      "options": "Bot\nOperatore\nMisto",
+      "default": "Bot",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "col2",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "msg_count",
+      "fieldtype": "Int",
+      "label": "Messaggi analizzati"
+    },
+    {
+      "fieldname": "bot_msg_count",
+      "fieldtype": "Int",
+      "label": "Messaggi bot"
+    },
+    {
+      "fieldname": "resolution",
+      "fieldtype": "Select",
+      "label": "Stato",
+      "options": "Nuovo\nVisto\nIn lavorazione\nRisolto\nIgnorato",
+      "default": "Nuovo",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "sec_detail",
+      "fieldtype": "Section Break",
+      "label": "Sintesi e problemi"
+    },
+    {
+      "fieldname": "summary",
+      "fieldtype": "Small Text",
+      "label": "Sintesi"
+    },
+    {
+      "fieldname": "issues",
+      "fieldtype": "Table",
+      "label": "Problemi rilevati",
+      "options": "Conversation Review Issue"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ]
+}

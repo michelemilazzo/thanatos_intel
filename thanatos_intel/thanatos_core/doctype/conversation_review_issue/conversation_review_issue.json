@@ -1,0 +1,36 @@
+{
+  "doctype": "DocType",
+  "name": "Conversation Review Issue",
+  "module": "Thanatos Core",
+  "istable": 1,
+  "fields": [
+    {
+      "fieldname": "issue_type",
+      "fieldtype": "Select",
+      "label": "Problema",
+      "options": "Tono robotico\nDomanda ignorata\nErrore/confabulazione\nHandoff mancato\nOccasione servizio persa\nAzione fallita\nLingua sbagliata\nRisposta lenta\nAltro",
+      "in_list_view": 1,
+      "reqd": 1
+    },
+    {
+      "fieldname": "severity",
+      "fieldtype": "Select",
+      "label": "Gravità",
+      "options": "Bassa\nMedia\nAlta",
+      "default": "Media",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "quote",
+      "fieldtype": "Small Text",
+      "label": "Messaggio bot",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "suggestion",
+      "fieldtype": "Small Text",
+      "label": "Come rispondere meglio"
+    }
+  ],
+  "permissions": []
+}
