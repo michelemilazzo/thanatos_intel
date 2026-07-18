@@ -370,27 +370,24 @@ CATALOGO = [
 # ── VISURA CAMERALE ORDINARIA (async, PDF ufficiale) ─────────────────────────
 @frappe.whitelist()
 def visura(piva, tipo="ordinaria", investigation_case=None, max_wait=90):
-    """Visura camerale ufficiale (visurecamerali.openapi.it).
-    tipo ∈ ordinaria | storica | soci | bilancio. Ritorna PDF id + evidence."""
+    """Visura camerale ufficiale via DocuEngine (docuengine.openapi.com): il PDF
+    finisce nei reperti del caso. Il vecchio host visurecamerali.openapi.it non
+    e' piu' sottoscritto sul token (401 \"Wrong Token\").
+    tipo ∈ ordinaria | storica | soci | bilancio."""
     p = _digits(piva)
     if len(p) != 11:
         return {"error": "P.IVA non valida", "piva": piva}
-    paths = {
-        "ordinaria": "/IT-ordinaria",
-        "storica":   "/IT-storica",
-        "soci":      "/IT-soci",
-        "bilancio":  "/IT-bilancio-ottico",
+    if not investigation_case:
+        return {"error": "serve un caso per allegare la visura (case mancante)"}
+    de = {
+        "ordinaria": "663df75d19a52195e23e315c",
+        "storica":   "6671a5a29e6f0e447bc2659f",
+        "soci":      "6932c9602a2ea4883e6ebba9",
+        "bilancio":  "667443c29e6f0e447bc265aa",
     }
-    post_path = paths.get(tipo, "/IT-ordinaria")
-    data, err = _async("visure", post_path, {"taxCode": p}, "/richiesta", max_wait=max_wait)
-    if err:
-        return {"error": err, "piva": p}
-    out = {"piva": p, "tipo": tipo, "id": (data or {}).get("id"), "status": (data or {}).get("status") or (data or {}).get("state"), "dati": data or {}}
-    lines = [f"Visura camerale {tipo} — P.IVA {p}",
-             f"ID richiesta: {out['id']}", f"Status: {out['status']}"]
-    out["evidence"] = _evidence(investigation_case, f"Visura {tipo} — {p}", lines,
-                                source="openapi visurecamerali")
-    return out
+    doc_id = de.get(tipo, de["ordinaria"])
+    from thanatos_intel.osint.official_documents import richiedi_docuengine
+    return richiedi_docuengine(investigation_case, doc_id, valori={"taxCode": p})
 
 
 # ── CATASTO / IPOTECHE (async) ───────────────────────────────────────────────

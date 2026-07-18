@@ -31,6 +31,18 @@ TIPI = {
     "certificato_vigenza":  ("visure", "certificato-iscrizione-vigenza"),
 }
 
+_DE_BY_TIPO = {
+    "ordinaria_capitale":    "663df75d19a52195e23e315c",
+    "ordinaria_persone":     "6671a5549e6f0e447bc2659d",
+    "ordinaria_individuale": "6671a5719e6f0e447bc2659e",
+    "storica_capitale":      "6671a5a29e6f0e447bc2659f",
+    "storica_persone":       "6671a5bf9e6f0e447bc265a0",
+    "storica_individuale":   "6671a5d69e6f0e447bc265a1",
+    "bilancio":              "667443c29e6f0e447bc265aa",
+    "certificato":           "689c99942d09c0a9bcb946e8",
+    "certificato_vigenza":   "689c99942d09c0a9bcb946e8",
+}
+
 _READY = {"dati disponibili", "evasa", "visura evasa", "completata", "completato"}
 
 
@@ -64,36 +76,14 @@ def _is_self_purchase(case):
 
 @frappe.whitelist()
 def richiedi_documento(case, tipo, cf_piva, self_mode=None):
-    """Avvia la richiesta del documento ufficiale e la elabora in background."""
-    if tipo not in TIPI:
-        return {"error": f"tipo non valido: {tipo}", "tipi": list(TIPI)}
+    """Visura/documento camerale ufficiale. Instradato su DocuEngine
+    (docuengine.openapi.com): il vecchio host visurecamerali.openapi.it non
+    e' piu' sottoscritto sul token e rispondeva 401 \"Wrong Token\"."""
+    doc_id = _DE_BY_TIPO.get(tipo)
+    if not doc_id:
+        return {"error": f"tipo non valido: {tipo}", "tipi": list(_DE_BY_TIPO)}
     digits = "".join(c for c in (cf_piva or "") if c.isdigit())
-    if self_mode is None:
-        self_mode = _is_self_purchase(case)
-    # pre-pagamento: documenti ufficiali sono a pagamento → blocca se credito insufficiente
-    client = frappe.db.get_value("Investigation Case", case, "client")
-    if client:
-        from thanatos_intel.osint.tool_catalog import tool_price, tool_base_price
-        from thanatos_intel.billing.credits import ensure_credit
-        from thanatos_intel.billing.mmos_wallet import mmos_ensure
-        ensure_credit(client, tool_price(case, "visura"), "documento ufficiale")
-        mmos_ensure(tool_base_price(case, "visura"), label="documento ufficiale")
-    service, path = TIPI[tipo]
-    import requests
-    r = requests.post(_url(service, path), headers=_hdr(),
-                      json={"cf_piva_id": digits}, timeout=40)
-    if r.status_code not in (200, 201):
-        return {"error": f"HTTP {r.status_code}: {(r.text or '')[:160]}"}
-    data = (r.json() or {}).get("data") or {}
-    req_id = data.get("id")
-    if not req_id:
-        return {"error": "nessun id richiesta", "raw": str(data)[:200]}
-    frappe.enqueue("thanatos_intel.osint.official_documents._scarica_bg",
-                   queue="long", timeout=600, case=case, service=service,
-                   path=path, req_id=req_id, tipo=tipo, cf_piva=digits,
-                   self_mode=int(self_mode or 0))
-    return {"ok": True, "id": req_id, "tipo": tipo,
-            "message": "Richiesta avviata; il documento arriverà nei reperti del caso tra qualche minuto."}
+    return richiedi_docuengine(case, doc_id, valori={"taxCode": digits}, self_mode=self_mode)
 
 
 def _scarica_bg(case, service, path, req_id, tipo, cf_piva, self_mode=0, max_wait=480):
