@@ -19,6 +19,19 @@ def get_context(context):
     is_client = "Client Portal User" in roles or not (is_investigator or is_lawyer or is_accountant)
 
     context.user = user
+    # Servizi speciali riservati: abilitati per-cliente lato operatore (console wc),
+    # letti server-side dall'API wallet-saas. Mai rompere il portale se l'API e' giu'.
+    context.special_services = []
+    try:
+        _sp_tok = frappe.conf.get('thanatos_special_token')
+        if is_client and _sp_tok:
+            import requests
+            _sp_r = requests.get('https://wallet.onekeyco.com/api/portal/special',
+                                 params={'client': user, 'k': _sp_tok}, timeout=4)
+            if _sp_r.ok:
+                context.special_services = (_sp_r.json() or {}).get('services', []) or []
+    except Exception:
+        context.special_services = []
     context.user_fullname = frappe.db.get_value("User", user, "full_name") or user
     context.is_investigator = is_investigator
     context.is_lawyer = is_lawyer
