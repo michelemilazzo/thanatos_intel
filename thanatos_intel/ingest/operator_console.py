@@ -575,8 +575,11 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
                    f"\u26a0\ufe0f Il caso *{case}* non ha un cliente collegato: non posso "
                    "mandare un link di pagamento. Collega prima un cliente.")
             return
+        _pay_arg = re.sub(r"\b(pagamento|paga(re)?|link|stripe|checkout|manda|invia|per|al|il|del|cliente)\b",
+                          " ", t, flags=re.I)
+        _pay_arg = re.sub(r"CASE-\d{4}-\d+", " ", _pay_arg, flags=re.I).strip(" .,")
         frappe.enqueue("thanatos_intel.ingest.operator_console.run_send_payment_link",
-                       queue="short", timeout=180,
+                       queue="short", timeout=180, price_arg=(_pay_arg or None),
                        case=case, lead_name=lead_name, wa_phone=wa_phone,
                        sender=sender, operator=operator)
         _reply(wa_phone, sender, lead_name,
@@ -1600,17 +1603,31 @@ def run_send_proforma(case, lead_name, wa_phone, sender, operator,
 # ─── Job: link pagamento → cliente ───────────────────────────────────────────
 
 @frappe.whitelist()
-def run_send_payment_link(case, lead_name, wa_phone, sender, operator):
+def run_send_payment_link(case, lead_name, wa_phone, sender, operator, price_arg=None):
     """Genera il link Stripe per lo step pagabile corrente del caso e lo manda al
-    cliente. Se non ci sono step «pay» pendenti, avvisa l'operatore."""
+    cliente. price_arg (opzionale): importo o servizio con cui impostare lo step
+    prima di generare il link. Se manca il prezzo, guida l'operatore."""
     try:
-        from thanatos_intel.integrations.stripe_bridge import create_case_step_checkout
+        from thanatos_intel.integrations.stripe_bridge import (
+            create_case_step_checkout, set_pay_step_price)
+        if price_arg:
+            set_pay_step_price(case, price_arg)
         r = create_case_step_checkout(case) or {}
     except Exception as e:
+        msg = str(e)
         frappe.log_error(frappe.get_traceback(), "operator payment link")
-        _reply(wa_phone, sender, lead_name,
-               f"⚠️ Non sono riuscito a generare il link di pagamento: {str(e)[:200]}")
-        return {"ok": False, "reason": str(e)}
+        if "senza prezzo" in msg or "Importo non valido" in msg or "Indica un importo" in msg:
+            _reply(wa_phone, sender, lead_name,
+                   f"Lo step di pagamento di *{case}* non ha ancora un importo. Dimmelo così:\n"
+                   f"• «pagamento {case} 500» (importo)\n"
+                   f"• «pagamento {case} visura camerale» (servizio del catalogo)")
+        elif "Nessuno step di pagamento" in msg:
+            _reply(wa_phone, sender, lead_name,
+                   f"⚠️ *{case}* non ha uno step di pagamento pendente. Controlla i case_steps.")
+        else:
+            _reply(wa_phone, sender, lead_name,
+                   f"⚠️ Non sono riuscito a generare il link di pagamento: {msg[:180]}")
+        return {"ok": False, "reason": msg}
 
     url = r.get("url") or r.get("checkout_url")
     if not url:

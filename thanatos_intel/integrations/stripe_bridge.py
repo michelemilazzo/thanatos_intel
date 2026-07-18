@@ -351,6 +351,58 @@ def create_case_step_checkout(case_name, seq=None):
 
 
 @frappe.whitelist()
+def set_pay_step_price(case_name, arg):
+    """Imposta prezzo/servizio dello step «pay» corrente del caso da <arg>: un
+    importo (es. «500», «1.200,50») oppure un servizio del catalogo (codice
+    SVC-... o nome). Ritorna {ok, amount, service, label}."""
+    import re as _re
+    from thanatos_intel.permissions import is_full_access, visible_case_names
+    if not is_full_access(frappe.session.user) and case_name not in (visible_case_names(frappe.session.user) or []):
+        frappe.throw(_("Accesso negato."), frappe.PermissionError)
+    case = frappe.get_doc("Investigation Case", case_name)
+    step = None
+    for st in sorted(case.get("case_steps") or [], key=lambda x: x.seq):
+        if (st.action_type or "") == "pay" and st.status in ("Awaiting Client", "In Progress", "Pending"):
+            step = st
+            break
+    if not step:
+        frappe.throw(_("Nessuno step di pagamento pendente su questa pratica."))
+
+    arg = (arg or "").strip()
+    svc = None
+    amount = None
+    label = None
+    # servizio dal catalogo? (codice esatto o nome parziale)
+    cat = frappe.db.get_value("Service Catalog", {"service_code": arg, "is_active": 1},
+                              ["service_code", "service_name"], as_dict=True)
+    if not cat and len(arg) > 3 and not _re.fullmatch(r"[\d.,\s€]+", arg):
+        cat = frappe.db.get_value("Service Catalog",
+                                  {"service_name": ["like", "%" + arg + "%"], "is_active": 1},
+                                  ["service_code", "service_name"], as_dict=True)
+    if cat:
+        svc = cat.service_code
+        _svcname, amount = _catalog_price(cat.service_code, case.client)
+        label = cat.service_name
+    else:
+        m = _re.search(r"(\d[\d.]*)(?:,(\d{1,2}))?", arg.replace(".", "").replace("€", ""))
+        if m:
+            amount = float(m.group(1) + ("." + m.group(2) if m.group(2) else ""))
+        else:
+            frappe.throw(_("Indica un importo (es. «500») o un servizio del catalogo (codice o nome)."))
+    if not amount or amount <= 0:
+        frappe.throw(_("Importo non valido."))
+
+    for st in case.case_steps:
+        if st.name == step.name:
+            st.price = amount
+            if svc:
+                st.service_code = svc
+    case.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"ok": True, "amount": amount, "service": svc, "label": label or step.step_label}
+
+
+@frappe.whitelist()
 def create_token_verification_checkout(case_name, keys):
     """Pagamento della verifica dei token selezionati (N token x prezzo unitario del
     blueprint). Salva la selezione sul caso e, al pagamento, esegue la verifica."""
