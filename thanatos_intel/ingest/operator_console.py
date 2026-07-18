@@ -509,15 +509,17 @@ def handle_operator_message(lead_name, wa_phone, sender, text, operator):
             _reply(wa_phone, sender, lead_name,
                    "Cita il caso (es. «aggiungi al caso CASE-2026-0026»).")
             return
+        _all_att = bool(re.search(r"\b(tutt[oi]|tutte|arretrat\w*|backlog|storic\w*|mese|mesi|settiman\w*)\b", t, re.I))
         frappe.enqueue(
             "thanatos_intel.ingest.operator_console.run_add_docs_to_case",
-            queue="long", timeout=1200,
+            queue="long", timeout=2400,
             lead_name=lead_name, case=case, wa_phone=wa_phone,
-            sender=sender, operator=operator,
+            sender=sender, operator=operator, minutes=(129600 if _all_att else 1440),
         )
         _reply(wa_phone, sender, lead_name,
-               f"\U0001F4CE Aggiungo gli allegati recenti al caso *{case}*. "
-               "Ti confermo con l'esito.")
+               "\U0001F4CE Aggiungo " + ("TUTTI gli allegati (anche arretrati)" if _all_att
+                                          else "gli allegati recenti")
+               + f" al caso *{case}*. Puo' richiedere qualche minuto; ti confermo con l'esito.")
         return
     if _REPROCESS_RE.search(t):
         case = frappe.db.get_value("Intel Lead", lead_name, "linked_case")
@@ -1829,7 +1831,11 @@ def run_add_docs_to_case(lead_name, case, wa_phone=None, sender=None,
         fields=["name", "file_name", "file_url"],
         order_by="creation asc", limit=0,
     )
-    docs = [f for f in files if (f.file_name or "").lower().endswith(_DOC_EXT)]
+    _already = set(x for x in frappe.get_all(
+        "Investigation Evidence", filters={"investigation_case": case},
+        pluck="attached_file") if x)
+    docs = [f for f in files
+            if (f.file_name or "").lower().endswith(_DOC_EXT) and f.file_url not in _already]
 
     # Se non ci sono file, prova a estrarre link/wallet dai messaggi testuali
     # recenti (l'operatore ha mandato URL/indirizzi crypto, non PDF).
@@ -1855,9 +1861,10 @@ def run_add_docs_to_case(lead_name, case, wa_phone=None, sender=None,
             _reply(wa_phone, sender, lead_name, "\n".join(body_lines))
             return {"ok": True, "case": case, "wallets": len(r["wallets"]),
                     "links": len(r["links"])}
+        _win = f"negli ultimi {minutes // 1440} giorni" if minutes >= 1440 else f"nelle ultime {minutes // 60}h"
         _reply(wa_phone, sender, lead_name,
-               f"Non trovo allegati né link/wallet nelle ultime {minutes // 60}h "
-               f"per *{case}*. Mandami prima i documenti o gli indirizzi e ripeti.")
+               f"Nessun allegato NUOVO da ingerire {_win} per *{case}* "
+               "(o li ho già aggiunti tutti). Mandami i documenti o cita un altro caso.")
         return {"ok": False, "reason": "no recent content"}
 
     ok_n, fail_n = 0, 0
