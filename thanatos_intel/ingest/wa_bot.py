@@ -34,6 +34,14 @@ _SYS = (
     "Quando emerge un bisogno concreto e vendibile: NOMINA l'area di servizio pertinente, "
     "condividi il link al catalogo e OFFRI di preparare un preventivo su misura, poi "
     "aggiungi [[HANDOFF]] cosi' un operatore finalizza. NON inventare prezzi ne' importi. "
+    "STILE UMANO: scrivi come una persona competente e cordiale al telefono, non come un "
+    "modulo. Frasi brevi, calde e naturali; niente gergo burocratico, niente formule "
+    "ripetute; varia le aperture; empatia vera quando serve. "
+    "ONESTA': rispondi PRIMA e in modo diretto alla domanda esatta del cliente, senza "
+    "cambiare argomento. Non affermare MAI di aver fatto qualcosa (inviato, verificato, "
+    "aperto, risolto) ne' citare cosa avresti detto in messaggi precedenti: non hai una "
+    "memoria affidabile della chat ne' azioni reali alle spalle. In dubbio, dillo con "
+    "onesta' e fai intervenire un operatore. "
     "Risposte brevi: massimo 60-70 parole."
 )
 
@@ -100,6 +108,22 @@ def _should_escalate(lead_name, last):
 def _service_nudge():
     return (f"Trova tutti i nostri servizi, con dettagli e costi, qui: {_SERVICE_LINK} — "
             "mi dica cosa le serve e le preparo un preventivo su misura.")
+
+
+# confabulazione del path PUBBLICO (senza stato/strumenti): affermazioni di azioni
+# completate o richiami a messaggi precedenti che il bot non puo' sostanziare.
+_CONFAB_RE = _re.compile(
+    r"(come le ho (gi. )?(detto|scritto|indicat|spiegat|mandat|inviat|dat)|"
+    r"come (gi. )?detto( prima| in precedenza)?|come anticipat|come da (mio )?precedente|"
+    r"nel (mio )?(precedente )?messaggio|nei messaggi precedenti|"
+    r"in questa (sessione|conversazione)|"
+    r"le avevo (gi. )?(detto|scritto|inviat|mandat|dat|indicat)|"
+    r"l.unico (link|messaggio) che|"
+    r"ho (gi. )?(verificat|controllat|aggiornat|registrat|elaborat|provvedut)|"
+    r"ho (gi. )?aperto (la pratica|il caso|la richiesta)|"
+    r"(risulta|. stato|e stato) (gi. )?(completat|risolt|elaborat|evas)|"
+    r"(la pratica|il caso|la richiesta|la verifica) . (gi. )?(complet|risolt|evas|pront))",
+    _re.I)
 
 _STATUS_IT = {"Draft": "in preparazione", "Open": "aperta", "In Progress": "in lavorazione",
               "Review": "in revisione", "Closed": "conclusa", "Cancelled": "annullata"}
@@ -582,6 +606,18 @@ def generate_reply(lead_name, wa_number, to_number):
         clean = ("Mi scusi, può darmi qualche dettaglio in più così la indirizzo "
                  "all'operatore giusto? Se preferisce, la metto subito in contatto "
                  "con un nostro operatore.")
+        handoff = True
+
+    # rete anti-confabulazione: il bot pubblico non ha stato ne' azioni → non puo'
+    # affermare cose fatte o citare messaggi precedenti. Sostituisci con onesta' + handoff.
+    if clean and _CONFAB_RE.search(clean):
+        try:
+            frappe.logger("wa_confab").info(f"{lead_name}: {clean[:180]}")
+        except Exception:
+            pass
+        clean = ("Preferisco non darle un'informazione imprecisa: faccio verificare i "
+                 "dettagli esatti da un nostro operatore, che la ricontatta a breve. "
+                 "Intanto, come posso esserle utile?")
         handoff = True
 
     if clean:
