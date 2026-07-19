@@ -27,11 +27,79 @@ _SYS = (
     "richiamato, oppure se la richiesta e' concreta/urgente o riguarda un preventivo o "
     "un caso aperto: rispondi con UNA frase breve di presa in carico e aggiungi su una "
     "riga a parte il marcatore [[HANDOFF]] (l'utente non lo vedra'). "
+    "AREE DI SERVIZIO (dettagli e prezzi su https://thanatos.agency/portal/servizi): "
+    "Investigazioni Complete, Verifiche Rapide, Due Diligence e Corporate Intelligence, "
+    "Financial Intelligence, Antifrode, Cyber Intelligence, Analisi Documenti, "
+    "Sequestri e Confische, Enterprise e API. "
+    "Quando emerge un bisogno concreto e vendibile: NOMINA l'area di servizio pertinente, "
+    "condividi il link al catalogo e OFFRI di preparare un preventivo su misura, poi "
+    "aggiungi [[HANDOFF]] cosi' un operatore finalizza. NON inventare prezzi ne' importi. "
     "Risposte brevi: massimo 60-70 parole."
 )
 
 _HANDOFF_MARK = "[[HANDOFF]]"
 _HISTORY = 12
+
+import re as _re
+_SERVICE_LINK = "https://thanatos.agency/portal/servizi"
+
+# frustrazione / reclamo: frasi ad alta precisione (evita falsi positivi generici)
+_FRUSTRATION_RE = _re.compile(
+    r"(non funzion|smett\w* di funzionar|non riesc|non mi aiut|non mi state aiut|"
+    r"non ho ricevut|non . arrivat|non e arrivat|non e' arrivat|"
+    r"assurd|vergogn|arrabbiat|incazz|inaccettabil|ridicol|scandal|imbarazz|"
+    r"perd\w* tempo|perdita di tempo|mi fate perder|"
+    r"sto ancora aspett|ancora aspetto|ancora niente|ancora nulla|sono giorni|"
+    r"nessuno (mi )?rispond|non rispond\w* nessuno|"
+    r"terza volta|seconda volta|quarta volta|ennesima volta|ogni volta|"
+    r"rimbors|truffa|truffat|imbrogli|denunc|avvocat|azioni legal|vie legal|"
+    r"non ne posso pi|ma . possibile|ma e possibile|ma e' possibile|"
+    r"che schifo|fate schifo|pessimo serviz|serviz\w* pessim)",
+    _re.I)
+
+# intento d'acquisto (permissivo: aggiunge solo un link utile)
+_BUY_RE = _re.compile(
+    r"(quanto cost|quanto vien|quanto mi cost|qual\w* . il prezz|che prezz|prezz|"
+    r"\bcost[oi]\b|tariff|preventiv|quotazion|listino|"
+    r"come (si )?pag|voglio pagar|posso pagar|metodo di pagam|link di pagam|"
+    r"voglio procede|come procedo|per procedere|voglio incaric|ingagg|assumerv|"
+    r"assumere l.agenzia|voglio il serviz|mi interessa il serviz|vorrei acquist|acquist)",
+    _re.I)
+
+
+def _norm_msg(x):
+    return _re.sub(r"\s+", " ", (x or "").lower().strip())
+
+
+def _recent_inbound(lead_name, limit=6):
+    try:
+        lead = frappe.get_doc("Intel Lead", lead_name)
+    except Exception:
+        return []
+    ins = [m.content for m in lead.messages
+           if m.direction == "Inbound" and (m.content or "").strip()]
+    return ins[-limit:]
+
+
+def _should_escalate(lead_name, last):
+    """Handoff deterministico: cliente frustrato/reclamo, oppure ripete lo stesso
+    messaggio (il bot e' bloccato e non lo aiuta). Non dipende dal giudizio dell'LLM."""
+    if not last:
+        return False
+    if _FRUSTRATION_RE.search(last):
+        return True
+    ln = _norm_msg(last)
+    if len(ln) > 6:
+        ins = [_norm_msg(x) for x in _recent_inbound(lead_name, 6)]
+        same = sum(1 for x in ins if x == ln or (len(x) > 6 and (x in ln or ln in x)))
+        if same >= 3:  # ultimo + almeno 2 ripetizioni precedenti
+            return True
+    return False
+
+
+def _service_nudge():
+    return (f"Trova tutti i nostri servizi, con dettagli e costi, qui: {_SERVICE_LINK} — "
+            "mi dica cosa le serve e le preparo un preventivo su misura.")
 
 _STATUS_IT = {"Draft": "in preparazione", "Open": "aperta", "In Progress": "in lavorazione",
               "Review": "in revisione", "Closed": "conclusa", "Cancelled": "annullata"}
@@ -409,6 +477,8 @@ def _try_operator_ai_reply(lead_name, wa_doc, to_number):
         return False
     if not reply or "non disponibile" in reply.lower():
         return False
+    if last and _BUY_RE.search(last) and _SERVICE_LINK not in reply:
+        reply = (reply + "\n\n" + _service_nudge()).strip()
     send_text(wa_doc, to_number, reply, lead_name)
     return True
 
@@ -456,6 +526,15 @@ def generate_reply(lead_name, wa_number, to_number):
     # Operatore riconosciuto -> brain in modalita' operatore (priorita' massima)
     if _try_operator_ai_reply(lead_name, wa_doc, to_number):
         return {"ok": True, "mode": "operator_ai"}
+    # Handoff deterministico PRIMA dell'AI: richiesta esplicita di umano, frustrazione o loop
+    _last_pre = _last_inbound(lead_name)
+    _already_ho_pre = int(frappe.db.get_value("Intel Lead", lead_name, "bot_handed_off") or 0)
+    if not _already_ho_pre and (_wants_human(_last_pre) or _should_escalate(lead_name, _last_pre)):
+        _msg = ("Capisco e mi dispiace per il disagio. La metto subito in contatto con un "
+                "nostro operatore che la segue di persona. Resto comunque qui con lei.")
+        send_text(wa_doc, to_number, _msg, lead_name)
+        _handoff(lead_name, wa_doc)
+        return {"ok": True, "handoff": True, "reason": "escalation"}
     # Cliente riconosciuto -> assistente AI scoped ai suoi casi
     if _try_client_ai_reply(lead_name, wa_doc, to_number):
         return {"ok": True, "mode": "client_scoped_ai"}
@@ -492,6 +571,11 @@ def generate_reply(lead_name, wa_number, to_number):
 
     handoff = _HANDOFF_MARK in text
     clean = text.replace(_HANDOFF_MARK, "").strip()
+
+    # occasione servizio: intento d'acquisto → garantisci link catalogo + preventivo + operatore
+    if last and _BUY_RE.search(last) and _SERVICE_LINK not in clean:
+        clean = (clean + "\n\n" + _service_nudge()).strip()
+        handoff = True
 
     # guardia: il modello a volte "narra" invece di rispondere → non inviarlo al cliente
     if not clean or _is_meta(clean):
