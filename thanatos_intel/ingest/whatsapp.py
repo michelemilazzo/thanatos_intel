@@ -693,6 +693,12 @@ def _handle_status_updates(data: dict):
                         except Exception:
                             frappe.log_error(frappe.get_traceback(),
                                              "alert invio WhatsApp fallito")
+                        try:
+                            from thanatos_intel.ingest.whatsapp_send import _maybe_auto_template
+                            _maybe_auto_template(row.parent, wa_msg_id, note)
+                        except Exception:
+                            frappe.log_error(frappe.get_traceback(),
+                                             "auto template fallback trigger")
                     try:
                         frappe.publish_realtime(
                             "centralino_update",

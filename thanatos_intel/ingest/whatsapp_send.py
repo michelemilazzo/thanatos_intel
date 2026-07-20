@@ -155,6 +155,66 @@ def scheduled_sync_template_status():
         frappe.log_error(frappe.get_traceback(), "sync_template_status")
 
 
+# ─────────── ripiego automatico fuori finestra 24h (errore 131047) ───────────
+# Template usato per riagganciare il contatto quando un messaggio libero fallisce
+# perche' sono passate 24h. Il jolly: riapre la conversazione senza svelare il merito.
+_FALLBACK_TEMPLATE = "contatto_operatore"
+_MESI_IT = ["", "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+            "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
+
+
+def _data_it(dt):
+    from frappe.utils import get_datetime
+    d = get_datetime(dt) if dt else now_datetime()
+    return f"{d.day} {_MESI_IT[d.month]} {d.year}"
+
+
+def _maybe_auto_template(lead_name: str, wa_msg_id: str, note: str = ""):
+    """Un messaggio libero e' fallito. Se e' per la finestra 24h (131047), reinvia
+    automaticamente il contatto come TEMPLATE (che la finestra la ignora), cosi' il
+    cliente non resta irraggiungibile. Protezioni: solo 131047; mai su un messaggio
+    che e' gia' un template (anti-loop); una volta per conversazione (cooldown);
+    solo se il template e' approvato. Disattivabile: site_config wa_auto_template_fallback=0."""
+    if not frappe.conf.get("wa_auto_template_fallback", 1):
+        return
+    if "131047" not in (note or ""):
+        return  # altri errori (numero invalido, ecc.): un template non aiuta
+    orig = frappe.db.get_value("Intel Lead Message", {"wa_message_id": wa_msg_id}, "content") or ""
+    if orig.strip().startswith("[template:"):
+        return  # anti-loop: il messaggio fallito era gia' un template
+    if not frappe.db.get_value("WhatsApp Template", _FALLBACK_TEMPLATE, "is_active"):
+        return  # template non approvato/attivo: resta solo l'alert
+    key = f"wa_tmpl_fb:{lead_name}"
+    if frappe.cache().get_value(key, use_local_cache=False):
+        return  # gia' riagganciato di recente
+    ttl = int(frappe.conf.get("wa_auto_template_fallback_cooldown") or 43200)  # 12h
+    frappe.cache().set_value(key, "1", expires_in_sec=ttl)
+    frappe.enqueue("thanatos_intel.ingest.whatsapp_send._send_fallback_template",
+                   queue="short", lead_name=lead_name, enqueue_after_commit=True)
+
+
+def _send_fallback_template(lead_name: str):
+    """Job: invia il template di riaggancio come sistema (sent_by=Administrator)."""
+    import json
+    lead = frappe.db.get_value(
+        "Intel Lead", lead_name,
+        ["source_name", "source_identifier", "received_at"], as_dict=True)
+    if not lead:
+        return
+    name = (lead.source_name or "").strip()
+    if not any(ch.isalpha() for ch in name):
+        name = "Cliente"
+    params = [name, _data_it(lead.received_at)]
+    prev_user = frappe.session.user
+    try:
+        frappe.set_user("Administrator")
+        send_template(lead_name, _FALLBACK_TEMPLATE, "it", body_params=json.dumps(params))
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "auto template fallback send")
+    finally:
+        frappe.set_user(prev_user)
+
+
 @frappe.whitelist()
 def send_template(lead_name: str, template_name: str, language: str = "it",
                   body_params: str | None = None) -> dict:
