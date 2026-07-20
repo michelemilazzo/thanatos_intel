@@ -637,6 +637,27 @@ def _status_note(st: dict) -> str:
     return (label + (" — " + details if details else "")).strip()
 
 
+def _alert_send_failure(lead_name: str, wa_msg_id: str, reason: str = ""):
+    """Risolve destinatario e contesto, poi avvisa l'operatore dell'invio fallito."""
+    lead = frappe.db.get_value(
+        "Intel Lead", lead_name,
+        ["assigned_to", "source_name", "source_identifier", "whatsapp_number"],
+        as_dict=True)
+    if not lead:
+        return
+    assignee = lead.assigned_to
+    if not assignee and lead.whatsapp_number:
+        assignee = frappe.db.get_value("WhatsApp Number", lead.whatsapp_number,
+                                       "auto_assign_to")
+    assignee = assignee or "Administrator"
+    preview = frappe.db.get_value("Intel Lead Message",
+                                  {"wa_message_id": wa_msg_id}, "content") or ""
+    from thanatos_intel.ingest.intel_notifications import notify_send_failed
+    notify_send_failed(lead_name, assignee,
+                       lead.source_name or lead.source_identifier or "",
+                       reason, preview)
+
+
 def _handle_status_updates(data: dict):
     """Aggiorna stato (consegnato/letto) dei messaggi outbound."""
     for entry in data.get("entry", []):
@@ -666,6 +687,12 @@ def _handle_status_updates(data: dict):
                     if note:
                         frappe.db.set_value("Intel Lead Message", row.name,
                                             "status_note", note[:280])
+                    if new_status == "Fallito":
+                        try:
+                            _alert_send_failure(row.parent, wa_msg_id, note)
+                        except Exception:
+                            frappe.log_error(frappe.get_traceback(),
+                                             "alert invio WhatsApp fallito")
                     try:
                         frappe.publish_realtime(
                             "centralino_update",

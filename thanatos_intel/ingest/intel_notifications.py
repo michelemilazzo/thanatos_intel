@@ -57,6 +57,35 @@ def notify_transferred(lead_name: str, new_assignee: str, transferred_by: str):
     )
 
 
+def notify_send_failed(lead_name: str, assigned_to: str, contact: str,
+                       reason: str = "", preview: str = ""):
+    """Un messaggio in USCITA e' stato rifiutato da WhatsApp. Prima falliva in
+    silenzio: il cliente non riceveva nulla e nessuno se ne accorgeva."""
+    _emit_centralino(lead_name, "send_failed", contact, preview)
+    if not assigned_to:
+        return
+    hint = ""
+    if "131047" in (reason or ""):
+        hint = ("<br><b>Cosa fare:</b> siamo fuori dalla finestra di 24h. Serve che il "
+                "cliente scriva per primo, oppure un template approvato.")
+    msg = (f"Il messaggio a <b>{contact or lead_name}</b> NON e' stato consegnato.<br>"
+           f"Motivo: {reason or 'non specificato'}{hint}<br>"
+           f"Testo: {(preview or '')[:140]}")
+    _notify(user=assigned_to, title="\U0001F6AB Invio WhatsApp fallito",
+            message=msg, lead_name=lead_name, indicator="red")
+    # email: canale affidabile — il problema era proprio che nessuno se ne accorgeva
+    try:
+        email = frappe.db.get_value("User", assigned_to, "email")
+        if email:
+            frappe.sendmail(
+                recipients=[email],
+                subject=f"[Thanatos] Invio WhatsApp fallito - {contact or lead_name}",
+                message=msg + f"<br><br>Conversazione: {get_url()}/app/intel-lead/{lead_name}",
+            )
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "notify_send_failed email")
+
+
 def _emit_centralino(lead_name: str, event_type: str, source_name: str = "", preview: str = ""):
     try:
         frappe.publish_realtime(
