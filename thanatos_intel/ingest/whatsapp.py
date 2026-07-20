@@ -620,6 +620,23 @@ def _format_account_event(field: str, v: dict) -> tuple:
     return (None, None, None)
 
 
+# ordine di avanzamento: uno stato non puo' mai regredire (webhook fuori ordine).
+# "Fallito" e' terminale: una volta fallito non viene declassato.
+_STATUS_RANK = {"": 0, "Inviato": 1, "Consegnato": 2, "Letto": 3, "Fallito": 4}
+
+
+def _status_note(st: dict) -> str:
+    """Riassume l'errore Meta di uno status update (code + titolo + dettaglio)."""
+    errs = st.get("errors") or []
+    if not errs:
+        return ""
+    e = errs[0] or {}
+    details = (e.get("error_data") or {}).get("details") or ""
+    parts = [str(e.get("code") or "").strip(), (e.get("title") or "").strip()]
+    label = " ".join(p for p in parts if p)
+    return (label + (" — " + details if details else "")).strip()
+
+
 def _handle_status_updates(data: dict):
     """Aggiorna stato (consegnato/letto) dei messaggi outbound."""
     for entry in data.get("entry", []):
@@ -634,11 +651,21 @@ def _handle_status_updates(data: dict):
                 row = frappe.db.get_value(
                     "Intel Lead Message",
                     {"wa_message_id": wa_msg_id},
-                    ["name", "parent"],
+                    ["name", "parent", "status"],
                     as_dict=True,
                 )
                 if row:
+                    # Meta consegna gli stati at-least-once e NON in ordine: senza
+                    # questa guardia un "sent" in ritardo declassava un "read".
+                    if _STATUS_RANK.get(new_status, 0) <= _STATUS_RANK.get(row.status, 0):
+                        continue
                     frappe.db.set_value("Intel Lead Message", row.name, "status", new_status)
+                    # motivo del fallimento: prima veniva scartato, lasciando un
+                    # "Fallito" muto e non azionabile (es. 131047 = finestra 24h).
+                    note = _status_note(st)
+                    if note:
+                        frappe.db.set_value("Intel Lead Message", row.name,
+                                            "status_note", note[:280])
                     try:
                         frappe.publish_realtime(
                             "centralino_update",
