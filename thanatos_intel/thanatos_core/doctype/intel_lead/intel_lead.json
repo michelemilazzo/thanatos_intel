@@ -27,7 +27,7 @@
    "fieldname": "source_type",
    "fieldtype": "Select",
    "label": "Canale",
-   "options": "WhatsApp\nTelegram\nEmail\nTelefono\nWeb\nOSINT Feed\nSegnalazione\nManuale",
+   "options": "WhatsApp\nInstagram\nTelegram\nEmail\nTelefono\nWeb\nOSINT Feed\nSegnalazione\nManuale",
    "default": "Manuale",
    "reqd": 1,
    "in_list_view": 1,
@@ -54,6 +54,14 @@
    "label": "Numero WA destinatario",
    "options": "WhatsApp Number",
    "depends_on": "eval:doc.source_type=='WhatsApp'"
+  },
+  {
+   "fieldname": "instagram_account",
+   "fieldtype": "Link",
+   "label": "Account Instagram",
+   "options": "Instagram Account",
+   "depends_on": "eval:doc.source_type=='Instagram'",
+   "read_only": 1
   },
   {
    "fieldname": "linked_contact",

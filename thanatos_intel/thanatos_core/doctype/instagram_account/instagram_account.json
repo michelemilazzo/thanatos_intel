@@ -1,0 +1,118 @@
+{
+ "doctype": "DocType",
+ "name": "Instagram Account",
+ "module": "Thanatos Core",
+ "autoname": "field:username",
+ "naming_rule": "By fieldname",
+ "title_field": "display_name",
+ "search_fields": "display_name,username",
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "label": "Nome account (es: Thanatos Intel)",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Username Instagram (senza @)",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ig_user_id",
+   "fieldtype": "Data",
+   "label": "Instagram Business Account ID",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "ID numerico dell'account IG Business (es: 17841413961543282). E' la chiave con cui il webhook riconosce l'account."
+  },
+  {
+   "fieldname": "page_id",
+   "fieldtype": "Data",
+   "label": "Facebook Page ID collegata",
+   "description": "Usata come fallback per l'invio DM se l'endpoint IG non accetta la richiesta."
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Attivo",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sb_auth",
+   "fieldtype": "Section Break",
+   "label": "Credenziali Meta"
+  },
+  {
+   "fieldname": "access_token",
+   "fieldtype": "Password",
+   "label": "Access Token (system user o page token)",
+   "length": 1000
+  },
+  {
+   "fieldname": "webhook_token",
+   "fieldtype": "Password",
+   "label": "Token webhook (verify token)",
+   "length": 1000,
+   "description": "Usato sia per la challenge GET hub.verify_token sia per il ?token= nel POST. Se vuoto vale instagram_ingest_token in site_config."
+  },
+  {
+   "fieldname": "sb_routing",
+   "fieldtype": "Section Break",
+   "label": "Instradamento lead"
+  },
+  {
+   "fieldname": "auto_assign_to",
+   "fieldtype": "Link",
+   "label": "Assegna lead a",
+   "options": "User"
+  },
+  {
+   "fieldname": "default_priority",
+   "fieldtype": "Select",
+   "label": "Priorità default",
+   "options": "Bassa\nMedia\nAlta\nCritica",
+   "default": "Media"
+  },
+  {
+   "fieldname": "default_tags",
+   "fieldtype": "Data",
+   "label": "Tag default (virgola separati)"
+  },
+  {
+   "fieldname": "sb_bot",
+   "fieldtype": "Section Break",
+   "label": "Risposta automatica"
+  },
+  {
+   "fieldname": "auto_reply_message",
+   "fieldtype": "Long Text",
+   "label": "Messaggio di risposta automatica (primo contatto)",
+   "description": "Inviato automaticamente al primo DM ricevuto. Lascia vuoto per disabilitare."
+  },
+  {
+   "fieldname": "ai_bot_enabled",
+   "fieldtype": "Check",
+   "default": "0",
+   "label": "Bot AI su Instagram",
+   "description": "Se attivo, le risposte automatiche sono generate dal bot AI di triage invece del messaggio fisso."
+  },
+  {
+   "fieldname": "ai_bot_system_prompt",
+   "fieldtype": "Small Text",
+   "label": "Istruzioni bot (opzionale)",
+   "depends_on": "ai_bot_enabled",
+   "description": "Sovrascrive la persona/istruzioni di default del bot. Lascia vuoto per usare quelle standard di Thanatos."
+  }
+ ],
+ "permissions": [
+  {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1, "report": 1, "export": 1},
+  {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+ ]
+}

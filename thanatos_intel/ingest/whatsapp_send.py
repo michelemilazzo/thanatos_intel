@@ -13,6 +13,11 @@ from frappe.utils.password import get_decrypted_password
 def send_reply(lead_name: str, message_text: str) -> dict:
     lead = frappe.get_doc("Intel Lead", lead_name)
 
+    # il Centralino usa un endpoint solo per tutti i canali: instrada su Instagram
+    if lead.source_type == "Instagram":
+        from thanatos_intel.ingest.instagram_send import send_reply as ig_send_reply
+        return ig_send_reply(lead_name, message_text)
+
     if lead.source_type != "WhatsApp":
         frappe.throw(_("Questo lead non è di tipo WhatsApp."))
 
