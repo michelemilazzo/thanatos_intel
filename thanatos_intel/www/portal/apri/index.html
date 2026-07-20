@@ -78,6 +78,7 @@ textarea{min-height:90px;resize:vertical}
 {{ thanatos_footer() }}
 <script>
 const CSRF="{{ csrf_token }}";
+const PRESEL={{ (preselect_bp or "")|tojson }};
 let selBp=null;
 function selectBp(el){
   document.querySelectorAll('.card').forEach(c=>c.classList.remove('sel'));
@@ -85,6 +86,7 @@ function selectBp(el){
   document.getElementById('formwrap').style.display='block';
   document.getElementById('formwrap').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
+if(PRESEL){document.querySelectorAll('.card').forEach(function(c){if(c.dataset.bp===PRESEL)selectBp(c);});}
 const btn=document.getElementById('send'),msg=document.getElementById('msg');
 if(btn) btn.addEventListener('click',async()=>{
   const title=document.getElementById('case_title').value.trim();

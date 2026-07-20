@@ -14,4 +14,5 @@ def get_context(context):
     context.has_client = bool(cl) or _is_operator(frappe.session.user)
     context.title = "Apri una pratica — Thanatos Intel"
     context.lang = frappe.local.lang or "it"
+    context.preselect_bp = frappe.form_dict.get("bp") or ""
     return context
