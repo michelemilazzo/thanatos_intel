@@ -89,6 +89,72 @@ def _send_via_meta(wa_doc, to_number: str, text: str) -> dict:
     return {"ok": False, "error": data.get("error", {}).get("message", str(data))}
 
 
+# stato Meta -> nostro is_active: solo APPROVED e' inviabile.
+_TEMPLATE_ACTIVE_STATUSES = {"APPROVED"}
+
+
+@frappe.whitelist()
+def sync_template_status(whatsapp_number: str | None = None) -> dict:
+    """Allinea lo stato dei WhatsApp Template col loro stato reale su Meta, così
+    non serve controllare a mano dopo aver sottoposto un template ad approvazione.
+    is_active = 1 solo se APPROVED; salva anche lo stato Meta grezzo per diagnosi."""
+    import requests
+    if not whatsapp_number:
+        whatsapp_number = frappe.db.get_value(
+            "WhatsApp Number", {"provider": "Meta", "is_active": 1}, "name") \
+            or frappe.db.get_value("WhatsApp Number", {"is_active": 1}, "name")
+    if not whatsapp_number:
+        return {"ok": False, "reason": "nessun WhatsApp Number configurato"}
+    wa = frappe.get_doc("WhatsApp Number", whatsapp_number)
+    waba = frappe.conf.get("wa_business_account_id") or getattr(wa, "waba_id", None)
+    if not waba:
+        # ricava il WABA id dall'ultimo webhook grezzo (l'entry.id è il WABA)
+        import json as _json
+        for L in frappe.get_all("WABA Webhook Log", fields=["payload"],
+                                order_by="creation desc", limit=50):
+            try:
+                p = _json.loads(L.payload)
+            except Exception:
+                continue
+            for e in p.get("entry", []):
+                if e.get("id"):
+                    waba = e["id"]
+                    break
+            if waba:
+                break
+    if not waba:
+        return {"ok": False, "reason": "WABA id non determinato"}
+    token = get_decrypted_password("WhatsApp Number", wa.name, "meta_access_token")
+    r = requests.get(
+        f"https://graph.facebook.com/v21.0/{waba}/message_templates",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"fields": "name,status,category", "limit": 200}, timeout=30)
+    if r.status_code != 200:
+        return {"ok": False, "reason": f"HTTP {r.status_code}: {(r.text or '')[:160]}"}
+    remote = {t.get("name"): t for t in (r.json() or {}).get("data", [])}
+    changed = []
+    for tpl in frappe.get_all("WhatsApp Template",
+                              fields=["name", "meta_template_name", "template_name", "is_active"]):
+        key = tpl.meta_template_name or tpl.template_name or tpl.name
+        rt = remote.get(key)
+        if not rt:
+            continue
+        want = 1 if rt.get("status") in _TEMPLATE_ACTIVE_STATUSES else 0
+        if want != (tpl.is_active or 0):
+            frappe.db.set_value("WhatsApp Template", tpl.name, "is_active", want)
+            changed.append({"template": tpl.name, "meta_status": rt.get("status"), "is_active": want})
+    frappe.db.commit()
+    return {"ok": True, "waba": waba, "totale": len(remote), "aggiornati": changed}
+
+
+def scheduled_sync_template_status():
+    """Job giornaliero: tiene allineato lo stato dei template con Meta."""
+    try:
+        return sync_template_status()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "sync_template_status")
+
+
 @frappe.whitelist()
 def send_template(lead_name: str, template_name: str, language: str = "it",
                   body_params: str | None = None) -> dict:
