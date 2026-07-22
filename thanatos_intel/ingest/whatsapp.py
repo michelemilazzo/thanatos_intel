@@ -544,6 +544,13 @@ def _handle_call_events(data: dict, wa_number: dict | None):
                                       json={"call_id": call_id}, timeout=10)
                     except Exception:
                         pass
+                    # avvisa il centralino: fa sparire la barra "Rispondi" se il
+                    # chiamante ha riagganciato prima che un operatore rispondesse
+                    try:
+                        frappe.publish_realtime("centralino_call_ended",
+                                                {"call_id": call_id}, after_commit=False)
+                    except Exception:
+                        pass
 
 
 _MONITOR_FIELDS = {
