@@ -104,10 +104,16 @@ def _recipients(case):
     return ["admin@thanatos.agency"]
 
 
-def check_wallet(address):
-    """Stato corrente di un wallet: saldo + attribuzione."""
+def check_wallet(address, with_attribution=True):
+    """Stato corrente di un wallet: saldo (+ attribuzione Arkham, opzionale).
+
+    Con ``with_attribution=False`` salta la chiamata Arkham (usato quando il
+    servizio non è disponibile): i campi attribuzione restano vuoti e vanno
+    reintegrati dallo stato precedente dal chiamante. Può sollevare
+    ``arkham.ArkhamUnavailable`` se l'attribuzione è richiesta ma il servizio
+    non è accessibile (401/402/403)."""
     bal = bc._balance(address)
-    att = arkham.attribute(address)
+    att = arkham.attribute(address) if with_attribution else {}
     return {
         "balance": bal["balance"], "received": bal["received"], "tx": bal["tx_count"],
         "entity": att.get("entity"), "label": att.get("label"),
@@ -139,15 +145,35 @@ def snapshot_case(case_name, notify=True):
     case = frappe.get_doc("Investigation Case", case_name)
     wallets = _wallets_of_case(case)
     changes = []
+    use_arkham = True       # sospeso al primo 401/402/403 di Arkham nel giro
+    arkham_warned = False
     for addr in wallets:
         ent = frappe.get_doc("Investigation Entity", addr)
         raw = _load_raw(ent)
         prev = raw.get(STATE_KEY) or {}
+        attributed = use_arkham
         try:
-            cur = check_wallet(addr)
+            cur = check_wallet(addr, with_attribution=use_arkham)
+        except arkham.ArkhamUnavailable as e:
+            # Arkham non accessibile (abbonamento/chiave): sospendi l'attribuzione
+            # per il resto del giro, logga UNA sola volta, prosegui col solo saldo.
+            use_arkham = False
+            attributed = False
+            if not arkham_warned:
+                frappe.log_error(str(e), "monitor: Arkham non disponibile (attribuzione sospesa)")
+                arkham_warned = True
+            try:
+                cur = check_wallet(addr, with_attribution=False)
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), "monitor check " + addr)
+                continue
         except Exception:
             frappe.log_error(frappe.get_traceback(), "monitor check " + addr)
             continue
+        if not attributed:
+            # conserva l'ultima attribuzione nota: evita falsi diff/alert mentre Arkham è giù
+            for _k in ("entity", "label", "cashout", "illicit"):
+                cur[_k] = prev.get(_k)
         diffs = _diff(prev, cur)
         raw[STATE_KEY] = {k: cur[k] for k in
                           ("balance", "received", "tx", "entity", "label", "cashout", "illicit", "ts")}

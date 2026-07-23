@@ -17,6 +17,13 @@ from frappe.utils import now_datetime
 
 DEFAULT_BASE = "https://api.arkm.com"
 
+
+class ArkhamUnavailable(Exception):
+    """Arkham non accessibile a livello di servizio (401/402/403): chiave non
+    valida o abbonamento non attivo. NON è un errore del singolo indirizzo:
+    i chiamanti dovrebbero sospendere l'attribuzione invece di loggare per
+    ogni wallet (vedi osint/wallet_monitor)."""
+
 # tipi/entita Arkham che indicano un endpoint di cash-out (VASP/exchange)
 CASHOUT_TYPES = {"cex", "exchange"}
 # spie testuali (tipo/service/note/label) di attivita illecita
@@ -40,6 +47,12 @@ def _get(path, params=None):
                      headers={"API-Key": _key(), "User-Agent": "thanatos-intel"}, timeout=30)
     if r.status_code == 404:
         return None
+    if r.status_code in (401, 402, 403):
+        # accesso al servizio negato (chiave/abbonamento) — non è un problema
+        # del singolo indirizzo: segnala uno stato "servizio non disponibile".
+        raise ArkhamUnavailable(
+            f"Arkham API non accessibile: HTTP {r.status_code} "
+            f"(verifica arkham_api_key / abbonamento)")
     r.raise_for_status()
     return r.json()
 
