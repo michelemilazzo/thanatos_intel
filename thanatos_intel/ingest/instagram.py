@@ -149,8 +149,6 @@ def _debug_dump(tag: str, content: str) -> None:
     """Dump diagnostico su file: il webhook puo' fallire PRIMA di poter scrivere
     su DocType, quindi il file e' l'unico posto sempre raggiungibile.
     Attivo solo con ``instagram_debug_payload`` in site_config."""
-    if not frappe.conf.get("instagram_debug_payload"):
-        return
     try:
         from frappe.utils import now
         with open("/tmp/ig_webhook_debug.log", "a") as f:
@@ -215,18 +213,24 @@ def webhook():
         frappe.response["http_status_code"] = 403
         return {"error": "unauthorized"}
 
-    _debug_dump("RAW BODY", (req.get_data(as_text=True) or "")[:8000])
+    raw = req.get_data(as_text=True) or ""
+    _debug_dump("RAW BODY", raw[:8000])
 
-    data = req.json or {}
+    try:
+        data = req.json or {}
+    except Exception:
+        _debug_dump("JSON PARSE FAIL", raw[:2000])
+        data = {}
     _log_raw(data)
 
     try:
         return _process(data)
     except Exception:
-        # senza questo il traceback si perde: Frappe rispondeva 417 muto
+        # NON rilanciare: un 417/500 fa entrare Meta in backoff e smette di
+        # consegnare. Logghiamo tutto e rispondiamo 200 (evento gia' catturato).
         _debug_dump("TRACEBACK", frappe.get_traceback())
         frappe.log_error(frappe.get_traceback(), "IG webhook")
-        raise
+        return {"ok": False, "handled_error": True}
 
 
 def _process(data: dict) -> dict:
