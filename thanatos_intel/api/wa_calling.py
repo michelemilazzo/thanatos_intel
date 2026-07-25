@@ -41,6 +41,55 @@ def forward_incoming_call(call_id, pnid, frm, sdp, wa_number=None):
     return r.json()
 
 
+def _sos_operators(wa_name):
+    """Numeri da far squillare su SOS: site_config sos_call_operators (csv),
+    altrimenti la catena operatori standard del numero."""
+    raw = (frappe.conf.get("sos_call_operators") or "").strip()
+    if raw:
+        return [x.strip() for x in raw.split(",") if x.strip()]
+    return _operator_chain(wa_name)
+
+
+@frappe.whitelist(allow_guest=True)
+def sos_incoming():
+    """Webhook dall'app di protezione (Angelo Custode) su pressione SOS: fa
+    squillare gli operatori con annuncio vocale. Protetto da secret ?k=.
+    Payload atteso (dal worker protect): {type,subject,loc,lat,lon}."""
+    import requests
+    secret = frappe.conf.get("sos_webhook_secret")
+    k = frappe.request.args.get("k") or frappe.form_dict.get("k")
+    if not secret or k != secret:
+        frappe.local.response["http_status_code"] = 403
+        return {"ok": False, "error": "auth"}
+    try:
+        body = json.loads(frappe.request.get_data() or b"{}")
+    except Exception:
+        body = {}
+    subject = (body.get("subject") or "").strip() or "persona protetta"
+    name = frappe.db.get_value("WhatsApp Number", {"provider": "Meta Cloud API", "is_active": 1}, "name") \
+        or frappe.db.get_value("WhatsApp Number", {"is_active": 1}, "name")
+    if not name:
+        return {"ok": False, "error": "numero non configurato"}
+    ops = _sos_operators(name)
+    if not ops:
+        return {"ok": False, "error": "nessun operatore SOS configurato"}
+    pnid = frappe.db.get_value("WhatsApp Number", name, "meta_phone_number_id")
+    token = get_decrypted_password("WhatsApp Number", name, "meta_access_token")
+    announce = ("Allarme S O S dal protetto %s. La posizione e' stata inviata su WhatsApp. "
+                "Intervenire con urgenza." % subject)
+    try:
+        r = requests.post("%s/sos-call" % _media_url(),
+                          json={"operators": ops, "pnid": pnid, "token": token,
+                                "frappe_url": frappe.utils.get_url(), "announce_text": announce},
+                          timeout=20)
+        out = r.json()
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "sos_incoming media")
+        return {"ok": False, "error": str(e)[:200]}
+    frappe.logger("sos").info("SOS call subject=%s ops=%s -> %s" % (subject, ops, out))
+    return {"ok": True, "dialed": out.get("dialed")}
+
+
 def _operator_chain(wa_name):
     """Lista ordinata di numeri operatore dal pannello (WhatsApp Operator Route).
     Fallback: call_forward_number + investigatori 'Available' (compat)."""
