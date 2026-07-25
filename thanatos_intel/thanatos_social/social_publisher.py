@@ -1,9 +1,13 @@
 """Allineamento News e Servizi Thanatos → Pagina Facebook / Instagram.
 
 - News: quando un News Article va live (``published`` 0→1) crea un Facebook Post
-  e lo pubblica (foto se ha ``featured_image``, altrimenti link). Solo news in
-  evidenza/interne salvo override, per non intasare la Pagina col firehose RSS.
+  e lo pubblica. Solo news in evidenza/interne salvo override, per non intasare
+  la Pagina col firehose RSS.
 - Servizi: scheduler settimanale che pubblica a rotazione un servizio attivo.
+
+Ogni pubblicazione è resa **visiva**: se il contenuto non ha già una copertina,
+viene generata una card brandizzata Thanatos (1080×1080), così il post esce come
+foto e può essere pubblicato anche su Instagram (che richiede un'immagine).
 
 Il job giornaliero delle news usa ``frappe.db.set_value`` (che NON fa scattare i
 doc_events), perciò l'auto-pubblicazione è coperta sia dall'hook ``on_update``
@@ -25,8 +29,8 @@ def _settings():
     return None
 
 
-def _hashtags(s) -> str:
-    return (getattr(s, "social_hashtags", "") or "").strip()
+def _hashtags(s, default="") -> str:
+    return (getattr(s, "social_hashtags", "") or "").strip() or default
 
 
 def _abs_url(file_url: str) -> str:
@@ -40,6 +44,135 @@ def _abs_url(file_url: str) -> str:
 def _already_posted(doctype: str, name: str) -> bool:
     return bool(frappe.db.exists(
         "Facebook Post", {"source_doctype": doctype, "source_name": name}))
+
+
+def _clean(text: str) -> str:
+    """Rimuove HTML e normalizza gli spazi."""
+    text = re.sub(r"<[^>]+>", " ", text or "")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _clip(text: str, n: int) -> str:
+    """Taglia al confine di parola aggiungendo un'ellissi."""
+    text = (text or "").strip()
+    if len(text) <= n:
+        return text
+    cut = text[:n].rsplit(" ", 1)[0].rstrip(",.;:—- ")
+    return (cut or text[:n]) + "…"
+
+
+# ---------------------------------------------------------------------------
+# Card brandizzata (fallback immagine → abilita Instagram anche per testo/link)
+# ---------------------------------------------------------------------------
+
+def _brand_card(kicker: str, title: str, subtitle: str = "") -> str:
+    """Genera una card 1080×1080 brandizzata Thanatos, la salva come File
+    pubblico e ne restituisce l'URL assoluto (fetchabile da Meta). Best-effort:
+    su qualsiasi errore ritorna "" e il chiamante ripiega sul post Link."""
+    try:
+        import hashlib
+        import io
+
+        from PIL import Image, ImageDraw, ImageFont
+
+        W = H = 1080
+        BG = (11, 31, 51)        # navy #0B1F33
+        PANEL = (30, 52, 78)
+        GOLD = (201, 162, 75)    # #C9A24B
+        WHITE = (240, 244, 250)
+        GREY = (150, 165, 185)
+        FONT_DIR = "/usr/share/fonts/truetype/dejavu/"
+        margin = 96
+
+        def font(sz, bold=True):
+            f = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
+            return ImageFont.truetype(FONT_DIR + f, sz)
+
+        img = Image.new("RGB", (W, H), BG)
+        d = ImageDraw.Draw(img)
+        d.rectangle([30, 30, W - 30, H - 30], outline=PANEL, width=2)
+
+        def wrap(text, fnt, maxw):
+            lines, cur = [], ""
+            for w in (text or "").split():
+                t = (cur + " " + w).strip()
+                if d.textlength(t, font=fnt) <= maxw or not cur:
+                    cur = t
+                else:
+                    lines.append(cur)
+                    cur = w
+            if cur:
+                lines.append(cur)
+            return lines
+
+        # kicker + filetto oro
+        d.text((margin, 150), (kicker or "").upper(), font=font(34), fill=GOLD)
+        d.line([(margin, 208), (margin + 130, 208)], fill=GOLD, width=4)
+
+        # titolo: wrap + auto-riduzione per stare nel riquadro
+        maxw = W - 2 * margin
+        size, lines, lh, tf = 88, [], 0, None
+        while size >= 42:
+            tf = font(size)
+            lines = wrap(title, tf, maxw)
+            lh = int(size * 1.16)
+            if len(lines) <= 5 and len(lines) * lh <= 470:
+                break
+            size -= 6
+        y = 268
+        for ln in lines[:5]:
+            d.text((margin, y), ln, font=tf, fill=WHITE)
+            y += lh
+
+        # sottotitolo (prezzo o snippet)
+        if subtitle:
+            sf = font(42, bold=False)
+            for ln in wrap(subtitle, sf, maxw)[:2]:
+                y += 12
+                d.text((margin, y), ln, font=sf, fill=GREY)
+                y += int(42 * 1.2)
+
+        # footer
+        d.text((margin, H - 156), "THANATOS INVESTIGAZIONI", font=font(30), fill=WHITE)
+        d.text((margin, H - 112), "thanatos.agency", font=font(28, bold=False), fill=GOLD)
+
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        data = buf.getvalue()
+
+        h = hashlib.sha1(("|".join((kicker, title, subtitle))).encode("utf-8")).hexdigest()[:12]
+        fname = f"social_card_{h}.png"
+        existing = frappe.db.get_value("File", {"file_name": fname, "is_private": 0}, "file_url")
+        if existing:
+            return _abs_url(existing)
+        f = frappe.get_doc({
+            "doctype": "File", "file_name": fname, "is_private": 0, "content": data,
+        }).insert(ignore_permissions=True)
+        return _abs_url(f.file_url)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "social brand card")
+        return ""
+
+
+def _make_post(post_title, message, link, image_url, source_doctype, source_name, s):
+    """Crea e pubblica un Facebook Post. Con immagine → post Foto (+ Instagram se
+    disponibile); senza → post Link."""
+    also_ig = bool(image_url and cint(getattr(s, "also_instagram", 0))
+                   and fb.instagram_available())
+    post = frappe.get_doc({
+        "doctype": "Facebook Post",
+        "post_title": (post_title or source_name)[:140],
+        "post_type": "Foto" if image_url else "Link",
+        "message": message,
+        "link": link,
+        "image_url": image_url or "",
+        "also_instagram": 1 if also_ig else 0,
+        "source_doctype": source_doctype,
+        "source_name": source_name,
+    })
+    post.insert(ignore_permissions=True)
+    post.publish_now()
+    return post
 
 
 # ---------------------------------------------------------------------------
@@ -56,13 +189,13 @@ def _news_url(doc) -> str:
 
 
 def _news_caption(doc, s) -> str:
-    body = (doc.get("thanatos_angle") or doc.get("excerpt") or "").strip()
-    parts = [doc.get("title") or ""]
+    title = (doc.get("title") or "").strip()
+    body = _clean(doc.get("thanatos_angle") or doc.get("excerpt") or "")
+    parts = [f"📰 {title}".strip()]
     if body:
-        parts.append(body[:400])
-    tags = _hashtags(s)
-    if tags:
-        parts.append(tags)
+        parts.append(_clip(body, 380))
+    parts.append(f"🔗 Leggi l'articolo: {_news_url(doc)}")
+    parts.append(_hashtags(s, "#Thanatos #Investigazioni #OSINT"))
     return "\n\n".join(p for p in parts if p).strip()
 
 
@@ -76,22 +209,15 @@ def _skip_news(doc_or_row, s) -> bool:
 
 
 def _create_and_publish_from_news(doc, s):
+    title = (doc.get("title") or doc.name)
     image_url = _abs_url((doc.get("featured_image") or "").strip())
-    also_ig = bool(image_url and cint(getattr(s, "also_instagram", 0))
-                   and fb.instagram_available())
-    post = frappe.get_doc({
-        "doctype": "Facebook Post",
-        "post_title": ("News: " + (doc.get("title") or doc.name))[:140],
-        "post_type": "Foto" if image_url else "Link",
-        "message": _news_caption(doc, s),
-        "link": _news_url(doc),
-        "image_url": image_url,
-        "also_instagram": 1 if also_ig else 0,
-        "source_doctype": "News Article",
-        "source_name": doc.name,
-    })
-    post.insert(ignore_permissions=True)
-    post.publish_now()
+    if not image_url:
+        # nessuna copertina: genera una card così il post è visivo e va su IG
+        image_url = _brand_card("News", title, _clip(
+            _clean(doc.get("excerpt") or doc.get("thanatos_angle") or ""), 90))
+    post = _make_post(
+        "News: " + title, _news_caption(doc, s), _news_url(doc),
+        image_url, "News Article", doc.name, s)
     return post.name
 
 
@@ -149,18 +275,38 @@ def sync_published_news():
 # SERVIZI → spotlight settimanale a rotazione
 # ---------------------------------------------------------------------------
 
+def _service_price(svc) -> str:
+    price = svc.get("price")
+    if price and int(price) > 0:
+        return f"A partire da {int(price)} {svc.get('currency') or 'EUR'}"
+    return ""
+
+
 def _service_caption(svc, s) -> str:
-    desc = re.sub(r"<[^>]+>", " ", svc.get("description") or "")
-    desc = re.sub(r"\s+", " ", desc).strip()
-    parts = [f"🔎 {svc.get('service_name') or svc.name}"]
+    name = svc.get("service_name") or svc.name
+    desc = _clean(svc.get("description") or "")
+    parts = [f"🔎 {name}"]
     if desc:
-        parts.append(desc[:400])
-    if svc.get("price"):
-        parts.append(f"💶 A partire da {int(svc.price)} {svc.get('currency') or 'EUR'}")
-    tags = _hashtags(s)
-    if tags:
-        parts.append(tags)
+        parts.append(_clip(desc, 320))
+    price = _service_price(svc)
+    if price:
+        parts.append(f"💶 {price}")
+    parts.append("📩 Contattaci in privato o su WhatsApp per una consulenza riservata.")
+    parts.append(f"🔗 {get_url().rstrip('/')}/servizi")
+    parts.append(_hashtags(s, "#Thanatos #Investigazioni #Sicurezza"))
     return "\n\n".join(p for p in parts if p).strip()
+
+
+def _service_image(svc) -> str:
+    """Copertina del servizio se presente (vari nomi campo possibili), altrimenti
+    una card brandizzata generata al volo."""
+    for fld in ("image", "cover_image", "featured_image", "banner"):
+        u = _abs_url((svc.get(fld) or "").strip()) if svc.get(fld) else ""
+        if u:
+            return u
+    name = svc.get("service_name") or svc.name
+    return _brand_card("Servizio Thanatos", name, _service_price(svc)
+                       or _clip(_clean(svc.get("description") or ""), 90))
 
 
 def _next_service(s):
@@ -174,6 +320,13 @@ def _next_service(s):
     return frappe.get_doc("Service Catalog", names[idx])
 
 
+def _publish_service(svc, s):
+    return _make_post(
+        "Servizio: " + (svc.get("service_name") or svc.name),
+        _service_caption(svc, s), get_url().rstrip("/") + "/servizi",
+        _service_image(svc), "Service Catalog", svc.name, s)
+
+
 def publish_service_spotlight():
     """Scheduler settimanale: pubblica a rotazione un servizio attivo."""
     try:
@@ -184,17 +337,7 @@ def publish_service_spotlight():
         svc = _next_service(s)
         if not svc:
             return
-        post = frappe.get_doc({
-            "doctype": "Facebook Post",
-            "post_title": ("Servizio: " + (svc.get("service_name") or svc.name))[:140],
-            "post_type": "Link",
-            "message": _service_caption(svc, s),
-            "link": get_url().rstrip("/") + "/servizi",
-            "source_doctype": "Service Catalog",
-            "source_name": svc.name,
-        })
-        post.insert(ignore_permissions=True)
-        post.publish_now()
+        _publish_service(svc, s)
         frappe.db.set_single_value("Facebook Settings", "service_spotlight_last", svc.name)
         frappe.db.commit()
     except Exception:
@@ -208,15 +351,5 @@ def publish_service_now(service_code: str):
     if not s or not fb.is_enabled():
         frappe.throw("Integrazione Facebook non attiva.")
     svc = frappe.get_doc("Service Catalog", service_code)
-    post = frappe.get_doc({
-        "doctype": "Facebook Post",
-        "post_title": ("Servizio: " + (svc.get("service_name") or svc.name))[:140],
-        "post_type": "Link",
-        "message": _service_caption(svc, s),
-        "link": get_url().rstrip("/") + "/servizi",
-        "source_doctype": "Service Catalog",
-        "source_name": svc.name,
-    })
-    post.insert(ignore_permissions=True)
-    post.publish_now()
+    post = _publish_service(svc, s)
     return {"name": post.name, "status": post.status, "fb_post_id": post.fb_post_id}
