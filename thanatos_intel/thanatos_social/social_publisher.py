@@ -125,6 +125,128 @@ def _extra_langs(s=None):
     return [l for l in langs if l in _STRINGS and l != "it"]
 
 
+# Glossario curato: traduzioni professionali esatte dei nomi servizio (e termini
+# ricorrenti). Ha la precedenza sulla traduzione automatica, così i titoli
+# risultano corretti. Chiave = testo italiano in minuscolo.
+_GLOSSARY = {
+    "en": {
+        # Abbonamenti e Academy
+        "piano free": "Free Plan",
+        "piano basic professionale": "Professional Basic Plan",
+        "piano professional": "Professional Plan",
+        "piano legal": "Legal Plan",
+        "piano enterprise": "Enterprise Plan",
+        "monitoraggio continuo azienda (mensile)": "Continuous Company Monitoring (monthly)",
+        "alert truffe di settore (mensile)": "Industry Scam Alerts (monthly)",
+        "newsletter premium intelligence (mensile)": "Premium Intelligence Newsletter (monthly)",
+        "corso osint base": "OSINT Fundamentals Course",
+        "corso antifrode professionale": "Professional Anti-Fraud Course",
+        "certificazione investigatore": "Investigator Certification",
+        # Analisi Documenti
+        "analisi contratto": "Contract Analysis",
+        "analisi fattura sospetta": "Suspicious Invoice Analysis",
+        "analisi proof of funds": "Proof of Funds Analysis",
+        "analisi bank guarantee / mt760": "Bank Guarantee / MT760 Analysis",
+        "analisi sblc": "SBLC Analysis",
+        "analisi documento identita": "ID Document Analysis",
+        "analisi documento notarile": "Notarial Document Analysis",
+        "analisi metadati pdf / office": "PDF / Office Metadata Analysis",
+        "analisi firma digitale": "Digital Signature Analysis",
+        "comparazione documenti autentici": "Authentic Document Comparison",
+        # Antifrode
+        "analisi schema truffa": "Scam Scheme Analysis",
+        "analisi investment scam": "Investment Scam Analysis",
+        "analisi trading / forex scam": "Trading / Forex Scam Analysis",
+        "analisi crypto / ponzi scam": "Crypto / Ponzi Scam Analysis",
+        "analisi romance scam": "Romance Scam Analysis",
+        "analisi broker / intermediario": "Broker / Intermediary Analysis",
+        "analisi identity theft": "Identity Theft Analysis",
+        "analisi frode aziendale": "Corporate Fraud Analysis",
+        "analisi phishing avanzato": "Advanced Phishing Analysis",
+        "analisi rete soggetti collegati": "Linked-Parties Network Analysis",
+        # Corporate Intelligence
+        "uk company due diligence (kyb)": "UK Company Due Diligence (KYB)",
+        "due diligence aziendale full": "Full Corporate Due Diligence",
+        "verifica reputazione aziendale": "Corporate Reputation Check",
+        "verifica partner commerciale": "Business Partner Check",
+        "mappa gruppo societario": "Corporate Group Mapping",
+        "analisi soci e amministratori": "Shareholders & Directors Analysis",
+        "analisi contenziosi pubblici": "Public Litigation Analysis",
+        "report affidabilita commerciale": "Commercial Reliability Report",
+        "verifica fornitore internazionale": "International Supplier Check",
+        "analisi beneficiari effettivi": "Beneficial Owners Analysis",
+        "due diligence aziendale light": "Light Corporate Due Diligence",
+        # Cyber Intelligence
+        "analisi malware file": "Malware File Analysis",
+        "analisi url malevolo": "Malicious URL Analysis",
+        "analisi software fake": "Fake Software Analysis",
+        "analisi app mobile sospetta": "Suspicious Mobile App Analysis",
+        "analisi ioc completa": "Full IOC Analysis",
+        "verifica software pirata aziendale": "Corporate Pirated-Software Check",
+        "report cyber risk pmi": "SME Cyber Risk Report",
+        "monitoraggio brand abuse (mensile)": "Brand Abuse Monitoring (monthly)",
+        "audit sicurezza software": "Software Security Audit",
+        "analisi estensione browser": "Browser Extension Analysis",
+        # Enterprise & API
+        "piattaforma white label (mensile)": "White-Label Platform (monthly)",
+        "api intelligence custom (mensile)": "Custom Intelligence API (monthly)",
+        "integrazione sistemi terzi": "Third-Party Systems Integration",
+        "formazione team interno": "Internal Team Training",
+        "consulenza cyber security (orario)": "Cyber Security Consulting (hourly)",
+        "perizia tecnica per tribunale": "Technical Expert Report for Court",
+        "computer forensics": "Computer Forensics",
+        "bonifica ambientale aziendale": "Corporate TSCM Bug Sweep",
+        "workshop investigativi full-day": "Full-Day Investigative Workshops",
+        "programma affiliati investigativi (setup)": "Investigative Affiliate Program (setup)",
+        # Financial Intelligence
+        "tracciamento blockchain e clustering wallet": "Blockchain Tracing & Wallet Clustering",
+        "analisi bilancio": "Financial Statement Analysis",
+        "analisi esposizione bancaria": "Bank Exposure Analysis",
+        "stima interessi passivi": "Interest Expense Estimate",
+        "analisi rischio insolvenza": "Insolvency Risk Analysis",
+        "analisi patrimonio aziendale": "Corporate Assets Analysis",
+        "report finanziario per avvocati": "Financial Report for Lawyers",
+        "report finanziario per commercialisti": "Financial Report for Accountants",
+        "protezione patrimoniale preliminare": "Preliminary Asset Protection",
+        "due diligence finanziaria": "Financial Due Diligence",
+        "valutazione azienda (fairness opinion)": "Company Valuation (Fairness Opinion)",
+        # Investigazioni Complete
+        "investigazione digitale base": "Basic Digital Investigation",
+        "investigazione patrimoniale": "Asset Investigation",
+        "investigazione aziendale": "Corporate Investigation",
+        "investigazione cyber fraud": "Cyber Fraud Investigation",
+        "investigazione crypto fraud": "Crypto Fraud Investigation",
+        "fascicolo legale completo": "Complete Legal Case File",
+        "report investigativo certificato": "Certified Investigative Report",
+        "controspionaggio aziendale": "Corporate Counter-Espionage",
+        "osint investigation completa": "Full OSINT Investigation",
+        "dossier per avvocato — tribunale ready": "Attorney Dossier — Court-Ready",
+        # Sequestri e Confische
+        "analisi preliminare provvedimento": "Preliminary Order Analysis",
+        "report analisi vizi procedurali": "Procedural Flaws Analysis Report",
+        "perizia valore beni sequestrati": "Seized Assets Valuation",
+        "analisi provenienza lecita beni": "Lawful Asset Origin Analysis",
+        "dossier completo per riesame": "Full Dossier for Review",
+        "dossier esproprio contestazione indennizzo": "Expropriation Compensation Dispute Dossier",
+        "supporto ricorso cedu": "ECHR Appeal Support",
+        "report opposizione confisca antimafia": "Anti-Mafia Confiscation Opposition Report",
+        "analisi confisca urbanistica": "Urban-Planning Confiscation Analysis",
+        "monitoraggio procedimento (mensile)": "Proceedings Monitoring (monthly)",
+        # Verifiche Rapide
+        "verifica email breach": "Email Breach Check",
+        "verifica dominio": "Domain Check",
+        "verifica ip reputation": "IP Reputation Check",
+        "verifica telefono": "Phone Number Check",
+        "verifica username / social": "Username / Social Check",
+        "verifica url sospetto": "Suspicious URL Check",
+        "verifica hash file": "File Hash Check",
+        "verifica wallet crypto": "Crypto Wallet Check",
+        "verifica azienda base": "Basic Company Check",
+        "verifica persona base": "Basic Person Check",
+    },
+}
+
+
 def _lt_url():
     return (frappe.conf.get("libretranslate_url")
             or "http://10.10.0.4:5000").rstrip("/")
@@ -136,6 +258,10 @@ def _translate(text: str, lang: str) -> str:
     text = (text or "").strip()
     if not text or lang == "it":
         return text
+    # 1) glossario curato: traduzione professionale esatta (precede l'automatica)
+    curated = _GLOSSARY.get(lang, {}).get(text.lower())
+    if curated:
+        return curated
     key = "social_tr:%s:%s" % (lang, hashlib.md5(text.encode("utf-8")).hexdigest())
     cache = None
     try:
