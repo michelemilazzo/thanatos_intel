@@ -15,6 +15,7 @@ doc_events), perciò l'auto-pubblicazione è coperta sia dall'hook ``on_update``
 giornaliero). Entrambi deduplicano sull'esistenza del Facebook Post di origine.
 """
 
+import hashlib
 import re
 
 import frappe
@@ -59,6 +60,107 @@ def _clip(text: str, n: int) -> str:
         return text
     cut = text[:n].rsplit(" ", 1)[0].rstrip(",.;:—- ")
     return (cut or text[:n]) + "…"
+
+
+# ---------------------------------------------------------------------------
+# Multilingua — didascalie bilingui (IT + lingue extra). Le parti fisse sono
+# curate per lingua; nome/descrizione servizio e titolo/corpo news vengono
+# tradotti a runtime da LibreTranslate (con cache e fallback all'originale).
+# ---------------------------------------------------------------------------
+
+_STRINGS = {
+    "it": {
+        "svc_price": "💶 A partire da {p} {c}",
+        "svc_cta": "📩 Contattaci in privato o su WhatsApp per una consulenza riservata.",
+        "svc_link": "🔗 {u}/servizi",
+        "svc_tags": "#Thanatos #Investigazioni #Sicurezza",
+        "news_link": "🔗 Leggi l'articolo: {u}",
+        "news_tags": "#Thanatos #Investigazioni #OSINT",
+    },
+    "en": {
+        "svc_price": "💶 Starting from {p} {c}",
+        "svc_cta": "📩 Contact us privately or on WhatsApp for a confidential consultation.",
+        "svc_link": "🔗 {u}/servizi",
+        "svc_tags": "#Thanatos #Investigations #Security",
+        "news_link": "🔗 Read the article: {u}",
+        "news_tags": "#Thanatos #Investigations #OSINT",
+    },
+    "es": {
+        "svc_price": "💶 Desde {p} {c}",
+        "svc_cta": "📩 Contáctanos en privado o por WhatsApp para una consulta confidencial.",
+        "svc_link": "🔗 {u}/servizi",
+        "svc_tags": "#Thanatos #Investigaciones #Seguridad",
+        "news_link": "🔗 Lee el artículo: {u}",
+        "news_tags": "#Thanatos #Investigaciones #OSINT",
+    },
+    "fr": {
+        "svc_price": "💶 À partir de {p} {c}",
+        "svc_cta": "📩 Contactez-nous en privé ou sur WhatsApp pour une consultation confidentielle.",
+        "svc_link": "🔗 {u}/servizi",
+        "svc_tags": "#Thanatos #Enquêtes #Sécurité",
+        "news_link": "🔗 Lire l'article : {u}",
+        "news_tags": "#Thanatos #Enquêtes #OSINT",
+    },
+    "de": {
+        "svc_price": "💶 Ab {p} {c}",
+        "svc_cta": "📩 Kontaktieren Sie uns privat oder per WhatsApp für eine vertrauliche Beratung.",
+        "svc_link": "🔗 {u}/servizi",
+        "svc_tags": "#Thanatos #Ermittlungen #Sicherheit",
+        "news_link": "🔗 Artikel lesen: {u}",
+        "news_tags": "#Thanatos #Ermittlungen #OSINT",
+    },
+}
+_LANG_LABEL = {"en": "🇬🇧 English", "es": "🇪🇸 Español",
+               "fr": "🇫🇷 Français", "de": "🇩🇪 Deutsch"}
+
+
+def _extra_langs(s=None):
+    """Lingue extra oltre all'italiano per la didascalia multilingua.
+
+    Configurabile in site_config: ``"social_extra_languages": ["en", "es"]``.
+    Default: solo inglese. Ignora i codici non supportati."""
+    langs = frappe.conf.get("social_extra_languages")
+    if langs is None:
+        langs = ["en"]
+    return [l for l in langs if l in _STRINGS and l != "it"]
+
+
+def _lt_url():
+    return (frappe.conf.get("libretranslate_url")
+            or "http://10.10.0.4:5000").rstrip("/")
+
+
+def _translate(text: str, lang: str) -> str:
+    """Traduce it→lang via LibreTranslate, con cache Redis (30gg). Best-effort:
+    su qualsiasi errore restituisce il testo originale (mai blocca la pubblicazione)."""
+    text = (text or "").strip()
+    if not text or lang == "it":
+        return text
+    key = "social_tr:%s:%s" % (lang, hashlib.md5(text.encode("utf-8")).hexdigest())
+    cache = None
+    try:
+        cache = frappe.cache()
+        hit = cache.get_value(key)
+        if hit:
+            return hit
+    except Exception:
+        pass
+    out = text
+    try:
+        import requests
+        r = requests.post(_lt_url() + "/translate",
+                          json={"q": text, "source": "it", "target": lang},
+                          timeout=10)
+        out = ((r.json() or {}).get("translatedText") or "").strip() or text
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "social translate")
+        out = text
+    try:
+        if cache and out:
+            cache.set_value(key, out, expires_in_sec=60 * 60 * 24 * 30)
+    except Exception:
+        pass
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -188,15 +290,29 @@ def _news_url(doc) -> str:
     return f"{base}/{route}" if route else base
 
 
-def _news_caption(doc, s) -> str:
+def _news_caption_lang(doc, s, lang) -> str:
+    st = _STRINGS[lang]
     title = (doc.get("title") or "").strip()
     body = _clean(doc.get("thanatos_angle") or doc.get("excerpt") or "")
+    if lang != "it":
+        title = _translate(title, lang)
+        if body:
+            body = _translate(_clip(body, 350), lang)
     parts = [f"📰 {title}".strip()]
     if body:
         parts.append(_clip(body, 380))
-    parts.append(f"🔗 Leggi l'articolo: {_news_url(doc)}")
-    parts.append(_hashtags(s, "#Thanatos #Investigazioni #OSINT"))
+    parts.append(st["news_link"].format(u=_news_url(doc)))
+    parts.append(_hashtags(s, st["news_tags"]) if lang == "it" else st["news_tags"])
     return "\n\n".join(p for p in parts if p).strip()
+
+
+def _news_caption(doc, s) -> str:
+    """Didascalia bilingue: blocco italiano + un blocco per ogni lingua extra."""
+    blocks = [_news_caption_lang(doc, s, "it")]
+    for lang in _extra_langs(s):
+        blocks.append("— %s —\n\n%s" % (_LANG_LABEL.get(lang, lang.upper()),
+                                        _news_caption_lang(doc, s, lang)))
+    return "\n\n".join(blocks).strip()
 
 
 def _skip_news(doc_or_row, s) -> bool:
@@ -282,19 +398,33 @@ def _service_price(svc) -> str:
     return ""
 
 
-def _service_caption(svc, s) -> str:
+def _service_caption_lang(svc, s, lang) -> str:
+    st = _STRINGS[lang]
     name = svc.get("service_name") or svc.name
     desc = _clean(svc.get("description") or "")
+    if lang != "it":
+        name = _translate(name, lang)
+        if desc:
+            desc = _translate(_clip(desc, 300), lang)
     parts = [f"🔎 {name}"]
     if desc:
         parts.append(_clip(desc, 320))
-    price = _service_price(svc)
-    if price:
-        parts.append(f"💶 {price}")
-    parts.append("📩 Contattaci in privato o su WhatsApp per una consulenza riservata.")
-    parts.append(f"🔗 {get_url().rstrip('/')}/servizi")
-    parts.append(_hashtags(s, "#Thanatos #Investigazioni #Sicurezza"))
+    price = svc.get("price")
+    if price and int(price) > 0:
+        parts.append(st["svc_price"].format(p=int(price), c=svc.get("currency") or "EUR"))
+    parts.append(st["svc_cta"])
+    parts.append(st["svc_link"].format(u=get_url().rstrip("/")))
+    parts.append(_hashtags(s, st["svc_tags"]) if lang == "it" else st["svc_tags"])
     return "\n\n".join(p for p in parts if p).strip()
+
+
+def _service_caption(svc, s) -> str:
+    """Didascalia bilingue: blocco italiano + un blocco per ogni lingua extra."""
+    blocks = [_service_caption_lang(svc, s, "it")]
+    for lang in _extra_langs(s):
+        blocks.append("— %s —\n\n%s" % (_LANG_LABEL.get(lang, lang.upper()),
+                                        _service_caption_lang(svc, s, lang)))
+    return "\n\n".join(blocks).strip()
 
 
 def _service_image(svc) -> str:
