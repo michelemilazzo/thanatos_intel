@@ -2,7 +2,9 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import now_datetime, today
+from datetime import datetime
+
+from frappe.utils import get_datetime, now_datetime, today
 
 
 class InvestigationCase(Document):
@@ -24,7 +26,11 @@ class InvestigationCase(Document):
 		acts = list(self.get("case_activities") or [])
 		if not acts:
 			return
-		acts.sort(key=lambda a: (a.activity_date or a.creation or ""), reverse=True)
+		_floor = datetime(1900, 1, 1)
+		def _sort_key(a):
+			val = a.activity_date or a.creation
+			return (get_datetime(val) or _floor) if val else _floor
+		acts.sort(key=_sort_key, reverse=True)
 		for i, a in enumerate(acts, start=1):
 			a.idx = i
 		self.set("case_activities", acts)
