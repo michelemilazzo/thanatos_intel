@@ -88,8 +88,11 @@ def genera_dossier(case):
     for blk in _activities(case, "Screening", "Verifica camerale", "VERIFICA PARTI", "RICONCILIAZIONE"):
         para(blk, size=10); d.add_paragraph()
 
-    # Rileva se il caso e' effettivamente una frode su cessione crediti (playbook Bomax)
-    _is_cessione = bool(_activities(case, "DOPPIA CESSIONE", "cessione credit", "cessione di credit", "Piattaforma Cessione"))
+    # Rileva se il caso e' effettivamente una frode su cessione crediti (playbook Bomax).
+    # Segnale affidabile = titolo/cliente del caso (il detector "doppia cessione" gira su OGNI
+    # caso e logga un'attivita anche a zero anomalie, quindi non e' un discriminante valido).
+    _ctx = ((c.case_title or "") + " " + (client or "")).lower()
+    _is_cessione = any(k in _ctx for k in ("cessione", "bomax", "trading hu", "worldmart", "credito d'imposta", "crediti d'imposta"))
 
     # 6. Danno
     h("6. Quantificazione del danno")
