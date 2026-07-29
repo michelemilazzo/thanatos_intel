@@ -68,7 +68,8 @@ def genera_dossier(case):
 
     # 3. Documenti analizzati
     h("3. Documenti analizzati — autenticità e catena di custodia")
-    evs = frappe.get_all("Investigation Evidence", filters={"investigation_case": case},
+    evs = frappe.get_all("Investigation Evidence",
+                         filters={"investigation_case": case, "custody_status": ["!=", "Archived"]},
                          fields=["evidence_name", "authenticity", "hash_value", "attached_file"], order_by="creation asc", limit=0)
     tab = d.add_table(rows=1, cols=3); tab.style = "Light Grid Accent 1"
     hdr = tab.rows[0].cells; hdr[0].text = "Documento"; hdr[1].text = "Autenticità"; hdr[2].text = "SHA-256 (estratto)"
