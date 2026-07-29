@@ -513,7 +513,7 @@ def case_entities(case):
     c = frappe.get_doc("Investigation Case", case)
     for i, ce in enumerate(c.get("case_entities") or []):
         et = frappe.db.get_value("Investigation Entity", ce.entity,
-                                 ["full_name", "entity_type", "primary_identifier"], as_dict=True)
+                                 ["full_name", "entity_type", "primary_identifier", "country"], as_dict=True)
         if not et:
             continue
         ident = et.primary_identifier or ""
@@ -523,8 +523,11 @@ def case_entities(case):
         m = re.search(r"\b([A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z])\b", ident.upper())
         if m:
             cf = m.group(1)
+        country = (et.country or "").strip()
+        foreign = bool(country) and country.lower() not in ("italia", "italy", "it")
         out.append({"idx": i, "entity": ce.entity, "full_name": et.full_name or ce.entity,
-                    "type": et.entity_type, "piva": piva, "cf": cf, "ident": ident})
+                    "type": et.entity_type, "piva": piva, "cf": cf, "ident": ident,
+                    "country": country, "foreign": foreign})
     return {"entities": out}
 
 

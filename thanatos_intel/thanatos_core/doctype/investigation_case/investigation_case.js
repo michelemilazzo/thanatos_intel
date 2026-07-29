@@ -1205,11 +1205,15 @@ window.ThanatosVerifiche = {
 				const tlabel = TLABEL[e.type] || e.type || 'Entità';
 				h += `<div class="vf-row"><div class="vf-ent"><span class="vf-nm">${esc(e.full_name)}</span>`
 					+ `<span class="vf-chip">${tlabel}</span>`
-					+ (isCo ? `<span class="vf-id">${e.piva ? 'P.IVA ' + esc(e.piva) : '⚠ P.IVA mancante'}</span>` : (e.cf ? `<span class="vf-id">${esc(e.cf)}</span>` : (e.ident ? `<span class="vf-id">${esc(e.ident)}</span>` : ''))) + '</div>'
+					+ (isCo ? `<span class="vf-id">${e.piva ? 'P.IVA ' + esc(e.piva) : (e.foreign ? '🌍 ' + esc(e.country || 'Estero') + (e.ident ? ' · ' + esc(e.ident) : '') : '⚠ P.IVA mancante')}</span>` : (e.cf ? `<span class="vf-id">${esc(e.cf)}</span>` : (e.ident ? `<span class="vf-id">${esc(e.ident)}</span>` : ''))) + '</div>'
 					+ '<div class="vf-acts">';
 				if (isCo) {
-					if (!e.piva) h += this.btn('🔗 Trova P.IVA', 'piva', e) + this.btn('🌍 Estero', 'estero', e);
-					h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('📜 Documenti', 'docs', e);
+					if (e.foreign) {
+						h += this.btn('🌍 Estero', 'estero', e) + this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('📜 Documenti', 'docs', e);
+					} else {
+						if (!e.piva) h += this.btn('🔗 Trova P.IVA', 'piva', e) + this.btn('🌍 Estero', 'estero', e);
+						h += this.btn('🏛 Visura', 'visura', e) + this.btn('👥 Soci & UBO', 'soci', e) + this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('📜 Documenti', 'docs', e);
+					}
 				} else if (e.type === 'Person') {
 					h += this.btn('🛂 Sanzioni/PEP', 'free', e) + this.btn('⚖ Negatività', 'neg', e) + this.btn('🏦 Patrimoniale', 'patr', e) + this.btn('📜 Documenti', 'docs', e);
 				} else if (e.type === 'Domain') {
@@ -1224,7 +1228,7 @@ window.ThanatosVerifiche = {
 				h += '</div></div>';
 			});
 		}
-		const missing = ents.filter(e => e.type === 'Company' && !e.piva).length;
+		const missing = ents.filter(e => e.type === 'Company' && !e.piva && !e.foreign).length;
 		h += '<div class="vf-foot">'
 			+ (missing ? '<button class="btn btn-xs btn-primary vf-resolve">🔗 Risolvi ' + missing + ' P.IVA mancanti</button>' : '')
 			+ '<button class="btn btn-xs btn-default vf-prev">🧾 Preventivo & pagamento cliente</button>'
