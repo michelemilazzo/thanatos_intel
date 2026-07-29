@@ -41,6 +41,7 @@ app_include_js=['/assets/thanatos_intel/js/bootstrap_jq.js?v=20260627b',
 ]
 web_include_css=['/assets/thanatos_intel/css/thanatos_web.css?v=20260627b']
 web_include_js=['/assets/thanatos_intel/js/fx_widget.js?v=20260627b', '/assets/thanatos_intel/js/thanatos_login.js?v=20260627b', '/assets/thanatos_intel/js/thanatos_intro.js?v=20260627b']
+doctype_js={"Investigation Case": "public/js/office_open.js"}
 
 # Riduce la finestra stale-while-revalidate delle pagine sito (no 404 appiccicati 3h)
 after_request = ['thanatos_intel.web_response.tune_cache',
