@@ -52,11 +52,11 @@ def genera_dossier(case):
 
     # 1. Sintesi esecutiva
     h("1. Sintesi esecutiva")
-    para("Il cliente (Trading HU S.R.L.) ha acquistato crediti d'imposta ceduti da BOMAX S.R.L., "
-         "versando complessivamente circa € 800.000. Le verifiche svolte indicano gravi anomalie sulla "
-         "genuinità dei crediti e della documentazione a supporto: l'Agenzia delle Entrate avrebbe già "
-         "segnalato la non spettanza/inesistenza. Il presente dossier raccoglie le evidenze raccolte e "
-         "indica le azioni per la tutela e il recupero.")
+    _sint = (c.get("summary") or "").strip()
+    if not _sint and c.get("description"):
+        _sint = frappe.utils.strip_html(c.description).strip()
+    para(_sint or "Sintesi esecutiva non ancora compilata per questo caso. "
+                  "Compilare il campo 'summary' del caso o le attività investigative.")
 
     # 2. Parti
     h("2. Le parti")
