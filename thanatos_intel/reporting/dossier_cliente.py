@@ -131,10 +131,39 @@ def genera_dossier(case):
     f = frappe.get_doc({"doctype": "File", "file_name": fname, "is_private": 1, "content": content,
                         "attached_to_doctype": "Investigation Case", "attached_to_name": case})
     f.save(ignore_permissions=True)
+
+    # PDF companion: i browser non renderizzano i .docx; alleghiamo anche un PDF apribile inline.
+    pdf_url = None
+    try:
+        import subprocess, tempfile, os
+        _tmp = tempfile.mkdtemp(prefix="dossier_")
+        _dx = os.path.join(_tmp, "dossier.docx")
+        with open(_dx, "wb") as _fh:
+            _fh.write(content)
+        subprocess.run(
+            ["soffice", "--headless", "-env:UserInstallation=file:///tmp/lo_dossier_profile",
+             "--convert-to", "pdf", "--outdir", _tmp, _dx],
+            check=True, timeout=120, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        _pdfp = os.path.join(_tmp, "dossier.pdf")
+        if os.path.exists(_pdfp):
+            with open(_pdfp, "rb") as _fh:
+                _pc = _fh.read()
+            _pfname = fname[:-5] + ".pdf" if fname.lower().endswith(".docx") else fname + ".pdf"
+            _oldp = frappe.db.get_value("File", {"attached_to_doctype": "Investigation Case",
+                                                 "attached_to_name": case, "file_name": _pfname}, "name")
+            if _oldp:
+                frappe.delete_doc("File", _oldp, ignore_permissions=True, force=True)
+            _pf = frappe.get_doc({"doctype": "File", "file_name": _pfname, "is_private": 1, "content": _pc,
+                                  "attached_to_doctype": "Investigation Case", "attached_to_name": case})
+            _pf.save(ignore_permissions=True)
+            pdf_url = _pf.file_url
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "dossier PDF companion")
+
     try:
         from thanatos_intel.reporting.case_reports import _put_in_drive
         _put_in_drive(case, fname, content, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", client, subfolder="05 Report")
     except Exception:
         frappe.log_error(frappe.get_traceback(), "dossier drive")
     frappe.db.commit()
-    return {"ok": True, "file_url": f.file_url, "documenti": len(evs)}
+    return {"ok": True, "file_url": f.file_url, "pdf_url": pdf_url, "documenti": len(evs)}
