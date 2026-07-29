@@ -8,7 +8,7 @@ from thanatos_intel.office.wopi import EDITABLE_EXT, mint_token
 
 DISCOVERY_INTERNAL = "http://127.0.0.1:9980/hosting/discovery"
 # host pubblico su cui il browser carica il client Collabora (proxy nginx /office)
-PUBLIC_COLLABORA = "/office-online"
+PUBLIC_COLLABORA = ""
 
 
 def _can_access_file(file_name):

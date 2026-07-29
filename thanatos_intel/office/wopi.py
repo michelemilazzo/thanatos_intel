@@ -1,20 +1,18 @@
 """WOPI host per Collabora Online — apre/edita i File privati (docx) dei casi.
 
-Flusso: la pagina /office conia un access_token (redis, TTL) legato a
-(File, utente, permesso di scrittura) dopo aver verificato i permessi Frappe.
-Collabora richiama qui server-to-server passando solo il token:
-  GET  /wopi/files/<id>            -> check_file_info (JSON WOPI top-level)
-  GET  /wopi/files/<id>/contents   -> contents (bytes)
-  POST /wopi/files/<id>/contents   -> contents (salva bytes)
-Le route pulite /wopi/... sono mappate in nginx sui method qui sotto.
-Gli endpoint restituiscono werkzeug Response per evitare l'involucro
-{"message": ...} di Frappe, che Collabora non sa interpretare.
+Auth via access_token (redis TTL) legato a (File, utente, write), coniato dalla
+pagina /office DOPO verifica permessi Frappe. Gli endpoint qui NON ricontrollano
+i permessi doc (gia autorizzati dal token) e leggono/scrivono il file su disco
+via get_site_path per non passare dal permission layer di get_doc.
+Il param access_token viene rinominato wopi_token in nginx per non far scattare
+l auth OAuth Bearer di Frappe, che darebbe 401 prima del dispatch allow_guest.
+Ritorni werkzeug Response per evitare l involucro message di Frappe.
 """
 import json
 import os
 
 import frappe
-from frappe.utils import get_datetime
+from frappe.utils import get_datetime, get_site_path
 from werkzeug.wrappers import Response
 
 TOKEN_TTL = 8 * 3600
@@ -36,11 +34,22 @@ def mint_token(file_name, write=True):
 
 
 def _resolve(file_id):
-    token = frappe.form_dict.get("access_token") or ""
+    token = frappe.form_dict.get("wopi_token") or frappe.form_dict.get("access_token") or ""
     data = frappe.cache().get_value(_tkey(token)) if token else None
     if not data or data.get("file") != file_id:
         return None
     return data
+
+
+def _file_meta(file_id):
+    m = frappe.db.get_value(
+        "File", file_id, ["file_name", "file_url", "is_private", "owner", "modified"], as_dict=True
+    )
+    if not m:
+        return None
+    url = (m.file_url or "").lstrip("/")
+    m.path = get_site_path(url) if url else None
+    return m
 
 
 @frappe.whitelist(allow_guest=True)
@@ -48,22 +57,23 @@ def check_file_info(file_id):
     data = _resolve(file_id)
     if not data:
         return Response("invalid token", status=401)
-    doc = frappe.get_doc("File", file_id)
-    path = doc.get_full_path()
-    size = os.path.getsize(path) if os.path.exists(path) else 0
+    m = _file_meta(file_id)
+    if not m or not m.path:
+        return Response("not found", status=404)
+    size = os.path.getsize(m.path) if os.path.exists(m.path) else 0
     try:
-        mtime = get_datetime(doc.modified).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        mtime = get_datetime(m.modified).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     except Exception:
         mtime = ""
     payload = {
-        "BaseFileName": doc.file_name,
+        "BaseFileName": m.file_name,
         "Size": size,
-        "OwnerId": doc.owner or "system",
+        "OwnerId": m.owner or "system",
         "UserId": data["user"],
         "UserFriendlyName": frappe.db.get_value("User", data["user"], "full_name") or data["user"],
         "UserCanWrite": bool(data.get("write")),
         "UserCanNotWriteRelative": True,
-        "Version": str(doc.modified),
+        "Version": str(m.modified),
         "LastModifiedTime": mtime,
         "PostMessageOrigin": frappe.utils.get_url(),
         "EnableOwnerTermination": False,
@@ -76,26 +86,25 @@ def contents(file_id):
     data = _resolve(file_id)
     if not data:
         return Response("invalid token", status=401)
-    doc = frappe.get_doc("File", file_id)
-    path = doc.get_full_path()
+    m = _file_meta(file_id)
+    if not m or not m.path:
+        return Response("not found", status=404)
     method = frappe.local.request.method.upper()
 
     if method == "POST":
         if not data.get("write"):
             return Response("read-only", status=403)
         body = frappe.local.request.get_data()
-        with open(path, "wb") as fh:
+        with open(m.path, "wb") as fh:
             fh.write(body)
-        doc.db_set("file_size", len(body), update_modified=True)
+        frappe.db.set_value("File", file_id, "file_size", len(body), update_modified=True)
         frappe.db.commit()
+        new_mod = frappe.db.get_value("File", file_id, "modified")
         return Response(
-            json.dumps({"LastModifiedTime": str(doc.modified)}),
+            json.dumps({"LastModifiedTime": str(new_mod)}),
             status=200, content_type="application/json",
         )
 
-    with open(path, "rb") as fh:
+    with open(m.path, "rb") as fh:
         body = fh.read()
-    return Response(
-        body, status=200,
-        content_type="application/octet-stream",
-    )
+    return Response(body, status=200, content_type="application/octet-stream")
