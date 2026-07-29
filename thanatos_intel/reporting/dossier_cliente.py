@@ -88,21 +88,36 @@ def genera_dossier(case):
     for blk in _activities(case, "Screening", "Verifica camerale", "VERIFICA PARTI", "RICONCILIAZIONE"):
         para(blk, size=10); d.add_paragraph()
 
+    # Rileva se il caso e' effettivamente una frode su cessione crediti (playbook Bomax)
+    _is_cessione = bool(_activities(case, "DOPPIA CESSIONE", "cessione credit", "cessione di credit", "Piattaforma Cessione"))
+
     # 6. Danno
     h("6. Quantificazione del danno")
-    para("Esposizione del cliente: € 800.000 versati per crediti risultati non genuini. La quantificazione "
-         "definitiva e l'individuazione dei beneficiari dei pagamenti (cedente e/o intermediari) richiede "
-         "l'acquisizione di tutti i contratti e dei bonifici del cliente (tracciamento dei flussi).")
+    if _is_cessione:
+        para("Esposizione del cliente: € 800.000 versati per crediti risultati non genuini. La quantificazione "
+             "definitiva e l'individuazione dei beneficiari dei pagamenti (cedente e/o intermediari) richiede "
+             "l'acquisizione di tutti i contratti e dei bonifici del cliente (tracciamento dei flussi).")
+    else:
+        para("Quantificazione del danno: da determinare sulla base delle evidenze raccolte per questo caso. "
+             "Non risultano, allo stato, esposizioni economiche accertate.")
 
     # 7. Conclusioni
     h("7. Conclusioni e raccomandazioni")
-    for it in [
-        "Acquisire, tramite delega del cliente, lo stato reale dei crediti sul cassetto fiscale e sulla Piattaforma Cessione Crediti AdE, e gli XML delle fatture elettroniche per la riconciliazione.",
-        "Tracciare i bonifici degli € 800.000 (follow-the-money) per individuare i beneficiari.",
-        "Valutare denuncia/querela per truffa (artt. 640/640-bis c.p.), falso e fatture per operazioni inesistenti, verso cedente, intermediari e asseveratori.",
-        "Promuovere azione civile di risarcimento/restituzione ed escutere le polizze RC professionali degli asseveratori.",
-        "Documentare la buona fede e la diligenza del cliente per neutralizzare il recupero erariale verso il cessionario.",
-    ]:
+    if _is_cessione:
+        _concl = [
+            "Acquisire, tramite delega del cliente, lo stato reale dei crediti sul cassetto fiscale e sulla Piattaforma Cessione Crediti AdE, e gli XML delle fatture elettroniche per la riconciliazione.",
+            "Tracciare i bonifici degli € 800.000 (follow-the-money) per individuare i beneficiari.",
+            "Valutare denuncia/querela per truffa (artt. 640/640-bis c.p.), falso e fatture per operazioni inesistenti, verso cedente, intermediari e asseveratori.",
+            "Promuovere azione civile di risarcimento/restituzione ed escutere le polizze RC professionali degli asseveratori.",
+            "Documentare la buona fede e la diligenza del cliente per neutralizzare il recupero erariale verso il cessionario.",
+        ]
+    else:
+        _concl = [
+            "Consolidare le evidenze raccolte (identita, footprint societario, documenti) nel fascicolo del caso.",
+            "Verificare gli elementi ancora aperti indicati nelle attivita investigative.",
+            "Valutare le azioni conseguenti in base all'esito e al mandato del caso.",
+        ]
+    for it in _concl:
         para("• " + it, size=10.5)
 
     out = io.BytesIO(); d.save(out); content = out.getvalue()
