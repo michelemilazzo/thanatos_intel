@@ -1,0 +1,91 @@
+{% extends "templates/web.html" %}
+{% from "thanatos_intel/templates/site_chrome.html" import thanatos_header, thanatos_footer, seo_head %}
+
+{% block title %}Cancellazione dei dati — Thanatos Investigazioni{% endblock %}
+
+{% block head_include %}
+{{ seo_head(
+   title='Cancellazione dei dati — Thanatos Investigazioni',
+   description='Come richiedere la cancellazione dei propri dati personali, inclusi i dati provenienti da WhatsApp, Instagram e Facebook, ai sensi del GDPR e della Legge rumena 190/2018.',
+   path='/cancellazione-dati') }}
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body.thanatos-legal, body.thanatos-legal .page_content, body.thanatos-legal .container,
+body.thanatos-legal main { background:#0A0E1A !important; color:#C7CCDA; max-width:100% !important; }
+.lg-wrap{max-width:860px;margin:0 auto;padding:56px 24px 40px;}
+.lg-kicker{color:#C8A96E;font-family:Georgia,serif;letter-spacing:4px;text-transform:uppercase;font-size:11px;}
+.lg-h1{font-family:'Cinzel Decorative',Georgia,serif;font-size:34px;line-height:1.15;margin:10px 0 6px;color:#fff;}
+.lg-upd{color:#5B6276;font-size:12px;letter-spacing:1px;margin-bottom:30px;}
+.lg-wrap h2{font-family:Georgia,serif;color:#C8A96E;font-size:18px;letter-spacing:1px;margin:36px 0 12px;
+  border-bottom:1px solid #1F2742;padding-bottom:8px;}
+.lg-wrap h3{color:#E0C58A;font-family:Georgia,serif;font-size:15px;margin:22px 0 8px;}
+.lg-wrap p, .lg-wrap li{font-size:14.5px;line-height:1.75;color:#B8BECF;}
+.lg-wrap ul,.lg-wrap ol{padding-left:22px;margin:8px 0;}
+.lg-wrap li{margin:5px 0;}
+.lg-wrap a{color:#C8A96E;text-decoration:none;}
+.lg-wrap a:hover{text-decoration:underline;}
+.lg-box{background:#111729;border:1px solid #1F2742;border-radius:10px;padding:18px 22px;margin:16px 0;}
+.lg-box p{margin:4px 0;}
+.lg-steps{counter-reset:st;list-style:none;padding-left:0;}
+.lg-steps li{position:relative;padding:2px 0 2px 40px;margin:10px 0;}
+.lg-steps li:before{counter-increment:st;content:counter(st);position:absolute;left:0;top:0;
+  width:26px;height:26px;border-radius:50%;background:#C8A96E;color:#0A0E1A;font-family:Georgia,serif;
+  font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px;}
+@media(max-width:780px){.lg-h1{font-size:26px;}}
+</style>
+{% endblock %}
+
+{% block page_content %}
+{{ thanatos_header('') }}
+<div class="lg-wrap">
+  <div class="lg-kicker">Protezione dei dati personali</div>
+  <h1 class="lg-h1">Cancellazione dei dati</h1>
+  <div class="lg-upd">Ultimo aggiornamento: {{ updated }} · Regolamento (UE) 2016/679 (GDPR) · Legea 190/2018 (Romania)</div>
+
+  <p>Questa pagina spiega come richiedere la <strong>cancellazione dei dati personali</strong> trattati da Thanatos Investigazioni, compresi i dati che ci pervengono quando ci contatti tramite i canali di messaggistica <strong>WhatsApp</strong>, <strong>Instagram</strong> e <strong>Facebook Messenger</strong>. La cancellazione è un diritto riconosciuto dall'art. 17 del GDPR (diritto all'oblio).</p>
+
+  <h2>1. Titolare del trattamento</h2>
+  <div class="lg-box">
+    <p><strong>Thanatos Investigazioni S.R.L.</strong></p>
+    <p>Sede: Constanța, Romania</p>
+    <p>Codice fiscale (CUI): RO 46901022</p>
+    <p>Contatto privacy: <a href="mailto:privacy@thanatos.agency">privacy@thanatos.agency</a></p>
+  </div>
+
+  <h2>2. Quali dati puoi far cancellare</h2>
+  <ul>
+    <li>Dati di contatto e identificativi (nome, email, numero di telefono, username social).</li>
+    <li>Contenuti e metadati delle conversazioni scambiate via WhatsApp, Instagram Direct, Facebook Messenger, email o modulo web.</li>
+    <li>Eventuali allegati (immagini, documenti, note vocali) da te inviati attraverso tali canali.</li>
+  </ul>
+
+  <h2>3. Come richiedere la cancellazione</h2>
+  <ol class="lg-steps">
+    <li>Invia una email a <a href="mailto:privacy@thanatos.agency">privacy@thanatos.agency</a> con oggetto <strong>&laquo;Richiesta cancellazione dati&raquo;</strong>.</li>
+    <li>Indica il <strong>canale</strong> dal quale ci hai contattato (WhatsApp, Instagram, Facebook, email o web) e l'<strong>identificativo</strong> corrispondente (numero di telefono o username) così da individuare i tuoi dati.</li>
+    <li>In alternativa, puoi scriverci la parola <strong>&laquo;CANCELLA I MIEI DATI&raquo;</strong> direttamente nella conversazione del canale che hai usato: la richiesta verrà presa in carico dallo stesso operatore.</li>
+  </ol>
+  <p>Per motivi di sicurezza potremmo chiederti di confermare la tua identità prima di procedere, così da evitare che terzi richiedano la cancellazione di dati non propri.</p>
+
+  <h2>4. Tempi ed esito</h2>
+  <p>Diamo riscontro alla richiesta <strong>senza ingiustificato ritardo e comunque entro 30 giorni</strong> (art. 12 GDPR). Completata la verifica, i dati vengono eliminati dai nostri sistemi e da quelli dei fornitori che agiscono come responsabili del trattamento. Ti confermeremo per iscritto l'avvenuta cancellazione.</p>
+
+  <h2>5. Limiti alla cancellazione</h2>
+  <p>Alcuni dati possono essere conservati anche dopo la richiesta quando la legge lo impone o lo consente, in particolare:</p>
+  <ul>
+    <li>documentazione di incarico e materiale probatorio, per i termini previsti dalla normativa sull'attività investigativa (Legge rumena n. 329/2003) e per l'accertamento, esercizio o difesa di un diritto in sede giudiziaria;</li>
+    <li>dati necessari all'adempimento di obblighi fiscali e contabili;</li>
+    <li>dati la cui conservazione sia richiesta da un'autorità competente.</li>
+  </ul>
+  <p>In questi casi i dati sono limitati al solo scopo di legge e cancellati alla scadenza del relativo termine.</p>
+
+  <h2>6. Dati provenienti dalle piattaforme Meta</h2>
+  <p>Quando ci contatti tramite WhatsApp, Instagram o Facebook, riceviamo unicamente i dati necessari a gestire la conversazione. La presente procedura si applica a tali dati nei nostri sistemi. Per la cancellazione dei dati trattati direttamente da Meta all'interno delle sue piattaforme, fai riferimento alle impostazioni del tuo account e ai relativi strumenti forniti da Meta Platforms.</p>
+
+  <h2>7. Reclamo</h2>
+  <p>Se ritieni che la tua richiesta non sia stata gestita correttamente, puoi proporre reclamo all'Autorità rumena per la protezione dei dati — <strong>ANSPDCP</strong>, <a href="https://www.dataprotection.ro" target="_blank" rel="noopener">www.dataprotection.ro</a> — o all'autorità di controllo del tuo Stato di residenza.</p>
+
+  <p style="margin-top:30px;font-size:12.5px;color:#5B6276;">Vedi anche l'<a href="/privacy">Informativa sulla Privacy</a>, i <a href="/termini">Termini e Condizioni</a> e la <a href="/cookie">Cookie Policy</a>.</p>
+</div>
+{{ thanatos_footer() }}
+{% endblock %}
