@@ -433,6 +433,7 @@ def _norm_ragsoc(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+@frappe.whitelist()
 def risolvi_piva(name):
     """Nome/ragione sociale → P.IVA (company IT-search → IT-start).
     IT-search torna solo gli id: per disambiguare legge IT-start dei candidati e
