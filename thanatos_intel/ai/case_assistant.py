@@ -520,7 +520,7 @@ def chat_upload(case, file_url, file_name, content_type=""):
     ev.insert(ignore_permissions=True)
     try:
         c = frappe.get_doc("Investigation Case", case)
-        c.append("case_activities", {"activity_date": now_datetime(), "activity_type": "Document",
+        c.append("case_activities", {"activity_date": now_datetime(), "activity_type": "Document Analysis",
                  "description": f"📎 File nel dossier: {file_name} (reperto {ev.name}, tipo {etype})"[:500],
                  "operator": frappe.session.user})
         c.flags.ignore_mandatory = True
