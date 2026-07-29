@@ -101,6 +101,9 @@ fixtures=[
      'Agency Mandate', 'Diplomatic Proforma', 'Company Profile', 'Investigation Case']],
    ['property', 'in', ['in_global_search', 'title_field']]]},
  {'doctype': 'Global Search Settings'},
+ # CryptoLab - matrice sicurezza wallet
+ {'doctype': 'DocType', 'filters': [['name', '=', 'Wallet Security Test']]},
+ {'doctype': 'Wallet Security Test', 'filters': []},
 ]
 
 doc_events={
