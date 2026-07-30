@@ -1,0 +1,40 @@
+{
+  "doctype": "DocType",
+  "name": "Canary Hit",
+  "module": "Thanatos Cyber",
+  "autoname": "format:CHIT-{YYYY}-{######}",
+  "title_field": "ip",
+  "sort_field": "hit_ts",
+  "sort_order": "DESC",
+  "fields": [
+    {"fieldname": "token", "fieldtype": "Link", "label": "Token", "options": "Canary Token", "in_list_view": 1, "in_standard_filter": 1, "reqd": 1},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Pratica", "options": "Investigation Case", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "hit_ts", "fieldtype": "Datetime", "label": "Quando (UTC)", "in_list_view": 1},
+    {"fieldname": "hit_type", "fieldtype": "Data", "label": "Tipo", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "via", "fieldtype": "Data", "label": "Via", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "ip", "fieldtype": "Data", "label": "IP", "in_list_view": 1},
+    {"fieldname": "suspect_net", "fieldtype": "Check", "label": "Rete sospetta (datacenter/VPN)", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "country", "fieldtype": "Data", "label": "Paese"},
+    {"fieldname": "city", "fieldtype": "Data", "label": "Città"},
+    {"fieldname": "asn", "fieldtype": "Data", "label": "ASN"},
+    {"fieldname": "org", "fieldtype": "Data", "label": "Rete / Org"},
+    {"fieldname": "tz", "fieldtype": "Data", "label": "Fuso"},
+    {"fieldname": "sb_device", "fieldtype": "Section Break", "label": "Device / De-anon"},
+    {"fieldname": "fp", "fieldtype": "Data", "label": "Fingerprint device", "in_standard_filter": 1},
+    {"fieldname": "webrtc", "fieldtype": "Small Text", "label": "WebRTC (IP reali)"},
+    {"fieldname": "ua", "fieldtype": "Small Text", "label": "User-Agent"},
+    {"fieldname": "col_2", "fieldtype": "Column Break"},
+    {"fieldname": "lat", "fieldtype": "Float", "label": "Lat", "precision": "6"},
+    {"fieldname": "lon", "fieldtype": "Float", "label": "Lon", "precision": "6"},
+    {"fieldname": "acc", "fieldtype": "Float", "label": "Accuratezza (m)"},
+    {"fieldname": "sb_raw", "fieldtype": "Section Break", "label": "Dedup / Raw"},
+    {"fieldname": "hit_key", "fieldtype": "Data", "label": "Hit key (dedup)", "unique": 1, "read_only": 1},
+    {"fieldname": "raw", "fieldtype": "Code", "label": "Raw (JSON)", "options": "JSON", "read_only": 1}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

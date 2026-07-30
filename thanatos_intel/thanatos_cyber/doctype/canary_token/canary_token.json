@@ -1,0 +1,34 @@
+{
+  "doctype": "DocType",
+  "name": "Canary Token",
+  "module": "Thanatos Cyber",
+  "autoname": "format:CAN-{YYYY}-{#####}",
+  "title_field": "label",
+  "track_changes": 1,
+  "fields": [
+    {"fieldname": "label", "fieldtype": "Data", "label": "Etichetta", "in_list_view": 1, "reqd": 1},
+    {"fieldname": "token_type", "fieldtype": "Select", "label": "Tipo token", "in_list_view": 1, "in_standard_filter": 1, "reqd": 1, "options": "Link / Pagina\nImmagine (pixel)\nEmail (pixel)\nPDF\nWord (.docx)\nExcel (.xlsx)\nQR code\nRedirect-esca\nSottodominio DNS\nCredenziale-esca\nEndpoint honeypot", "default": "Link / Pagina"},
+    {"fieldname": "ref", "fieldtype": "Data", "label": "Ref (opaco)", "unique": 1, "reqd": 1, "read_only": 1, "in_standard_filter": 1},
+    {"fieldname": "status", "fieldtype": "Select", "label": "Stato", "in_list_view": 1, "in_standard_filter": 1, "options": "Attivo\nDisattivato", "default": "Attivo"},
+    {"fieldname": "col_1", "fieldtype": "Column Break"},
+    {"fieldname": "investigation_case", "fieldtype": "Link", "label": "Pratica", "options": "Investigation Case", "in_list_view": 1, "in_standard_filter": 1},
+    {"fieldname": "case_step", "fieldtype": "Data", "label": "Step pratica"},
+    {"fieldname": "recipient", "fieldtype": "Data", "label": "Destinatario (per attribuzione fuga)", "description": "A CHI è stata consegnata questa copia. Ref distinto per destinatario = quando l'esca fa phone-home sai chi ha esfiltrato."},
+    {"fieldname": "alert_on", "fieldtype": "Check", "label": "Allarme operatore ai nuovi hit", "default": 1},
+    {"fieldname": "sb_vectors", "fieldtype": "Section Break", "label": "Vettori"},
+    {"fieldname": "base_url", "fieldtype": "Data", "label": "Base URL cattura", "read_only": 1},
+    {"fieldname": "redir_url", "fieldtype": "Data", "label": "URL destinazione (redirect-esca)", "description": "Pagina genuina attesa dal target. Il link /l previewa (OG) e reindirizza qui dopo la cattura."},
+    {"fieldname": "redir_title", "fieldtype": "Data", "label": "Titolo anteprima (redirect-esca)"},
+    {"fieldname": "vectors", "fieldtype": "Code", "label": "Link generati (JSON)", "options": "JSON", "read_only": 1},
+    {"fieldname": "sb_hits", "fieldtype": "Section Break", "label": "Attività"},
+    {"fieldname": "hit_count", "fieldtype": "Int", "label": "N. hit", "read_only": 1, "in_list_view": 1},
+    {"fieldname": "last_hit", "fieldtype": "Datetime", "label": "Ultimo hit", "read_only": 1, "in_list_view": 1},
+    {"fieldname": "col_2", "fieldtype": "Column Break"},
+    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Note"}
+  ],
+  "permissions": [
+    {"role": "Investigation Manager", "read": 1, "write": 1, "create": 1, "delete": 1},
+    {"role": "Investigator", "read": 1, "write": 1, "create": 1},
+    {"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}
+  ]
+}

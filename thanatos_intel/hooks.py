@@ -209,7 +209,8 @@ doc_events={
 scheduler_events={
  'cron':{'0 7 * * *':['thanatos_intel.news.ingestion.daily_publish'],
          '*/5 * * * *':['thanatos_intel.thanatos_social.doctype.facebook_post.facebook_post.publish_due_posts'],
-         '*/15 * * * *':['thanatos_intel.thanatos_tracking.most_wanted.fetch_interpol_photos_scheduled']},
+         '*/15 * * * *':['thanatos_intel.thanatos_tracking.most_wanted.fetch_interpol_photos_scheduled'],
+         '*/10 * * * *':['thanatos_intel.thanatos_cyber.canary.pull_all_hits']},
  'all':[],
  'hourly':['thanatos_intel.news.ingestion.hourly_ingest',
            'thanatos_intel.thanatos_core.currency.converter.fetch_rates',
