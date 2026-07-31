@@ -597,3 +597,163 @@ def dossier(ref):
 		"gps": gps,
 		"timeline": rows,
 	}
+
+
+# ---------------------------------------------------------------------------
+# Referto PDF — Esito verifica dispositivo (consegnabile al cliente)
+# ---------------------------------------------------------------------------
+
+def _kit_tokens(investigation_case=None, label=None, refs=None):
+	if refs:
+		if isinstance(refs, str):
+			refs = [r.strip() for r in refs.replace(",", "\n").splitlines() if r.strip()]
+		return frappe.get_all("Canary Token", filters={"ref": ["in", refs]},
+							  fields=["name", "ref", "label", "token_type", "recipient", "investigation_case"])
+	filters = {"label": ["like", "Verifica device%"]}
+	if investigation_case:
+		filters["investigation_case"] = investigation_case
+	if label:
+		filters["recipient"] = label
+	return frappe.get_all("Canary Token", filters=filters,
+						  fields=["name", "ref", "label", "token_type", "recipient", "investigation_case"],
+						  order_by="creation")
+
+
+def _report_html(label, investigation_case, dossiers):
+	esc = frappe.utils.escape_html
+	now = frappe.utils.now_datetime()
+	# aggregati
+	tot_hits = sum(d["summary"]["total_hits"] for d in dossiers)
+	res_ips, dc_ips, wrtc, devices, attempts, gps = {}, {}, {}, {}, [], []
+	for d in dossiers:
+		for x in d["residential_ips"]:
+			res_ips[x["ip"]] = x
+		for x in d["datacenter_vpn_ips"]:
+			dc_ips[x["ip"]] = x
+		for x in d["webrtc_public_ips"]:
+			wrtc[x["ip"]] = x
+		for x in d["devices"]:
+			devices[x["fp"]] = x
+		attempts += d["credential_attempts"]
+		gps += d["gps"]
+	fired = tot_hits > 0
+	if fired:
+		verdict_title = "SEGNALI DI ACCESSO DA TERZI RILEVATI"
+		verdict_col = "#b02a2a"
+		verdict_txt = ("Durante il periodo di osservazione una o più esche sono state aperte / provate / "
+					   "esfiltrate. Ci sono indizi coerenti con l'accesso al dispositivo da parte di terzi. "
+					   "Gli elementi di attribuzione (IP, rete, device) sono riportati sotto. L'analista deve "
+					   "escludere che le aperture provengano dal titolare del dispositivo prima di concludere.")
+	else:
+		verdict_title = "NESSUN SEGNALE RILEVATO"
+		verdict_col = "#2e7d32"
+		verdict_txt = ("Nel periodo di osservazione nessuna esca è stata aperta. Non sono emersi segnali di "
+					   "accesso al dispositivo da parte di terzi. L'assenza di segnali non è prova definitiva "
+					   "di assenza di monitoraggio (es. sorveglianza passiva o non interessata alle esche).")
+
+	def iptbl(m, title):
+		if not m:
+			return ""
+		rows = "".join("<tr><td class='mono'>%s</td><td>%s hit</td><td>%s %s</td><td>%s</td></tr>" % (
+			esc(x["ip"]), x["hits"], esc(x.get("country") or ""), esc(x.get("city") or ""), esc(x.get("org") or "")) for x in m.values())
+		return "<h3>%s</h3><table>%s</table>" % (esc(title), rows)
+
+	esche_rows = "".join("<tr><td>%s</td><td class='mono'>%s</td><td>%s</td><td>%s</td></tr>" % (
+		esc(d["token"]["token_type"]), esc(d["token"]["ref"]), esc(d["token"].get("label") or ""),
+		d["summary"]["total_hits"]) for d in dossiers)
+
+	att_html = ""
+	if attempts:
+		ar = "".join("<tr><td>%s</td><td>%s</td><td class='mono'>%s</td><td class='mono'>%s</td><td class='mono'>%s</td></tr>" % (
+			esc(a.get("ts")), esc(a.get("type")), esc(a.get("user") or ""), esc(a.get("secret") or ""), esc(a.get("ip") or "")) for a in attempts)
+		att_html = "<h3>Tentativi su credenziali/endpoint esca</h3><table><tr><th>quando (UTC)</th><th>tipo</th><th>utente/chiave</th><th>segreto provato</th><th>IP</th></tr>%s</table>" % ar
+
+	dev_html = ""
+	if devices:
+		dr = "".join("<tr><td class='mono'>%s</td><td>%s</td><td class='mono'>%s</td></tr>" % (
+			esc(x["fp"]), x["hits"], esc(", ".join(x.get("ips") or []))) for x in devices.values())
+		dev_html = "<h3>Device che hanno aperto le esche (fingerprint)</h3><table><tr><th>fingerprint</th><th>aperture</th><th>IP visti</th></tr>%s</table>" % dr
+
+	gps_html = ""
+	if gps:
+		gr = "".join("<tr><td class='mono'>%s, %s</td><td>%s</td></tr>" % (esc(g.get("lat")), esc(g.get("lon")), esc(g.get("ts"))) for g in gps)
+		gps_html = "<h3>Posizione GPS rilevata</h3><table><tr><th>coordinate</th><th>quando</th></tr>%s</table>" % gr
+
+	attr = ""
+	if fired:
+		attr = (iptbl(res_ips, "IP residenziali (possibile identità reale del watcher)")
+				+ iptbl(wrtc, "IP pubblici reali via WebRTC (rivelati anche dietro VPN)")
+				+ iptbl(dc_ips, "IP datacenter / VPN (mascheramento)")
+				+ dev_html + att_html + gps_html)
+
+	return """<!doctype html><html><head><meta charset="utf-8"><style>
+	@page {{ margin: 22mm 18mm; }}
+	body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #1c1c1c; font-size: 12px; line-height: 1.5; }}
+	.hd {{ border-bottom: 2px solid #1c1c1c; padding-bottom: 8px; margin-bottom: 14px; }}
+	.hd .b {{ font-size: 18px; font-weight: 700; letter-spacing: .5px; }}
+	.hd .s {{ font-size: 11px; color: #666; }}
+	h1 {{ font-size: 15px; margin: 16px 0 4px; }}
+	h3 {{ font-size: 12px; margin: 14px 0 4px; color: #333; }}
+	.meta td {{ padding: 2px 8px 2px 0; font-size: 12px; }}
+	.meta .k {{ color: #666; }}
+	.verdict {{ border: 2px solid {vcol}; border-radius: 8px; padding: 12px 14px; margin: 14px 0; }}
+	.verdict .t {{ font-weight: 700; color: {vcol}; font-size: 14px; }}
+	table {{ border-collapse: collapse; width: 100%; margin-top: 4px; }}
+	td, th {{ border: 1px solid #ddd; padding: 4px 7px; text-align: left; vertical-align: top; }}
+	th {{ background: #f3f3f3; font-weight: 600; }}
+	.mono {{ font-family: 'Courier New', monospace; font-size: 11px; }}
+	.note {{ font-size: 10.5px; color: #555; margin-top: 16px; line-height: 1.5; }}
+	.ft {{ margin-top: 20px; border-top: 1px solid #ccc; padding-top: 8px; font-size: 10px; color: #888; }}
+	</style></head><body>
+	<div class="hd"><div class="b">THANATOS INTELLIGENCE</div><div class="s">Referto tecnico — Verifica dispositivo (counter-surveillance)</div></div>
+	<table class="meta">
+	  <tr><td class="k">Oggetto</td><td>Verifica sospetto controllo del dispositivo da parte di terzi</td></tr>
+	  <tr><td class="k">Soggetto / dispositivo</td><td><b>{label}</b></td></tr>
+	  <tr><td class="k">Pratica</td><td>{case}</td></tr>
+	  <tr><td class="k">Data referto</td><td>{date}</td></tr>
+	  <tr><td class="k">Esche impiegate</td><td>{nesche}</td></tr>
+	</table>
+	<div class="verdict"><div class="t">{vtitle}</div><div>{vtxt}</div></div>
+	<h1>Esche impiegate</h1>
+	<table><tr><th>tipo</th><th>ref</th><th>etichetta</th><th>aperture</th></tr>{esche}</table>
+	{attr}
+	<h1>Metodologia</h1>
+	<div class="note">Su consenso del titolare e sul suo dispositivo sono state collocate esche (canary token)
+	dall'aspetto credibile — credenziali «salvate», documenti «riservati», link/note e chiavi API esca — inerti
+	e non funzionali. Ogni esca, se aperta o utilizzata, contatta un'infrastruttura di rilevamento neutra e
+	registra l'origine dell'accesso (IP, rete, fuso, user-agent, impronta del dispositivo e, ove disponibile,
+	IP reale via WebRTC anche dietro VPN, e posizione GPS se concessa). Le esche non accedono ad altri
+	dispositivi né raccolgono dati del titolare: rilevano unicamente CHI apre l'esca.</div>
+	<h1>Limiti e note legali</h1>
+	<div class="note">Attività svolta con il <b>consenso informato del titolare</b> e sul <b>dispositivo del
+	titolare</b>, nell'ambito di un incarico di indagine (giurisdizione rumena, Legea 329/2003; trattamento dati
+	conforme al GDPR). Il presente referto riporta elementi tecnici oggettivi; la loro interpretazione va
+	contestualizzata dall'analista e, se del caso, sottoposta all'Autorità competente. L'assenza di segnali non
+	costituisce prova di assenza di monitoraggio.</div>
+	<div class="ft">Documento generato automaticamente dal toolkit Canary di Thanatos Intelligence — {date}. Riservato.</div>
+	</body></html>""".format(
+		vcol=verdict_col, label=esc(label or "-"), case=esc(investigation_case or "-"),
+		date=frappe.utils.format_datetime(now, "dd/MM/yyyy HH:mm"), nesche=len(dossiers),
+		vtitle=esc(verdict_title), vtxt=esc(verdict_txt), esche=esche_rows, attr=attr)
+
+
+@frappe.whitelist()
+def device_report(label=None, investigation_case=None, refs=None):
+	"""Genera il referto PDF 'Esito verifica dispositivo' aggregando i dossier delle esche del kit.
+	Ritorna un download PDF."""
+	_require()
+	tokens = _kit_tokens(investigation_case, label, refs)
+	if not tokens:
+		frappe.throw(_("Nessuna esca 'Verifica dispositivo' trovata per questi parametri."))
+	if not label:
+		label = tokens[0].get("recipient") or (investigation_case or "dispositivo")
+	if not investigation_case:
+		investigation_case = tokens[0].get("investigation_case")
+	dossiers = [dossier(t["ref"]) for t in tokens]
+	html = _report_html(label, investigation_case, dossiers)
+	from frappe.utils.pdf import get_pdf
+	pdf = get_pdf(html)
+	fname = "Referto_verifica_dispositivo_%s.pdf" % frappe.utils.now_datetime().strftime("%Y%m%d_%H%M")
+	frappe.local.response.filename = fname
+	frappe.local.response.filecontent = pdf
+	frappe.local.response.type = "download"

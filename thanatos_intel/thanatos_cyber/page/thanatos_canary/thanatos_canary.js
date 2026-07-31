@@ -14,6 +14,7 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 
 	page.set_primary_action('Nuova esca', () => newEsca(), 'add');
 	page.add_inner_button('🕵️ Verifica dispositivo', () => deviceCheck());
+	page.add_menu_item('📄 Referto verifica dispositivo (PDF)', () => deviceReport());
 	page.add_menu_item('Aggiorna hit dal worker (backfill)', () => {
 		frappe.xcall(API + 'pull_hits', {}).then(r => {
 			frappe.show_alert({ message: `Backfill: ${r.new || 0} nuovi hit`, indicator: r.error ? 'orange' : 'green' });
@@ -236,7 +237,11 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 	}
 
 	function renderKit(data) {
-		const d = new frappe.ui.Dialog({ title: '🕵️ Kit verifica dispositivo — ' + (data.label || ''), size: 'large' });
+		const d = new frappe.ui.Dialog({
+			title: '🕵️ Kit verifica dispositivo — ' + (data.label || ''), size: 'large',
+			primary_action_label: '📄 Referto PDF',
+			primary_action() { window.open(reportUrl(data.label, data.case), '_blank'); },
+		});
 		const intro = 'Uso <b>consensuale</b> sul device del <b>cliente</b> (suo consenso / mandato) per verificare se è sotto controllo di terzi. '
 			+ 'Piantate queste esche come indicato: se un terzo che monitora il device le apre/prova/esfiltra, l\'hit fa phone-home → '
 			+ '<b>prova</b> che il device è sorvegliato + il Dossier attribuisce il watcher (IP reale, geo, device). Non tocca dispositivi di terzi.';
@@ -253,6 +258,31 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 		d.$body.html(`<div style="padding:2px"><div style="font-size:12px;color:var(--text-muted,#888);line-height:1.6;margin-bottom:14px">${intro}</div>${blocks}
 		  <div style="font-size:12px;margin-top:6px">Gli hit compaiono nelle campagne qui sotto; apri il <b>Dossier de-anon</b> di ciascuna per l'attribuzione.</div></div>`);
 		d.$body.find('.cn-cp').on('click', function () { copy(decodeURIComponent($(this).data('v'))); frappe.show_alert({ message: 'Copiato', indicator: 'green' }); });
+		d.show();
+	}
+
+	function reportUrl(label, investigation_case) {
+		const p = new URLSearchParams();
+		if (label) p.set('label', label);
+		if (investigation_case) p.set('investigation_case', investigation_case);
+		return '/api/method/' + API + 'device_report?' + p.toString();
+	}
+
+	function deviceReport(prefLabel, prefCase) {
+		const d = new frappe.ui.Dialog({
+			title: '📄 Referto verifica dispositivo (PDF)',
+			fields: [
+				{ fieldtype: 'HTML', options: '<div style="font-size:12px;color:var(--text-muted,#888);line-height:1.6;margin-bottom:8px">Genera il referto consegnabile al cliente aggregando i dossier delle esche del kit «Verifica dispositivo». Filtra per pratica e/o soggetto.</div>' },
+				{ fieldtype: 'Link', fieldname: 'investigation_case', label: 'Pratica', options: 'Investigation Case', default: prefCase || $case.get_value() || '' },
+				{ fieldtype: 'Data', fieldname: 'label', label: 'Soggetto / device (come nel kit)', default: prefLabel || '' },
+			],
+			primary_action_label: 'Scarica PDF',
+			primary_action(v) {
+				if (!v.label && !v.investigation_case) { frappe.msgprint('Indica almeno la pratica o il soggetto'); return; }
+				window.open(reportUrl(v.label, v.investigation_case), '_blank');
+				d.hide();
+			},
+		});
 		d.show();
 	}
 
