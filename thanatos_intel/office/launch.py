@@ -9,6 +9,9 @@ from thanatos_intel.office.wopi import EDITABLE_EXT, mint_token
 DISCOVERY_INTERNAL = "http://127.0.0.1:9980/hosting/discovery"
 # host pubblico su cui il browser carica il client Collabora (proxy nginx /office)
 PUBLIC_COLLABORA = ""
+# WOPI host interno HTTP sul gateway docker: il kit Collabora (in jail) lo
+# raggiunge senza DNS/TLS/CF. NON pubblico (nginx listen 172.17.0.1:8880).
+WOPI_CALLBACK_HOST = "http://172.17.0.1:8880"
 
 
 def _can_access_file(file_name):
@@ -61,7 +64,7 @@ def editor_url(file_name):
     write = _can_write_file(doc)
     token = mint_token(doc.name, write=write)
     urlsrc = _urlsrc(ext)
-    wopi_src = frappe.utils.get_url() + "/wopi/files/" + doc.name
+    wopi_src = WOPI_CALLBACK_HOST + "/wopi/files/" + doc.name
     sep = "&" if urlsrc.endswith("?") else ("&" if "?" in urlsrc else "?")
     full = f"{urlsrc}WOPISrc={frappe.utils.quote(wopi_src)}" if urlsrc.endswith("?") else f"{urlsrc}{sep}WOPISrc={frappe.utils.quote(wopi_src)}"
     return {"src": full, "access_token": token, "file_name": doc.file_name, "can_write": write}

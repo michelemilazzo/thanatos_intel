@@ -118,7 +118,8 @@ def _enabled_set():
 @frappe.whitelist()
 def list_enabled():
     _guard()
-    return sorted(_enabled_set())
+    # solo caselle @thanatos.agency: lo store SSO Roundcube contiene anche legacy di altri domini
+    return sorted(m for m in _enabled_set() if m.endswith("@" + DOMAIN))
 
 
 @frappe.whitelist()
