@@ -102,6 +102,12 @@ phone-home → **prova** che il device è sorvegliato + il Dossier **attribuisce
 device, anche dietro VPN). Desk: bottone **🕵️ Verifica dispositivo** → dialog cliente+pratica → kit con
 istruzioni di posizionamento. **Solo device del cliente, consensuale, su mandato — mai dispositivi di terzi.**
 
+**Referto PDF** — `device_report(label, case)` = download; **`device_report_attach(label, case)`** = allega al
+fascicolo: **File sull'Investigation Case** (Attachments) + **box Drive del caso** (`_put_in_drive`, «05 Report»)
++ nota in bacheca. Il PDF aggrega i dossier delle esche: verdetto (segnali accesso terzi sì/no), esche,
+attribuzione watcher, metodologia, note legali (RO Legea 329/2003 + GDPR). Desk: menu «📄 Referto verifica
+dispositivo (PDF)» (📎 Allega al caso / Solo scarica) + pulsante nel dialog kit.
+
 ## Stato
 
 - **Fase 1 (FATTA):** DocType + API + PULL scheduler + ingest PUSH + alert operatore + vettori

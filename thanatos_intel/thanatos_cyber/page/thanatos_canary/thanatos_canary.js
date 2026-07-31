@@ -239,8 +239,13 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 	function renderKit(data) {
 		const d = new frappe.ui.Dialog({
 			title: '🕵️ Kit verifica dispositivo — ' + (data.label || ''), size: 'large',
-			primary_action_label: '📄 Referto PDF',
-			primary_action() { window.open(reportUrl(data.label, data.case), '_blank'); },
+			primary_action_label: data.case ? '📎 Referto → fascicolo' : '📄 Referto PDF',
+			primary_action() {
+				if (data.case) {
+					frappe.xcall(API + 'device_report_attach', { label: data.label, investigation_case: data.case })
+						.then(res => { frappe.show_alert({ message: 'Referto allegato al fascicolo', indicator: 'green' }); if (res.file_url) window.open(res.file_url, '_blank'); });
+				} else { window.open(reportUrl(data.label, data.case), '_blank'); }
+			},
 		});
 		const intro = 'Uso <b>consensuale</b> sul device del <b>cliente</b> (suo consenso / mandato) per verificare se è sotto controllo di terzi. '
 			+ 'Piantate queste esche come indicato: se un terzo che monitora il device le apre/prova/esfiltra, l\'hit fa phone-home → '
@@ -276,8 +281,19 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 				{ fieldtype: 'Link', fieldname: 'investigation_case', label: 'Pratica', options: 'Investigation Case', default: prefCase || $case.get_value() || '' },
 				{ fieldtype: 'Data', fieldname: 'label', label: 'Soggetto / device (come nel kit)', default: prefLabel || '' },
 			],
-			primary_action_label: 'Scarica PDF',
+			primary_action_label: '📎 Allega al caso',
 			primary_action(v) {
+				if (!v.investigation_case) { frappe.msgprint('Per allegare al fascicolo serve la pratica'); return; }
+				frappe.xcall(API + 'device_report_attach', { label: v.label || undefined, investigation_case: v.investigation_case })
+					.then(res => {
+						d.hide();
+						frappe.show_alert({ message: 'Referto allegato al fascicolo (' + (res.fired ? 'segnali rilevati' : 'nessun segnale') + ')', indicator: res.fired ? 'orange' : 'green' });
+						if (res.file_url) window.open(res.file_url, '_blank');
+					});
+			},
+			secondary_action_label: 'Solo scarica',
+			secondary_action() {
+				const v = d.get_values(true);
 				if (!v.label && !v.investigation_case) { frappe.msgprint('Indica almeno la pratica o il soggetto'); return; }
 				window.open(reportUrl(v.label, v.investigation_case), '_blank');
 				d.hide();

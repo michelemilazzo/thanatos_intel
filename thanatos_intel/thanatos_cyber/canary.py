@@ -737,11 +737,7 @@ def _report_html(label, investigation_case, dossiers):
 		vtitle=esc(verdict_title), vtxt=esc(verdict_txt), esche=esche_rows, attr=attr)
 
 
-@frappe.whitelist()
-def device_report(label=None, investigation_case=None, refs=None):
-	"""Genera il referto PDF 'Esito verifica dispositivo' aggregando i dossier delle esche del kit.
-	Ritorna un download PDF."""
-	_require()
+def _build_device_report(label, investigation_case, refs):
 	tokens = _kit_tokens(investigation_case, label, refs)
 	if not tokens:
 		frappe.throw(_("Nessuna esca 'Verifica dispositivo' trovata per questi parametri."))
@@ -750,10 +746,54 @@ def device_report(label=None, investigation_case=None, refs=None):
 	if not investigation_case:
 		investigation_case = tokens[0].get("investigation_case")
 	dossiers = [dossier(t["ref"]) for t in tokens]
+	fired = any(d["summary"]["total_hits"] for d in dossiers)
 	html = _report_html(label, investigation_case, dossiers)
 	from frappe.utils.pdf import get_pdf
 	pdf = get_pdf(html)
-	fname = "Referto_verifica_dispositivo_%s.pdf" % frappe.utils.now_datetime().strftime("%Y%m%d_%H%M")
+	safe = "".join(ch if ch.isalnum() else "_" for ch in (label or "dispositivo"))[:40]
+	fname = "Referto_verifica_dispositivo_%s_%s.pdf" % (safe, frappe.utils.now_datetime().strftime("%Y%m%d_%H%M"))
+	return pdf, fname, label, investigation_case, fired
+
+
+@frappe.whitelist()
+def device_report(label=None, investigation_case=None, refs=None):
+	"""Genera il referto PDF 'Esito verifica dispositivo' (download)."""
+	_require()
+	pdf, fname, _lbl, _case, _fired = _build_device_report(label, investigation_case, refs)
 	frappe.local.response.filename = fname
 	frappe.local.response.filecontent = pdf
 	frappe.local.response.type = "download"
+
+
+@frappe.whitelist()
+def device_report_attach(label=None, investigation_case=None, refs=None):
+	"""Genera il referto e lo ALLEGA al fascicolo del caso: File su Investigation Case (Attachments) +
+	box Drive del caso (sotto '05 Report') + nota in bacheca. Ritorna {file_url, filename}."""
+	_require()
+	pdf, fname, label, investigation_case, fired = _build_device_report(label, investigation_case, refs)
+	if not investigation_case:
+		frappe.throw(_("Serve una pratica per allegare il referto al fascicolo."))
+	client = frappe.db.get_value("Investigation Case", investigation_case, "client") or label
+	# rimpiazza un eventuale referto omonimo (idempotente)
+	old = frappe.db.get_value("File", {"attached_to_doctype": "Investigation Case",
+									   "attached_to_name": investigation_case, "file_name": fname}, "name")
+	if old:
+		frappe.delete_doc("File", old, ignore_permissions=True, force=1)
+	f = frappe.get_doc({"doctype": "File", "file_name": fname, "is_private": 1, "content": pdf,
+						"attached_to_doctype": "Investigation Case", "attached_to_name": investigation_case})
+	f.save(ignore_permissions=True)
+	try:
+		from thanatos_intel.reporting.case_reports import _put_in_drive
+		_put_in_drive(investigation_case, fname, pdf, "application/pdf", client, subfolder="05 Report")
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "canary device_report drive")
+	try:
+		from thanatos_intel.workflow import notify
+		esito = "SEGNALI di accesso da terzi" if fired else "nessun segnale"
+		notify.channels(investigation_case,
+						"📄 Referto «Verifica dispositivo» allegato al fascicolo (%s): %s." % (label, esito),
+						subject="Referto verifica dispositivo", client_visible=False)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "canary device_report notify")
+	frappe.db.commit()
+	return {"ok": True, "file_url": f.file_url, "filename": fname, "fired": fired}
