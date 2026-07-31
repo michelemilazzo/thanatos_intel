@@ -59,7 +59,15 @@ niente accesso occulto a dispositivi di terzi (reato). Vedi distinzione consenso
 | `pull_hits(ref)` / `pull_all_hits()` | ingest on-demand / scheduler |
 | `hits(ref, investigation_case)` | lista hit |
 | `dashboard(investigation_case)` | token + hit recenti + **entity resolution** per fingerprint (cross-caso) |
+| `dossier(ref)` | **fascicolo de-anon** per token: IP residenziale vs datacenter/VPN, IP pubblici **WebRTC (VPN-proof)**, fingerprint device (+cross-caso), GPS, timeline, **best-guess IP reale** |
 | `disable(ref)` | disattiva token |
+
+## Playbook attribuzione (caso "chi apre l'esca")
+
+1. `generate(label, token_type="Link / Pagina", investigation_case="CASE-…")` → usa il link **`page`** (`/?utm_content=<ref>`): è la homepage del blog che carica `b.js` → **device fingerprint + WebRTC IP-leak**, che de-anonimizzano anche dietro VPN in-browser. (Il `link`=`/l` redirect-esca è più "sembra la pagina vera" ma fa solo beacon base + redirect veloce: meno de-anon.)
+2. Manda il link al target col ref opaco nel param `utm_content`. Ogni apertura → push real-time → Canary Hit + alert operatore.
+3. `dossier(ref)` → **best_guess_ip** (WebRTC pubblico > IP residenziale > datacenter), correlazione device via fingerprint (stesso device su VPN e IP reale), GPS se concesso, cross-caso. Il WebRTC `srflx` rivela l'IP pubblico reale anche se il target naviga via VPN.
+4. Per il **secondo device**: il QR in pagina (b.js) codifica lo stesso URL `+via=qr` → quando lo scansiona col telefono cattura anche quello.
 
 ## Casi d'uso → tipo token
 

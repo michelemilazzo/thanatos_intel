@@ -62,6 +62,7 @@ def token_links(ref, base=None, zone=None):
 	zone = zone or z
 	q = "utm_content=" + ref
 	return {
+		"page": "%s/?%s" % (base, q),  # homepage blog: carica b.js → fingerprint + WebRTC de-anon (VPN-proof). Vettore attribuzione forte.
 		"link": "%s/l?%s" % (base, q),
 		"pixel": "%s/px?%s&via=img" % (base, q),
 		"email_pixel": '<img src="%s/px?%s&via=email" width="1" height="1" style="display:none" alt="">' % (base, q),
@@ -412,3 +413,121 @@ def dashboard(investigation_case=None):
 					"cross_case": len(e["cases"]) > 1})
 	ent.sort(key=lambda x: (-int(x["cross_case"]), -x["hits"]))
 	return {"base": data["base"], "tokens": data["tokens"], "recent_hits": recent, "entities": ent}
+
+
+def _is_private_ip(ip):
+	ip = (ip or "").strip()
+	if not ip:
+		return True
+	if ip.startswith(("10.", "192.168.", "127.", "169.254.", "::1", "fc", "fd", "fe80")):
+		return True
+	if ip.startswith("172."):
+		try:
+			return 16 <= int(ip.split(".")[1]) <= 31
+		except Exception:
+			return False
+	return False
+
+
+def _webrtc_public(webrtc):
+	"""Estrae gli IP pubblici REALI dai candidati WebRTC ('ip:typ ip:typ'). srflx = server-reflexive =
+	IP pubblico reale (rivelato anche dietro VPN in-browser); host privati = LAN, scartati."""
+	out = []
+	for tokn in (webrtc or "").replace(",", " ").split():
+		parts = tokn.split(":")
+		if parts[-1] in ("srflx", "host", "prflx", "relay"):
+			typ, ip = parts[-1], ":".join(parts[:-1])
+		else:
+			typ, ip = "", tokn
+		if _is_private_ip(ip):
+			continue
+		if typ in ("srflx", "prflx", "") and ip not in out:  # pubblici reali (VPN-proof)
+			out.append(ip)
+	return out
+
+
+@frappe.whitelist()
+def dossier(ref):
+	"""Fascicolo de-anon per un token (caso ATTRIBUZIONE): distingue IP residenziale vs datacenter/VPN,
+	estrae gli IP pubblici reali da WebRTC (VPN-proof), i fingerprint device (+ cross-caso), GPS, timeline,
+	e un best-guess dell'IP/identità reale."""
+	_require()
+	tok = frappe.db.get_value(
+		"Canary Token", {"ref": ref},
+		["name", "label", "token_type", "ref", "investigation_case", "recipient", "hit_count", "last_hit"],
+		as_dict=True)
+	if not tok:
+		frappe.throw(_("Token non trovato"))
+	tok = dict(tok)
+	rows = frappe.get_all(
+		"Canary Hit", filters={"token": tok["name"]},
+		fields=["hit_ts", "hit_type", "via", "ip", "suspect_net", "country", "city", "asn", "org",
+				"tz", "fp", "webrtc", "ua", "lat", "lon", "acc"],
+		order_by="hit_ts desc", limit_page_length=1000)
+
+	residential, datacenter, webrtc_ips = {}, {}, {}
+	fps, gps = {}, []
+	for h in rows:
+		ip = h.get("ip")
+		if ip:
+			bucket = datacenter if h.get("suspect_net") else residential
+			b = bucket.setdefault(ip, {"ip": ip, "hits": 0, "country": h.get("country"),
+									   "city": h.get("city"), "asn": h.get("asn"), "org": h.get("org")})
+			b["hits"] += 1
+		for wip in _webrtc_public(h.get("webrtc")):
+			webrtc_ips.setdefault(wip, {"ip": wip, "hits": 0})["hits"] += 1
+		fp = h.get("fp")
+		if fp:
+			f = fps.setdefault(fp, {"fp": fp, "hits": 0, "ips": set(), "ua": h.get("ua")})
+			f["hits"] += 1
+			if h.get("ip"):
+				f["ips"].add(h.get("ip"))
+		if h.get("lat") and h.get("lon"):
+			gps.append({"lat": h.get("lat"), "lon": h.get("lon"), "acc": h.get("acc"), "ts": h.get("hit_ts")})
+
+	# cross-caso: gli stessi fingerprint appaiono su altri token/casi?
+	fp_list = []
+	for fp, f in fps.items():
+		also = frappe.get_all("Canary Hit", filters={"fp": fp, "token": ["!=", tok["name"]]},
+							  fields=["token", "investigation_case"], limit_page_length=200)
+		also_cases = sorted({a["investigation_case"] for a in also if a.get("investigation_case")})
+		also_tokens = sorted({a["token"] for a in also})
+		fp_list.append({"fp": fp, "hits": f["hits"], "ua": f["ua"], "ips": sorted(f["ips"]),
+						"also_tokens": also_tokens, "also_cases": also_cases,
+						"cross_case": bool(also_cases)})
+	fp_list.sort(key=lambda x: (-int(x["cross_case"]), -x["hits"]))
+
+	res_sorted = sorted(residential.values(), key=lambda x: -x["hits"])
+	dc_sorted = sorted(datacenter.values(), key=lambda x: -x["hits"])
+	wrtc_sorted = sorted(webrtc_ips.values(), key=lambda x: -x["hits"])
+
+	# best-guess IP reale: WebRTC pubblico (più forte, VPN-proof) > IP residenziale più frequente
+	best_ip, best_src = None, None
+	if wrtc_sorted:
+		best_ip, best_src = wrtc_sorted[0]["ip"], "webrtc"
+	elif res_sorted:
+		best_ip, best_src = res_sorted[0]["ip"], "residential"
+	elif dc_sorted:
+		best_ip, best_src = dc_sorted[0]["ip"], "datacenter"
+
+	return {
+		"token": tok,
+		"summary": {
+			"total_hits": len(rows),
+			"residential_ips": len(res_sorted),
+			"datacenter_vpn_ips": len(dc_sorted),
+			"webrtc_public_ips": len(wrtc_sorted),
+			"devices": len(fp_list),
+			"cross_case_devices": sum(1 for f in fp_list if f["cross_case"]),
+			"gps_points": len(gps),
+			"best_guess_ip": best_ip,
+			"best_guess_source": best_src,
+			"behind_vpn": bool(dc_sorted) and not res_sorted,
+		},
+		"residential_ips": res_sorted,
+		"datacenter_vpn_ips": dc_sorted,
+		"webrtc_public_ips": wrtc_sorted,
+		"devices": fp_list,
+		"gps": gps,
+		"timeline": rows,
+	}
