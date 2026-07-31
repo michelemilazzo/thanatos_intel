@@ -187,6 +187,42 @@ def disable(ref):
 	return {"ok": bool(name)}
 
 
+# Kit consensuale "il mio device è sotto controllo di terzi?" — counter-surveillance dimostrativa.
+# Il cliente (o l'operatore, sul device del CLIENTE col suo consenso) pianta esche credibili: se un terzo
+# che controlla/monitora il device le apre / le prova / le esfiltra, l'hit fa phone-home → PROVA che il
+# device è sorvegliato + attribuzione del watcher (IP reale, geo, device). Solo device del cliente,
+# consensuale, su mandato. NON è accesso a dispositivi di terzi.
+_DEVICE_KIT_PLAN = [
+	("Credenziale-esca", "🔑 Login «salvato»",
+	 "Salva queste credenziali nel gestore password / login del browser sul device. Uno stalkerware che "
+	 "ruba le password salvate proverà a usarle → cattura del watcher."),
+	("Word (.docx)", "📄 Documento «riservato»",
+	 "Metti il file sul device con un nome allettante (es. «accessi_banca.docx», «seed_wallet.docx»). "
+	 "Chi esfiltra i file e lo apre → phone-home con IP/rete reali."),
+	("Link / Pagina", "🔗 Nota/Link «riservato»",
+	 "Incolla il link in una nota/chat sul device (es. «accesso conto: <link>»). Chi legge lo schermo o "
+	 "le note e lo apre → de-anon: IP reale, fingerprint, WebRTC anche dietro VPN."),
+	("Endpoint honeypot", "🔌 Chiave API «esca»",
+	 "Metti la chiave in un file tipo .env o negli appunti. Chi la trova e la usa contro l'endpoint → alert."),
+]
+
+
+@frappe.whitelist()
+def device_check_kit(label, investigation_case=None):
+	"""Genera un bundle di esche per verificare (in modo dimostrativo e consensuale) se il device del
+	cliente è sotto controllo di terzi. Ogni esca è legata alla pratica; il Dossier attribuisce il watcher."""
+	_require()
+	base, _s, _z = _cfg()
+	kit = []
+	for ttype, title, instr in _DEVICE_KIT_PLAN:
+		res = generate(label="Verifica device · %s · %s" % (label, title), token_type=ttype,
+					   investigation_case=investigation_case, recipient=label,
+					   notes="Kit verifica dispositivo (counter-surveillance consensuale)")
+		kit.append({"title": title, "instruction": instr, "ref": res["ref"],
+					"token_type": ttype, "links": res["links"], "planted": res.get("planted")})
+	return {"label": label, "case": investigation_case, "base": base, "kit": kit}
+
+
 @frappe.whitelist()
 def list_tokens(investigation_case=None):
 	_require()

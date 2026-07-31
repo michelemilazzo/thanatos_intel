@@ -92,6 +92,16 @@ Se il device è compromesso e un malware le esfiltra e le **prova**, l'hit viene
 UI: nel form "Nuova esca" tipi *Credenziale-esca* / *Endpoint honeypot* → dialog con le creds da piantare;
 i tentativi appaiono nel Dossier sotto "⚠ Tentativi credenziali / honeypot".
 
+## Verifica dispositivo (counter-surveillance consensuale)
+
+Scenario: un cliente teme che il **suo** device sia sotto controllo di terzi; Thanatos deve verificarlo e
+**dimostrarlo**. `device_check_kit(label, investigation_case)` genera un bundle di esche credibili da
+piantare **sul device del cliente col suo consenso** (login «salvato», documento «riservato», nota/link
+«riservato», chiave API «esca»). Se un terzo che monitora il device le apre / prova / esfiltra, l'hit fa
+phone-home → **prova** che il device è sorvegliato + il Dossier **attribuisce il watcher** (IP reale, geo,
+device, anche dietro VPN). Desk: bottone **🕵️ Verifica dispositivo** → dialog cliente+pratica → kit con
+istruzioni di posizionamento. **Solo device del cliente, consensuale, su mandato — mai dispositivi di terzi.**
+
 ## Stato
 
 - **Fase 1 (FATTA):** DocType + API + PULL scheduler + ingest PUSH + alert operatore + vettori

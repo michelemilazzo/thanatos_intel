@@ -13,6 +13,7 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 	$case.$input && $case.$input.on('change', () => load());
 
 	page.set_primary_action('Nuova esca', () => newEsca(), 'add');
+	page.add_inner_button('🕵️ Verifica dispositivo', () => deviceCheck());
 	page.add_menu_item('Aggiorna hit dal worker (backfill)', () => {
 		frappe.xcall(API + 'pull_hits', {}).then(r => {
 			frappe.show_alert({ message: `Backfill: ${r.new || 0} nuovi hit`, indicator: r.error ? 'orange' : 'green' });
@@ -218,6 +219,57 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 		const d = new frappe.ui.Dialog({ title: '🔑 Credenziali-esca da piantare', size: 'large' });
 		d.$body.html(`<div style="padding:4px 2px"><div style="font-size:12px;color:var(--text-muted,#888);line-height:1.6;margin-bottom:14px">${note}</div>${rows}</div>`);
 		d.$body.find('.cn-cp').on('click', function () { copy(decodeURIComponent($(this).data('v'))); frappe.show_alert({ message: 'Copiato', indicator: 'green' }); });
+		d.show();
+	}
+
+	function kitArtifact(item) {
+		if (item.token_type === 'Credenziale-esca' && item.planted) {
+			const c = item.planted.credential;
+			return [['URL login', c.login_url], ['Username', c.username], ['Password', c.password]];
+		}
+		if (item.token_type === 'Endpoint honeypot' && item.planted) {
+			const c = item.planted.honeypot;
+			return [['Endpoint', c.api_url], ['API key', c.api_key], ['Authorization', c.authorization]];
+		}
+		if (item.token_type === 'Word (.docx)') return [['Scarica il documento-esca', item.links.docx]];
+		return [['Link de-anon', item.links.page]];
+	}
+
+	function renderKit(data) {
+		const d = new frappe.ui.Dialog({ title: '🕵️ Kit verifica dispositivo — ' + (data.label || ''), size: 'large' });
+		const intro = 'Uso <b>consensuale</b> sul device del <b>cliente</b> (suo consenso / mandato) per verificare se è sotto controllo di terzi. '
+			+ 'Piantate queste esche come indicato: se un terzo che monitora il device le apre/prova/esfiltra, l\'hit fa phone-home → '
+			+ '<b>prova</b> che il device è sorvegliato + il Dossier attribuisce il watcher (IP reale, geo, device). Non tocca dispositivi di terzi.';
+		const blocks = (data.kit || []).map(item => {
+			const rows = kitArtifact(item).map(kv => `<div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+			  <span style="flex:0 0 130px;font-size:11px;color:var(--text-muted,#888)">${esc(kv[0])}</span>
+			  <code style="flex:1;overflow:auto;white-space:nowrap;font-size:12px">${esc(kv[1])}</code>
+			  <button class="btn btn-xs btn-default cn-cp" data-v="${encodeURIComponent(kv[1])}">Copia</button></div>`).join('');
+			return `<div style="border:1px solid var(--border-color,#e3e3e3);border-radius:9px;padding:12px 14px;margin-bottom:10px">
+			  <div style="font-weight:600">${esc(item.title)} <span class="cn-mono" style="font-size:11px;color:var(--text-muted,#999)">· ref ${esc(item.ref)}</span></div>
+			  <div style="font-size:12px;color:var(--text-muted,#888);line-height:1.6;margin-top:4px">${esc(item.instruction)}</div>
+			  ${rows}</div>`;
+		}).join('');
+		d.$body.html(`<div style="padding:2px"><div style="font-size:12px;color:var(--text-muted,#888);line-height:1.6;margin-bottom:14px">${intro}</div>${blocks}
+		  <div style="font-size:12px;margin-top:6px">Gli hit compaiono nelle campagne qui sotto; apri il <b>Dossier de-anon</b> di ciascuna per l'attribuzione.</div></div>`);
+		d.$body.find('.cn-cp').on('click', function () { copy(decodeURIComponent($(this).data('v'))); frappe.show_alert({ message: 'Copiato', indicator: 'green' }); });
+		d.show();
+	}
+
+	function deviceCheck() {
+		const d = new frappe.ui.Dialog({
+			title: '🕵️ Verifica dispositivo (sospetto controllo di terzi)',
+			fields: [
+				{ fieldtype: 'HTML', options: '<div style="font-size:12px;color:var(--text-muted,#888);line-height:1.6;margin-bottom:8px">Genera un kit di esche da piantare sul device del <b>cliente</b> (col suo consenso). Se il device è monitorato da terzi, le esche lo rivelano e attribuiscono il watcher. Consensuale, su mandato.</div>' },
+				{ fieldtype: 'Data', fieldname: 'label', label: 'Cliente / device', reqd: 1, placeholder: 'es. Mario Rossi — Android personale' },
+				{ fieldtype: 'Link', fieldname: 'investigation_case', label: 'Pratica', options: 'Investigation Case', default: $case.get_value() || '' },
+			],
+			primary_action_label: 'Genera kit',
+			primary_action(v) {
+				frappe.xcall(API + 'device_check_kit', { label: v.label, investigation_case: v.investigation_case || undefined })
+					.then(res => { d.hide(); renderKit(res); load(); });
+			},
+		});
 		d.show();
 	}
 
