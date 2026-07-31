@@ -11,6 +11,16 @@
     #bar b{color:#fff;font-weight:600}
     #frameholder{flex:1 1 auto;position:relative}
     #office_frame{position:absolute;inset:0;width:100%;height:100%;border:0}
+    /* overlay brand che copre lo splash Collabora finché l'editor non è pronto */
+    #office_overlay{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:22px;background:#0d1b3e;
+      color:#fff;transition:opacity .45s ease;opacity:1}
+    #office_overlay.hide{opacity:0;pointer-events:none}
+    #office_overlay .spin{width:52px;height:52px;border-radius:50%;
+      border:3px solid rgba(200,169,110,.25);border-top-color:#c8a96e;animation:osp 1s linear infinite}
+    #office_overlay .msg{font-size:15px;letter-spacing:.2px;color:#e8eefc}
+    #office_overlay .sub{font-size:12px;color:#8ea0c8;margin-top:-12px}
+    @keyframes osp{to{transform:rotate(360deg)}}
     .err{color:#fff;padding:40px;max-width:640px;margin:0 auto;line-height:1.5}
     .err h1{color:#c8a96e}
     a.back{color:#c8a96e;text-decoration:none}
@@ -27,6 +37,11 @@
   <div id="wrap">
     <div id="bar"><b>{{ doc_name }}</b><span>{{ "modificabile" if can_write else "sola lettura" }}</span></div>
     <div id="frameholder">
+      <div id="office_overlay">
+        <div class="spin"></div>
+        <div class="msg">Apertura editor in corso…</div>
+        <div class="sub">{{ doc_name }}</div>
+      </div>
       <form id="office_form" target="office_frame" action="{{ src }}" method="post">
         <input type="hidden" name="access_token" value="{{ access_token }}"/>
       </form>
@@ -34,7 +49,50 @@
               allowfullscreen sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals"></iframe>
     </div>
   </div>
-  <script>document.getElementById("office_form").submit();</script>
+  <script>
+    (function () {
+      var overlay = document.getElementById("office_overlay");
+      var frame = document.getElementById("office_frame");
+      var done = false;
+      function hide() {
+        if (done) return;
+        done = true;
+        overlay.classList.add("hide");
+        setTimeout(function () { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 600);
+      }
+      // Segnale primario: postMessage di Collabora (App_LoadingStatus / Document_Loaded)
+      window.addEventListener("message", function (e) {
+        var d = e.data;
+        if (typeof d === "string") { try { d = JSON.parse(d); } catch (x) { return; } }
+        if (d && (d.MessageId === "App_LoadingStatus" || d.MessageId === "Document_Loaded" ||
+                  d.MessageId === "Frame_Ready" || d.MessageId === "View_Loaded")) {
+          if (!d.Values || d.Values.Status === undefined || d.Values.Status === "Document_Loaded" ||
+              d.MessageId !== "App_LoadingStatus") {
+            hide();
+          }
+        }
+      });
+      // Segnale di fallback: l'iframe è same-origin, rileviamo quando la toolbar compare
+      function ready() {
+        try {
+          var doc = frame.contentDocument;
+          if (!doc || !doc.body) return false;
+          var t = doc.body.innerText || "";
+          if (/Initializing/i.test(t)) return false;
+          return t.indexOf("Home") !== -1 && t.indexOf("Insert") !== -1;
+        } catch (x) { return false; }
+      }
+      var started = Date.now();
+      var iv = setInterval(function () {
+        if (done) { clearInterval(iv); return; }
+        if (ready() || Date.now() - started > 60000) { // hard-timeout 60s: non resta mai bloccato
+          clearInterval(iv);
+          hide();
+        }
+      }, 500);
+      document.getElementById("office_form").submit();
+    })();
+  </script>
 {% endif %}
 </body>
 </html>
