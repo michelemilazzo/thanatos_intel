@@ -12,7 +12,9 @@ def get_context(context):
         frappe.local.flags.redirect_location = "/login?redirect-to=" + frappe.utils.quote(
             "/office?file=" + (file_name or "")
         )
-        raise frappe.Redirect
+        exc = frappe.Redirect()
+        exc.http_status_code = 302  # 302: il browser NON deve cachare il redirect a login (Frappe default 301)
+        raise exc
     context.error = None
     try:
         if not file_name:
