@@ -72,7 +72,23 @@ def token_links(ref, base=None, zone=None):
 		"qr_target": "%s/l?%s&via=qr" % (base, q),
 		"redirect": "%s/l?%s" % (base, q),
 		"dns_host": "%s.%s" % (ref, zone),
+		"login": "%s/login?%s" % (base, q),          # honeypot credenziale-esca: chi PROVA le creds piantate viene loggato
+		"api": "%s/api/v1/me?api_key=%s" % (base, ref),  # honeypot endpoint: uso della "chiave API" piantata = alert
 		"admin_hits": "%s/__hits?r=%s" % (base, ref),
+	}
+
+
+def planted_creds(ref, base=None):
+	"""Credenziali-esca DETERMINISTICHE dal ref (ricostruibili, niente storage). Sono i valori finti che
+	l'operatore pianta sul device del cliente: se il device è compromesso e un malware le esfiltra e le
+	PROVA contro l'honeypot, l'hit viene loggato e attribuito a questo token."""
+	import hashlib
+	b, secret, _z = _cfg()
+	L = token_links(ref, base or b)
+	pw = hashlib.sha256((ref + secret).encode()).hexdigest()[:14]
+	return {
+		"credential": {"login_url": L["login"], "username": "reader_" + ref[:6], "password": pw},
+		"honeypot": {"api_url": L["api"], "api_key": ref, "authorization": "Bearer " + ref},
 	}
 
 
@@ -127,7 +143,10 @@ def generate(label, token_type="Link / Pagina", investigation_case=None, case_st
 	if token_type == "Redirect-esca" and redir_url:
 		_push_redir(ref, redir_url, title=redir_title)
 	frappe.db.commit()
-	return {"name": doc.name, "ref": ref, "links": token_links(ref, base)}
+	out = {"name": doc.name, "ref": ref, "links": token_links(ref, base)}
+	if token_type in ("Credenziale-esca", "Endpoint honeypot"):
+		out["planted"] = planted_creds(ref, base)
+	return out
 
 
 @frappe.whitelist()
@@ -183,6 +202,8 @@ def list_tokens(investigation_case=None):
 	base, _s, _z = _cfg()
 	for r in rows:
 		r["links"] = token_links(r["ref"], r.get("base_url") or base)
+		if r.get("token_type") in ("Credenziale-esca", "Endpoint honeypot"):
+			r["planted"] = planted_creds(r["ref"], r.get("base_url") or base)
 	return {"base": base, "tokens": rows}
 
 
@@ -242,6 +263,8 @@ def _materialize_hit(h, tok):
 		"fp": h.get("fp"),
 		"webrtc": rtc,
 		"ua": h.get("ua"),
+		"attempt_user": h.get("attempt_user"),
+		"attempt_secret": h.get("attempt_secret"),
 		"lat": frappe.utils.flt(h.get("lat")) if h.get("lat") not in (None, "") else None,
 		"lon": frappe.utils.flt(h.get("lon")) if h.get("lon") not in (None, "") else None,
 		"acc": frappe.utils.flt(h.get("acc")) if h.get("acc") not in (None, "") else None,
@@ -383,7 +406,7 @@ def hits(ref=None, investigation_case=None, limit=200):
 		"Canary Hit", filters=filters,
 		fields=["name", "token", "investigation_case", "hit_ts", "hit_type", "via", "ip",
 				"suspect_net", "country", "city", "asn", "org", "tz", "fp", "webrtc", "ua",
-				"lat", "lon", "acc"],
+				"attempt_user", "attempt_secret", "lat", "lon", "acc"],
 		order_by="hit_ts desc", limit_page_length=frappe.utils.cint(limit))
 
 
@@ -462,12 +485,17 @@ def dossier(ref):
 	rows = frappe.get_all(
 		"Canary Hit", filters={"token": tok["name"]},
 		fields=["hit_ts", "hit_type", "via", "ip", "suspect_net", "country", "city", "asn", "org",
-				"tz", "fp", "webrtc", "ua", "lat", "lon", "acc"],
+				"tz", "fp", "webrtc", "ua", "attempt_user", "attempt_secret", "lat", "lon", "acc"],
 		order_by="hit_ts desc", limit_page_length=1000)
 
 	residential, datacenter, webrtc_ips = {}, {}, {}
-	fps, gps = {}, []
+	fps, gps, attempts = {}, [], []
 	for h in rows:
+		if h.get("hit_type") in ("credential", "honeypot") or h.get("attempt_user") or h.get("attempt_secret"):
+			attempts.append({"ts": h.get("hit_ts"), "type": h.get("hit_type"), "ip": h.get("ip"),
+							 "suspect_net": h.get("suspect_net"), "org": h.get("org"),
+							 "user": h.get("attempt_user"), "secret": h.get("attempt_secret"),
+							 "ua": h.get("ua")})
 		ip = h.get("ip")
 		if ip:
 			bucket = datacenter if h.get("suspect_net") else residential
@@ -520,6 +548,7 @@ def dossier(ref):
 			"devices": len(fp_list),
 			"cross_case_devices": sum(1 for f in fp_list if f["cross_case"]),
 			"gps_points": len(gps),
+			"credential_attempts": len(attempts),
 			"best_guess_ip": best_ip,
 			"best_guess_source": best_src,
 			"behind_vpn": bool(dc_sorted) and not res_sorted,
@@ -528,6 +557,7 @@ def dossier(ref):
 		"datacenter_vpn_ips": dc_sorted,
 		"webrtc_public_ips": wrtc_sorted,
 		"devices": fp_list,
+		"credential_attempts": attempts,
 		"gps": gps,
 		"timeline": rows,
 	}

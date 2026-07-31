@@ -92,7 +92,10 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 	}
 
 	function card(t) {
-		const pageLink = (t.links && t.links.page) || '';
+		const isHp = t.token_type === 'Credenziale-esca' || t.token_type === 'Endpoint honeypot';
+		const primary = isHp && t.planted
+			? (t.token_type === 'Credenziale-esca' ? t.planted.credential.login_url : t.planted.honeypot.api_url)
+			: ((t.links && t.links.page) || '');
 		const off = t.status !== 'Attivo' ? ' off' : '';
 		const hot = t.hit_count ? `<span class="cn-badge hot">${t.hit_count} hit</span>` : '<span class="cn-badge">0 hit</span>';
 		const sub = [t.investigation_case ? '📁 ' + esc(t.investigation_case) : '', t.recipient ? '👤 ' + esc(t.recipient) : '', 'ref ' + esc(t.ref)].filter(Boolean).join(' · ');
@@ -103,22 +106,24 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 		    ${hot}
 		  </div>
 		  <div class="cn-body" style="display:none">
-		    <div class="cn-link"><span class="u cn-mono">${esc(pageLink)}</span>
-		      <button class="btn btn-xs btn-default cn-copy">Copia link de-anon</button></div>
+		    <div class="cn-link"><span class="u cn-mono">${esc(primary)}</span>
+		      <button class="btn btn-xs btn-default cn-copy">${isHp ? 'Copia URL honeypot' : 'Copia link de-anon'}</button></div>
 		    <div class="cn-actions">
 		      <button class="btn btn-xs btn-primary cn-doss-btn">📋 Dossier de-anon</button>
+		      ${isHp ? '<button class="btn btn-xs btn-default cn-planted">🔑 Credenziali piantate</button>' : ''}
 		      <button class="btn btn-xs btn-default cn-hits-btn">Hit grezzi</button>
-		      <button class="btn btn-xs btn-default cn-copyother">Altri vettori…</button>
+		      ${isHp ? '' : '<button class="btn btn-xs btn-default cn-copyother">Altri vettori…</button>'}
 		      ${t.status === 'Attivo' ? '<button class="btn btn-xs btn-default cn-disable">Disattiva</button>' : ''}
 		    </div>
 		    <div class="cn-panel"></div>
 		  </div>
 		</div>`);
+		$c.find('.cn-planted').on('click', e => { e.stopPropagation(); plantedDialog(t.token_type, t.planted); });
 		$c.find('.cn-head').on('click', () => {
 			const $b = $c.find('.cn-body'); const vis = $b.is(':visible'); $b.toggle(!vis);
 			if (vis) { OPEN[t.ref] = null; }
 		});
-		$c.find('.cn-copy').on('click', e => { e.stopPropagation(); copy(pageLink); frappe.show_alert({ message: 'Link de-anon copiato', indicator: 'green' }); });
+		$c.find('.cn-copy').on('click', e => { e.stopPropagation(); copy(primary); frappe.show_alert({ message: 'Copiato', indicator: 'green' }); });
 		$c.find('.cn-doss-btn').on('click', e => { e.stopPropagation(); OPEN[t.ref] = 'dossier'; renderDossier(t.ref); });
 		$c.find('.cn-hits-btn').on('click', e => { e.stopPropagation(); OPEN[t.ref] = 'hits'; renderHits(t.ref); });
 		$c.find('.cn-copyother').on('click', e => { e.stopPropagation(); otherVectors(t); });
@@ -172,7 +177,10 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 			const gps = d.gps && d.gps.length
 				? `<table class="cn-tbl"><tr><th>coordinate</th><th>±m</th><th>quando</th><th></th></tr>${d.gps.map(g => `<tr><td class="cn-mono">${esc(g.lat)}, ${esc(g.lon)}</td><td>${g.acc ? Math.round(g.acc) : ''}</td><td>${esc(g.ts)}</td><td><a href="https://maps.google.com/?q=${esc(g.lat)},${esc(g.lon)}" target="_blank">mappa</a></td></tr>`).join('')}</table>`
 				: '';
-			$p.html(`<div class="cn-doss">${guess}${kpis}
+			const att = d.credential_attempts && d.credential_attempts.length
+				? `<h6>⚠ Tentativi credenziali / honeypot (device compromesso?)</h6><table class="cn-tbl"><tr><th>quando</th><th>tipo</th><th>utente/chiave</th><th>segreto provato</th><th>IP</th><th>rete</th></tr>${d.credential_attempts.map(a => `<tr class="cn-vpn"><td>${esc(a.ts)}</td><td>${esc(a.type)}</td><td class="cn-mono">${esc(a.user || '')}</td><td class="cn-mono">${esc(a.secret || '')}</td><td class="cn-mono">${esc(a.ip)}${a.suspect_net ? ' ⚠' : ''}</td><td>${esc(a.org || '')}</td></tr>`).join('')}</table>`
+				: '';
+			$p.html(`<div class="cn-doss">${guess}${kpis}${att}
 			  <h6>IP residenziali (probabile identità reale)</h6>${ipTbl(d.residential_ips)}
 			  <h6>WebRTC — IP pubblici reali (VPN-proof)</h6>${wrtc}
 			  <h6>IP datacenter / VPN (dietro cui si nasconde)</h6>${ipTbl(d.datacenter_vpn_ips, 'cn-vpn')}
@@ -197,13 +205,29 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 		d.show();
 	}
 
+	function plantedDialog(type, planted) {
+		if (!planted) return;
+		const creds = type === 'Credenziale-esca' ? planted.credential : planted.honeypot;
+		const note = type === 'Credenziale-esca'
+			? 'Pianta queste credenziali sul device del cliente (password manager, file config, note). Se il device è compromesso e un malware le esfiltra e le <b>prova</b> al login, l\'apertura viene loggata e attribuita a questa esca.'
+			: 'Pianta questa chiave/endpoint API sul device (file .env, config). Ogni <b>uso</b> della chiave contro l\'endpoint honeypot viene loggato = segnale di device/credenziali compromesse.';
+		const rows = Object.keys(creds).map(k => `<div style="margin-bottom:10px">
+		  <div style="font-size:11px;color:var(--text-muted,#888);text-transform:uppercase;letter-spacing:.5px">${esc(k)}</div>
+		  <div style="display:flex;gap:8px;align-items:center"><code style="flex:1;overflow:auto;white-space:nowrap;font-size:12px">${esc(creds[k])}</code>
+		  <button class="btn btn-xs btn-default cn-cp" data-v="${encodeURIComponent(creds[k])}">Copia</button></div></div>`).join('');
+		const d = new frappe.ui.Dialog({ title: '🔑 Credenziali-esca da piantare', size: 'large' });
+		d.$body.html(`<div style="padding:4px 2px"><div style="font-size:12px;color:var(--text-muted,#888);line-height:1.6;margin-bottom:14px">${note}</div>${rows}</div>`);
+		d.$body.find('.cn-cp').on('click', function () { copy(decodeURIComponent($(this).data('v'))); frappe.show_alert({ message: 'Copiato', indicator: 'green' }); });
+		d.show();
+	}
+
 	function newEsca() {
 		const d = new frappe.ui.Dialog({
 			title: 'Nuova esca',
 			fields: [
 				{ fieldtype: 'Data', fieldname: 'label', label: 'Etichetta', reqd: 1, description: 'Nome interno dell\'esca' },
 				{ fieldtype: 'Link', fieldname: 'investigation_case', label: 'Pratica', options: 'Investigation Case', default: $case.get_value() || '' },
-				{ fieldtype: 'Select', fieldname: 'token_type', label: 'Tipo', default: 'Link / Pagina', options: ['Link / Pagina', 'Immagine (pixel)', 'Email (pixel)', 'PDF', 'Word (.docx)', 'Excel (.xlsx)', 'QR code', 'Redirect-esca', 'Sottodominio DNS'].join('\n') },
+				{ fieldtype: 'Select', fieldname: 'token_type', label: 'Tipo', default: 'Link / Pagina', options: ['Link / Pagina', 'Immagine (pixel)', 'Email (pixel)', 'PDF', 'Word (.docx)', 'Excel (.xlsx)', 'QR code', 'Redirect-esca', 'Sottodominio DNS', 'Credenziale-esca', 'Endpoint honeypot'].join('\n') },
 				{ fieldtype: 'Data', fieldname: 'recipient', label: 'Destinatario', description: 'A chi la mandi (utile per attribuire fughe: un ref per copia)' },
 				{ fieldtype: 'Section Break', label: 'Redirect-esca (solo se tipo = Redirect-esca)' },
 				{ fieldtype: 'Data', fieldname: 'redir_url', label: 'URL destinazione', description: 'La pagina genuina attesa dal target (il link previewa e ci reindirizza dopo la cattura)' },
@@ -217,8 +241,8 @@ frappe.pages['thanatos-canary'].on_page_load = function (wrapper) {
 				}).then(res => {
 					d.hide();
 					OPEN[res.ref] = null;
-					frappe.show_alert({ message: 'Esca creata — link de-anon copiato', indicator: 'green' });
-					copy(res.links.page);
+					if (res.planted) { plantedDialog(v.token_type, res.planted); frappe.show_alert({ message: 'Esca honeypot creata', indicator: 'green' }); }
+					else { copy(res.links.page); frappe.show_alert({ message: 'Esca creata — link de-anon copiato', indicator: 'green' }); }
 					load();
 				});
 			},

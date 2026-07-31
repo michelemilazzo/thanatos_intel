@@ -24,6 +24,8 @@
     {"fieldname": "fp", "fieldtype": "Data", "label": "Fingerprint device", "in_standard_filter": 1},
     {"fieldname": "webrtc", "fieldtype": "Small Text", "label": "WebRTC (IP reali)"},
     {"fieldname": "ua", "fieldtype": "Small Text", "label": "User-Agent"},
+    {"fieldname": "attempt_user", "fieldtype": "Data", "label": "Tentativo — utente/chiave", "description": "Credenziale-esca: username provato. Honeypot: metodo+path.", "in_standard_filter": 1},
+    {"fieldname": "attempt_secret", "fieldtype": "Data", "label": "Tentativo — segreto", "description": "Password/token provato dall'attaccante (evidenza)."},
     {"fieldname": "col_2", "fieldtype": "Column Break"},
     {"fieldname": "lat", "fieldtype": "Float", "label": "Lat", "precision": "6"},
     {"fieldname": "lon", "fieldtype": "Float", "label": "Lon", "precision": "6"},

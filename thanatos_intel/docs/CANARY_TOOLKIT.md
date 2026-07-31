@@ -79,10 +79,24 @@ niente accesso occulto a dispositivi di terzi (reato). Vedi distinzione consenso
   credenziali finte piazzate sul device che, se un malware le prova contro il nostro honeypot, loggano
   il tentativo.
 
+## Honeypot — device cliente compromesso (credenziale-esca + endpoint)
+
+Route worker: **`/login`** (login NEUTRO, member-area della civetta — nessun brand reale = niente phishing).
+POST con username/password → Hit `credential` con `attempt_user`/`attempt_secret` (ciò che l'attaccante ha
+provato). **`/api/*`** → Hit `honeypot` (metodo+path + Authorization/token usato). Loggano solo con `ref`
+presente (le creds piantate lo portano) → niente rumore da bot.
+
+`planted_creds(ref)` genera credenziali **deterministiche dal ref** (`password = sha256(ref+secret)[:14]`,
+ricostruibili senza storage): l'operatore le pianta sul device del cliente (password manager, file config).
+Se il device è compromesso e un malware le esfiltra e le **prova**, l'hit viene loggato e attribuito.
+UI: nel form "Nuova esca" tipi *Credenziale-esca* / *Endpoint honeypot* → dialog con le creds da piantare;
+i tentativi appaiono nel Dossier sotto "⚠ Tentativi credenziali / honeypot".
+
 ## Stato
 
-- **Fase 1 (FATTA):** DocType + API + PULL scheduler + alert operatore + vettori
-  link/pixel/email/PDF/DOCX/XLSX/QR/redirect/DNS (tutti già serviti dal worker).
-- **Fase 2 (TODO):** route worker per **Credenziale-esca** (fake login `/login` che logga i tentativi) e
-  **Endpoint honeypot** (`/api/*` fake che logga POST). Dashboard desk custom (Page) con generatore +
-  timeline + dossier de-anon (oggi: List View di Canary Token/Hit filtrate per pratica + `dashboard()`).
+- **Fase 1 (FATTA):** DocType + API + PULL scheduler + ingest PUSH + alert operatore + vettori
+  link/pixel/email/PDF/DOCX/XLSX/QR/redirect/DNS.
+- **Fase 1b — Attribuzione (FATTA):** vettore `page` (b.js fingerprint+WebRTC), `dossier(ref)` de-anon,
+  **Page desk** `/app/thanatos-canary`.
+- **Fase 2 — Honeypot (FATTA):** route worker `/login` + `/api/*`, `planted_creds`, campi Hit
+  `attempt_user`/`attempt_secret`, UI creds piantate + tentativi nel dossier. Verificato E2E in produzione.
