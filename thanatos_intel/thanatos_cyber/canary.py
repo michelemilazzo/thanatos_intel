@@ -20,7 +20,7 @@ from datetime import datetime
 import frappe
 from frappe import _
 
-_LOGO_PATH = os.path.join(os.path.dirname(__file__), "..", "public", "images", "thanatos-logo-mark.png")
+_LOGO_PATH = os.path.join(os.path.dirname(__file__), "..", "public", "images", "thanatos-logo.png")
 _LOGO_URI = None
 
 
@@ -706,10 +706,8 @@ def _report_html(label, investigation_case, dossiers):
 	return """<!doctype html><html><head><meta charset="utf-8"><style>
 	@page {{ margin: 22mm 18mm; }}
 	body {{ font-family: 'Helvetica Neue', Arial, sans-serif; color: #1c1c1c; font-size: 12px; line-height: 1.5; }}
-	.hd {{ border-bottom: 2px solid #1c1c1c; padding-bottom: 8px; margin-bottom: 14px; }}
-	.hd table {{ border: none; width: 100%; }}
-	.hd td {{ border: none; padding: 0; vertical-align: middle; }}
-	.hd .logo {{ height: 46px; width: auto; }}
+	.hd {{ border-bottom: 2px solid #1c1c1c; padding-bottom: 10px; margin-bottom: 14px; }}
+	.hd .logo {{ height: 36px; width: auto; display: block; margin-bottom: 6px; }}
 	.hd .b {{ font-size: 18px; font-weight: 700; letter-spacing: .5px; }}
 	.hd .s {{ font-size: 11px; color: #666; }}
 	h1 {{ font-size: 15px; margin: 16px 0 4px; }}
@@ -725,7 +723,7 @@ def _report_html(label, investigation_case, dossiers):
 	.note {{ font-size: 10.5px; color: #555; margin-top: 16px; line-height: 1.5; }}
 	.ft {{ margin-top: 20px; border-top: 1px solid #ccc; padding-top: 8px; font-size: 10px; color: #888; }}
 	</style></head><body>
-	<div class="hd"><table><tr>{logo_cell}<td><div class="b">THANATOS INTELLIGENCE</div><div class="s">Referto tecnico — Verifica dispositivo (counter-surveillance)</div></td></tr></table></div>
+	<div class="hd">{header_inner}</div>
 	<table class="meta">
 	  <tr><td class="k">Oggetto</td><td>Verifica sospetto controllo del dispositivo da parte di terzi</td></tr>
 	  <tr><td class="k">Soggetto / dispositivo</td><td><b>{label}</b></td></tr>
@@ -755,7 +753,15 @@ def _report_html(label, investigation_case, dossiers):
 		vcol=verdict_col, label=esc(label or "-"), case=esc(investigation_case or "-"),
 		date=frappe.utils.format_datetime(now, "dd/MM/yyyy HH:mm"), nesche=len(dossiers),
 		vtitle=esc(verdict_title), vtxt=esc(verdict_txt), esche=esche_rows, attr=attr,
-		logo_cell=('<td style="width:58px"><img class="logo" src="%s"></td>' % _logo_data_uri()) if _logo_data_uri() else "")
+		header_inner=_report_header())
+
+
+def _report_header():
+	sub = '<div class="s">Referto tecnico — Verifica dispositivo (counter-surveillance)</div>'
+	uri = _logo_data_uri()
+	if uri:
+		return '<img class="logo" src="%s">%s' % (uri, sub)
+	return '<div class="b">THANATOS INTELLIGENCE</div>' + sub
 
 
 def _build_device_report(label, investigation_case, refs):
