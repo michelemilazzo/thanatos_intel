@@ -953,3 +953,25 @@ def topup_wallet(client, amount):
         payment_intent_data={"metadata": meta}, metadata=meta, locale="it",
     )
     return {"url": session.url, "net": net, "fee": fee, "gross": gross}
+
+
+def daily_stripe_sync() -> dict:
+    """Scheduler: riallinea le subscription non chiuse e ritenta gli Stripe Event falliti."""
+    synced, failed_sub, retried, still_failed = 0, 0, 0, 0
+    for sid in frappe.get_all("Stripe Subscription", filters={"status": ("!=", "canceled")}, pluck="name"):
+        try:
+            sync_subscription(sid)
+            synced += 1
+        except Exception:
+            failed_sub += 1
+            frappe.log_error(title="daily_stripe_sync subscription %s" % sid)
+    for ev in frappe.get_all("Stripe Event", filters={"status": "failed"}, fields=["name", "payload"]):
+        try:
+            handle_event(json.loads(ev.payload or "{}"))
+            frappe.db.set_value("Stripe Event", ev.name, {"status": "processed", "error_message": None})
+            retried += 1
+        except Exception as e:
+            still_failed += 1
+            frappe.db.set_value("Stripe Event", ev.name, "error_message", str(e)[:2000])
+    frappe.db.commit()
+    return {"synced": synced, "failed_sub": failed_sub, "retried": retried, "still_failed": still_failed}
